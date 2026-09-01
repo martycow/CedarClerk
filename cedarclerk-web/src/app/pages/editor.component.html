@@ -1475,14 +1475,14 @@
                 <p class="insp-group is-selection">{{ selectionKindLabel() }}</p>
                 @for (row of selectionRows(); track row.label) {
                 <app-spec-row scope="selection" [label]="row.label" [value]="row.value"
-                              [field]="!!row.field" [warn]="!!row.warn"></app-spec-row>
+                              [warn]="!!row.warn"></app-spec-row>
                 }
                 <!--The one property here the writer must be able to change: alt reaches a reader as
                 a bare attribute on both Telegram and the blog, so an unfilled one is a real defect
                 and a read-only row naming it is a complaint with no fix.-->
                 @if (sel.altMissing !== undefined) {
                 <app-spec-row scope="selection" [label]="t().editor.inspector.alt" field [warn]="sel.altMissing">
-                    <input class="insp-input" [value]="sel.alt || ''"
+                    <input class="insp-input field" [value]="sel.alt || ''"
                            [placeholder]="t().editor.inspector.altMissing"
                            (change)="setSelectedAttr('alt', $any($event.target).value)">
                 </app-spec-row>
@@ -1518,7 +1518,9 @@
                 <app-spec-row scope="selection" [label]="t().editor.inspector.blockType" [value]="blockTypeLabel()"></app-spec-row>
                 <app-spec-row scope="selection" [label]="t().editor.inspector.formatting" [value]="activeMarks()"></app-spec-row>
                 @if (activeLinkHref(); as href) {
-                <app-spec-row scope="selection" [label]="t().editor.inspector.link" [value]="href" field></app-spec-row>
+                <!--Plain ink: the href is edited through the link mark's own dialog, and a box here
+                would promise a second, weaker editor for it (ADR-238 clause 1).-->
+                <app-spec-row scope="selection" [label]="t().editor.inspector.link" [value]="href"></app-spec-row>
                 }
                 <app-spec-row scope="selection" [label]="t().editor.inspector.words" [value]="'' + selectedWordCount()"></app-spec-row>
                 <app-spec-row scope="selection" [label]="t().editor.inspector.characters" [value]="'' + selectedCharCount()"></app-spec-row>
@@ -1562,8 +1564,10 @@
                     </select>
                 </app-spec-row>
                 <!--T-345 — the document's own location (a trip); blank falls back to the
-                profile's at render, which is what the MapLocation slot showed before.-->
-                <app-spec-row scope="document" [label]="t().editor.inspector.location" field>
+                profile's at render, which is what the MapLocation slot showed before. No `field`:
+                the control is a stacked input plus a profile chip and paints its own face, so the
+                row's box would be the second, weaker one ADR-238 clause 1 removes elsewhere.-->
+                <app-spec-row scope="document" [label]="t().editor.inspector.location">
                     <app-location-input [value]="locationText()" (valueChange)="setLocation($event)" />
                 </app-spec-row>
                 @if (isWorkingMaterial()) {
@@ -1575,7 +1579,18 @@
                 <p class="channel-error">{{ err }}</p>
                 }
                 @if (currentBlog(); as blog) {
-                <app-spec-row scope="document" [label]="t().editor.inspector.slug" [value]="blog.slug" field></app-spec-row>
+                <!--T-239 — the post's blog address, typed here. The server slugifies what it is
+                given and refuses an empty or taken result, so the row shows the stored answer back
+                rather than the keystrokes, and surfaces the refusal instead of inventing one.-->
+                <app-spec-row scope="document" [label]="t().editor.inspector.slug" field
+                              [warn]="!!slugError()">
+                    <input class="insp-input field" [value]="blog.slug"
+                           [title]="t().editor.inspector.slugTitle"
+                           (change)="assignBlogSlug($any($event.target))">
+                </app-spec-row>
+                @if (slugError(); as err) {
+                <p class="channel-error">{{ err }}</p>
+                }
                 }
                 @if (backlinks().length) {
                 <!--Its own row on the sheet rather than a control projected into a spec row: the

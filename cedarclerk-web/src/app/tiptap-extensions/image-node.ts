@@ -1,10 +1,12 @@
 import { Image } from '@tiptap/extension-image';
+import { assetIdAttribute } from './asset-id-attribute';
 
 export const ImageNode = Image.extend({
     addAttributes() {
         return {
             ...this.parent?.(),
             caption: { default: null },
+            assetId: assetIdAttribute,
         };
     },
 

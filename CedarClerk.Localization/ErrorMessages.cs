@@ -34,6 +34,7 @@ public static class ErrorMessages
     public static string AutoTranslateNotConfigured => Ru("Авто-перевод не настроен.", "Auto-translate is not configured");
     public static string AvatarMustBeUploaded => Ru("Аватар должен быть загруженным изображением.", "Avatar must be an uploaded image");
     public static string AssetInUse => Ru("Файл используется в постах — сначала уберите его оттуда.", "This file is used by posts — remove it from them first");
+    public static string AssetIdOrPathRequired => Ru("Нужен id файла или путь к нему.", "An asset id or path is required");
     public static string BothTagsRequired => Ru("Нужны и старый, и новый тег.", "Both the old and the new tag are required");
     public static string InvalidEmail => Ru("Введите корректный адрес почты.", "Enter a valid email address");
     public static string ImportFileNotFound => Ru("Файл не найден в каталоге import-tmp.", "File not found in import-tmp directory.");
@@ -42,6 +43,20 @@ public static class ErrorMessages
     public static string InvalidFileName => Ru("Некорректное имя файла.", "Invalid file name.");
     public static string InvalidInviteCode => Ru("Неверный инвайт-код.", "Invalid invite code");
     public static string InvalidTelegramSignature => Ru("Подпись входа через Telegram недействительна или устарела.", "Invalid or expired Telegram login signature");
+    public static string ExternalProviderNotConfigured =>
+        Ru("Этот способ входа не настроен на сервере.", "This sign-in method is not configured on this server");
+    public static string ExternalLoginExpired =>
+        Ru("Вход через провайдера истёк — начните заново.", "The provider sign-in expired — start again");
+    public static string ExternalNoEmail =>
+        Ru("Провайдер не вернул адрес почты — войдите паролем.", "The provider returned no email address — sign in with a password instead");
+    public static string ExternalAlreadyLinkedToOther =>
+        Ru("Этот аккаунт провайдера уже привязан к другому аккаунту Cedar Clerk.", "This provider account is already linked to a different Cedar Clerk account");
+    public static string ExternalEmailTaken =>
+        Ru("На этот адрес уже есть аккаунт — войдите паролем, и привязка добавится сама.", "An account already holds this address — sign in with your password and the link will be added");
+    public static string ExternalLastWayIn =>
+        Ru("Это единственный способ войти в аккаунт — сначала задайте пароль.", "This is the only way into this account — set a password first");
+    public static string TelegramNoAccount =>
+        Ru("К этому Telegram не привязан аккаунт Cedar Clerk. Войдите другим способом и привяжите его в Настройках.", "No Cedar Clerk account is linked to this Telegram. Sign in another way and link it in Settings");
     public static string NewDraftDefaultsTooLarge => Ru("Настройки нового черновика слишком большие.", "New-draft defaults are too large");
     public static string NoMarkdownInZip => Ru("Внутри архива нет ни одного .md-файла.", "No .md file found inside the zip.");
     public static string NoStripeSubscription => Ru("На этом аккаунте нет подписки Stripe.", "No Stripe subscription on this account");

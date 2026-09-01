@@ -11,6 +11,7 @@ import {
     CLOUDFLARE_UPLOAD_LIMIT_BYTES,
 } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
+import { SeriesService } from '../core/series.service';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { SeriesPickerComponent } from '../shared/series-picker.component';
@@ -28,6 +29,7 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
 export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
@@ -53,10 +55,10 @@ const TITLE_MIN_WIDTH = 200;
 // left to drift — so if the density tokens move, these move with them.
 const ROW_GAP = 8;
 const ROW_PADDING = 20;
-// Four controls at the paper box plus the three gaps between them (evergreen joined template,
-// archive and delete in Wave 2). It was 80 — narrower than the buttons it holds — so the group
-// overflowed left and printed over the UPDATED column beside it.
-const ACTIONS_WIDTH = 4 * 38 + 3 * 4;
+// Five controls at the paper box plus the gaps between them (describe, evergreen, template,
+// archive, delete). It was 80 — narrower than the buttons it holds — so the group overflowed left
+// and printed over the UPDATED column beside it.
+const ACTIONS_WIDTH = 5 * 38 + 4 * 4;
 
 // Below this the row would have to scroll sideways to show everything, so it stops showing
 // everything instead: Tags and Activity are the two columns you can lose and still recognise a
@@ -136,7 +138,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, PopoverComponent,
         FolderPickerComponent, TagPickerComponent, SeriesPickerComponent, IndexTabsComponent, ShelfPanelComponent,
-        InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
+        SpecRowComponent, InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -147,6 +149,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     t = this.locale.t;
     private draftsApi = inject(DraftsService);
     private foldersApi = inject(FoldersService);
+    private seriesApi = inject(SeriesService);
     private router = inject(Router);
 
     loading = signal(true);
@@ -182,6 +185,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     folders = this.foldersApi.folders;
     selectedFolder = signal<'all' | 'none' | string>('all');
 
+    // T-256 — which row the shelf describes. A row's own click is the door to the editor
+    // (ADR-163), so this is only ever set by the explicit control in .row-actions.
+    selectedId = signal<string | null>(null);
+
     // Both imports live here now (B22) — the editor topbar is Export/theme/profile only.
     importingCedar = signal(false);
     importCedarError = signal<string | null>(null);
@@ -196,7 +203,9 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     async ngOnInit() {
         window.addEventListener('resize', this.onResize);
         try {
-            const [drafts] = await Promise.all([this.draftsApi.list(), this.foldersApi.ensureLoaded()]);
+            const [drafts] = await Promise.all([
+                this.draftsApi.list(), this.foldersApi.ensureLoaded(), this.seriesApi.ensureLoaded(),
+            ]);
             this.drafts.set(drafts);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().drafts.errors.load));
@@ -360,6 +369,46 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
 
     openDraft(id: string) {
         this.router.navigate(['/editor'], { queryParams: { draft: id } });
+    }
+
+    // ---- the draft shelf (T-256, ADR-238 clauses 6-7) ------------------------------------------
+    // Read-only, and exclusive with the folder filter: the shelf shows the picked draft or the
+    // folders, never both (ADR-167). Everything below reads DraftMeta and the two shared lists —
+    // picking a row asks the server nothing.
+
+    /** Resolved against the filtered list, so a draft filtered off screen stops being described. */
+    selectedDraft(): DraftMeta | null {
+        const id = this.selectedId();
+        return id ? this.filteredDrafts().find(d => d.id === id) ?? null : null;
+    }
+
+    toggleSelected(d: DraftMeta, ev: Event) {
+        ev.stopPropagation();
+        this.selectedId.update(id => id === d.id ? null : d.id);
+    }
+
+    seriesName(id: string | null): string {
+        if (id === null) return this.t().drafts.series.none;
+        return this.seriesApi.find(id)?.name ?? this.t().drafts.series.none;
+    }
+
+    /** Primary first, then the translations — the row badges show the same set. */
+    allLanguages(d: DraftMeta): string[] {
+        return [d.primaryLanguage, ...d.languages.filter(l => l !== d.primaryLanguage)];
+    }
+
+    tagList(d: DraftMeta): string[] {
+        return d.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    }
+
+    parentTitle(d: DraftMeta): string {
+        if (!d.parentDraftId) return this.t().drafts.tree.root;
+        const parent = this.drafts().find(x => x.id === d.parentDraftId);
+        return parent?.title || this.t().drafts.untitled;
+    }
+
+    childCount(d: DraftMeta): number {
+        return this.drafts().filter(x => x.parentDraftId === d.id).length;
     }
 
     // ---- document tree (ADR-128) --------------------------------------------------------------

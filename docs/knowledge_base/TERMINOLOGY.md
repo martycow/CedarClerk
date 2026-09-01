@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-29
+last_verified: 2026-09-01
 source_of_truth_for: project terminology — what the words the code and docs use mean
 guard: none
 ---
@@ -39,6 +39,7 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | DraftRevision | ревизия | An immutable history broken down by language: a row for every explicit save and every publish (Kind: save\|telegram\|blog) — an edit history and a safe diff before publishing | `Entities.cs:513-525` |
 | ShrinkGuard | — | When a save requires explicit confirmation: an incident on 29.07 where autosave saved an instantaneously-empty editor; "suspicious" means there were ≥200 visible characters and ≤20% remain | `Core/ShrinkGuard.cs` |
 | .cedar (CedarPackage) | формат .cedar | Document export/import: a zip container (analogous to .docx) with document.json + assets/; translations are deliberately not included in the export | `Core/CedarPackage.cs`, ARCHITECTURE:130-132 |
+| assetId (node attribute) | ссылка на ассет | The one link from a media node (image/video/audio) to the `Asset` it was inserted from, `data-asset-id` in the DOM. The file's own facts — resolution, byte size, name — are never copied into the document: they belong to the file and go stale when its bytes change, so the inspector asks `GET /api/assets/meta` (by id, or by media path for documents older than the attribute) | ADR-238, `core/selection-spec.ts` |
 | queue slot | слот очереди | `QueueSlot` — a weekly posting moment (UTC weekday + minute) on one destination; `FillQueueSlotsJob` keeps its upcoming occurrences filled from the evergreen pool, one occurrence per ISO week — which is why a dragged ticket is never double-filled | `Entities.cs`, ADR-228 |
 | evergreen | эвергрин | `Draft.IsEvergreen` plus category/max-sends/until bounds: membership in the pool queue slots repost from, picked least-sent-first; `EvergreenSendCount` counts only sends that actually went out, never fills | `Entities.cs`, `Bot/FillQueueSlotsJob.cs` |
 | CTA buttons | CTA-кнопки | Up to 3 URL buttons under a Telegram post — `Draft.CtaButtonsJson`, a per-post send setting appended at the wire level to the publication's last part; never a document node, never on the blog or in `.cedar` | ADR-226 |
@@ -70,6 +71,8 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | cross-link | кросс-ссылка | Mutual links between a post's surfaces ("Watch on Telegram" ↔ "Read on the blog"), with owner-facing text that is localizable (I15) | `Consts.CrossLinks` |
 | press kit page | пресс-кит | `/games/{slug}/press` — a press page rendered from the showcase plus five optional press fields, with a downloadable press-pack zip; self-updating because it is a renderer over existing data, not a maintained document | UI-INVENTORY §Blog surfaces, CHANGELOG 29.08 |
 | user glossary | пользовательский глоссарий | `GlossaryTerm` — the owner's own terms (per-owner, per-language, with case-form aliases), highlighted in the blog with a tooltip; only on first occurrence | `Core/GlossaryScanner.cs` |
+| GlossaryTermUsage | использование термина | One row per (term, draft) pair that actually matched, written when either half changes — a draft save rescans that draft, a term write rescans that term. A pair at zero has no row rather than a row holding `0`. The scan runs on plain text and ignores `DraftGlossaryExclusion`: an exclusion is a publishing decision, and "where is this term used" is a question about the text. The field is `usedInDrafts`, never `usedInPosts` — since ADR-102 a post is one `DocumentType` of six | `Entities.cs`, `GlossaryUsage.cs`, ADR-238 |
+| shadowed term | перекрытый термин | Two terms of one owner and language whose spellings intersect compete for the same position, and `CountHits` credits exactly one — project-scoped before global (ADR-112), then `CreatedAt`, then `Id`. The loser carries `shadowedByTermId` naming the winner, because a bare `0` on it would read as "appears nowhere", and those two readings call for opposite actions. Two terms in *different* projects can never meet, so they never collide; spellings are compared case-insensitively unless **both** terms are case-sensitive | `GlossaryEndpoints.cs`, ADR-238 clause 13 |
 
 ## Tenancy and hosts
 

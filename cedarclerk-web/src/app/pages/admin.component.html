@@ -20,12 +20,16 @@ used to run across the top are the shelf beside it (ADR-164).-->
 
             @if (tab() === 'users') {
             <!--Priority Fixes 01 (Claude Design): the fixed-grid table shell swaps for the
-            sheet-card list the rest of the app already uses — same data, same row-expand-to-actions
-            interaction. The form stays in the row rather than moving to the shelf: it is a wide
-            multi-field editor, not a readout (ADR-164 clause 5).-->
+            sheet-card list the rest of the app already uses. T-257 took the form out of the row —
+            two selects, a date, three inputs and six buttons neither fit a 340px shelf (ADR-164
+            clause 5) nor belong in a row that pushes the rest of the list off screen, so the card
+            is now a door to a modal. With nothing nested inside it any more, the card is a real
+            button: keyboard-reachable, and no click has to be stopped from propagating.-->
             <div class="user-cards">
                 @for (u of users(); track u.id) {
-                <div class="user-card" [class.expanded]="expandedId() === u.id" (click)="toggleExpanded(u)">
+                <button type="button" class="user-card" [class.on]="expandedId() === u.id"
+                        [attr.aria-label]="t().admin.userModal.open(u.email ?? t().admin.userModal.untitled)"
+                        (click)="openUser(u)">
                     <div class="user-card-main">
                         <span class="user-avatar" [style.background]="avatarColor(u.email)">{{ avatarInitial(u.email) }}</span>
                         <div class="user-card-body">
@@ -50,87 +54,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                             </div>
                         </div>
                     </div>
-
-                    @if (expandedId() === u.id) {
-                    <div class="user-actions" (click)="$event.stopPropagation()">
-                        <div class="action-group">
-                            <label>{{ t().admin.actions.plan }}</label>
-                            <div class="action-row">
-                                <select [(ngModel)]="planTier">
-                                    @for (tier of tiers; track tier) { <option [value]="tier">{{ tier }}</option> }
-                                </select>
-                                <!--Blank on a paid tier is a manual grant with no expiry, which is what
-                                the rest of the app already means by a null expiry.-->
-                                <input type="date" [(ngModel)]="planExpiresAt" [disabled]="planTier === 'Free'">
-                                <app-button variant="pine" size="sm" [disabled]="busy()" (clicked)="savePlan(u)">
-                                    {{ t().common.save }}
-                                </app-button>
-                            </div>
-                            <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
-                        </div>
-
-                        <div class="action-group">
-                            <label>{{ t().admin.actions.credits }}</label>
-                            <div class="action-row">
-                                <span class="credit-balance">{{ t().admin.actions.creditBalance(u.credits) }}</span>
-                                <input type="number" class="credit-amount" min="1" step="1" [(ngModel)]="creditAmount">
-                                <input type="text" class="credit-note" [(ngModel)]="creditNote"
-                                       [placeholder]="t().admin.actions.creditNote">
-                                <app-button variant="pine" size="sm" [disabled]="busy()" (clicked)="adjustCredits(u, 1)">
-                                    {{ t().admin.actions.creditAdd }}
-                                </app-button>
-                                <!--Taking back is the same control with the other sign: a correction has
-                                    to be as easy as the mistake, and it lands in the same ledger.-->
-                                <app-button variant="paper" size="sm" [disabled]="busy() || u.credits === 0"
-                                            (clicked)="adjustCredits(u, -1)">
-                                    {{ t().admin.actions.creditTake }}
-                                </app-button>
-                            </div>
-                            <p class="field-hint-inline">{{ t().admin.actions.creditHint }}</p>
-                        </div>
-
-                        <div class="action-row">
-                            <app-button variant="paper" size="sm" [disabled]="busy() || !u.trialUsed" (clicked)="resetTrial(u)">
-                                {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}
-                            </app-button>
-
-                            <!--Self-targeting is refused server-side too; disabling here just explains
-                            why rather than letting the click fail.-->
-                            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
-                                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="toggleLock(u)">
-                                {{ u.isLocked ? t().admin.actions.unlock : t().admin.actions.lock }}
-                            </app-button>
-
-                            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
-                                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="toggleAdmin(u)">
-                                {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
-                            </app-button>
-
-                            <!--The only irreversible action in the app, so it is the only one that
-                            asks twice.-->
-                            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
-                                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="askDelete(u)">
-                                {{ t().admin.actions.deleteAccount }}
-                            </app-button>
-                        </div>
-
-                        <div class="action-group">
-                            <label>{{ t().admin.invites.attribution }}</label>
-                            <div class="action-row">
-                                <select [value]="u.inviteCodeId ?? ''" (change)="attribute(u, $any($event.target).value)" [disabled]="busy()">
-                                    <option value="">{{ t().admin.invites.unknownOrigin }}</option>
-                                    @for (c of invites(); track c.id) { <option [value]="c.id">{{ c.code }}</option> }
-                                </select>
-                            </div>
-                            <!--Only meaningful for accounts that predate invite tracking; for everyone
-                            else this is already recorded at registration.-->
-                            <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
-                        </div>
-
-                        <p class="field-hint-inline">{{ t().admin.actions.deleteNote }}</p>
-                    </div>
-                    }
-                </div>
+                </button>
                 }
             </div>
             }
@@ -548,11 +472,111 @@ used to run across the top are the shelf beside it (ADR-164).-->
     }
 </div>
 
+<!--T-257 — the per-user controls, opened by clicking the account's card. Same handlers and same
+endpoints as the inline row they replace; only where they are drawn changed. The user is re-read
+from users() on every render, so a `run()` reload refreshes the open modal instead of stranding it
+on the values it opened with.-->
+@if (modalUser(); as u) {
+<app-modal [width]="560" (closed)="closeUser()">
+    <app-icon modal-icon name="user" size="sm"></app-icon>
+    <span modal-title>{{ u.email ?? t().admin.userModal.untitled }}</span>
+
+    <div class="user-form">
+        <div class="user-card-top">
+            @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
+            @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
+            <span class="chip plan" [class.accent]="u.effectiveTier !== 'Free'">{{ u.effectiveTier }}</span>
+            @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
+        </div>
+
+        <div class="action-group">
+            <label>{{ t().admin.actions.plan }}</label>
+            <div class="action-row">
+                <select [(ngModel)]="planTier">
+                    @for (tier of tiers; track tier) { <option [value]="tier">{{ tier }}</option> }
+                </select>
+                <!--Blank on a paid tier is a manual grant with no expiry, which is what
+                the rest of the app already means by a null expiry.-->
+                <input type="date" [(ngModel)]="planExpiresAt" [disabled]="planTier === 'Free'">
+                <app-button variant="pine" size="sm" [disabled]="busy()" (clicked)="savePlan(u)">
+                    {{ t().common.save }}
+                </app-button>
+            </div>
+            <p class="field-hint-inline">{{ planTier === 'Free' ? t().admin.actions.freeHasNoExpiry : t().admin.actions.blankIsForever }}</p>
+        </div>
+
+        <div class="action-group">
+            <label>{{ t().admin.actions.credits }}</label>
+            <div class="action-row">
+                <span class="credit-balance">{{ t().admin.actions.creditBalance(u.credits) }}</span>
+                <input type="number" class="credit-amount" min="1" step="1" [(ngModel)]="creditAmount">
+                <input type="text" class="credit-note" [(ngModel)]="creditNote"
+                       [placeholder]="t().admin.actions.creditNote">
+                <app-button variant="pine" size="sm" [disabled]="busy()" (clicked)="adjustCredits(u, 1)">
+                    {{ t().admin.actions.creditAdd }}
+                </app-button>
+                <!--Taking back is the same control with the other sign: a correction has
+                    to be as easy as the mistake, and it lands in the same ledger.-->
+                <app-button variant="paper" size="sm" [disabled]="busy() || u.credits === 0"
+                            (clicked)="adjustCredits(u, -1)">
+                    {{ t().admin.actions.creditTake }}
+                </app-button>
+            </div>
+            <p class="field-hint-inline">{{ t().admin.actions.creditHint }}</p>
+        </div>
+
+        <div class="action-row">
+            <app-button variant="paper" size="sm" [disabled]="busy() || !u.trialUsed" (clicked)="resetTrial(u)">
+                {{ u.trialUsed ? t().admin.actions.resetTrial : t().admin.actions.trialUnused }}
+            </app-button>
+
+            <!--Self-targeting is refused server-side too; disabling here just explains
+            why rather than letting the click fail.-->
+            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
+                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="toggleLock(u)">
+                {{ u.isLocked ? t().admin.actions.unlock : t().admin.actions.lock }}
+            </app-button>
+
+            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
+                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="toggleAdmin(u)">
+                {{ u.isAdmin ? t().admin.actions.revokeAdmin : t().admin.actions.grantAdmin }}
+            </app-button>
+
+            <!--The only irreversible action in the app, so it is the only one that asks twice —
+            and the confirm replaces this modal rather than stacking on it, because one Escape
+            reaches every mounted app-modal at once.-->
+            <app-button variant="paper" size="sm" [disabled]="busy() || isSelf(u)"
+                        [title]="isSelf(u) ? t().admin.actions.notOnSelf : ''" (clicked)="askDelete(u)">
+                {{ t().admin.actions.deleteAccount }}
+            </app-button>
+        </div>
+
+        <div class="action-group">
+            <label>{{ t().admin.invites.attribution }}</label>
+            <div class="action-row">
+                <select [value]="u.inviteCodeId ?? ''" (change)="attribute(u, $any($event.target).value)" [disabled]="busy()">
+                    <option value="">{{ t().admin.invites.unknownOrigin }}</option>
+                    @for (c of invites(); track c.id) { <option [value]="c.id">{{ c.code }}</option> }
+                </select>
+            </div>
+            <!--Only meaningful for accounts that predate invite tracking; for everyone
+            else this is already recorded at registration.-->
+            <p class="field-hint-inline">{{ t().admin.invites.attributionHint }}</p>
+        </div>
+
+        <p class="field-hint-inline">{{ t().admin.actions.deleteNote }}</p>
+    </div>
+
+    <app-button modal-actions variant="paper" (clicked)="closeUser()">{{ t().common.close }}</app-button>
+</app-modal>
+}
+
 @if (deleteTarget(); as target) {
 <app-modal (closed)="cancelDelete()">
     <app-icon modal-icon name="trash" size="sm"></app-icon>
     <span modal-title>{{ t().admin.actions.deleteTitle }}</span>
     <p>{{ t().admin.actions.deleteBody(target.email ?? target.id) }}</p>
+    <p class="field-hint-inline">{{ t().admin.actions.closedForDelete }}</p>
     <app-button modal-actions variant="paper" (clicked)="cancelDelete()">{{ t().common.cancel }}</app-button>
     <app-button modal-actions variant="pine" (clicked)="confirmDelete()">{{ t().common.delete }}</app-button>
 </app-modal>

@@ -1,4 +1,4 @@
-<app-legal-page title="Privacy Policy" updated="12 August 2026">
+<app-legal-page title="Privacy Policy" updated="1 September 2026">
     <h2>1. Who this is about</h2>
     <p>
         This Privacy Policy explains what Cedar Clerk (operated by Viacheslav Chudaev, trading as Moo.exe, in the State of Oregon, United States,
@@ -24,34 +24,54 @@
         <li><strong>Telegram</strong> — to publish posts to the channel(s) you connect, via the Telegram Bot API.</li>
         <li><strong>Payment processors</strong> (Stripe, PayPal, Telegram Stars) — to handle paid plan billing.</li>
         <li><strong>AI translation provider</strong> (Anthropic) — only when you use the "Auto-translate" feature; the post text you're translating is sent to this provider for that request only.</li>
+        <li><strong>Product analytics</strong> (PostHog, EU region) — only if you accepted analytics cookies; see section 4.</li>
     </ul>
     <p>We don't sell your data, and we don't share it with anyone else beyond what's listed above.</p>
 
-    <h2>4. Data retention &amp; deletion</h2>
+    <h2>4. Analytics cookies</h2>
+    <p>
+        We use PostHog, hosted in the EU, to understand which parts of Cedar Clerk are used and where people
+        get stuck. It is asked for, not assumed: on your first visit you are shown a banner with Accept and
+        Decline, nothing from PostHog is loaded until you accept, and your answer is kept in a
+        <code>cedar_consent</code> cookie for a year. Declining leaves the Service fully working.
+    </p>
+    <p>
+        What we record this way are product events — an account was created, a draft was made, a post was
+        published, a plan was bought, an AI call was made — keyed to your account id, never to your email or
+        your name. Two things are deliberately outside it: the content of your posts, which is never sent to
+        PostHog, and <strong>readers of blogs published with Cedar Clerk, who are never counted this way at
+        all</strong> — blog statistics are our own, and are described in section 2.
+    </p>
+    <p>
+        You can change your answer at any time by clearing the <code>cedar_consent</code> cookie in your
+        browser, which brings the banner back.
+    </p>
+
+    <h2>5. Data retention &amp; deletion</h2>
     <p>
         We keep your data for as long as your account exists. Deleting your account removes your
         drafts and media from our storage. Backups are the exception, and they are worth stating plainly: a nightly copy of the database is kept for 14 days, an off-site copy of it for 30 days, and our hosting provider keeps a weekly whole-machine image for four weeks. Deleted content therefore survives in those backups until they age out, and we do not restore a backup in order to recover an account you asked us to delete.
     </p>
 
-    <h2>5. Your rights</h2>
+    <h2>6. Your rights</h2>
     <p>
         You can access, export (via the <code>.cedar</code> export, or a Markdown archive, from the editor),
         or delete your data at any time from Settings.
         If you are in the EU/EEA or the UK, you also have the right to ask us for a copy of your data, to correct it, to have it erased, to restrict or object to how we use it, and to complain to your local data protection authority. If you are in California, you have the right to know what we collect, to have it deleted, and not to be discriminated against for asking — we do not sell personal information, so there is nothing to opt out of. Write to cedarworks@mooexe.dev and we will answer within 30 days.
     </p>
 
-    <h2>6. Children's privacy</h2>
+    <h2>7. Children's privacy</h2>
     <p>The Service is not directed at children under 16, and we don't knowingly collect their data.</p>
 
-    <h2>7. Governing law</h2>
+    <h2>8. Governing law</h2>
     <p>This Policy is governed by the laws of the State of Oregon, United States.</p>
 
-    <h2>8. Changes to this Policy</h2>
+    <h2>9. Changes to this Policy</h2>
     <p>
         We may update this Policy from time to time. Material changes will be announced
         by email and by a notice in the app at least 14 days before they take effect.
     </p>
 
-    <h2>9. Contact</h2>
+    <h2>10. Contact</h2>
     <p>Questions about this Policy: cedarworks@mooexe.dev</p>
 </app-legal-page>

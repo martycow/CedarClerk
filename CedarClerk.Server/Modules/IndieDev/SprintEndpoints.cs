@@ -135,6 +135,7 @@ public static class SprintEndpoints
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
 
             return Results.Ok(new { documentId = draft.Id, draft.Title, doneCount = done.Count });
         });

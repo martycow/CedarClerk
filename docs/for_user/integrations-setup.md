@@ -221,6 +221,87 @@ Environment=Cedar__AdminEmail=cedarworks@mooexe.dev
 - `journalctl -u cedarclerk -n 30 --no-pager | grep "Admin rights"` — строка появляется один раз, при первой выдаче
 - в UI: меню аккаунта → пункт «Панель админа» виден только у этого аккаунта
 
+## 3c. Продуктовая аналитика — PostHog (EU). `T-153`, ADR-236
+
+Зачем: воронка «лендинг → регистрация → первая публикация» и то, где люди застревают. Восемь из
+десяти событий сервер пишет сам (`docs/product/METRICS.md` §4); провайдер нужен для двух оставшихся
+и для живого дашборда.
+
+Где взять ключ:
+
+1. Регистрация на **eu.posthog.com** — именно EU-регион, не US. Регион выбирается один раз при
+   создании аккаунта и потом не меняется, а `/privacy` называет его явно.
+2. Project Settings → **Project API Key** (начинается с `phc_`).
+
+Три строки в дроп-ин (`Cedar__` = `Cedar:`, двойное подчёркивание вместо двоеточия):
+
+```
+Environment=Cedar__Analytics__Enabled=true
+Environment=Cedar__Analytics__ProjectKey=phc_ваш_ключ
+Environment=Cedar__Analytics__Host=https://eu.i.posthog.com
+```
+
+`Host` можно не указывать — по умолчанию берётся EU. Без `Enabled=true` или без ключа аналитика
+выключена целиком: провайдер не регистрируется, баннер согласия не показывается, `/api/health` не
+отдаёт секцию `analytics`. Это же и есть режим для локального запуска и для self-hosted установки.
+
+**Project API Key публичный** — он и так уезжает в браузер внутри скрипта страницы, поэтому едет
+через `/api/health`, а не зашит в бандл. Секретом он не является; в отличие от Personal API Key,
+который здесь не нужен и который в конфиг класть нельзя.
+
+Проверка после рестарта:
+- `curl -s https://cedarclerk.mooexe.dev/api/health | grep -o '"analytics":[^,]*'` — секция есть
+- инкогнито-визит на `/welcome`: внизу слева баннер согласия; до нажатия «Принять» в Network нет
+  ни одного запроса на `eu.i.posthog.com`
+- после «Принять» — запрос на `/static/array.js`, затем события в PostHog → Activity
+
+## 3d. Вход через Google и Telegram. `T-003`, ADR-237
+
+Кнопки появляются на `/login` и `/register` только когда провайдер настроен. Не настроено ничего —
+двери выглядят ровно как раньше.
+
+### Google
+
+1. **console.cloud.google.com** → новый проект (или существующий).
+2. APIs & Services → **OAuth consent screen**: тип External, название, почта поддержки, домен
+   `cedarclerk.mooexe.dev`, ссылки на `/terms` и `/privacy`. Пока приложение в Testing, входить
+   могут только добавленные тестовые адреса — для закрытой беты этого хватает; для открытой нужен
+   Publish, а он требует верификации домена.
+3. Credentials → Create credentials → **OAuth client ID** → Web application.
+   - Authorized redirect URI: **`https://cedarclerk.mooexe.dev/signin-google`**
+   - Это путь по умолчанию у `AddGoogle`, он не совпадает с нашим `/api/auth/external/callback` —
+     колбэк провайдера и наш экран после него разные вещи.
+4. Client ID и Client secret — в дроп-ин:
+
+```
+Environment=Cedar__Auth__Google__ClientId=....apps.googleusercontent.com
+Environment=Cedar__Auth__Google__ClientSecret=GOCSPX-....
+```
+
+Обе строки обязательны: без любой из них схема не регистрируется и `/api/auth/external/google`
+отвечает 501.
+
+### Telegram
+
+Отдельных ключей не нужно — используется тот же `Cedar:BotToken`. Но **виджету нужен домен,
+привязанный к боту**, иначе он не отрисуется:
+
+```
+@BotFather → /setdomain → выбрать бота → cedarclerk.mooexe.dev
+```
+
+Без этого шага кнопка Telegram просто не появится, и никакой ошибки в консоли не будет — виджет
+молча откажется рисоваться на незарегистрированном домене.
+
+**Вход через Telegram не создаёт аккаунт** (ADR-237 п.4): у Telegram нет почты, а она нужна для
+приглашений, чеков и восстановления. Незнакомому Telegram отвечает 404 с объяснением. Привязка —
+по-прежнему в Настройках → Интеграции.
+
+Проверка после рестарта:
+- `curl -s https://cedarclerk.mooexe.dev/api/health | grep -o '"externalAuth":{[^}]*}'` — видно
+  `"google":true` и имя бота
+- на `/login` появились кнопка Google и виджет Telegram
+
 ## 4. Чеклист прокидывания на прод
 
 ```bash

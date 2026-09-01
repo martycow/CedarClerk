@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Localization;
 using CedarClerk.Server.Translation;
 using Microsoft.EntityFrameworkCore;
@@ -36,9 +37,23 @@ public static class GlossaryEndpoints
 
             var terms = await query
                 .OrderBy(t => t.Term)
-                .Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive, t.SourceTermId, t.ProjectId, t.UpdatedAt })
+                .Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive, t.SourceTermId, t.ProjectId, t.UpdatedAt, t.CreatedAt })
                 .ToListAsync();
-            return Results.Ok(terms);
+            // ADR-238 — one grouped read for the whole glossary, merged here; a term nothing uses
+            // has no rows and reads as zero.
+            var usedIn = await GlossaryUsage.CountsByTermAsync(db, uid);
+            // Clause 13 — computed from the rows already in hand, so a zero next to a term another
+            // term outspells says which one won instead of reading as "this word is nowhere".
+            var shadows = GlossaryUsage.ShadowsByTerm(terms
+                .Select(t => new GlossaryUsage.TermRow(t.Id, t.Term, t.Aliases, t.IsCaseSensitive, t.Language, t.ProjectId, t.CreatedAt))
+                .ToList());
+            return Results.Ok(terms.Select(t => new
+            {
+                t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive,
+                t.SourceTermId, t.ProjectId, t.UpdatedAt,
+                UsedInDrafts = usedIn.GetValueOrDefault(t.Id),
+                ShadowedByTermId = shadows.TryGetValue(t.Id, out var winner) ? winner : (Guid?)null,
+            }));
         });
 
         // T-040 — the Russian forms of a term, proposed rather than applied. Russian inflects, so
@@ -133,6 +148,7 @@ public static class GlossaryEndpoints
             };
             db.GlossaryTerms.Add(term);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForTermAsync(db, uid, term.Id);
             return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.ProjectId, term.UpdatedAt });
         });
 
@@ -155,6 +171,9 @@ public static class GlossaryEndpoints
             term.ProjectId = req.ProjectId;
             term.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
+            // ADR-238 — the aliases, the language or the scope may have moved, and each of those
+            // changes which documents this term is used in.
+            await GlossaryUsage.SyncForTermAsync(db, uid, term.Id);
             return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.ProjectId, term.UpdatedAt });
         });
 
@@ -163,6 +182,8 @@ public static class GlossaryEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             await db.DraftGlossaryExclusions
                 .Where(x => x.GlossaryTermId == id && x.OwnerId == uid).ExecuteDeleteAsync();
+            await db.GlossaryTermUsages
+                .Where(u => u.GlossaryTermId == id && u.OwnerId == uid).ExecuteDeleteAsync();
             var deleted = await db.GlossaryTerms.Where(t => t.Id == id && t.OwnerId == uid).ExecuteDeleteAsync();
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
@@ -172,7 +193,8 @@ public static class GlossaryEndpoints
         // Aliases are NOT translated — they cover one language's inflections and would come back
         // as noise in another. The image is copied: a picture is language-neutral.
         group.MapPost("/{id:guid}/translate", async (Guid id, TranslateTermRequest req, ClaimsPrincipal user,
-            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory,
+            ProductAnalytics analytics, CancellationToken ct) =>
         {
             if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
                 return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
@@ -203,7 +225,7 @@ public static class GlossaryEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(req.TargetLanguage, provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost) is { } refusal)
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost, analytics, "glossary_term") is { } refusal)
                 return refusal;
 
             IReadOnlyList<string> translated;
@@ -253,13 +275,15 @@ public static class GlossaryEndpoints
                 db.GlossaryTerms.Add(term);
             }
             await db.SaveChangesAsync(CancellationToken.None); // the work is done — don't let a disconnect discard it
+            await GlossaryUsage.SyncForTermAsync(db, uid, term.Id);
             return Results.Ok(new { term.Id, term.Term, term.Description, term.Aliases, term.ImageUrl, term.Language, term.UpdatedAt });
         });
         // ADR-062 — the whole-language sweep: every term of sourceLanguage into targetLanguage
         // for one quota call and one (chunked) provider call, instead of one per term. The
         // frontend still loops per target language, so quota and errors stay per-language.
         group.MapPost("/translate-all", async (TranslateAllRequest req, ClaimsPrincipal user,
-            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory,
+            ProductAnalytics analytics, CancellationToken ct) =>
         {
             if (req.SourceLanguage is null || !Languages.ContentLanguages.Contains(req.SourceLanguage))
                 return Results.BadRequest(new { error = $"Unsupported language: {req.SourceLanguage}" });
@@ -296,7 +320,7 @@ public static class GlossaryEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(req.TargetLanguage, provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost) is { } refusal)
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost, analytics, "glossary_bulk") is { } refusal)
                 return refusal;
 
             IReadOnlyList<string> translated;
@@ -359,6 +383,8 @@ public static class GlossaryEndpoints
                 }
             }
             await db.SaveChangesAsync(CancellationToken.None); // the work is done — don't let a disconnect discard it
+            // One pass over the documents for the whole language, not one per term.
+            await GlossaryUsage.SyncForTermsAsync(db, uid, upserted.Select(t => t.Id).ToList());
             return Results.Ok(new
             {
                 terms = upserted.Select(t => new { t.Id, t.Term, t.Description, t.Aliases, t.ImageUrl, t.Language, t.IsCaseSensitive, t.SourceTermId, t.UpdatedAt }),

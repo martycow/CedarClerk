@@ -158,6 +158,15 @@ a popover, is the shelf beside it.-->
                     <div class="right">{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</div>
                     }
                     <div class="row-actions">
+                        <!--T-256 — the shelf's selector. It is a control in this cluster and never
+                        the row's own click: the row is the door to the editor (ADR-163), and a
+                        click that sometimes opened and sometimes selected would break that.-->
+                        <button class="mini" (click)="toggleSelected(d, $event)" [class.on]="selectedId() === d.id"
+                                [title]="selectedId() === d.id ? t().drafts.actions.stopDescribing : t().drafts.actions.describe"
+                                [attr.aria-pressed]="selectedId() === d.id"
+                                [attr.aria-label]="selectedId() === d.id ? t().drafts.actions.stopDescribing : t().drafts.actions.describe">
+                            <app-icon name="info" size="sm"></app-icon>
+                        </button>
                         <!--Wave 2 item 10 — the evergreen mark, beside mark-template: opens the
                         small dialog with the flag and its bounds.-->
                         <button class="mini" (click)="openEvergreenDialog(d, $event)" [disabled]="busyId() === d.id" [class.on]="!!d.isEvergreen" [title]="t().drafts.actions.evergreen" [attr.aria-label]="t().drafts.actions.evergreen">
@@ -262,6 +271,12 @@ a popover, is the shelf beside it.-->
                     <div class="drafts-card-foot">
                         <span>{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</span>
                         <span class="row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                            <button class="mini" (click)="toggleSelected(d, $event)" [class.on]="selectedId() === d.id"
+                                    [title]="selectedId() === d.id ? t().drafts.actions.stopDescribing : t().drafts.actions.describe"
+                                    [attr.aria-pressed]="selectedId() === d.id"
+                                    [attr.aria-label]="selectedId() === d.id ? t().drafts.actions.stopDescribing : t().drafts.actions.describe">
+                                <app-icon name="info" size="sm"></app-icon>
+                            </button>
                             <button class="mini" (click)="openEvergreenDialog(d, $event)" [disabled]="busyId() === d.id" [class.on]="!!d.isEvergreen" [title]="t().drafts.actions.evergreen" [attr.aria-label]="t().drafts.actions.evergreen">
                                 <app-icon name="tree-evergreen" size="sm"></app-icon>
                             </button>
@@ -285,10 +300,85 @@ a popover, is the shelf beside it.-->
             }
         </app-shelf-panel>
 
+        <!--T-256 — the third column is exclusive (ADR-167, ADR-238 clause 7): the picked
+        document's facts, or the folder filter, never both. Tree view keeps neither: it shows
+        structure, and both filters already stand aside there.-->
+        @if (view() !== 'tree') {
+        @if (selectedDraft(); as d) {
+        <app-shelf-panel class="inspector" [title]="t().drafts.inspector.title"
+                         [count]="t().drafts.inspector.scope">
+            <app-button actions variant="rail" size="sm" [title]="t().common.close" (clicked)="selectedId.set(null)">
+                <app-icon name="x" size="xs"></app-icon>
+            </app-button>
+
+            <p class="insp-name">
+                @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
+                {{ d.title || t().drafts.untitled }}
+            </p>
+
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.state">
+                <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
+                    {{ status(d).label }}
+                </span>
+                @if (status(d).detail) {
+                <span class="insp-detail" [title]="status(d).detail">{{ status(d).detail }}</span>
+                }
+            </app-spec-row>
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.type"
+                          [value]="t().projects.docTypes[d.documentType]?.name ?? d.documentType"></app-spec-row>
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.languages">
+                @for (code of allLanguages(d); track code) {
+                <span class="draft-lang-badge" [class.is-stale]="d.staleLanguages.includes(code)"
+                      [title]="d.staleLanguages.includes(code) ? t().drafts.status.translationBehind(code.toUpperCase()) : ''">
+                    {{ code.toUpperCase() }}
+                </span>
+                }
+            </app-spec-row>
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.visibility"
+                          [value]="d.isPrivate ? t().drafts.inspector.private : t().drafts.inspector.public"></app-spec-row>
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.folder"
+                          [value]="folderName(d.folderId)"></app-spec-row>
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.series"
+                          [value]="seriesName(d.seriesId)"></app-spec-row>
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.tags">
+                @for (tag of tagList(d); track tag) { <span class="tag-chip-ro">#{{ tag }}</span> }
+                @if (!tagList(d).length) { <span class="insp-none">{{ t().drafts.inspector.none }}</span> }
+            </app-spec-row>
+
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.activity">
+                @if (hasActivity(d)) {
+                <span class="activity-metric" [title]="t().drafts.activity.views">
+                    <app-icon name="eye" size="xs"></app-icon>{{ d.viewCount }}
+                    @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
+                </span>
+                <span class="activity-metric" [title]="t().drafts.activity.reactions">
+                    <app-icon name="heart" size="xs"></app-icon>{{ d.reactionCount }}
+                    @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
+                </span>
+                } @else {
+                <span class="insp-none">{{ t().drafts.inspector.neverPublished }}</span>
+                }
+            </app-spec-row>
+            @if (d.blogPublishedAt) {
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.blogPublished"
+                          [value]="d.blogPublishedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
+            }
+
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.parent"
+                          [value]="parentTitle(d)"></app-spec-row>
+            @if (childCount(d)) {
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.children"
+                          value="{{ childCount(d) }}"></app-spec-row>
+            }
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.updated"
+                          [value]="d.updatedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
+            <app-spec-row scope="selection" [label]="t().drafts.inspector.created"
+                          [value]="d.createdAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
+        </app-shelf-panel>
+        } @else {
         <!--FI3.3: filtering only. Creating, renaming and deleting a folder live in the shared
         picker on every row, so it is no longer something only this page can do — and the same
         markup isn't maintained in two places.-->
-        @if (view() !== 'tree') {
         <app-shelf-panel class="folders" [title]="t().drafts.folders.title" [count]="folders().length">
             <nav class="folder-list" [attr.aria-label]="t().drafts.folders.filter">
                 <button type="button" class="folder-row" [class.is-on]="selectedFolder() === 'all'"
@@ -310,6 +400,7 @@ a popover, is the shelf beside it.-->
                 }
             </nav>
         </app-shelf-panel>
+        }
         }
     </div>
     }

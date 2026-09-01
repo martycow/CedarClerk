@@ -18,6 +18,7 @@ public static class DraftDeletion
     public static async Task CascadeAsync(CedarDbContext db, string ownerId, Guid draftId)
     {
         await db.DraftGlossaryExclusions.Where(x => x.DraftId == draftId && x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.GlossaryTermUsages.Where(x => x.DraftId == draftId && x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.DraftStatSeens.Where(x => x.DraftId == draftId && x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.DraftRevisions.Where(x => x.DraftId == draftId).ExecuteDeleteAsync();
         await db.DraftTranslations.Where(x => x.DraftId == draftId).ExecuteDeleteAsync();

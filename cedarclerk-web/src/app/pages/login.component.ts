@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { ExternalAuthService } from '../core/external-auth.service';
 import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
@@ -9,12 +10,14 @@ import { ButtonComponent } from '../bench/forms/button.component';
 import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
+import { ExternalAuthButtonsComponent } from '../shared/external-auth-buttons.component';
 
 @Component({
     selector: 'app-login',
     imports: [
         RouterLink, CedarLogoComponent, LangSwitchComponent,
         ButtonComponent, InputComponent, PaperCardComponent, IconComponent,
+        ExternalAuthButtonsComponent,
     ],
     templateUrl: 'login.component.html',
     styleUrls: ['login.component.css']
@@ -24,6 +27,13 @@ export class LoginComponent {
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     theme = inject(ThemeService);
+    private external = inject(ExternalAuthService);
+
+    // T-003 — the callback sent this person here because an account already holds the address the
+    // provider vouched for. The password is what proves it is the same person (ADR-237 clause 3);
+    // the link is added right after it is accepted.
+    readonly externalOutcome = this.route.snapshot.queryParamMap.get('external');
+    readonly linkPending = this.externalOutcome === 'link';
     t = inject(LocaleService).t;
 
     /** Where authGuard or the expiry interceptor was heading; the hub when nobody said. */
@@ -58,12 +68,24 @@ export class LoginComponent {
         if (outcome === 'ok') this.router.navigateByUrl(this.returnUrl);
     }
 
+    /** The provider buttons need the destination as a plain value, not the private accessor. */
+    get externalReturnUrl(): string { return this.returnUrl; }
+
+    /** Telegram signs in without leaving the page, so the door is what moves on afterwards. */
+    async afterExternalSignIn(): Promise<void> {
+        await this.auth.refresh();
+        void this.router.navigateByUrl(this.returnUrl);
+    }
+
     async submit() {
         this.busy.set(true);
         this.error.set('');
         const result = await this.auth.login(this.email, this.password);
         this.busy.set(false);
         if (result.ok) {
+            // Best effort, deliberately: the sign-in already succeeded, and failing to attach a
+            // convenience must not turn into a failed login.
+            if (this.linkPending) await this.external.linkPending();
             void this.router.navigateByUrl(this.returnUrl);
             return;
         }

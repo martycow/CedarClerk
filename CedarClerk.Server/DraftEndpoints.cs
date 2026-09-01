@@ -6,6 +6,7 @@ using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Ai;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Server.Email;
 using CedarClerk.Server.Translation;
 using Microsoft.AspNetCore.Identity;
@@ -684,6 +685,7 @@ public static class DraftEndpoints
                 };
                 db.Drafts.Add(draft);
                 await db.SaveChangesAsync();
+                await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
                 return Results.Ok(new { draft.Id, draft.Title });
             }
 
@@ -705,6 +707,7 @@ public static class DraftEndpoints
                 };
                 db.Drafts.Add(copy);
                 await db.SaveChangesAsync();
+                await GlossaryUsage.SyncForDraftAsync(db, uid, copy.Id);
                 return Results.Ok(new { copy.Id, copy.Title });
             }
 
@@ -1035,6 +1038,7 @@ public static class DraftEndpoints
             translation.SourceLanguage = draft.PrimaryLanguage;
             await DraftRevisionService.RecordAsync(db, id, lang, req.Title, req.CedarJson);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, id);
             return Results.Ok(new { translation.Language, translation.UpdatedAt, translation.SourceSnapshotJson });
         });
         
@@ -1045,7 +1049,8 @@ public static class DraftEndpoints
         // frontend polls GET /api/ai-jobs/{jobId}.
         groupBuilder.MapPost("/{id:guid}/translations/{lang}/auto", async (
             Guid id, string lang, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg,
-            IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs) =>
+            IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs,
+            ProductAnalytics analytics) =>
         {
             if (!Languages.IsContentLanguage(lang))
                 return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
@@ -1081,7 +1086,7 @@ public static class DraftEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(lang, provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiTranslateCost) is { } refusal)
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiTranslateCost, analytics, "translate") is { } refusal)
                 return refusal;
 
             var sourceTitle = draft.Title;
@@ -1163,6 +1168,7 @@ public static class DraftEndpoints
                 translation.SourceLanguage = scopedDraft.PrimaryLanguage;
                 await DraftRevisionService.RecordAsync(scopedDb, id, lang, result.Title, result.CedarJson, ct: ct);
                 await scopedDb.SaveChangesAsync(ct);
+                await GlossaryUsage.SyncForDraftAsync(scopedDb, uid, id);
 
                 return AiJobOutcome.Ok(new { translation.Language, translation.Title, translation.CedarJson, translation.UpdatedAt, translation.SourceSnapshotJson });
             }, Consts.Anthropic.AutoTranslateTimeout,
@@ -1181,7 +1187,8 @@ public static class DraftEndpoints
         // the AI call + persist move into a background job, response is 202 + a job id.
         groupBuilder.MapPost("/{id:guid}/ai-edit/{lang}/{kind}", async (
             Guid id, string lang, string kind, ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg,
-            IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs) =>
+            IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory, AiJobService jobs,
+            ProductAnalytics analytics) =>
         {
             if (!Languages.IsContentLanguage(lang))
                 return Results.BadRequest(new { error = $"Unsupported language: {lang}" });
@@ -1222,7 +1229,7 @@ public static class DraftEndpoints
 
             // Charged only once there is something to edit — the quota used to be spent before the
             // 404 above, so a doomed request still cost the user one of the day's AI calls.
-            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiTranslateCost) is { } aiRefusal)
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiTranslateCost, analytics, "edit") is { } aiRefusal)
                 return aiRefusal;
 
             IAiEditProvider? provider;
@@ -1287,6 +1294,7 @@ public static class DraftEndpoints
                 // is exactly the kind of change worth being able to look back at.
                 await DraftRevisionService.RecordAsync(scopedDb, id, lang, result.Title, result.CedarJson, ct: ct);
                 await scopedDb.SaveChangesAsync(ct);
+                await GlossaryUsage.SyncForDraftAsync(scopedDb, uid, id);
 
                 return AiJobOutcome.Ok(new { title = result.Title, cedarJson = result.CedarJson, updatedAt = DateTime.UtcNow });
             }, Consts.Anthropic.RequestTimeout,
@@ -1316,17 +1324,23 @@ public static class DraftEndpoints
                 await db.DraftGlossaryExclusions
                     .Where(x => x.DraftId == id && x.OwnerId == uid && x.Language == lang).ExecuteDeleteAsync();
                 await db.DraftRevisions.Where(r => r.DraftId == id && r.Language == lang).ExecuteDeleteAsync();
+                await GlossaryUsage.SyncForDraftAsync(db, uid, id);
             }
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
         
-        groupBuilder.MapPost("/", async (SaveDraftRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        groupBuilder.MapPost("/", async (SaveDraftRequest req, ClaimsPrincipal user, CedarDbContext db,
+            ProductAnalytics analytics) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = new Draft { Title = req.Title, CedarJson = req.CedarJson, OwnerId = uid };
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, req.Title, req.CedarJson);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
+            // Only the empty-handed create, not the copy, the import or the example project: this is
+            // the activation step "did they reach the editor", and a seeded document did not.
+            analytics.Track(uid, Consts.Analytics.Events.DraftCreated);
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id });
         });
         
@@ -1353,6 +1367,9 @@ public static class DraftEndpoints
             await DraftRevisionService.RecordAsync(db, id, draft.PrimaryLanguage, req.Title, req.CedarJson);
             await SyncDocumentLinksAsync(db, uid, id, req.CedarJson);
             await db.SaveChangesAsync();
+            // ADR-238 — the text moved, so where each glossary term is used moved with it. After the
+            // save, because the scan reads the stored document.
+            await GlossaryUsage.SyncForDraftAsync(db, uid, id);
             return Results.Ok(new { draft.Id, draft.UpdatedAt });
         });
 
@@ -1421,6 +1438,7 @@ public static class DraftEndpoints
             // The primary document just changed wholesale — its derived links change with it.
             await SyncDocumentLinksAsync(db, uid, id, draft.CedarJson);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, id);
             return Results.Ok(new { draft.PrimaryLanguage, draft.UpdatedAt });
         });
 
@@ -1513,6 +1531,7 @@ public static class DraftEndpoints
 
             await DraftRevisionService.RecordAsync(db, id, lang, revision.Title, revision.CedarJson, DraftRevisionService.Kinds.Restore);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, id);
             return Results.Ok(new { language = lang, title = revision.Title, cedarJson = revision.CedarJson, updatedAt = restoredAt });
         });
         
@@ -1741,6 +1760,7 @@ public static class DraftEndpoints
             var draft = new Draft { Title = pkg.Title, CedarJson = rewrittenJson, OwnerId = uid };
             db.Drafts.Add(draft);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
 
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id });
         }).DisableAntiforgery();
@@ -1904,6 +1924,7 @@ public static class DraftEndpoints
             var draft = new Draft { Title = title, CedarJson = rewrittenJson, OwnerId = ownerId };
             db.Drafts.Add(draft);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, ownerId, draft.Id);
 
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id, unmatchedImages = unmatched });
         }

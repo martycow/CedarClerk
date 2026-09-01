@@ -1,13 +1,14 @@
 ---
 owner: marty
-last_verified: 2026-08-24
-source_of_truth_for: what is in progress now, decisions waiting on Marty, the live-verification checklist
+last_verified: 2026-09-01
+source_of_truth_for: what is in progress now, decisions waiting on Marty, which verification checks are still outstanding (how to run them: docs/tech/QA.md)
 guard: none
 ---
 
 # Tasks
 
-Short horizon: what is in progress, what waits on Marty, and the live-verification checklist.
+Short horizon: what is in progress, what waits on Marty, and which verification checks are still
+outstanding — **how** to run each one is `docs/tech/QA.md` (T-187), the permanent checklist.
 Current status: this file's §Notes below; open tasks: the board in `docs/tasks/BACKLOG.md`; history: `docs/tasks/CHANGELOG.md`. (Phase-by-phase status through Phase 13 used to live in a separate ROADMAP doc, retired 24.08.2026 as a near-duplicate of CHANGELOG — see `docs/archive/roadmap-phases-0-13.md`.)
 
 ## Now
@@ -25,66 +26,57 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Waiting on Marty
 
-**The UI V2 port is finished and cannot go further without him.** Two rows, in order:
+`T-234` and `T-235` are gone from here: `Consts.CurrentVersion` reads 0.20.0, the port is merged and
+deployed, and `styles/_forest.scss` no longer exists in the tree. What is still his:
 
-- [ ] Version, tag, merge and deploy (`T-234`) — bump `Consts.CurrentVersion` to 0.13.0, tag the commit with the bare number, merge `UI_V2` into master and deploy. Deliberately not done by the port: the version number is Marty's call, and `cedar deploy` refuses anything but master with a clean tree, so the branch cannot ship from where it is. Everything a checker can answer is green after the fidelity pass too — 1002 backend, 442 frontend, icons, contrast, density, and the smoke subset the isolated stack can run — but **nobody has opened any of the ported screens**, and the verification map's marks are reset for all of them, so the eye-checks in the section below are the real gate in front of this one. Before any of it: `.\Scripts\install-cli.ps1` — the installed `cedar` predates the Icon inventory phase, so `cedar test` on this machine runs one phase short until it is reinstalled #release #decision P1
-- [ ] Delete the neutralised forest partial (`T-235`) — 1 229 lines that compile into the bundle and match nothing, the skin attribute never being set. A deletion that size is a `.claude/rules/destructive-operations.md` event, so it waits for the word. Independent of `T-234`: it changes nothing that renders, and until it runs the contrast census reports 80 blocks of dead forest rules that no longer describe anything the app paints #design P2
 - [ ] Narrow-screen designs (`T-236`) — the one thing the port cannot take from the kit: the design system states `1440x900` and nothing else, so the shell ships with no width breakpoint of its own (ADR-147, Marty's answer to `Q-23`). The brief is written — `docs/design/bench-responsive-prompt.md`, nine questions — and the run is Marty's to make; paste fresh token values from `styles.scss` into its marked block first. Blocks `T-034` and `T-237` #design #decision P1
+- [ ] The drawer lip and the shelf-panel header — both write `--rail-ink` on `--shelf-frame`, whose light stop is `#B68B60`: the lip's title measures 2.51:1 by day and its summary 1.79:1, and no flat ink clears that ramp end to end, so this is which material those two bands are made of rather than which ink they take. Found while settling Stage 4 and left for the decision. It sat under §Live verification until 01.09, which was the wrong shelf — nobody can check it, it has to be decided #design #a11y #decision P1
 - [ ] Show Terms/Privacy to a lawyer — before public registration opens; the texts are filled (13.08), no lawyer has seen them — a gate in `docs/product/BUSINESS.md` §2. The privacy text also needs a line about the waitlist email (ADR-135) before that pass #legal P1
 
 ## Live verification
 
-- [ ] Teams end to end (T-358, 01.09) — make a team, invite a real address, accept from a second account, hand a project to the team and confirm the second account reaches its canvas and nothing else; then restrict them (the board goes read-only), ban them (the project disappears from their hub and the address cannot be re-invited), lift the ban and confirm the role they had comes back. Also: a per-project viewer on a project whose team makes them an editor stays a viewer #collaboration P1
-- [ ] The invited stranger's way in (T-304, 01.09) — invite an address with no account, open the mailed link in a private window, follow Register from the login bounce: the invite-code field is gone, the account is created, and the invitation opens straight after. Needs Resend configured — this is the same run as the never-rendered `EmailTexts.ProjectInviteBody`, and now `TeamInviteBody` too #collaboration #email P1
-- [ ] Shared with me (T-302, 01.09) — as a member: the hub's fourth tile lists the project, its card opens the canvas, and the count is right after a second invitation. As an owner: the tile is empty and says so #canvas #ui P1
-- [ ] Project and export presets (T-331, 01.09) — a project preset appears in New project and builds what it describes (type, first document, its title, the description); editing the fields after picking it still wins. An export preset fills step 2 of the Export modal in one pick, and a language the post does not have is ignored rather than ticked #ui P2
-- [ ] Post card thumbnails (T-337, 01.09) — on an account with existing posts: the first listing fills covers in (50 at a time), a post with no picture keeps its type icon, and adding or removing the first image changes the plate on the next listing #postsmanager #ui P2
-- [ ] Stats sparklines (T-338, 01.09) — on a source with a real series: the line matches the chart's shape; under three readings there is no line; a flat series draws on the middle, not the floor #stats #ui P3
-- [ ] The asset window on cover and gallery (T-353, 01.09) — the project logo and the showcase gallery both open the picker, uploading through it works, and the gallery appends without eating a hand-typed URL #media #ui P2
-- [ ] Stars payment by a third party (T-359 finding 7, 01.09) — pay a credits invoice from a Telegram account that is not the payload account's: the credits land on the right account and the reply says nothing about its balance or expiry. Marty only — it costs real Stars #telegram #billing P3
-- [ ] Onboarding door (T-328, 31.08) — on a fresh account: register lands on /onboarding, guarded routes bounce there until a display name is saved, the blog address shows read-only (T-329: shown, never assigned), returnUrl survives the detour; an existing account without a display name goes through it once #growth P1
-- [ ] Language paywall (T-350, 31.08) — on Free: the editor's + menu locks everything but EN/JA (silver), the glossary form's locked options are disabled and labeled, and a direct API PUT of a new RU translation answers 403; an existing RU translation stays editable; on Pro everything unlocks #billing P1
-- [ ] Settings tabs (T-348, 31.08) — four tabs; X OAuth callback lands on Integrations, the X credits note crosses to Billing → credits, the account menu still opens Account #settings P2
-- [ ] AI credits end to end (T-152, 31.08) — on Pro with 0 credits: an AI translate answers the top-up message (402), buying a pack unblocks it, the ledger shows the `ai` charge; a Pro+ payment lands 30 credits (`proplus-monthly` in the ledger); a trial payment lands none; the 21st call in a day answers 429 whatever the balance #billing P1
-- [ ] The four presets (31.08) — New project offers Empty/Blog/Game/Product, Empty's first note has no skeleton, an old jam/prototype project still names its type on the dashboard #ui P2
-- [ ] Plan locks by eye (T-349, 31.08) — on a Free account: silver locks on the signature field/Save and slot 3, gold locks on every AI control (settings translate buttons, editor retranslate/translate-all/auto-translate, right-click AI entries, glossary translate×2, form preset language chip); every locked button inert; on Pro the signature unlocks while AI stays gold; on Pro+ nothing wears a lock #billing P1
+**How to run any of these is in `docs/tech/QA.md`** (T-187), which is the permanent checklist. This
+section is only the list of what is outstanding *now*: a row leaves it when the check is done, not
+when the feature ships, and the behaviour stays in QA.md for the next time someone touches that
+surface.
 
-Code is written and covered by tests, but never checked by hand or on a device. The UI V2 rows below stay Marty's after the fidelity pass: the audit looked through a capture script, not a person, and its before/after shots live in the session scratchpad only — untracked, so `cedar run` is the way to see them.
+- [ ] Sprint S-15 by eye (01.09) — five things in one pass. **The editor's inspector**: retype a post's blog address in the slug row (a taken one refuses in place, under the row, and the field shows the stored answer back rather than the keystrokes); the media source, the link href and the Location rows no longer look typeable, while alt and Type still do and each draws exactly one box, not a box inside a box. **A picture's own facts**: select one inserted today and read resolution, size and library file; select one inserted before this sprint — no `assetId` on the node — and confirm they still fill in from the media path; select an image pasted from an external URL and confirm the three rows are absent rather than blank. **`/drafts`**: the (i) button describes the row on the shelf while the row's own click still opens the editor, the Folders shelf comes back when nothing is selected, and neither shelf appears in tree view. **Admin**: a user card opens the modal, Escape closes it, and Delete account replaces it instead of stacking on it. **Glossary**: a term used in documents reads a real count, and two terms of the same scope sharing a spelling make the loser say so in rust rather than read `0` #editor #screens #glossary P1
+- [ ] Sprint v0.2.0 by eye (01.09) — none of it has been opened by a person: teams end to end (T-358), the invited stranger's way in (T-304), Shared with me (T-302), project and export presets (T-331), post card thumbnails (T-337), stats sparklines (T-338), the asset window on cover and gallery (T-353), and a Stars payment by a third party (T-359 — real Stars, Marty alone). QA.md §Collaboration, §UI presets and the shell, §Media and assets, §Stats and analytics, §Telegram #collaboration #ui P1
+- [ ] The 31.08 batch by eye — the onboarding door (T-328), the language paywall (T-350), Settings' four tabs (T-348), AI credits end to end (T-152), plan locks (T-349) and the four project presets. QA.md §Auth and onboarding, §Billing and plans, §UI presets and the shell #billing #settings P1
+- [ ] Blocked on configuration only Marty can create — sign in with Google and Telegram (T-003: an OAuth client plus `@BotFather /setdomain`), analytics end to end (T-153: the PostHog project key), and every check that sends mail (Resend, which is also the only run that ever renders `EmailTexts.ProjectInviteBody` and `TeamInviteBody`). Until each key exists the feature draws nothing at all, so these cannot fail — they cannot start. `docs/for_user/integrations-setup.md` §3c/§3d says where each one comes from #auth #analytics #email P1
 
-- [ ] The reference board with two real people — the two-client run that exists was a Playwright driver on one machine, and it only ever added a **note**, which is exactly how the image hole (ADR-219) survived to the review. Wanted: two browsers on two machines, an image dropped and a library image picked, a frame around them, a link, a resize, fit-to-content on a board holding one item; then the failure half — kill the server under an open board and watch the offline overlay and Retry, demote a live editor to viewer, delete the board someone else is drawing on #canvas P1
-- [ ] The invitation, end to end, with mail configured — `EmailTexts.ProjectInviteSubject/Body` has never rendered: Resend is unconfigured in the isolated stack, so every run took the designed fallback and read the URL out of the response. Send one to a real address, and to an address with no account — the second is `T-304` and should be watched failing before it is fixed #canvas #email P1
-- [ ] UI V2 palette by eye — `cedar run` and walk both themes: the state washes, the avatar initials in the editor and the admin list, the blog's channel avatar, and the focus ring on paper and on rail. The ring and the density floors are no longer static-only — both were measured in real Chromium against the built bundle — but a measurement is not a look, and nobody has looked #design P1
+Code is written and covered by tests, but never checked by hand or on a device. The UI V2 row below
+stays Marty's after the fidelity pass: the audit looked through a capture script, not a person, and
+its before/after shots live in the session scratchpad only — untracked, so `cedar run` is the way to
+see them.
+
 - [ ] UI V2 ported screens by eye — **this is now most of the app and none of it has been opened.** Stage 5's fourteen: the three hub-like screens (an empty planner, a deckled "No sprint" pile, a released build against an unreleased one, a project with a cover and one without); the four stats-like boards (a kind at zero losing its badge, an inspector shelf standing where a modal used to cover the list, the drafts Folders shelf and its withdrawal in tree view, the admin journal as log lines); the two writer-like ones (the manager's inspector on a selection and on the document, the per-post growth chart's three series and its leaf legend, the glossary inspector with and without a term); the task board's ruler readout and its clearing on leave; and the four doors — login, register, terms, privacy — in both themes. Then Stage 4's three, which were already unopened. Stats: no source selected, one source versus several, a dried leaf, the table view, and the axis shortening when a young channel is ticked. The hub: no projects, no documents, no sprint, no tasks, an archived project. The writer: the strip at one row, at two, and with the captions dropped; the inspector on a selection and on the document; the outline against a long document, both directions of the selection sync. Their verification-map marks are reset for this reason #design P1
-- [ ] The drawer lip and the shelf-panel header — both write `--rail-ink` on `--shelf-frame`, whose light stop is `#B68B60`: the lip's title measures 2.51:1 by day and its summary 1.79:1, and no flat ink clears that ramp end to end, so this is which material those two bands are made of rather than which ink they take. Found while settling Stage 4 and left for the decision #design #a11y #decision P1
-- [ ] UI V2 shell by eye — `cedar run` and walk every authenticated screen inside it: which hook lights on which route and what the crumb says, the dots menu (theme, Appearance, Glossary, Admin, `/dev/*`), the drawer lip opening onto the journal, the ruler showing the editor's counts and blank everywhere else, and the four routes that stay outside the shell. Static checks cover the CSS; the route table and the crumbs are behaviour and nobody has watched them #design P1
-- [ ] cedar restart — the CLI's only destructive command, never run (drops the blog together with the app for seconds; run when it costs nothing) #cli P2
-- [ ] cedar build --installer and cedar deploy --desktop — not run end-to-end since the pipeline moved to C# (ADR-119); installer build and Cloudflare distribution were verified only on the old pipeline (0.10.7–0.10.9) #desktop P2
-- [ ] Desktop installer on a clean machine — T-121: builds and is verified on artifacts, never executed #desktop P2
-- [ ] Desktop after ADR-117 — the list in `docs/tech/DESKTOP.md` §Risks: cloud `/projects` without the price table, a scan of a real Unity/Blender folder, the orientation of a real `.blend` preview, cancelling mid-preview-pass and resuming, zero processes after closing the window, `curl` to the agent without a token → 401 #desktop P2
-- [ ] Bluesky post with an image — Marty only: `uploadBlob` against real bsky.social (list building and text are unit-tested, ADR-109) #publishing P2
-- [ ] flush-on-hide on a real iPhone — remainder of T-018 (the 29.07 incident was on iOS; Safari kills a tab differently than desktop) #mobile P2
-- [ ] Save guards + restore from history — remainder of T-060: see the wipe-save refusal, "restore stored" and a version rollback by hand; confirm a heavy honest edit does not false-positive #editor P2
-- [ ] OG previews (T-174) — via @WebpageBot or opengraph.xyz with `?v=2` on the URL (Telegram caches the old scrape): public post — full card with image and description; semi-public — title + fallback only; private and the gate — nothing. `/og-default.png` serves from the blog host #blog P1
-- [ ] EXIF stripping (T-175) — upload a phone photo with GPS, download it back from `/media/`, confirm the coordinates are gone (any EXIF viewer); the Telegram derivative too #media #security P1
-- [ ] Paste/drop into the editor (T-177) — a screenshot from the real clipboard (Win+Shift+S → Ctrl+V) and a multi-file drag&drop; the progress panel appears, files land at the drop point #editor P1
-- [ ] Media library (T-177) — insert from the library → publish → media renders on the blog and Telegram; deleting a used asset → 409 with post titles; a free one — the file AND the `_tg` derivative disappear from disk #media P1
-- [ ] The `[[` trigger on a Russian layout (T-181) — how the suggester behaves when `[` needs the Latin layout; if unreachable from Russian, an alternative is needed (a button/command) #editor P1
-- [ ] A series of 3 posts (T-178) — the `/series/{slug}` page, prev/next on posts, "Part N of M"; a private unlisted post does not shift a stranger's numbering #blog P1
-- [ ] The tree (T-181) — moving via the "Move under…" menu, up/down among siblings, editor breadcrumbs open the document, the backlinks chip counts correctly after saving with a `[[` link #editor P1
-- [ ] Discord webhook (T-161) — connect a real channel webhook in Settings → Integrations, publish a post with an image: the announcement lands, the blog link unfurls into a card with the OG image, no @everyone ping even if the text contains one #integrations P1
-- [ ] Sprint → devlog (T-158) — on a real sprint with done/open tasks and a released build: the "Devlog draft" button on the planner card assembles the three sections in the document's language and opens the editor #editor P1
-- [ ] Onboarding (T-160) — on a fresh account: "Create an example project" from the empty `/projects` builds Cedar Quest whole (board, sprint, build, devlog), and a new ordinary project's starter document opens with its skeleton in the UI language #growth P1
-- [ ] Showcase page (T-159) — enable the public page in project settings, mark two tasks public: `/games/{slug}` shows cover, links, the devlog feed (private-listed posts locked, unlisted absent) and the roadmap; archiving the project 404s the page #blog P1
-- [ ] Landing + waitlist (T-154) — after deploy: an incognito visit shows the EN devlog-first page (RU browser gets RU), the waitlist form accepts an email and swaps to the done-line, the row lands in `WaitlistEntries` (`cedar db`) #growth P1
-- [ ] Old unverified small things — once each, no rush: incremental re-translation preserving manual edits; DeepL's uk/be/ka refusal with a clear message; the glossary tooltip on a live published post; per-language cross-links; tag rename/delete; audit paging past page one; Russian wording screen by screen #misc P3
 
 ## Notes
 
+- **T-003 (sign in with Google/Telegram) is built but not configured**: same shape as the analytics
+  row below — nothing is registered without credentials, and both doors draw no provider button at
+  all, so production looks unchanged until Marty creates the Google OAuth client and runs
+  `@BotFather /setdomain`. Apple and Discord stay on T-003; Apple's four costs are written on that
+  row now rather than discovered later.
+- **T-153 (analytics) is built but not configured**: the code is on master and off by default —
+  without `Cedar:Analytics:Enabled` and a project key the provider is never registered, no banner is
+  shown and `/api/health` carries no `analytics` section. Turning it on is three lines in the systemd
+  drop-in plus a PostHog EU account (`docs/for_user/integrations-setup.md` §3c), and it is Marty's to
+  do: the account is his. Until then nothing is being measured, which is the honest state and not a
+  defect. `/privacy` already names PostHog — it is dated 1 September 2026 and goes to the lawyer with
+  the rest of the text under the `BUSINESS.md` §2 gate.
 - Production: **0.20.0 on the droplet, deployed 01.09.2026**, `LIVE` = `4755566`, `LIVE-PREV` = `95fa976`. Everything that had been queued since 0.12.0 is live: the `UI_V2` port and fidelity pass, multitenancy (ADR-206…213), the showcase site and screen, the reference board (ADR-217…219), the 0.17.0 maintainer batch, Waves 1–2, the dialogue tool, and sprint v0.2.0. **The `95fa976` project-frame design (ADR-234 as it was then) was live for three hours and this deploy removed it** — reverted on master by Marty's call, recoverable from the reflog. `LIVE`/`LIVE-PREV` never go to origin (the local-tag rule in CLAUDE.md); the `0.20.0` version tag is local so far.
 - **The version string can no longer tell two builds apart**: the deploy before this one also called itself 0.20.0, so the health check's version match proved nothing. What proved the swap was `GET /api/teams` answering 401 instead of 404. Bump `Consts.CurrentVersion` before the next deploy, or the same blind spot returns.
 - Sprint v0.2.0 is **closed on master (01.09.2026)**: T-331/T-337/T-338/T-350/T-353/T-358/T-359/T-361
   are done, and T-358 closed T-301/T-302/T-304 with them (CHANGELOG 01.09, ADR-234/235). Three
   migrations rode along — `BotKnownChatAdminsSyncedAt`, `DraftCoverImage`, `AddTeams`. Every eye-check
   the sprint earned is in §Live verification above and **none of it has been done**.
-- On `master`; `showcase_menu_and_layout` is merged in and no branch is active. `Consts.CurrentVersion` reads 0.17.0, the whole 0.17.0 session (ADR-220…222, CHANGELOG 29.08) sits **uncommitted** in the working tree, and nothing is tagged. The `UI_V2` port is merged into master and its branch rows are closed.
+- **Sprint S-15 (ADR-238) is on `master` and uncommitted**, together with the analytics and
+  external-sign-in work of the same day (ADR-236/237): T-239, T-240, T-256, T-257 and T-260 are
+  built, T-270 was found already shipped and closed as such, and T-187/T-198 landed
+  `docs/tech/QA.md` and `docs/archive/incidents.md`. One migration, `AddGlossaryTermUsage`, add-table
+  only. **Not deployed, and `Consts.CurrentVersion` still reads 0.20.0** — the note above about a
+  version string that cannot tell two builds apart applies to the next deploy as written.
+- On `master`; `showcase_menu_and_layout` is merged in and no branch is active. The `UI_V2` port is merged into master and its branch rows are closed.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.

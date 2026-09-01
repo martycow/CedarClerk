@@ -62,6 +62,8 @@
             {{ busy() ? '…' : t().register.submit }}
         </app-button>
 
+        <app-external-auth-buttons [returnUrl]="externalReturnUrl" (signedIn)="afterExternalSignIn()" />
+
         <div class="auth-footer">{{ t().register.haveAccount }} <a routerLink="/login">{{ t().register.login }}</a></div>
         <div class="auth-footer muted">{{ t().register.legalPrefix }} <a routerLink="/terms">{{ t().register.legalTerms }}</a> {{ t().register.legalAnd }} <a routerLink="/privacy">{{ t().register.legalPrivacy }}</a></div>
 

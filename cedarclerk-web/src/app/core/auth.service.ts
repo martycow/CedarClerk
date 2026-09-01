@@ -7,6 +7,10 @@ import { LocaleService, UiLang } from './i18n/locale.service';
 import { FREE_CONTENT_LANGUAGES } from './languages';
 
 interface MeResponse {
+    // The account key the server writes every product event against (ADR-236). Read here so the
+    // browser can name the same person the server does; without it the client's half of the signup
+    // funnel and the server's half describe two different people.
+    id: string;
     // Phase 13 — which optional modules this installation runs (ADR-101). Optional in the type
     // because an older server simply omits it, and an absent module must read as "off".
     modules?: { indieDev?: boolean };
@@ -42,6 +46,7 @@ export class AuthService {
     private router = inject(Router);
     private locale = inject(LocaleService);
 
+    readonly userId = signal<string | null>(null);
     readonly userEmail = signal<string | null>(null);
     /** This account's blog, as the server resolves it. Null until a name is picked. */
     readonly blogUrl = signal<string | null>(null);
@@ -192,6 +197,7 @@ export class AuthService {
     }
 
     private applyMe(me: MeResponse): void {
+        this.userId.set(me.id);
         this.userEmail.set(me.email);
         this.blogUrl.set(me.blogUrl ?? null);
         this.emailConfirmed.set(me.emailConfirmed ?? true);
@@ -238,6 +244,7 @@ export class AuthService {
     }
 
     private clearSession(): void {
+        this.userId.set(null);
         this.userEmail.set(null);
         this.blogUrl.set(null);
         this.createdAt.set(null);

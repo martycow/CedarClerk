@@ -1,9 +1,10 @@
 // What the inspector may say about the selected block (ADR-159 clause 6).
 //
-// Every field here is read off the node's own attributes. The kit's image panel also shows a
-// resolution, a byte size and the asset folder the file came from; a TipTap image node carries
-// none of the three and no client pass produces them, so they are absent rather than blank — an
-// empty row would assert the property exists and is unfilled.
+// Every field here is read off the node's own attributes. Resolution, byte size and the originating
+// file are properties of the file, not of the document, so they are never copied onto a node — a
+// stored copy goes stale the moment the bytes change. The node carries `assetId` and the shelf asks
+// the server for the rest (ADR-238 clause 3); a node with neither an id nor a resolvable media path
+// gets no such rows at all, since an empty row would assert the property exists and is unfilled.
 
 export type SelectionKind =
     | 'image' | 'video' | 'audio' | 'youtube' | 'carousel' | 'collage'
@@ -31,6 +32,8 @@ export interface SelectionSpec {
     text?: string;
     /** The one property the document can be wrong about: media with no alt text. */
     altMissing?: boolean;
+    /** ADR-238 — the Asset this media came from, when the node was inserted knowing it. */
+    assetId?: string;
 }
 
 const KINDS: Record<string, SelectionKind> = {
@@ -52,12 +55,27 @@ export function fileNameOf(src: string): string {
     return tail || withoutQuery;
 }
 
+/**
+ * The `Asset.LocalPath` behind a media src, or null when the src is not one of ours. This is what
+ * lets a document written before `assetId` existed still answer: `/media/{path}` is the shape the
+ * library has always inserted, so the path is a second key into the same row.
+ */
+export function mediaPathOf(src: string | undefined | null): string | null {
+    if (!src) return null;
+    const withoutQuery = src.split(/[?#]/)[0];
+    const at = withoutQuery.indexOf('/media/');
+    if (at === -1) return null;
+    return withoutQuery.slice(at + '/media/'.length) || null;
+}
+
 export function describeSelection(node: NodeLike | null): SelectionSpec | null {
     if (!node) return null;
 
     const spec: SelectionSpec = { kind: KINDS[node.typeName] ?? 'block', typeName: node.typeName };
     const src = str(node.attrs['src']);
     if (src) spec.source = fileNameOf(src);
+    const assetId = str(node.attrs['assetId']);
+    if (assetId) spec.assetId = assetId;
     const caption = str(node.attrs['caption']);
     if (caption) spec.caption = caption;
 

@@ -373,6 +373,48 @@
     margin-right: 3px;
 }
 
+/* ---------- Draft inspector (T-256) ----------
+   The shelf shares its column with the folder filter, so nothing here places itself — the two
+   panels are alternatives, not neighbours. */
+
+/* Which document the sheet describes. Reading matter on the shelf's paper sheet, so it takes
+   paper's floor rather than chrome's (ADR-159 clause 8). */
+[data-surface="paper"] .insp-name {
+    margin: 0 0 var(--space-2);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text);
+}
+
+/* Everything else on this shelf is projected into a spec row, and a spec row is chrome — the
+   table's own --fs-caption would be a paper measurement standing on a chrome band. */
+[data-surface="chrome"] .insp-detail,
+[data-surface="chrome"] .insp-none,
+[data-surface="chrome"] .status-badge,
+[data-surface="chrome"] .draft-lang-badge,
+[data-surface="chrome"] .tag-chip-ro,
+[data-surface="chrome"] .activity-metric {
+    font-size: var(--text-chrome-sm);
+}
+
+.insp-detail {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--t2);
+}
+
+.insp-none { color: var(--t3); }
+
+/* A translation that predates the last edit of its source — the same fact the status badge states
+   for the document as a whole, said per language. */
+.draft-lang-badge.is-stale {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
 /* ---------- Folders shelf ---------- */
 .folder-list {
     display: flex;

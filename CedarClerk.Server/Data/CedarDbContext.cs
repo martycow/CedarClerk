@@ -44,6 +44,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<DraftGlossaryExclusion> DraftGlossaryExclusions => Set<DraftGlossaryExclusion>();
+    public DbSet<GlossaryTermUsage> GlossaryTermUsages => Set<GlossaryTermUsage>();
     public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();
     public DbSet<FormPreset> FormPresets => Set<FormPreset>();
     public DbSet<PostInvite> PostInvites => Set<PostInvite>();
@@ -325,6 +326,10 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<DraftGlossaryExclusion>()
             .HasIndex(x => new { x.DraftId, x.GlossaryTermId, x.Language })
             .IsUnique();
+        // ADR-238 — read from the term's side ("used in how many"), written from the draft's side
+        // (one save rewrites that document's whole set), so both ends are indexed.
+        builder.Entity<GlossaryTermUsage>().HasIndex(u => new { u.OwnerId, u.GlossaryTermId });
+        builder.Entity<GlossaryTermUsage>().HasIndex(u => new { u.OwnerId, u.DraftId });
         // The project list query: this owner's projects, active ones first by their own order.
         builder.Entity<Project>().HasIndex(p => new { p.OwnerId, p.ArchivedAt });
         // "What is in this project" — the dashboard's only real question, and the one the drafts
@@ -458,6 +463,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<FormPreset>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<GameTask>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<GlossaryTerm>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<GlossaryTermUsage>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Payment>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Project>().HasQueryFilter(e => e.OwnerId == TenantId);
         // OwnerId here is the project owner, not the invitee — a membership is the owner's row about

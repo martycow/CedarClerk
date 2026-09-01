@@ -152,6 +152,7 @@ public static class BuildEndpoints
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
 
             // Linked, so the build and its changelog find each other afterwards from either side.
             await ProjectLinks.AddAsync(db, uid, build.ProjectId, LinkTargets.Build, build.Id, LinkTargets.Document, draft.Id);

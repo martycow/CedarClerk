@@ -113,10 +113,73 @@ public static class Consts
         public const string ProviderKeyCfg = "Cedar:Translate:Provider";
 
         public const string ViewedCookiePrefix = "cedar_viewed_";
+
+        // Consent for Analytics.Events, one cookie for both surfaces: the landing is server-rendered
+        // and the app is the SPA, so a value the server can read is the only thing both can agree on.
+        public const string ConsentCookie = "cedar_consent";
+        public const string ConsentGranted = "granted";
+        public const string ConsentDenied = "denied";
         
         public const string PrivateAccessCookiePrefix = "cedar_access_";
         
         public const string UnknownGeo = "??";
+    }
+
+    /// <summary>
+    /// Signing in with somebody else's account (T-003, ADR-237). Telegram is not here: it is not
+    /// OAuth, it carries no email, and it is already verified by <see cref="TelegramLoginVerifier"/>.
+    /// </summary>
+    public static class ExternalAuth
+    {
+        public const string GoogleClientIdCfg = "Cedar:Auth:Google:ClientId";
+        public const string GoogleClientSecretCfg = "Cedar:Auth:Google:ClientSecret";
+
+        /// <summary>The Identity login-provider name; also what the frontend puts in the URL.</summary>
+        public const string Google = "Google";
+
+        /// <summary>
+        /// Where the callback sends somebody it could not sign in, with the reason. Both are SPA
+        /// routes: the server never renders a page here, it only decides which one applies.
+        /// </summary>
+        public const string CompleteRoute = "/auth/complete";
+        public const string LoginRoute = "/login";
+
+        /// <summary>
+        /// The state the two screens above read. `link` means an account already holds that address
+        /// and the password is what proves it is the same person (ADR-237 clause 3).
+        /// </summary>
+        public const string OutcomeLink = "link";
+        public const string OutcomeNew = "new";
+        public const string OutcomeFailed = "failed";
+    }
+
+    /// <summary>
+    /// The event dictionary of <c>docs/product/METRICS.md</c>, as code. ADR-126 makes the names a
+    /// contract the provider only transports, so they live here rather than as literals at each call
+    /// site — a renamed string in one of eight places is a metric that quietly stops adding up.
+    /// </summary>
+    public static class Analytics
+    {
+        public const string EnabledCfg = "Cedar:Analytics:Enabled";
+        public const string ProjectKeyCfg = "Cedar:Analytics:ProjectKey";
+        public const string HostCfg = "Cedar:Analytics:Host";
+
+        // EU cloud, not the US default: the account is EU and /privacy names the region.
+        public const string DefaultHost = "https://eu.i.posthog.com";
+
+        public static class Events
+        {
+            public const string SignupStarted = "signup_started";
+            public const string SignupCompleted = "signup_completed";
+            public const string DraftCreated = "draft_created";
+            public const string PostPublished = "post_published";
+            public const string PostPublishedFirst = "post_published_first";
+            public const string TrialStarted = "trial_started";
+            public const string PlanPurchased = "plan_purchased";
+            public const string PlanRenewed = "plan_renewed";
+            public const string CreditsPurchased = "credits_purchased";
+            public const string AiUsed = "ai_used";
+        }
     }
 
     public static class FileSizes

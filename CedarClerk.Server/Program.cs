@@ -1,6 +1,7 @@
 using System.Globalization;
 using CedarClerk.Core;
 using CedarClerk.Server;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
 using CedarClerk.Server.Modules.Agent;
@@ -12,6 +13,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using PostHog;
+using PostHog.Config;
 using Quartz;
 
 const int passwordRequiredLength = 8;
@@ -84,8 +87,29 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysDir))
     .SetApplicationName(Consts.DataProtectionApplicationName);
 
-builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
-    .AddIdentityCookies();
+var authentication = builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme);
+authentication.AddIdentityCookies();
+
+// T-003 / ADR-237 — registered only when both halves are configured, so an install without Google
+// credentials simply has no Google scheme and /api/auth/external/google answers 501 rather than
+// throwing at startup. Telegram needs nothing here: it is a signed widget payload, not a scheme.
+if (builder.Configuration[Consts.ExternalAuth.GoogleClientIdCfg] is { Length: > 0 } googleClientId
+    && builder.Configuration[Consts.ExternalAuth.GoogleClientSecretCfg] is { Length: > 0 } googleClientSecret)
+{
+    authentication.AddGoogle(options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        // The external cookie is what carries the identity between the callback and the screen that
+        // finishes the job — an invite code and an account name are asked for after Google answers,
+        // never before, because most people who press the button already have an account.
+        options.SignInScheme = IdentityConstants.ExternalScheme;
+        // Asked for explicitly: without it the callback has a subject and no address, and the whole
+        // "does an account already hold this email" question below has nothing to ask about.
+        options.Scope.Add("email");
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    });
+}
 
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -134,6 +158,23 @@ builder.Services.AddScoped<IDraftSearchIndex, DraftSearchIndex>();
 builder.Services.AddHostedService<DraftSearchBackfill>();
 builder.Services.AddSingleton<BlogSubscriberNotifier>();
 builder.Services.AddPreflightServices();
+
+// Analytics (T-153, ADR-236). The provider is registered only when it is configured, so a local run
+// and a self-hosted install carry no client at all; ProductAnalytics resolves it with GetService and
+// turns into a no-op rather than a missing dependency.
+if (builder.Configuration.GetValue(Consts.Analytics.EnabledCfg, false)
+    && builder.Configuration[Consts.Analytics.ProjectKeyCfg] is { Length: > 0 } postHogKey)
+{
+    builder.AddPostHog(postHog => postHog.PostConfigure(options =>
+    {
+        options.ProjectToken = postHogKey;
+        options.HostUrl = new Uri(builder.Configuration[Consts.Analytics.HostCfg] ?? Consts.Analytics.DefaultHost);
+    }));
+}
+builder.Services.AddSingleton(sp => new ProductAnalytics(
+    sp.GetService<IPostHogClient>(),
+    sp.GetRequiredService<IConfiguration>(),
+    sp.GetRequiredService<ILogger<ProductAnalytics>>()));
 
 // The canvas hub (ADR-218), registered with the module it belongs to. The tuning is about the
 // Cloudflare Tunnel in front of Kestrel: WebSockets pass through it, but an idle connection is not
@@ -258,6 +299,7 @@ app.MapWhen(TenantRouting.IsTenantRequest,
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
 app.MapAuthEndpoints();
+app.MapExternalAuthEndpoints();
 app.MapWaitlistEndpoint();
 app.MapFeedbackEndpoints();
 app.MapPresetEndpoints();
@@ -365,6 +407,25 @@ app.MapGet("/api/health", () => Results.Ok(new
     env = app.Environment.EnvironmentName,
     version = Consts.CurrentVersion,
     openRegistration = app.Configuration.IsOn(Consts.General.OpenRegistrationCfg),
+    // The provider's project key is public by design — it ships inside the page script — so it
+    // rides the call the frontend already makes at startup rather than being built into the bundle,
+    // where a self-hosted install could not turn it off. Absent when analytics is not configured,
+    // which is how the SPA decides there is nothing to ask consent for.
+    analytics = app.Configuration.GetValue(Consts.Analytics.EnabledCfg, false)
+                && app.Configuration[Consts.Analytics.ProjectKeyCfg] is { Length: > 0 } key
+        ? new { key, host = app.Configuration[Consts.Analytics.HostCfg] ?? Consts.Analytics.DefaultHost }
+        : null,
+    // T-003 — which sign-in buttons the doors may draw. Read here rather than from a settings call,
+    // because /login and /register run before there is a session to make one with. The Telegram
+    // widget needs the bot's username to render at all, and it is public by nature.
+    externalAuth = new
+    {
+        google = !string.IsNullOrEmpty(app.Configuration[Consts.ExternalAuth.GoogleClientIdCfg])
+                 && !string.IsNullOrEmpty(app.Configuration[Consts.ExternalAuth.GoogleClientSecretCfg]),
+        telegramBot = app.Services.GetRequiredService<TelegramBotService>() is { IsRunning: true } bot
+            ? bot.Me.Username
+            : null,
+    },
     timeUtc = DateTime.UtcNow,
     status = "I'm fine, thanks."
 }));

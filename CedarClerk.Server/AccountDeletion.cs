@@ -57,6 +57,7 @@ public static class AccountDeletion
         await db.FormPresets.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.GameTasks.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.GlossaryTerms.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.GlossaryTermUsages.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Payments.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.PublishJobs.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.PublishTargets.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();

@@ -191,6 +191,14 @@
                               [value]="term.isCaseSensitive ? t().glossary.inspector.exact : t().glossary.inspector.anyCase"></app-spec-row>
                 <app-spec-row scope="selection" [label]="t().glossary.inspector.aliases"
                               [value]="aliasList(term).join(', ') || t().glossary.inspector.none"></app-spec-row>
+                <!--T-260 — where the term is actually used. The count comes from the list endpoint
+                alone, so a term freshly back from a save has no row until the list is re-read; a
+                shadowed term names the one taking its spelling, and warns when both sit in the
+                same scope, which is a glossary mistake rather than the T-125 override.-->
+                @if (usageKnown(term)) {
+                <app-spec-row scope="selection" [label]="t().glossary.inspector.usedIn"
+                              [value]="usageValue(term)" [warn]="usageIsMistake(term)"></app-spec-row>
+                }
                 }
             } @else {
                 <p class="insp-note">{{ t().glossary.inspector.pick }}</p>

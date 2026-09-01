@@ -169,6 +169,97 @@ public class GlossaryScannerTests
     }
 }
 
+// ADR-238. The counting half shares the matcher with Mark but runs on plain text, and its result is
+// positional — a dictionary keyed by term would collide, since the same word is a separate term in
+// each language and each project.
+public class GlossaryCountHitsTests
+{
+    private static GlossaryEntry Entry(string term, params string[] aliases) =>
+        new(term, "A description", null, aliases);
+
+    private static int[] Count(string text, params GlossaryEntry[] entries) =>
+        GlossaryScanner.CountHits(text, entries);
+
+    [Fact]
+    public void Counts_every_occurrence()
+    {
+        Assert.Equal([3], Count("Unity and Unity and Unity", Entry("Unity")));
+    }
+
+    [Fact]
+    public void A_term_that_is_absent_counts_zero()
+    {
+        Assert.Equal([0], Count("Nothing to see.", Entry("Unity")));
+    }
+
+    [Fact]
+    public void The_result_is_positional_even_when_two_terms_are_the_same_word()
+    {
+        // The caller's only handle on a term is where it sat in the list it passed in.
+        var counts = Count("Unity", Entry("Godot"), Entry("Unity"), Entry("Blender"));
+        Assert.Equal([0, 1, 0], counts);
+    }
+
+    [Fact]
+    public void An_empty_glossary_yields_an_empty_array()
+    {
+        Assert.Empty(GlossaryScanner.CountHits("Unity", []));
+    }
+
+    [Fact]
+    public void Empty_text_counts_nothing()
+    {
+        Assert.Equal([0], Count("", Entry("Unity")));
+    }
+
+    [Fact]
+    public void Matching_is_case_insensitive_by_default()
+    {
+        Assert.Equal([2], Count("UNITY and unity", Entry("Unity")));
+    }
+
+    [Fact]
+    public void A_case_sensitive_term_counts_only_its_own_spelling()
+    {
+        var it = new GlossaryEntry("IT", "d", null, [], IsCaseSensitive: true);
+        Assert.Equal([1], GlossaryScanner.CountHits("IT is not it", [it]));
+    }
+
+    [Fact]
+    public void A_term_inside_a_longer_word_is_not_a_hit()
+    {
+        Assert.Equal([0], Count("These are articles.", Entry("art")));
+    }
+
+    [Fact]
+    public void Aliases_count_towards_their_own_entry()
+    {
+        Assert.Equal([2], Count("рендерер и рендерера", Entry("рендерер", "рендерера")));
+    }
+
+    [Fact]
+    public void The_longest_candidate_wins_and_the_shorter_one_is_not_counted_twice()
+    {
+        // "Unity engine" is one hit for the longer term, not one for each.
+        var counts = Count("the Unity engine", Entry("Unity"), Entry("Unity engine"));
+        Assert.Equal([0, 1], counts);
+    }
+
+    [Fact]
+    public void An_ampersand_entity_is_five_letters_here()
+    {
+        // Mark skips entities because it runs on escaped HTML; this runs on the document's own
+        // text, where "&amp;" is what the writer typed.
+        Assert.Equal([1], Count("Tom &amp; Jerry", Entry("amp")));
+    }
+
+    [Fact]
+    public void Blank_aliases_do_not_match_everywhere()
+    {
+        Assert.Equal([0], Count("Some text", Entry("Unity", "", "   ")));
+    }
+}
+
 // The renderer half: a term must not be marked where marking it would be wrong.
 public class GlossaryRendererTests
 {

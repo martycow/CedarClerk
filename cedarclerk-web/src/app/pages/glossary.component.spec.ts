@@ -52,9 +52,9 @@ describe('glossary screen', () => {
     const names = () => cards().map(c => c.querySelector('.term-name')?.textContent?.trim());
     const shelf = () => el().querySelector('app-shelf-panel.inspector') as HTMLElement;
     const rows = () => [...shelf().querySelectorAll('app-spec-row')] as HTMLElement[];
-    const rowValue = (label: string) =>
-        rows().find(r => r.querySelector('.label')?.textContent?.trim() === label)
-            ?.querySelector('.text')?.textContent?.trim();
+    const row = (label: string) =>
+        rows().find(r => r.querySelector('.label')?.textContent?.trim() === label);
+    const rowValue = (label: string) => row(label)?.querySelector('.text')?.textContent?.trim();
 
     async function settle() {
         fixture.detectChanges();
@@ -144,6 +144,47 @@ describe('glossary screen', () => {
         cards()[1].click();           // Верстак — alone in its group
         await settle();
         expect(shelf().querySelectorAll('.preview-langs app-leaf-tag').length).toBe(0);
+    });
+
+    // T-260. Only GET /api/glossary carries the count, so a term that has come back from a save
+    // and not from the list has none — and a nought drawn there would be a number the screen made
+    // up, indistinguishable from the real "nothing uses this".
+    it('says nothing about usage until the list has answered for that term', async () => {
+        cards()[0].click();
+        await settle();
+        expect(row(t.inspector.usedIn)).toBeUndefined();
+    });
+
+    it('counts the documents a term is used in, and names whatever takes its spelling', async () => {
+        page().terms.set([
+            term({ id: 'ru1', term: 'Рендерер', usedInDrafts: 4, shadowedByTermId: null }),
+            // Shadowed from another scope: a project term beating a global one is the T-125
+            // override working, so the row informs and does not accuse.
+            term({ id: 'ru2', term: 'Верстак', projectId: 'p1', usedInDrafts: 2, shadowedByTermId: 'ru1' }),
+            // Shadowed inside its own scope: this term will never mark anything, and nothing else
+            // on the screen would tell its author so.
+            term({ id: 'ru3', term: 'Стапель', usedInDrafts: 0, shadowedByTermId: 'ru1' }),
+        ]);
+        await settle();
+
+        cards()[0].click();
+        await settle();
+        expect(rowValue(t.inspector.usedIn)).toBe(t.inspector.usedInDrafts(4));
+        expect(row(t.inspector.usedIn)!.classList.contains('warn')).toBe(false);
+
+        cards()[1].click();
+        await settle();
+        // The count is not zeroed by the shadow — the global term is still used everywhere the
+        // project term does not reach — so the note has to read beside a real number too.
+        expect(rowValue(t.inspector.usedIn))
+            .toBe(`${t.inspector.usedInDrafts(2)} · ${t.inspector.shadowedBy('Рендерер')}`);
+        expect(row(t.inspector.usedIn)!.classList.contains('warn')).toBe(false);
+
+        cards()[2].click();
+        await settle();
+        expect(rowValue(t.inspector.usedIn))
+            .toBe(`${t.inspector.usedInDrafts(0)} · ${t.inspector.shadowedBy('Рендерер')}`);
+        expect(row(t.inspector.usedIn)!.classList.contains('warn')).toBe(true);
     });
 
     it('shows each term translation coverage and pages a large language set', async () => {

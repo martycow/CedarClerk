@@ -79,7 +79,16 @@
     gap: 8px;
 }
 
+/* A real button since T-257 took the form out of it: nothing is nested inside the card any more,
+   so it can be the door it always behaved like — reachable from the keyboard, and with no click
+   left to stop from propagating. */
 .user-card {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    font: inherit;
+    color: inherit;
     background-color: var(--sheet);
     background-image: var(--tex-paper);
     border: var(--border-paper);
@@ -89,11 +98,8 @@
     cursor: pointer;
 }
 
-.user-card:hover {
-    border-color: var(--abord);
-}
-
-.user-card.expanded {
+.user-card:hover,
+.user-card.on {
     border-color: var(--abord);
 }
 
@@ -192,28 +198,14 @@
     .user-card {
         padding: var(--space-3);
     }
-
-    /* Keeps the negative-margin bleed matching the card's own padding above — they have to move
-       together or the action footer stops lining up with the card edges. */
-    .user-actions {
-        margin: var(--space-3) calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
-        padding: var(--space-3);
-    }
 }
 
-/* ---------- Step 2: per-user actions ----------
-   Bleeds to the card's own edges via negative margin (equal to .user-card's own padding) so the
-   footer reads as part of the same rounded card instead of a separate block underneath it. */
-.user-actions {
+/* ---------- Step 2: per-user actions (T-257 — inside the account modal) ----------
+   The modal card already draws the paper and its own padding, so this is only the stack. */
+.user-form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin: 12px -16px -12px;
-    padding: 12px 16px 14px;
-    border-top: 1px solid var(--border);
-    background: var(--alt);
-    border-radius: 0 0 var(--radius-paper) var(--radius-paper);
-    cursor: default;
+    gap: var(--space-3);
 }
 
 .action-group {

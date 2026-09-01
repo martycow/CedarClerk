@@ -1759,6 +1759,37 @@ namespace CedarClerk.Server.Migrations
                     b.ToTable("GlossaryTerms");
                 });
 
+            modelBuilder.Entity("CedarClerk.Server.GlossaryTermUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DraftId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GlossaryTermId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Occurrences")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ScannedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "DraftId");
+
+                    b.HasIndex("OwnerId", "GlossaryTermId");
+
+                    b.ToTable("GlossaryTermUsages");
+                });
+
             modelBuilder.Entity("CedarClerk.Server.InviteCode", b =>
                 {
                     b.Property<Guid>("Id")

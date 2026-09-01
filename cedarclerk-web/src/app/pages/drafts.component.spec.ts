@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { DraftsPageComponent } from './drafts.component';
-import { DraftMeta, DraftsService, FolderMeta } from '../core/drafts.service';
+import { DraftMeta, DraftsService, FolderMeta, SeriesMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
+import { SeriesService } from '../core/series.service';
 import { en } from '../core/i18n/en';
 
 async function settle(fixture: ComponentFixture<unknown>) {
@@ -25,16 +26,18 @@ function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
 // the tiles that must lose their badge are genuinely at zero — and "All" excludes the archived one,
 // which is why its badge and the folder shelf's whole-library tally are allowed to disagree.
 const DRAFTS: DraftMeta[] = [
-    draft('alpha', { folderId: 'f1' }),
+    draft('alpha', { folderId: 'f1', seriesId: 's1', tags: 'devlog,art' }),
     draft('beta'),
     draft('gamma', { isArchived: true }),
 ];
 
 const FOLDERS: FolderMeta[] = [{ id: 'f1', name: 'Devlogs', count: 1 }];
+const SERIES: SeriesMeta[] = [{ id: 's1', name: 'Season one', slug: 'season-one', description: null, count: 1 }];
 
 class FakeDrafts {
     async list() { return structuredClone(DRAFTS); }
     async listFolders() { return structuredClone(FOLDERS); }
+    async listSeries() { return structuredClone(SERIES); }
 }
 
 describe('drafts page', () => {
@@ -63,6 +66,7 @@ describe('drafts page', () => {
                 provideRouter([]),
                 { provide: DraftsService, useClass: FakeDrafts },
                 FoldersService,
+                SeriesService,
             ],
         });
         fixture = TestBed.createComponent(DraftsPageComponent);
@@ -115,6 +119,72 @@ describe('drafts page', () => {
 
         expect(el().querySelector('.drafts-tree')).not.toBeNull();
         expect(strip(t.stateStrip)).toBeUndefined();
+        expect(panel(t.folders.title)).toBeUndefined();
+    });
+
+    // ---- T-256, the draft shelf ---------------------------------------------------------------
+
+    const rows = () =>
+        [...el().querySelectorAll('.drafts-table .drafts-row:not(.drafts-row-head)')] as HTMLElement[];
+    const describeButton = (index: number) =>
+        rows()[index].querySelector('.row-actions .mini') as HTMLButtonElement;
+    const specRows = () =>
+        [...(panel(t.inspector.title)?.querySelectorAll('app-spec-row') ?? [])]
+            .map(r => [r.querySelector('.label')!.textContent!.trim(),
+                       r.querySelector('.value')!.textContent!.replace(/\s+/g, ' ').trim()]);
+
+    it('the describe control fills the shelf, and the shelf is exclusive with the folder filter', () => {
+        expect(panel(t.folders.title)).toBeDefined();
+        expect(panel(t.inspector.title)).toBeUndefined();
+
+        describeButton(0).click();
+        fixture.detectChanges();
+
+        // Exclusive (ADR-167): the picked document replaces the folder filter, never joins it.
+        expect(panel(t.inspector.title)).toBeDefined();
+        expect(panel(t.folders.title)).toBeUndefined();
+        expect(panel(t.inspector.title)!.querySelector('.insp-name')!.textContent!.trim()).toBe('alpha');
+        expect(specRows()).toContainEqual([t.inspector.folder, 'Devlogs']);
+        expect(specRows()).toContainEqual([t.inspector.series, 'Season one']);
+        expect(specRows()).toContainEqual([t.inspector.tags, '#devlog#art']);
+    });
+
+    it('the control toggles, and never steals the row click that opens the editor', () => {
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+        describeButton(0).click();
+        fixture.detectChanges();
+        expect(navigate).not.toHaveBeenCalled();
+
+        describeButton(0).click();
+        fixture.detectChanges();
+        expect(panel(t.inspector.title)).toBeUndefined();
+        expect(panel(t.folders.title)).toBeDefined();
+
+        rows()[0].click();
+        expect(navigate).toHaveBeenCalledWith(['/editor'], { queryParams: { draft: 'alpha' } });
+    });
+
+    it('a picked draft that leaves the filtered list stops being described', () => {
+        describeButton(0).click();
+        fixture.detectChanges();
+        expect(panel(t.inspector.title)).toBeDefined();
+
+        tiles(t.stateStrip)[5].click(); // Archived — alpha is not in it
+        fixture.detectChanges();
+
+        expect(panel(t.inspector.title)).toBeUndefined();
+        expect(panel(t.folders.title)).toBeDefined();
+    });
+
+    it('tree view keeps no shelf even with a draft picked', () => {
+        describeButton(0).click();
+        fixture.detectChanges();
+
+        tiles(t.viewStrip)[2].click();
+        fixture.detectChanges();
+
+        expect(panel(t.inspector.title)).toBeUndefined();
         expect(panel(t.folders.title)).toBeUndefined();
     });
 });

@@ -82,6 +82,20 @@ public static class AssetEndpoints
             .RequireAuthorization()
             .DisableAntiforgery();
 
+        // ADR-238 — the three facts a media node cannot carry: resolution, byte size and which file
+        // it is. Owner-scoped, because an asset guid on a blog-published document is public
+        // knowledge and this must not become a way to read another account's library.
+        app.MapGet("/api/assets/meta", async (Guid? id, string? path, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
+            {
+                if (id is null && string.IsNullOrWhiteSpace(path))
+                    return Results.BadRequest(new { error = ErrorMessages.AssetIdOrPathRequired });
+
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                var meta = await LookupMetaAsync(db, uid, id, path, media);
+                return meta is null ? Results.NotFound() : Results.Ok(meta);
+            })
+            .RequireAuthorization();
+
         // ADR-127 — the owner-wide library behind /media. One response carries the page, the
         // unfiltered type counts (chips must not shrink when a filter is on) and the quota line.
         // ADR-204 — `project` is a guid, or the literal "none" for the files that belong to no
@@ -192,6 +206,50 @@ public static class AssetEndpoints
     private static void DeleteIfExists(string path)
     {
         if (File.Exists(path)) File.Delete(path);
+    }
+
+    public record AssetMeta(Guid Id, string FileName, string ContentType, long SizeBytes,
+        int? Width, int? Height, Guid? ProjectId);
+
+    /// <summary>
+    /// One asset by id, or by the <c>LocalPath</c> an older document carries as its <c>src</c>
+    /// (ADR-238 clause 4) — an id-only lookup would answer for nothing written before today.
+    /// Null when nothing this owner has matches.
+    /// </summary>
+    public static async Task<AssetMeta?> LookupMetaAsync(
+        CedarDbContext db, string ownerId, Guid? id, string? path, MediaPaths media)
+    {
+        var localPath = path?.Trim();
+        if (localPath is not null && localPath.StartsWith("/media/", StringComparison.Ordinal))
+            localPath = localPath["/media/".Length..];
+
+        var asset = id is { } assetId
+            ? await db.Assets.AsNoTracking().FirstOrDefaultAsync(a => a.Id == assetId && a.OwnerId == ownerId)
+            : localPath is { Length: > 0 }
+                ? await db.Assets.AsNoTracking().FirstOrDefaultAsync(a => a.LocalPath == localPath && a.OwnerId == ownerId)
+                : null;
+        if (asset is null) return null;
+
+        var (width, height) = Dimensions(Path.Combine(media.Dir, asset.LocalPath), asset.ContentType);
+        return new AssetMeta(asset.Id, asset.FileName, asset.ContentType, asset.SizeBytes, width, height, asset.ProjectId);
+    }
+
+    // Identify reads the header, not the pixels — which is what lets this run per selection instead
+    // of becoming two columns and a backfill over the whole media directory (ADR-238 clause 5). It
+    // throws for formats it does not know, and a file can be missing entirely; either is "unknown
+    // resolution", never a failed request.
+    private static (int? Width, int? Height) Dimensions(string fullPath, string contentType)
+    {
+        if (!contentType.StartsWith("image/", StringComparison.Ordinal)) return (null, null);
+        try
+        {
+            var info = SixLabors.ImageSharp.Image.Identify(fullPath);
+            return (info.Width, info.Height);
+        }
+        catch (Exception)
+        {
+            return (null, null);
+        }
     }
 
     // Telegram rejects a photo fetched by URL above ~TelegramSafeImageBytes with a misleading

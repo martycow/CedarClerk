@@ -84,6 +84,28 @@ export const en = {
         published: 'live',
         keys: '↑↓ move · Enter opens · Esc closes',
     },
+    // T-153 — the consent banner. It has to name the provider and the region, because that is the
+    // one thing a reader cannot check for themselves, and it stays on screen until answered either
+    // way: a dismissible banner is a "no" nobody recorded.
+    consent: {
+        title: 'Cookies for product analytics',
+        body: 'We use PostHog (EU) to see which parts of Cedar Clerk are used and where people get stuck. '
+            + 'Nothing here is sold or shared onward, and blog readers are never counted this way.',
+        accept: 'Accept',
+        decline: 'Decline',
+        privacy: 'Privacy policy',
+    },
+    // T-003 — the provider row on both doors, and the screen that finishes a new account.
+    externalAuth: {
+        or: 'or',
+        google: 'Continue with Google',
+        completeTitle: 'One more step',
+        completeTagline: 'Your address is confirmed. Pick your account name and enter your invite code.',
+        completeSubmit: 'Create account',
+        linkPrompt: 'An account already uses this address. Sign in below and the provider will be attached to it.',
+        linkDone: 'Signed in — the provider is now attached to this account.',
+        failed: 'That sign-in did not finish. Try again, or use your password.',
+    },
     login: {
         tagline: 'Write here. Publish there. Moo.',
         email: 'Email',
@@ -1013,6 +1035,31 @@ export const en = {
             markTemplate: 'Mark as template',
             unmarkTemplate: 'Unmark as template',
             evergreen: 'Evergreen recycling…',
+            describe: 'Describe on the shelf',
+            stopDescribing: 'Stop describing',
+        },
+        // T-256 — the read-only shelf beside the list. Every fact it states is already on the
+        // row's own DraftMeta, so it never asks the server anything.
+        inspector: {
+            title: 'Document',
+            scope: 'selected',
+            state: 'State',
+            type: 'Type',
+            languages: 'Languages',
+            visibility: 'Visibility',
+            private: 'Private',
+            public: 'Public',
+            folder: 'Folder',
+            series: 'Series',
+            tags: 'Tags',
+            none: 'None',
+            activity: 'Activity',
+            neverPublished: 'Never on the blog',
+            blogPublished: 'On the blog',
+            parent: 'Parent',
+            children: 'Sub-documents',
+            updated: 'Updated',
+            created: 'Created',
         },
         // Wave 2 item 10 — the evergreen pool the queue slots draw from.
         evergreen: {
@@ -1255,6 +1302,13 @@ export const en = {
             primaryLanguage: 'original',
             none: 'none',
             nothingSelected: 'Nothing selected',
+            // ADR-238 — the slug row that can be typed in, and the three facts about the file
+            // itself, which the shelf asks the server for rather than reading off the document.
+            slugTitle: 'The blog address of this post — letters, digits and dashes',
+            slugChangeFailed: 'Could not change the address.',
+            resolution: 'Resolution',
+            fileSize: 'Size',
+            asset: 'Library file',
         },
         outline: {
             title: 'Structure',
@@ -1925,6 +1979,12 @@ export const en = {
             total: 'Terms in all',
             languages: 'Languages used',
             projects: 'Projects with terms',
+            // T-260 — documents the term appears in, and the term that takes its spelling when
+            // one does. The note has to read beside a real number too: a shadowed global term is
+            // still used in every project whose own terms do not override it.
+            usedIn: 'Used in',
+            usedInDrafts: (n: number) => n === 1 ? '1 document' : `${n} documents`,
+            shadowedBy: (term: string) => `spelling goes to “${term}”`,
         },
     },
     admin: {
@@ -1946,6 +2006,11 @@ export const en = {
             joined: 'Joined',
         },
         tabStrip: 'Admin sections',
+        // T-257 — the per-user controls, opened by clicking the account's card.
+        userModal: {
+            open: (email: string) => `Manage ${email}`,
+            untitled: 'Account without an email',
+        },
         auditTitle: 'Audit log',
         noAudit: 'Nothing has been changed from here yet.',
         loadMoreAudit: 'Older entries',
@@ -1971,6 +2036,9 @@ export const en = {
             deleteAccount: 'Delete account',
             deleteNote: 'Deleting removes the account and everything it owns. Locking is the reversible alternative.',
             deleteTitle: 'Delete this account?',
+            // T-257 — the per-user form is a modal now, so the delete confirm replaces it rather
+            // than covering it; the line says where the form went.
+            closedForDelete: 'The account form closed to ask this — reopen the account afterwards.',
             deleteBody: (email: string) =>
                 `${email} and every document, file, channel and payment record it owns will be removed. This cannot be undone.`,
         },

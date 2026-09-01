@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AnalyticsService } from '../core/analytics.service';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../core/theme.service';
 import { VersionService } from '../core/version.service';
@@ -10,12 +11,14 @@ import { ButtonComponent } from '../bench/forms/button.component';
 import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
+import { ExternalAuthButtonsComponent } from '../shared/external-auth-buttons.component';
 
 @Component({
     selector: 'app-register',
     imports: [
         RouterLink, CedarLogoComponent, LangSwitchComponent,
         ButtonComponent, InputComponent, PaperCardComponent, IconComponent,
+        ExternalAuthButtonsComponent,
     ],
     templateUrl: 'register.component.html',
     styleUrls: ['register.component.css']
@@ -33,6 +36,7 @@ export class RegisterComponent {
     // would be asking for something that does not exist. See Consts.General.OpenRegistrationCfg.
     version = inject(VersionService);
     private locale = inject(LocaleService);
+    private analytics = inject(AnalyticsService);
     t = this.locale.t;
 
     email = '';
@@ -54,6 +58,15 @@ export class RegisterComponent {
         const url = this.returnUrl();
         const match = /^\/(?:invite|team-invite)\/([^/?#]+)$/.exec(url);
         return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    /** The provider buttons take the destination as a value. */
+    get externalReturnUrl(): string { return this.returnUrl(); }
+
+    /** Telegram signs in without leaving the page; this door moves on afterwards. */
+    async afterExternalSignIn(): Promise<void> {
+        await this.auth.refresh();
+        void this.router.navigateByUrl(this.returnUrl() || '/');
     }
 
     /** Same-origin paths only, exactly as the login screen reads it. */
@@ -100,6 +113,10 @@ export class RegisterComponent {
     }
 
     async submit() {
+        // The one funnel step the server cannot see: signup_completed is written when the account
+        // exists, so without this the people who tried and were refused are invisible, and that
+        // gap is the whole point of measuring registration (docs/product/METRICS.md).
+        this.analytics.capture('signup_started', { invited: this.invitedToken !== null });
         this.busy.set(true);
         this.error.set('');
         const result = await this.auth.register(this.email, this.password, this.invitedToken ?? this.inviteCode, this.username());

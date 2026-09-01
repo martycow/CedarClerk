@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { assetIdAttribute } from './asset-id-attribute';
 
 export const AudioNode = Node.create({
     name: 'audio',
@@ -13,6 +14,7 @@ export const AudioNode = Node.create({
             // I16: the clip name Telegram shows. Empty falls back to the generated
             // asset_<guid>.mp3 filename, which is what it used to always show.
             title: { default: null },
+            assetId: assetIdAttribute,
         };
     },
 

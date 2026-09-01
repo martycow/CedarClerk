@@ -73,8 +73,10 @@ export type SpecScope = 'selection' | 'document';
             font-weight: 700;
         }
 
-        :host(.field) .text {
-            flex: 1;
+        /* The box belongs to the value slot, not to the ink inside it: a projected input or select
+           then *is* the field, rather than standing beside a sunken box that cannot be typed in.
+           Drawn on the container, the marker is also only true where a control was projected. */
+        :host(.field) .value {
             box-sizing: border-box;
             padding: 3px 7px;
             border: var(--border-field);
@@ -83,19 +85,19 @@ export type SpecScope = 'selection' | 'document';
             box-shadow: var(--shadow-field-inset);
         }
 
+        :host(.field) .text { flex: 1; }
+
         /* A field already carries its own edge, so the warning is drawn on that edge — the weight
            the plain variant uses would fight the inset. */
-        :host(.field.warn) .text {
-            border: 1px dashed var(--danger);
-            font-weight: 400;
-        }
+        :host(.field.warn) .value { border: 1px dashed var(--danger); }
+        :host(.field.warn) .text { font-weight: 400; }
     `],
 })
 export class SpecRowComponent {
     readonly label = input.required<string>();
     /** Mono value. Ignored when the row projects content. */
     readonly value = input('');
-    /** Draw the value as an editable paper field rather than as plain ink. */
+    /** This row hosts a control. The box is a promise the row keeps — never decoration on ink. */
     readonly field = input(false, { transform: booleanAttribute });
     /** Something is missing or wrong — rust ink, dashed field edge. */
     readonly warn = input(false, { transform: booleanAttribute });

@@ -1,6 +1,7 @@
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server.Publishing;
@@ -18,7 +19,8 @@ namespace CedarClerk.Server.Publishing;
 /// </summary>
 public class PublishJobRunner(
     IServiceScopeFactory scopes,
-    ILogger<PublishJobRunner> logger)
+    ILogger<PublishJobRunner> logger,
+    ProductAnalytics analytics)
 {
     /// <summary>Retries only ever happen for failures that could not have posted; three is enough for a flaky link.</summary>
     public const int MaxAttempts = 3;
@@ -181,6 +183,30 @@ public class PublishJobRunner(
         }
 
         await db.SaveChangesAsync(ct);
+
+        if (job.Status == PublishJobStatus.Succeeded)
+        {
+            // Explicit OwnerId rather than the tenant filter: the runner works through the queue in
+            // a platform scope, where the filter is off (see .claude/rules/telegram-bot.md).
+            //
+            // "Earlier succeeded job" is what makes this the first publish, and it stays right for a
+            // thread: parts 2..N each find part 1 behind them. TTFP is the metric on the other end
+            // of it, and it is measured from AspNetUsers.CreatedAt in the provider, not here.
+            var isFirst = !await db.PublishJobs.AnyAsync(
+                j => j.OwnerId == job.OwnerId
+                     && j.Id != job.Id
+                     && j.Status == PublishJobStatus.Succeeded
+                     && j.FinishedAt < job.FinishedAt, ct);
+
+            var properties = new Dictionary<string, object>
+            {
+                ["network"] = job.TargetId,
+                ["language"] = job.Language,
+                ["threaded"] = job.PartCount > 1,
+            };
+            analytics.Track(job.OwnerId, Consts.Analytics.Events.PostPublished, properties);
+            if (isFirst) analytics.Track(job.OwnerId, Consts.Analytics.Events.PostPublishedFirst, properties);
+        }
 
         // The next part waits on this one, so it is kicked here rather than left to the sweeper —
         // otherwise an eight-part thread would take two minutes of doing nothing between messages.

@@ -37,6 +37,9 @@
                    [value]="email" (valueChange)="email = $any($event) ?? ''" />
         <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
         to this host.-->
+        @if (linkPending) { <p class="session-notice">{{ t().externalAuth.linkPrompt }}</p> }
+        @if (externalOutcome === 'failed') { <p class="error">{{ t().externalAuth.failed }}</p> }
+
         <app-input inputId="cc-login-pass" type="password" [label]="t().login.password"
                    placeholder="••••••••" autocomplete="current-password"
                    [value]="password" (valueChange)="password = $any($event) ?? ''"
@@ -47,6 +50,8 @@
         </app-button>
 
         @if (error()) { <p class="error">{{ error() }}</p> }
+
+        <app-external-auth-buttons [returnUrl]="externalReturnUrl" (signedIn)="afterExternalSignIn()" />
 
         <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register" [queryParams]="registerParams">{{ t().login.register }}</a> <span class="muted">{{ t().login.inviteRequired }}</span></div>
 

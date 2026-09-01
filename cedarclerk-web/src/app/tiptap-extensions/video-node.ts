@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { assetIdAttribute } from './asset-id-attribute';
 
 // GIFs are stored as "video" nodes (Telegram needs them sent as an animation, not a static
 // photo), but a <video src="…gif"> never plays in the browser — no browser video decoder
@@ -18,6 +19,7 @@ export const VideoNode = Node.create({
         return {
             src: { default: null },
             caption: { default: null },
+            assetId: assetIdAttribute,
         };
     },
 

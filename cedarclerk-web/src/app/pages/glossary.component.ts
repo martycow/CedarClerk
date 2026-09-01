@@ -218,6 +218,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
             this.selectLanguage(input.language);
             this.editing.set(false);
             this.selectedId.set(null);
+            void this.refreshTerms();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().glossary.saveFailed));
         } finally {
@@ -240,6 +241,8 @@ export class GlossaryComponent implements OnInit, OnDestroy {
             this.terms.update(list => list.filter(t => t.id !== id));
             if (this.selectedId() === id) this.cancelEdit();
             if (this.previewId() === id) this.closePreview();
+            // Deleting a term can hand its spelling back to whichever one it was shadowing.
+            void this.refreshTerms();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().glossary.deleteFailed));
         } finally {
@@ -446,6 +449,54 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     inspectorScopeWord(): string {
         const t = this.t().glossary.inspector;
         return this.inspectorScope() === 'selection' ? t.scopeTerm : t.scopeGlossary;
+    }
+
+    // ─── Where a term is used (T-260) ─────────────────────────────────────────────────────────
+
+    /** Absent until the list endpoint has been read: no other response carries the count. */
+    usageKnown(term: GlossaryTerm): boolean {
+        return term.usedInDrafts !== undefined;
+    }
+
+    /**
+     * The count, plus the term that takes this one's spelling when there is one. A shadowed term
+     * is not zeroed — a global term losing one project's spelling is still used everywhere else —
+     * so the note has to read beside a real number as well as beside a nought.
+     */
+    usageValue(term: GlossaryTerm): string {
+        const t = this.t().glossary.inspector;
+        const count = t.usedInDrafts(term.usedInDrafts ?? 0);
+        const winner = this.shadowingTerm(term);
+        return winner ? `${count} · ${t.shadowedBy(winner.term)}` : count;
+    }
+
+    /**
+     * Two terms in the *same* scope sharing a spelling is a glossary mistake: one of them will
+     * never mark anything and its author has no way to know. Across scopes it is the override
+     * T-125 exists for — a project term beating a global one is the point, not a defect.
+     */
+    usageIsMistake(term: GlossaryTerm): boolean {
+        const winner = this.shadowingTerm(term);
+        return !!winner && (winner.projectId ?? null) === (term.projectId ?? null);
+    }
+
+    /** Resolved against the terms already on screen — the shelf never asks the server for a name. */
+    private shadowingTerm(term: GlossaryTerm): GlossaryTerm | null {
+        const id = term.shadowedByTermId;
+        return id ? this.terms().find(t => t.id === id) ?? null : null;
+    }
+
+    /**
+     * A write can move both fields on rows other than the one written — taking a spelling away
+     * from another term is exactly what shadowing is — and only the list endpoint carries either.
+     * So a save is followed by a re-read rather than by a merge that leaves the numbers wrong.
+     */
+    private async refreshTerms() {
+        try {
+            this.terms.set(await this.api.list());
+        } catch {
+            // The merged list still stands; the counts catch up on the next load.
+        }
     }
 
     /** Only the languages that actually carry a term — a full list would claim coverage. */

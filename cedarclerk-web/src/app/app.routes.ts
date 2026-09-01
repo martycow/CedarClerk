@@ -23,6 +23,14 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/register.component').then(m => m.RegisterComponent),
         canActivate: [guestGuard],
     },
+    // T-003 — where the Google callback lands somebody it has no account for: the invite code and
+    // the account name are the two things a provider cannot supply. guestGuard, like the doors
+    // above, because a live session means the sign-in already finished.
+    {
+        path: 'auth/complete',
+        loadComponent: () => import('./pages/external-complete.component').then(m => m.ExternalCompleteComponent),
+        canActivate: [guestGuard],
+    },
     // T-328 — the mandatory first stop after registration, outside the shell like the other doors.
     {
         path: 'onboarding',

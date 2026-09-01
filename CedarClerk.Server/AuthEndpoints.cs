@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using System.Text;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Server.Bot;
 using CedarClerk.Server.Email;
 using Microsoft.AspNetCore.WebUtilities;
@@ -61,45 +62,17 @@ public static class AuthEndpoints
         #region Register
         groupBuilder.MapPost("/register", async (RegisterRequest req, UserManager<ApplicationUser> users,
             SignInManager<ApplicationUser> signIn, IConfiguration cfg, CedarDbContext db,
-            IServiceScopeFactory scopes, ResendEmailProvider email, ILogger<Program> logger) =>
+            IServiceScopeFactory scopes, ResendEmailProvider email, ILogger<Program> logger,
+            ProductAnalytics analytics) =>
         {
-            var submitted = req.InviteCode?.Trim() ?? "";
-
-            // Real invite codes first (IF2 step 3), config code as the fallback — deliberately
-            // kept, so a database problem can't lock registration out entirely.
-            var now = DateTime.UtcNow;
-            var code = await db.InviteCodes.FirstOrDefaultAsync(c => c.Code.ToLower() == submitted.ToLower());
-            var codeUsable = code is not null
-                && InviteCodeRules.IsUsable(code.IsActive, code.ExpiresAt, code.MaxUses, code.Uses, now);
-
-            var configInvite = cfg[Consts.General.InviteCodeCfg];
-            var configMatches = !string.IsNullOrEmpty(configInvite) && submitted == configInvite;
-
-            // The invite gate exists to keep strangers off a shared server. An install that has no
-            // strangers — one listening on 127.0.0.1 for the person sitting at the machine — can drop
-            // it, or a fresh install could never make its first account: there is no code to type, and
-            // no way to mint one without an account to mint it from.
-            //
-            // **Nothing sets this any more since ADR-117**: the desktop no longer keeps accounts of its
-            // own, so the only install that needed it is gone. Kept because it is still the correct
-            // answer for a self-hosted single-user install, which is a real thing somebody may do.
-            var openRegistration = cfg.IsOn(Consts.General.OpenRegistrationCfg);
-
-            // T-304 — a live team or project invitation stands in for the code. Somebody who was
-            // invited by name has already been let in by a person; sending them to a login page
-            // they cannot get past, while the owner's screen says the invitation was sent, was the
-            // whole failure. Read in a platform scope: registration has no tenant yet, so the
-            // ordinary filter would hide every membership row there is.
-            var invitedByToken = false;
-            if (!openRegistration && !codeUsable && !configMatches)
-            {
-                using var inviteScope = scopes.CreatePlatformScope();
-                invitedByToken = await TeamEndpoints.IsLiveInviteTokenAsync(
-                    inviteScope.ServiceProvider.GetRequiredService<CedarDbContext>(), submitted);
-            }
-
-            if (!openRegistration && !codeUsable && !configMatches && !invitedByToken)
+            var invite = await ResolveInviteAsync(req.InviteCode, db, scopes, cfg);
+            if (!invite.Admits)
                 return Results.BadRequest(new { error = ErrorMessages.InvalidInviteCode });
+
+            var code = invite.Code;
+            var codeUsable = invite.Kind is InviteKind.Code;
+            var configMatches = invite.Kind is InviteKind.ConfigCode;
+            var invitedByToken = invite.Kind is InviteKind.Invitation;
 
             var username = Usernames.Normalize(req.Username);
             if (await VerdictAsync(db, req.Username) is var verdict && verdict != UsernameVerdict.Free)
@@ -128,6 +101,13 @@ public static class AuthEndpoints
             }
             if (!result.Succeeded)
                 return Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+            // How the account got in is the one dimension the signup funnel turns on: an invited
+            // stranger (T-304) and someone typing a code off a landing page are different stories.
+            analytics.Track(user.Id, Consts.Analytics.Events.SignupCompleted, new()
+            {
+                ["entry"] = invitedByToken ? "invitation" : codeUsable ? "invite_code" : configMatches ? "config_code" : "open",
+            });
 
             // Counted only after the account actually exists — a failed registration shouldn't
             // burn a use off a limited code.
@@ -403,6 +383,7 @@ public static class AuthEndpoints
             CedarDbContext db,
             IConfiguration cfg,
             IHttpClientFactory httpFactory,
+            ProductAnalytics analytics,
             CancellationToken ct) =>
         {
             var user = await users.GetUserAsync(principal);
@@ -450,7 +431,7 @@ public static class AuthEndpoints
                 return Results.Json(new { error = ErrorMessages.LanguageNotSupportedByProvider(unsupported[0], provider.Name) },
                     statusCode: StatusCodes.Status501NotImplemented);
 
-            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, user.Id, CreditPacks.AiSmallCost) is { } refusal)
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, user.Id, CreditPacks.AiSmallCost, analytics, "signature") is { } refusal)
                 return refusal;
 
             foreach (var target in targets)
@@ -665,6 +646,56 @@ public static class AuthEndpoints
     // Unknown codes and blanks are dropped rather than rejected: the map is a set of optional
     // labels, and refusing the whole profile save over one stray key would be out of proportion.
     public record TranslateProfileTextsRequest(string SourceLanguage, List<string>? TargetLanguages);
+
+    /// <summary>How somebody got past the invite gate, or that they did not.</summary>
+    public enum InviteKind { None, Code, ConfigCode, Invitation, OpenRegistration }
+
+    /// <summary>
+    /// The gate's verdict. <see cref="Code"/> is the row to charge a use against, and only a
+    /// <see cref="InviteKind.Code"/> has one — the config fallback points at nothing, and counting
+    /// a use against an invitation would spend a code nobody typed.
+    /// </summary>
+    public record InviteVerdict(InviteKind Kind, InviteCode? Code)
+    {
+        public bool Admits => Kind != InviteKind.None;
+    }
+
+    /// <summary>
+    /// Who is allowed to make an account (IF2 step 3, T-304). Shared by <c>/register</c> and by the
+    /// external sign-in's completion step (ADR-237 clause 2), so a provider button cannot become a
+    /// way around the gate the password form still enforces.
+    ///
+    /// Real invite codes first, the config code as a fallback that is deliberately kept — a database
+    /// problem must not lock registration out entirely. Then, if neither matched, a live team or
+    /// project invitation, read in a platform scope because registration has no tenant yet and the
+    /// ordinary filter would hide every membership row there is.
+    /// </summary>
+    public static async Task<InviteVerdict> ResolveInviteAsync(
+        string? submittedRaw, CedarDbContext db, IServiceScopeFactory scopes, IConfiguration cfg)
+    {
+        // The invite gate exists to keep strangers off a shared server. An install that has no
+        // strangers — one listening on 127.0.0.1 for the person sitting at the machine — can drop
+        // it, or a fresh install could never make its first account: there is no code to type, and
+        // no way to mint one without an account to mint it from.
+        if (cfg.IsOn(Consts.General.OpenRegistrationCfg))
+            return new InviteVerdict(InviteKind.OpenRegistration, null);
+
+        var submitted = submittedRaw?.Trim() ?? "";
+        var code = await db.InviteCodes.FirstOrDefaultAsync(c => c.Code.ToLower() == submitted.ToLower());
+        if (code is not null
+            && InviteCodeRules.IsUsable(code.IsActive, code.ExpiresAt, code.MaxUses, code.Uses, DateTime.UtcNow))
+            return new InviteVerdict(InviteKind.Code, code);
+
+        var configInvite = cfg[Consts.General.InviteCodeCfg];
+        if (!string.IsNullOrEmpty(configInvite) && submitted == configInvite)
+            return new InviteVerdict(InviteKind.ConfigCode, null);
+
+        using var inviteScope = scopes.CreatePlatformScope();
+        var invited = await TeamEndpoints.IsLiveInviteTokenAsync(
+            inviteScope.ServiceProvider.GetRequiredService<CedarDbContext>(), submitted);
+
+        return new InviteVerdict(invited ? InviteKind.Invitation : InviteKind.None, null);
+    }
 
     /// <summary>
     /// <see cref="Usernames.Check"/> plus the one question only the database can answer. Registration

@@ -1,5 +1,189 @@
 # Changelog
 
+## 2026-09-01 — Inspectors that can be written to, and the facts they were missing (S-15, ADR-238)
+
+Six board rows that were one complaint in different places: a shelf describing an object it cannot
+change, or naming a property nobody stored. Reading the code first changed the sprint — **T-270 was
+already shipped** (`DocumentType` is on both draft projections and the editor's Type row is a live
+`<select>`), so it closes as already done rather than as this session's work.
+
+**T-239 — `field` is a promise, and a row that hosts no control loses it.** `app-spec-row`'s sunken
+paper box moved off `.text` onto `.value`, so a projected input or select *is* the field instead of
+standing beside one. The media **source** row dropped it (the file itself cannot be typed over) and
+so did the **link href** row (the link mark's own dialog owns it, and a second weaker editor is not
+worth building). The **Location** row is a third the ADR's list did not name: `app-location-input`
+draws its own bordered input with a profile chip stacked under it, so the row's box would have
+wrapped a two-line composite in a one-line field. And the **slug row became a real edit** —
+`POST /api/drafts/{id}/slug` and `DraftsService.setBlogSlug` have existed since FI3.4 and the port
+simply stopped calling them. Every rule stays on the server, so the field shows the stored answer
+back rather than the keystrokes and surfaces the refusal instead of inventing one. Alt text was
+already editable before this sprint; it keeps `field`, and its input carries the global `.field`
+opt-out class so one box is drawn rather than two.
+
+**T-240 — one attribute, and the facts come from the server.** `assetId` (default null,
+`data-asset-id`) on image, video and audio; a node without it renders, saves, exports and publishes
+exactly as before, because every renderer reads named attributes and ignores the rest.
+`GET /api/assets/meta?id=|path=` answers resolution, byte size and origin. **Nothing is
+denormalised into the document and no column was added to `Asset`**: a resolution copied into a
+document goes stale the moment a derivative is written, and `Image.Identify` reads a header rather
+than an image with ImageSharp already a dependency. That is what removed a migration plus a backfill
+pass over ~937 MB of existing media. The lookup resolves by id **or by media path**, so documents
+written before today answer too — an id-only endpoint would have been true and useless.
+
+**T-256 — `/drafts` gets a shelf, and a row keeps its one meaning.** A read-only inspector over the
+picked document, selected by an explicit control in the existing `.row-actions` cluster and never by
+the row's own click: a row is a door to the editor (ADR-163), and a click that sometimes opened and
+sometimes selected would break the one interaction the board is for. Exclusive with the Folders
+shelf, which is what the column falls back to (ADR-167), and withdrawn in tree view alongside the
+other filters. No new endpoint — `DraftMeta` already carried every field it states, so picking a row
+asks the server nothing.
+
+**T-257 — the admin per-user form is a modal, by the maintainer's ruling.** The row was `#decision`,
+and the choice was made over both the 340px shelf ADR-164 clause 5 refused and leaving the form
+inline. A pure move: same handlers, same endpoints, the existing `app-modal` as the shell. Two
+things came with it. The user card is now a real `<button>` — with nothing nested inside it, it is
+keyboard-reachable and no click has to be stopped from propagating. And the delete confirmation
+**closes** the user modal instead of stacking on it: `ModalComponent` binds
+`document:keydown.escape` on every mounted instance, so two on screen would let one Escape dismiss
+both, taking the destructive question away with the context that explains it.
+
+**T-260 — glossary hits are recorded where the text changes and where the term changes.**
+`GlossaryTermUsage` holds one row per (term, draft) pair and none at all for a pair at zero, and
+`usedInDrafts` rides `GET /api/glossary`. Deliberately **not** `usedInPosts`: since ADR-102 a post
+is one of six `DocumentType`s, a term appearing in a changelog and two design documents is used
+three times, and `TERMINOLOGY.md` makes `Draft` the entity word. The scan runs on plain text through
+the matcher `Mark` already uses and ignores `DraftGlossaryExclusion` — an exclusion is a publishing
+decision, and a writer asking where a term is used wants the text, not the render. Beside the count
+travels `shadowedByTermId`, because `CountHits` is a single non-overlapping pass: where two terms
+spell the same thing only one is credited, and a bare `0` on the loser is indistinguishable from
+"this term appears nowhere in your documents" — two readings that call for opposite actions. The
+count is not zeroed for it, since a shadowed global term is still genuinely used everywhere the
+other one does not reach. Migration `AddGlossaryTermUsage`, add-table-only, and the sprint's only
+schema change.
+
+Three things about how the ADR itself moved, because each reads as drift otherwise.
+
+**The ADR said six write paths; the code has sixteen.** Clause 8 was written as a census of call
+sites, and the C# lane's sweep found eleven more: template instantiation on both branches, both AI
+background jobs, revision restore, `.cedar` and markdown import, project starter documents, preset
+bodies, changelog-from-build and devlog-from-sprint. A count labelled "used in N" that is quietly a
+different N is a lie rather than a delay, so the clause was rewritten as an invariant — *any
+endpoint that changes a draft's stored text calls `SyncForDraftAsync` before it returns* — and
+`GlossaryUsageInvariantTests` now enforces it, with a reasoned allow-list and a second test that
+validates the allow-list itself. It was verified to go red twice: once by the lane that wrote it,
+once independently.
+
+**Clause 1 went stale the same way inside one session** and was rewritten as an invariant for the
+same reason: `field` belongs on a row whose value container *is* the control, never on one that
+paints its own face. The test a future row is held to is one question — strip the row's box, does
+anything still draw an edge?
+
+**The lead found an error in his own clause 13 and corrected it rather than blessing it.** "The
+stricter of the two case flags" was wrong: a case-insensitive `"Unity"` and a case-sensitive
+`"unity"` both match the text `unity`, so they genuinely compete there and the loser then shows the
+bare `0` the field exists to prevent — the field would have stayed silent in exactly the case it was
+added for. The rule is to compare case-insensitively **unless both terms are case-sensitive**, which
+still answers *no collision* for `"IT"` against `"it"` when both are, since no string matches both.
+
+Two documentation rows closed with the sprint. **T-187** — `docs/tech/QA.md`, the permanent
+verification checklist: a row naming a behaviour is permanent and lives there, a row naming a task
+id and a date is a moment and stays on the board. **T-198** — `docs/archive/incidents.md`, an index
+of 24 incidents across 8 groups, linking the narratives that already existed in ADRs, the CHANGELOG
+and the rule files rather than rewriting them.
+
+Tests: **1759 `CedarClerk.Tests`** (+54) plus **127 `CedarClerk.Cli.Tests`** — 1886 backend in all,
+and the CLI half was never counted in the numbers earlier entries report. 518 frontend (+17).
+`cedar test` green across all five phases, every drift guard included; the icon inventory was
+regenerated at 86 icons over 445 call sites. **Nothing has been opened by a person** — the S-15
+eye-check is in `docs/tasks/TASKS.md`.
+
+## 2026-09-01 — Sign in with Google and Telegram (T-003 part, ADR-237)
+
+Two of T-003's four providers. **Apple is deliberately not among them** and now carries its costs on
+the backlog row: a paid Developer Program membership, a `client_secret` that is a self-signed ES256
+JWT Apple caps at six months, Private Relay addresses our Resend sender cannot reach without being
+registered with Apple, and a name returned only on the first sign-in. Bundling that would have held
+the two cheap providers behind it.
+
+**The invite gate applies to a provider button exactly as it applies to the password form.**
+Registration is invite-only, and a Google button that made accounts freely would have opened it to
+anyone with a Google account — through a door nobody decided to open, leaving the `BUSINESS.md`
+§1/§2 gates behind the fact. Signing in is free; signing up goes through the same check, which moved
+out of the register handler into `AuthEndpoints.ResolveInviteAsync` so the two callers cannot drift
+apart. Nine tests now hold it there.
+
+**An address that already belongs to an account is never merged on the provider's word.** The
+callback sends that person to `/login?external=link`, the password proves the account is theirs, and
+the link is attached right after it is accepted — best-effort, because a failed link must not become
+a failed login. `email_verified` is a claim about Google's world, not ours, and treating it as proof
+of ownership over our account is the standard takeover path.
+
+**Telegram signs in; it does not sign up.** It carries no email, and email is what invitations,
+receipts and recovery run through — inventing an address to satisfy the model would put a fiction in
+the one field that must be writable. An unknown Telegram gets a 404 saying so. `TelegramLoginVerifier`
+is reused unchanged from `/telegram/link`.
+
+New: `ExternalAuthEndpoints` (`/api/auth/external/*` — challenge, callback, complete, link, the
+account's login list, unlink, and Telegram), `/auth/complete` for a Google sign-in with no account
+behind it yet (account name and invite code, the same pair `/register` asks for, on the same fields),
+a provider row on both doors, and a Google mark in `brand-icon`. **No migration** — `AspNetUserLogins`
+has been in the schema since `InitialCreate`.
+
+Two things kept from going wrong on the way: the external cookie is cleared **by name**, because a
+bare `SignOutAsync()` clears every scheme including the application cookie and would drop the session
+just created; and unlinking refuses to remove the last way into an account, which with no password
+set would leave it reachable only by hand.
+
+Configuration is two lines for Google (`Cedar:Auth:Google:ClientId`/`ClientSecret`) and, for
+Telegram, no keys at all — but `@BotFather → /setdomain`, without which the widget silently refuses
+to render. Both in `integrations-setup.md` §3d. Neither configured means neither button is drawn.
+
+Tests: 1705 backend (+9), 501 frontend. **Nothing has been opened by a person.**
+
+## 2026-09-01 — Analytics: PostHog behind a consent nobody assumed (T-153, ADR-236)
+
+The provider question open since 13.08 is answered: **PostHog, EU cloud**. It was the one of four
+candidates that computes funnels, cohorts and retention directly — three of the four `BUSINESS.md`
+§4 metrics are those shapes — and free well past this install's volume. Self-hosting was refused on
+the spot: the droplet is 1 vCPU / 2 GB with no swap, and a ClickHouse beside the app trades a few
+dollars for an out-of-memory kill that takes the service with it.
+
+**The nine dictionary events of `METRICS.md` §4 are wired at the point each happens.** Eight on the
+server — `signup_completed` (carrying how the account got in), `draft_created` on the empty-handed
+create only, `post_published`/`post_published_first` off `PublishJobRunner`'s success, the three plan
+events across Stripe, PayPal and Stars, `credits_purchased` against the **owner** rather than the
+payer (T-359 finding 7), and `ai_used` at `ChargeAiOrRefuseAsync`, the single gate every AI call
+passes, carrying `outcome` so a refusal counts too. One on the client: `signup_started`, the only
+funnel step the server cannot witness, because `signup_completed` is written when the account already
+exists and the people who tried and were refused would otherwise be invisible.
+
+`ProductAnalytics` is the only route to the provider and **never throws** — it sits inside the Stripe
+webhook and the publish queue, and a metric is not worth a failed payment. Unconfigured it is a
+no-op, so a local run and a self-hosted install carry no client at all. The names live in
+`Consts.Analytics.Events`, which a test asserts against the METRICS list.
+
+**Consent is asked, and nothing loads before the answer.** ADR-126 clause 4 allowed a banner only by
+the maintainer's deliberate decision, and this is it: PostHog's own cookie is kept, and a banner with
+Accept and Decline stands in front of it. The SPA imports the library dynamically and the landing
+appends its script tag only after an accept, so an unasked visitor has no provider code running —
+stronger than initialising it opted-out. One `cedar_consent` cookie is read by both surfaces, so
+answering on either settles both. The landing decides in the browser rather than on the server
+because it is served `Cache-Control: public, max-age=300`, and a server-rendered banner would hand
+one visitor's answer to the next out of the edge cache.
+
+`/privacy` gains §4 "Analytics cookies" (the sections below it shift down one) and is dated
+1 September 2026: it names the provider, the region, the cookie and its year, and states the two
+exclusions outright — post content is never sent, and **blog readers are never counted this way**,
+whose statistics stay our own and cookie-free.
+
+Configuration is three lines in the systemd drop-in (`Cedar:Analytics:Enabled`, `:ProjectKey`,
+`:Host`), documented in `integrations-setup.md` §3c. The project key rides `/api/health`, which the
+frontend already calls at startup — it is public by construction, and building it into the bundle
+would leave a self-hosted install unable to turn it off.
+
+Tests: 1696 backend (+8), 501 frontend (+5). **Nothing has been opened by a person** — the
+eye-check is in `docs/tasks/TASKS.md`.
+
 ## 2026-09-01 — Sprint v0.2.0 closed: teams, three preset kinds, and the sprint's remainders
 
 **Teams (T-358, ADR-235).** `Team` and `TeamMember` beside the per-project membership ADR-217 built,

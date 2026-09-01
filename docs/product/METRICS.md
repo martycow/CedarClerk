@@ -1,13 +1,14 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-09-01
 source_of_truth_for: product event dictionary, derivation of the four BUSINESS §4 metrics from data
 guard: none
 ---
 
 # Metrics: event dictionary and how they're calculated
 
-Contract for T-153 (ADR-126): event names are stable, the analytics provider only transports them.
+Contract for T-153 (ADR-126/236): event names are stable, the analytics provider only transports them.
+The provider is live since 01.09.2026 — PostHog, EU cloud, behind a consent banner (ADR-236).
 `BUSINESS.md` §4 owns the list of "which metrics matter"; this file owns "exactly how they're
 calculated and from what." Updated in the same commit that adds or renames an event.
 
@@ -40,15 +41,38 @@ ADR-016; `BlogViewGeoDaily` — an aggregate, not a visit trail). Snapshots are 
 | Payment | `Payment` — provider, plan, amount, currency, status | Everything money-related below | ✔ full history |
 | Admin actions | `AdminAuditEntry` | Audit of manual interventions (plan, lock, grants) | ✔ |
 
-## 2. What's not being written (will appear only with T-153)
+## 2. What the provider adds, and what is still not written
 
-- **Funnel up to registration**: landing page visits, started and abandoned registrations, referral
-  source. Today only the outcome is visible — a row in `AspNetUsers`.
+The provider is **PostHog, EU cloud** (ADR-236). Events are captured where they happen, so history
+through it starts the day it ships — the four §4 metrics below are unaffected, because they are
+derived from the database and always were.
+
+Covered now:
+
+- **Funnel up to registration**: `signup_started` fires from the register form, so an attempt that
+  was refused is visible; previously only the outcome was — a row in `AspNetUsers`. Traffic source
+  comes from the landing's page views.
+- **An explicit first-publication event**: `post_published_first` is written beside
+  `post_published`, decided by "no earlier succeeded job for this owner". Still not a data-rescue
+  measure — §3.1's join remains the source of truth and covers all history.
+- **AI refusals**: `ai_used` carries `outcome` (`charged` / `no_credits` / `daily_limit`), because
+  "asked and was turned away" is what says whether the limits sit where they should.
+
+Still not written:
+
 - **Feature usage**: which capabilities get touched at all (`.cedar` export, private posts, forms,
   header slots). The only trace is the feature's own data — "opened it and didn't use it" isn't
   visible.
-- **An explicit first-publication event** — not needed as a data-rescue measure: it's derived via a
-  join (§3.1); in the provider it will become an optimization for live dashboards.
+- **Anything about blog readers.** Deliberate, not pending: their statistics are our own and
+  cookie-free (§1), and no third-party script goes on a tenant blog.
+
+### Consent
+
+Nothing reaches PostHog until the visitor accepts (ADR-236 clause 7): the library is not loaded at
+all before an answer, and the answer lives in one `cedar_consent` cookie shared by the landing and
+the app. **A declining visitor is therefore absent from every event above**, which is a real gap in
+the funnel numbers and not a bug — read activation and conversion off the database (§3), and read
+PostHog for the shape of what happens before an account exists.
 
 ## 3. The four metrics from §4 — derived from what exists
 
@@ -69,21 +93,25 @@ ADR-016; `BlogViewGeoDaily` — an aggregate, not a visit trail). Snapshots are 
 ## 4. Name dictionary for the provider
 
 `snake_case`, action's object first. The provider transports exactly these names; switching
-providers doesn't change the dictionary. The "source" column says where the event comes from once
-wired up.
+providers doesn't change the dictionary. The names are `Consts.Analytics.Events` in code (ADR-236
+clause 4) — a contract spread across string literals is one a rename silently breaks. "Where it
+fires" is the call site; "properties" are the dimensions it carries.
 
-| Name | Metric | Source |
-|---|---|---|
-| `signup_started` | activation (funnel) | client-only — doesn't exist today |
-| `signup_completed` | activation, cohorts | `AspNetUsers.CreatedAt` |
-| `draft_created` | activation (step) | `Draft.CreatedAt` |
-| `post_published` | activation, habit | `PublishJob` (Succeeded) / `BlogPublishedAt` |
-| `post_published_first` | activation, TTFP | derivable via the §3.1 join |
-| `trial_started` | conversion (step) | `Payment` (trial plan) |
-| `plan_purchased` | conversion, MRR | `Payment` (pro/proplus) |
-| `plan_renewed` | churn, MRR | `Payment` (repeat) |
-| `credits_purchased` | revenue outside MRR | `CreditEntry` (+Delta, purchase) |
-| `ai_used` | Pro Plus cost | `AiUsage` |
+| Name | Metric | Where it fires | Properties |
+|---|---|---|---|
+| `signup_started` | activation (funnel) | `register.component.ts` — the only client-side event | `invited` |
+| `signup_completed` | activation, cohorts | `AuthEndpoints` after `CreateAsync` | `entry` (invitation / invite_code / config_code / open) |
+| `draft_created` | activation (step) | `DraftEndpoints` `POST /` — the empty-handed create only, never a copy or an import | — |
+| `post_published` | activation, habit | `PublishJobRunner`, on `Succeeded` | `network`, `language`, `threaded` |
+| `post_published_first` | activation, TTFP | same, when no earlier succeeded job exists for the owner | same |
+| `trial_started` | conversion (step) | Stripe checkout, PayPal capture, Stars payment | `plan`, `provider` |
+| `plan_purchased` | conversion, MRR | same three | `plan`, `provider` |
+| `plan_renewed` | churn, MRR | Stripe `invoice.paid` (`subscription_cycle`) | `plan`, `provider` |
+| `credits_purchased` | revenue outside MRR | Stripe checkout, Stars payment — against the **owner**, never the payer (T-359 finding 7) | `credits`, `pack`, `provider` |
+| `ai_used` | Pro Plus cost | `SubscriptionPlan.ChargeAiOrRefuseAsync`, the one gate every AI call passes | `kind`, `credits`, `outcome` |
+
+The distinct id is the account id and nothing else: no email, no display name, no post content
+(ADR-236 clause 6).
 
 What's deliberately absent: likes, reach, landing-page traffic as an end in itself — §4 explicitly
 forbids measuring the pleasant instead of the decisive while there are fewer than ten paying users.

@@ -21,6 +21,18 @@ export interface GlossaryTerm {
     /** T-125 — the project this term belongs to, or null for a global one. */
     projectId: string | null;
     updatedAt: string;
+    /**
+     * ADR-238 — documents this term appears in. Carried by `GET /api/glossary` and by nothing
+     * else, so it is absent on a term that has just come back from a create or an update; a row
+     * drawn from an absent count would be a number the screen made up.
+     */
+    usedInDrafts?: number;
+    /**
+     * Another term that wins this one's spelling. The scan is a single non-overlapping pass, so
+     * only one of two terms sharing a spelling is ever credited — without this the loser's `0`
+     * would be indistinguishable from "nothing uses this", and the two call for opposite actions.
+     */
+    shadowedByTermId?: string | null;
 }
 
 export interface GlossaryTermInput {

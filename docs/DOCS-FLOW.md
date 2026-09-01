@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-24
+last_verified: 2026-09-01
 source_of_truth_for: map of ownership, flows and placement of documentation
 guard: DocsFlowGraphTests
 ---
@@ -35,6 +35,7 @@ flowchart TB
         PRODUCT["docs/product/PRODUCT.md<br/>product, target audience, pricing"]
         PRD["docs/product/PRD.md<br/>requirements"]
         ARCH["docs/tech/ARCHITECTURE.md<br/>system design"]
+        QA["docs/tech/QA.md<br/>permanent verification checklist<br/>by surface, re-checked on change"]
         DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
         UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
         STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
@@ -66,6 +67,7 @@ flowchart TB
 
     BACKLOG -->|"taken into work →<br/>row is DELETED from here"| TASKS
     TASKS -->|"done, session summary"| CHANGELOG
+    TASKS -->|"a check that outlives its sprint"| QA
 
     BACKLOG -.->|"a Q-xx question needs<br/>the owner's decision"| OWNER
 
@@ -111,7 +113,7 @@ flowchart TB
     class OWNER,INPUTP,CODE source
     class BACKLOG,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
-    class PRODUCT,PRD,ARCH,DESIGN,UIINV,STACK,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
+    class PRODUCT,PRD,ARCH,QA,DESIGN,UIINV,STACK,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
     class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT,BPROMPT mod
 ```
 
@@ -167,12 +169,12 @@ The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DEC
 | **`product/`** | The highest-level product context: the product as a whole, the business model, requirements | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV, COMPETITORS |
 | **`tasks/`** | Everything related to tasks | TASKS (short horizon), BACKLOG (board), CHANGELOG (history by date) |
 | **`design/`** | Design, UI, UX | DESIGN (tokens), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt, bench-board-prompt |
-| **`tech/`** | The technical side | ARCHITECTURE, DESKTOP |
+| **`tech/`** | The technical side | ARCHITECTURE, DESKTOP, QA |
 | **`adr/`** | Decision texts, one file per ADR (+ ownership-audit) | 205 ADRs. The index is in the root; its own folder rather than `tech/adr/`, because ADRs can be product decisions (ADR-092, ADR-101) as well as technical ones |
 | **`fleet/`** | Agent orchestration (Cowtext / FleetView) | so far only `docs/fleet/README.md` — agent definitions live in `.claude/agents/` |
 | **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026) |
 | **`for_user/`** | All instructions, manuals and everything else that matters to the user | integrations-setup (provider runbook) |
-| **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | empty — the last of it went in the 25.08.2026 clear-out |
+| **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | `incidents.md` — the index of every recorded incident: what broke, where the narrative lives, what guards it now. It is an index into living records rather than a record of a moment, so it is maintained, not frozen |
 | **`misc/`** | Everything else | the folder will appear with the first file that doesn't fit anywhere above |
 
 A new doc must get a node in the diagram above **in the same commit** — STACK/BUSINESS/MULTITENANCY were once not entered at all, and that was found only by an audit (18.08).

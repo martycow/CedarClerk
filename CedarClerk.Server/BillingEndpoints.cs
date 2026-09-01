@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Server.Bot;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -245,7 +246,8 @@ public static class BillingEndpoints
             return Results.Ok(new { url = doc.RootElement.GetProperty("url").GetString() });
         }).RequireAuthorization();
         
-        group.MapPost("/stripe/webhook", async (HttpRequest request, CedarDbContext db, IConfiguration cfg, ILogger<Payment> logger) =>
+        group.MapPost("/stripe/webhook", async (HttpRequest request, CedarDbContext db, IConfiguration cfg,
+            ILogger<Payment> logger, ProductAnalytics analytics) =>
         {
             var webhookSecret = cfg[Consts.Stripe.WebhookSecretCfg];
             if (string.IsNullOrEmpty(webhookSecret))
@@ -302,6 +304,12 @@ public static class BillingEndpoints
                             Currency = obj.TryGetProperty("currency", out var cur3) ? cur3.GetString() ?? "" : "",
                         });
                         await db.SaveChangesAsync();
+                        analytics.Track(userId, Consts.Analytics.Events.CreditsPurchased, new()
+                        {
+                            ["credits"] = credited,
+                            ["pack"] = creditPack?.Id ?? Consts.Plans.CustomCreditsPrefix,
+                            ["provider"] = "stripe",
+                        });
                         logger.LogInformation("Stripe credits purchase — user {UserId}, {Credits} credits", userId, credited);
                         break;
                     }
@@ -342,6 +350,11 @@ public static class BillingEndpoints
                     // not, or $1 would buy the $12-list allowance. Idempotent by the session id.
                     if (plan == Consts.Plans.ProPlus && sessionId is not null)
                         await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, sessionId);
+                    // The $1 trial is its own funnel step, never a component of conversion to Pro
+                    // (BUSINESS §4), so it carries a different event rather than a property.
+                    analytics.Track(user.Id,
+                        plan == Consts.Plans.Trial ? Consts.Analytics.Events.TrialStarted : Consts.Analytics.Events.PlanPurchased,
+                        new() { ["plan"] = plan, ["provider"] = "stripe" });
                     logger.LogInformation("Stripe checkout completed — user {UserId} on plan {Plan}", userId, plan);
                     break;
                 }
@@ -374,6 +387,8 @@ public static class BillingEndpoints
                     await db.SaveChangesAsync();
                     if (plan == Consts.Plans.ProPlus && invoiceId is not null)
                         await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, invoiceId);
+                    analytics.Track(user.Id, Consts.Analytics.Events.PlanRenewed,
+                        new() { ["plan"] = plan, ["provider"] = "stripe" });
                     logger.LogInformation("Stripe renewal — user {UserId} extended on plan {Plan}", user.Id, plan);
                     break;
                 }
@@ -556,7 +571,8 @@ public static class BillingEndpoints
             return Results.Ok(new { url = approveUrl });
         }).RequireAuthorization();
         
-        group.MapGet("/paypal/capture", async (string token, CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, ILogger<Payment> logger) =>
+        group.MapGet("/paypal/capture", async (string token, CedarDbContext db, IConfiguration cfg,
+            IHttpClientFactory httpFactory, ILogger<Payment> logger, ProductAnalytics analytics) =>
         {
             var clientId = cfg[Consts.PayPal.ClientIdCfg];
             var secret = cfg[Consts.PayPal.SecretKeyCfg];
@@ -623,6 +639,9 @@ public static class BillingEndpoints
             await db.SaveChangesAsync();
             if (plan == Consts.Plans.ProPlus && captureId is not null)
                 await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, captureId);
+            analytics.Track(user.Id,
+                plan == Consts.Plans.Trial ? Consts.Analytics.Events.TrialStarted : Consts.Analytics.Events.PlanPurchased,
+                new() { ["plan"] = plan, ["provider"] = "paypal" });
             logger.LogInformation("PayPal capture {CaptureId} — user {UserId} on plan {Plan}", captureId, userId, plan);
             return Results.Redirect("/?billing=success");
         });

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using CedarClerk.Core;
+using CedarClerk.Server.Analytics;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -9,7 +10,8 @@ using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Server.Bot;
 
-public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> logger, IServiceScopeFactory scopeFactory) : BackgroundService
+public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> logger,
+    IServiceScopeFactory scopeFactory, ProductAnalytics analytics) : BackgroundService
 {
     public TelegramBotClient Client => _client ?? throw new InvalidOperationException("Bot is not started");
     public bool IsRunning => _client is not null;
@@ -178,6 +180,14 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
                     Currency = payment.Currency, // "XTR"
                 });
                 await db.SaveChangesAsync();
+                // The owner, never the payer: a transferable invoice link means the two can differ
+                // (T-359 finding 7), and the credits landed on the account named in the payload.
+                analytics.Track(user.Id, Consts.Analytics.Events.CreditsPurchased, new()
+                {
+                    ["credits"] = purchasedCredits,
+                    ["pack"] = plan,
+                    ["provider"] = "telegram-stars",
+                });
                 logger.LogInformation("Telegram Stars credits purchase — user {UserId}, {Credits} credits", user.Id, purchasedCredits);
                 await Client.SendMessage(message.Chat, paidByOwner
                     ? $"Payment received — {purchasedCredits} credits added to your Cedar Clerk balance."
@@ -207,6 +217,9 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
             // T-152 — the Pro+ monthly credit allowance rides every paid Pro+ payment, trial excluded.
             if (plan == Consts.Plans.ProPlus && payment.TelegramPaymentChargeId is not null)
                 await CreditWallet.GrantAsync(db, user.Id, CreditPacks.ProPlusMonthlyCredits, CreditReasons.ProPlusMonthly, payment.TelegramPaymentChargeId);
+            analytics.Track(user.Id,
+                plan == Consts.Plans.Trial ? Consts.Analytics.Events.TrialStarted : Consts.Analytics.Events.PlanPurchased,
+                new() { ["plan"] = plan, ["provider"] = "telegram-stars" });
             logger.LogInformation("Telegram Stars payment — user {UserId} on plan {Plan} until {ExpiresAt}", user.Id, plan, user.PlanExpiresAt);
             await Client.SendMessage(message.Chat, paidByOwner
                 ? $"Payment received — your plan is active until {user.PlanExpiresAt:d MMM yyyy} (auto-renews for subscriptions). Enjoy Cedar Clerk!"

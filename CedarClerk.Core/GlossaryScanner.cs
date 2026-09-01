@@ -71,6 +71,49 @@ public static class GlossaryScanner
         return sb.ToString();
     }
 
+    /// <summary>
+    /// How many times each entry occurs in <paramref name="plainText"/>, parallel to the input list.
+    /// </summary>
+    /// <remarks>
+    /// Parallel array rather than a dictionary because <see cref="GlossaryEntry"/> carries no id and
+    /// the same word is a separate term in each language and each project. The input is plain text,
+    /// so — unlike <see cref="Mark"/> — "&amp;amp;" is five letters here and is matched as such.
+    /// </remarks>
+    public static int[] CountHits(string plainText, IReadOnlyList<GlossaryEntry> glossary)
+    {
+        var counts = new int[glossary.Count];
+        if (glossary.Count == 0 || plainText.Length == 0) return counts;
+
+        var candidates = glossary
+            .SelectMany((e, index) => e.Aliases.Prepend(e.Term)
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Select(a => (Alias: a.Trim(), Index: index, e.IsCaseSensitive)))
+            .OrderByDescending(c => c.Alias.Length)
+            .ToList();
+
+        var i = 0;
+        while (i < plainText.Length)
+        {
+            var matched = false;
+            if (IsWordStart(plainText, i))
+            {
+                foreach (var (alias, index, caseSensitive) in candidates)
+                {
+                    if (!MatchesAt(plainText, i, alias, caseSensitive)) continue;
+
+                    counts[index]++;
+                    i += alias.Length;
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched) i++;
+        }
+
+        return counts;
+    }
+
     private static void AppendMarked(StringBuilder sb, string matchedText, GlossaryEntry entry)
     {
         sb.Append("<span class=\"glossary-term\" tabindex=\"0\" data-term=\"")

@@ -62,7 +62,14 @@ public static class LandingEndpoints
             // Without this, one visitor's language is served to the next from the edge cache. The
             // ?lang= override needs no Vary — it is part of the URL, which the cache keys on.
             ctx.Response.Headers.Vary = "Accept-Language";
-            await ctx.Response.WriteAsync(Render(ru, content));
+
+            var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+            var analyticsKey = cfg.GetValue(Consts.Analytics.EnabledCfg, false)
+                ? cfg[Consts.Analytics.ProjectKeyCfg]
+                : null;
+            await ctx.Response.WriteAsync(Render(ru, content,
+                string.IsNullOrWhiteSpace(analyticsKey) ? null : analyticsKey,
+                cfg[Consts.Analytics.HostCfg] ?? Consts.Analytics.DefaultHost));
         });
     }
 
@@ -490,6 +497,21 @@ public static class LandingEndpoints
             }
             .ruler a { color: var(--rail-ink-soft); }
 
+            /* T-153 — the consent gate. Fixed and low-left so it never covers the waitlist form,
+               which is the one thing on this page a visitor came to use. */
+            .consent {
+                position: fixed; z-index: 60; left: 16px; bottom: 16px;
+                width: min(28rem, calc(100vw - 32px)); padding: 16px;
+                border: 1px solid var(--paper-edge); border-radius: 3px;
+                background-color: var(--sheet); background-image: var(--tex-paper);
+                box-shadow: 0 6px 18px rgb(0 0 0 / .22);
+                font-size: 14px; line-height: 1.6;
+            }
+            .consent[hidden] { display: none; }
+            .consent h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 18px; }
+            .consent p { margin: 0 0 8px; }
+            .consent-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
             /* ---- narrow ------------------------------------------------------------------ */
             @media (max-width: 1000px) {
                 .hero, .story { grid-template-columns: minmax(0, 1fr); gap: 32px; }
@@ -536,7 +558,83 @@ public static class LandingEndpoints
         .Replace("%%DONE%%", ru ? "Вы в списке — инвайт придёт на эту почту." : "You are on the list — the invite will land in this inbox.")
         .Replace("%%FAIL%%", ru ? "Не получилось отправить — попробуйте ещё раз." : "Could not send — try again.");
 
-    private static string Render(bool ru, LandingContent c)
+    /// <summary>
+    /// The consent gate and the provider loader, as one block (T-153, ADR-236).
+    ///
+    /// The decision is made in the browser rather than here, and that is not a preference: this page
+    /// is served with <c>Cache-Control: public, max-age=300</c>, so a server-rendered answer would
+    /// hand one visitor's choice to the next from the edge cache. Reading the cookie in the page
+    /// keeps the document identical for everyone and still correct for each of them.
+    ///
+    /// The banner ships in the markup and starts hidden, so nothing is injected after paint; the
+    /// script only decides whether to show it. Nothing from the provider is fetched until the answer
+    /// is yes — the loader is what an accepted consent buys, not something opted out of afterwards.
+    /// </summary>
+    private static string ConsentBlock(bool ru, string key, string host)
+    {
+        string T(string russian, string english) => ru ? russian : english;
+
+        var title = E(T("Cookies для продуктовой аналитики", "Cookies for product analytics"));
+        var body = E(T(
+            "Мы используем PostHog (EU), чтобы видеть, какими частями Cedar Clerk пользуются и где люди застревают. "
+            + "Ничего из этого не продаётся и не передаётся дальше, а читателей блогов так не считают никогда.",
+            "We use PostHog (EU) to see which parts of Cedar Clerk are used and where people get stuck. "
+            + "Nothing here is sold or shared onward, and blog readers are never counted this way."));
+        var accept = E(T("Принять", "Accept"));
+        var decline = E(T("Отклонить", "Decline"));
+        var privacy = E(T("Политика приватности", "Privacy policy"));
+
+        return $$"""
+            <div class="consent" id="consent" hidden>
+              <h2>{{title}}</h2>
+              <p>{{body}}</p>
+              <p><a href="/privacy">{{privacy}}</a></p>
+              <div class="consent-actions">
+                <button class="btn btn-paper btn-sm" id="consent-no">{{decline}}</button>
+                <button class="btn btn-pine btn-sm" id="consent-yes">{{accept}}</button>
+              </div>
+            </div>
+            <script>
+            (function () {
+              var COOKIE = '{{Consts.General.ConsentCookie}}';
+              var KEY = '{{key}}', HOST = '{{host}}';
+              function answer() {
+                var m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=([^;]*)'));
+                return m ? m[1] : '';
+              }
+              function remember(value) {
+                var secure = location.protocol === 'https:' ? '; Secure' : '';
+                document.cookie = COOKIE + '=' + value + '; path=/; max-age=31536000; SameSite=Lax' + secure;
+              }
+              function load() {
+                var s = document.createElement('script');
+                s.src = HOST + '/static/array.js';
+                s.onload = function () {
+                  window.posthog.init(KEY, { api_host: HOST, defaults: '2025-05-24' });
+                };
+                document.head.appendChild(s);
+              }
+              var current = answer();
+              if (current === '{{Consts.General.ConsentGranted}}') { load(); return; }
+              if (current === '{{Consts.General.ConsentDenied}}') return;
+
+              var banner = document.getElementById('consent');
+              banner.hidden = false;
+              document.getElementById('consent-yes').addEventListener('click', function () {
+                remember('{{Consts.General.ConsentGranted}}');
+                banner.hidden = true;
+                load();
+              });
+              document.getElementById('consent-no').addEventListener('click', function () {
+                remember('{{Consts.General.ConsentDenied}}');
+                banner.hidden = true;
+              });
+            })();
+            </script>
+            """;
+    }
+
+    private static string Render(bool ru, LandingContent c, string? analyticsKey, string analyticsHost)
     {
         string T(string russian, string english) => ru ? russian : english;
 
@@ -866,6 +964,7 @@ public static class LandingEndpoints
                 <a href="/login">{T("Войти", "Log in")}</a>
             </footer>
             <script>{WaitlistScript(ru)}</script>
+            {(analyticsKey is null ? "" : ConsentBlock(ru, analyticsKey, analyticsHost))}
             </body>
             </html>
             """;

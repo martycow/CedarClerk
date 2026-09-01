@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-09-01
 source_of_truth_for: ADR index — which decisions exist and where their texts live
 guard: none
 ---
@@ -248,3 +248,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-233 — A preset is a named starting point; a document type's meaning is the preset that carries it](adr/ADR-233.md)
 - [ADR-234 — A preset's kind decides which record reads it, and nothing else about it differs](adr/ADR-234.md)
 - [ADR-235 — A team is a second way in, resolved after the first, and a status is not a role](adr/ADR-235.md)
+- [ADR-236 — Analytics is PostHog, recorded where it happens, behind a consent nobody assumed](adr/ADR-236.md)
+- [ADR-237 — Signing in with somebody else's account: a second door, never a side door](adr/ADR-237.md)
+- [ADR-238 — Inspectors that can be written to, and the facts they were missing](adr/ADR-238.md)

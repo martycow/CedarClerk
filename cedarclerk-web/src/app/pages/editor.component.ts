@@ -44,7 +44,7 @@ import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { Mathematics } from '@tiptap/extension-mathematics';
 import { TextAlign } from '@tiptap/extension-text-align';
-import { AssetsService, DraftAsset } from '../core/assets.service';
+import { AssetMeta, AssetsService, DraftAsset } from '../core/assets.service';
 import { VideoNode } from '../tiptap-extensions/video-node';
 import { AudioNode } from '../tiptap-extensions/audio-node';
 import { CarouselNode } from '../tiptap-extensions/carousel-node';
@@ -92,7 +92,7 @@ import {
 import { RulerService } from '../core/ruler.service';
 import { STRIP_GROUP_IDS } from '../core/toolbar-layout';
 import { ToolbarFit, fitToolbar } from '../core/toolbar-fit';
-import { NodeLike, SelectionKind, SelectionSpec, describeSelection } from '../core/selection-spec';
+import { NodeLike, SelectionKind, SelectionSpec, describeSelection, mediaPathOf } from '../core/selection-spec';
 import { OutlineEntry, OutlineNodeLike, buildOutline, topLevelStart } from '../core/document-outline';
 import { DocumentOutlineComponent } from '../shared/document-outline.component';
 
@@ -1241,6 +1241,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     documentType = signal<DocumentType>('post');
     isWorkingMaterial = computed(() => !isPublishableType(this.documentType()));
     documentTypeError = signal<string | null>(null);
+    /** T-239 — the server's refusal to take a typed blog address, shown under the slug row. */
+    slugError = signal<string | null>(null);
     readonly docTypes = DOCUMENT_TYPES;
     readonly docTypeIcons = DOCUMENT_TYPE_ICONS;
     readonly isPublishableType = isPublishableType;
@@ -1713,6 +1715,33 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return describeSelection(this.selectedNode());
     }
 
+    // T-240 — the file behind the selected media node. Held here rather than on the node: a
+    // resolution or a byte count copied into the document goes stale the moment the bytes change,
+    // and a document that quietly asserts a wrong resolution is worse than one that says nothing.
+    assetMeta = signal<AssetMeta | null>(null);
+    private assetMetaKey = '';
+
+    /**
+     * Runs on every transaction, so it is keyed rather than debounced: selecting the same picture
+     * twice asks once, and typing asks not at all. The path is the second key — it is what lets a
+     * document written before `assetId` existed answer too.
+     */
+    private syncAssetMeta() {
+        const spec = this.selectionSpec();
+        const isMedia = spec?.kind === 'image' || spec?.kind === 'video' || spec?.kind === 'audio';
+        const id = isMedia ? spec?.assetId ?? null : null;
+        const path = isMedia ? mediaPathOf(this.selectedNode()?.attrs['src'] as string | undefined) : null;
+        const key = id ? `id:${id}` : path ? `path:${path}` : '';
+        if (key === this.assetMetaKey) return;
+
+        this.assetMetaKey = key;
+        this.assetMeta.set(null);
+        if (!key) return;
+        void this.assets.meta({ id, path }).then(meta => {
+            if (this.assetMetaKey === key) this.assetMeta.set(meta);
+        });
+    }
+
     /**
      * Whose properties the shelf shows. Most specific first: a selected object, then the table the
      * caret stands in, then a run of selected text. The document is the fallback, and it used to be
@@ -1812,21 +1841,34 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     /**
-     * Every row the selected block can answer, and no row it cannot. The kit's resolution, byte
-     * size and asset path are absent rather than blank: a TipTap node carries none of the three.
+     * Every row the selected block can answer, and no row it cannot. Resolution, byte size and the
+     * originating file come from the asset lookup (T-240) and stand down entirely when it found
+     * nothing — a blank row would assert the property exists and is unfilled.
      */
-    selectionRows(): { label: string; value: string; field?: boolean; warn?: boolean }[] {
+    selectionRows(): { label: string; value: string; warn?: boolean }[] {
         const spec = this.selectionSpec();
         if (!spec) return [];
         const i = this.t().editor.inspector;
-        const rows: { label: string; value: string; field?: boolean; warn?: boolean }[] = [];
+        const rows: { label: string; value: string; warn?: boolean }[] = [];
 
-        if (spec.source) rows.push({ label: i.source, value: spec.source, field: true });
+        // Plain ink: the source is the file itself and cannot be typed over (ADR-238 clause 1).
+        if (spec.source) rows.push({ label: i.source, value: spec.source });
         // Alt is drawn by the template instead: it is the one property here the writer has to be
         // able to change, and a read-only row saying "not filled in" is a complaint with no fix.
         if (spec.caption) rows.push({ label: i.caption, value: spec.caption });
         if (spec.text) rows.push({ label: i.summary, value: spec.text });
         if (spec.count !== undefined) rows.push({ label: this.countLabel(spec.kind), value: String(spec.count) });
+
+        const meta = this.assetMeta();
+        if (meta) {
+            // Null width/height is audio, video, or a header that would not read — not a zero.
+            if (meta.width && meta.height) {
+                rows.push({ label: i.resolution, value: `${meta.width} × ${meta.height}` });
+            }
+            rows.push({ label: i.fileSize, value: this.formatFileSize(meta.sizeBytes) });
+            rows.push({ label: i.asset, value: meta.fileName });
+        }
+
         rows.push({ label: i.node, value: spec.typeName });
         return rows;
     }
@@ -1970,6 +2012,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             content: '',
             onTransaction: ({ transaction }) => {
                 this.tick.update(v => v + 1);
+                this.syncAssetMeta();
                 this.scheduleRuDiffRecompute();
                 // Two clocks (ADR-162 clause 2): the lit outline row rides `tick` because it is one
                 // integer off the selection, while the list itself only rebuilds when the document
@@ -2512,6 +2555,29 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    /**
+     * T-239 — the blog address, retyped. Every rule stays on the server (slugify, refuse empty,
+     * refuse taken, refuse before the post has a slug at all), so the field shows the stored answer
+     * back: what came home after a save, or what was there before a refusal. Never the keystrokes,
+     * which are the one value the document does not hold.
+     */
+    async assignBlogSlug(input: HTMLInputElement) {
+        const id = this.currentId();
+        const blog = this.currentBlog();
+        if (!id || !blog) return;
+        const typed = input.value.trim();
+        if (!typed || typed === blog.slug) { input.value = blog.slug; return; }
+        this.slugError.set(null);
+        try {
+            const res = await this.draftsApi.setBlogSlug(id, typed);
+            this.currentBlog.set({ ...blog, slug: res.blogSlug });
+            input.value = res.blogSlug;
+        } catch (e) {
+            this.slugError.set(httpErrorMessage(e, this.t().editor.inspector.slugChangeFailed));
+            input.value = blog.slug;
+        }
+    }
+
     // Machine-translates the RU version into EN and loads the result into the editor for review.
     // Replacing an existing translation goes through a confirm modal first (see confirmTranslate()).
     autoTranslate() {
@@ -2825,6 +2891,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.isPrivate.set(draft.isPrivate);
             this.documentType.set(draft.documentType ?? 'post');
             this.documentTypeError.set(null);
+            this.slugError.set(null);
             this.watermarkText.set(draft.watermarkText);
             this.watermarkInput = draft.watermarkText ?? '';
             this.locationText.set(draft.locationText ?? '');
@@ -2921,6 +2988,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.currentSeriesId.set(null);
             this.documentType.set('post');
             this.documentTypeError.set(null);
+            this.slugError.set(null);
             this.isPrivate.set(isPrivate);
             this.disableCopy.set(false);
             this.watermarkText.set(null);
@@ -3842,7 +3910,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const files = Array.from(input.files ?? []);
         input.value = '';
         for (const file of files) {
-            this.uploadFilePromise(file).then(url => { if (url) this.editor?.chain().focus().setImage({ src: url }).run(); });
+            this.uploadFilePromise(file).then(a => { if (a) this.insertNode('image', { src: a.url, assetId: a.id }); });
         }
     }
 
@@ -3851,7 +3919,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const files = Array.from(input.files ?? []);
         input.value = '';
         for (const file of files) {
-            this.uploadFilePromise(file).then(url => { if (url) this.insertNode('video', { src: url }); });
+            this.uploadFilePromise(file).then(a => { if (a) this.insertNode('video', { src: a.url, assetId: a.id }); });
         }
     }
 
@@ -3861,7 +3929,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const files = Array.from(input.files ?? []);
         input.value = '';
         for (const file of files) {
-            this.uploadFilePromise(file).then(url => { if (url) this.insertNode('video', { src: url }); });
+            this.uploadFilePromise(file).then(a => { if (a) this.insertNode('video', { src: a.url, assetId: a.id }); });
         }
     }
 
@@ -3870,7 +3938,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const files = Array.from(input.files ?? []);
         input.value = '';
         for (const file of files) {
-            this.uploadFilePromise(file).then(url => { if (url) this.insertNode('audio', { src: url }); });
+            this.uploadFilePromise(file).then(a => { if (a) this.insertNode('audio', { src: a.url, assetId: a.id }); });
         }
     }
 
@@ -3879,8 +3947,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const files = Array.from(input.files ?? []);
         input.value = '';
         if (!files.length) return;
-        Promise.all(files.map(f => this.uploadFilePromise(f))).then(urls => {
-            const images = urls.filter((u): u is string => !!u);
+        Promise.all(files.map(f => this.uploadFilePromise(f))).then(uploaded => {
+            // A gallery holds an array of URLs and no per-frame attrs, so it carries no asset link.
+            const images = uploaded.filter(a => !!a).map(a => a!.url);
             if (images.length) this.insertNode('carousel', { images });
         });
     }
@@ -3954,21 +4023,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // including the GIF quirk (a .gif goes in as <video> so Telegram treats it as an animation).
     onLibraryPicked(asset: LibraryAsset) {
         this.libraryOpen.set(false);
-        this.insertMediaUrl(`/media/${asset.localPath}`, asset.contentType);
+        this.insertMediaUrl(`/media/${asset.localPath}`, asset.contentType, asset.id);
     }
 
-    private insertMediaUrl(url: string, contentType: string) {
+    private insertMediaUrl(url: string, contentType: string, assetId: string | null = null) {
         if (contentType === 'image/gif' || contentType.startsWith('video/')) {
-            this.insertNode('video', { src: url });
+            this.insertNode('video', { src: url, assetId });
         } else if (contentType.startsWith('audio/')) {
-            this.insertNode('audio', { src: url });
+            this.insertNode('audio', { src: url, assetId });
         } else {
-            this.editor?.chain().focus().setImage({ src: url }).run();
+            this.insertNode('image', { src: url, assetId });
         }
     }
 
     private uploadAndInsert(file: File) {
-        void this.uploadFilePromise(file).then(url => { if (url) this.insertMediaUrl(url, file.type); });
+        void this.uploadFilePromise(file).then(a => { if (a) this.insertMediaUrl(a.url, file.type, a.id); });
     }
 
     onCollageChosen(ev: Event) {
@@ -3976,8 +4045,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const files = Array.from(input.files ?? []);
         input.value = '';
         if (!files.length) return;
-        Promise.all(files.map(f => this.uploadFilePromise(f))).then(urls => {
-            const images = urls.filter((u): u is string => !!u);
+        Promise.all(files.map(f => this.uploadFilePromise(f))).then(uploaded => {
+            const images = uploaded.filter(a => !!a).map(a => a!.url);
             if (images.length) this.insertNode('collage', { images });
         });
     }
@@ -4173,7 +4242,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.editor?.chain().focus().insertContent({ type, attrs }).run();
     }
 
-    private uploadFilePromise(file: File): Promise<string | null> {
+    // Resolves the uploaded Asset, not just its URL: the id is what a media node keeps so the
+    // inspector can ask the server for the file's own facts later (ADR-238 clause 3).
+    private uploadFilePromise(file: File): Promise<{ id: string; url: string } | null> {
         const id = ++this.uploadSeq;
         this.uploads.update(list => [...list, { id, name: file.name, progress: 0 }]);
         return new Promise(resolve => {
@@ -4184,7 +4255,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                         this.uploads.update(list => list.map(u => u.id === id ? { ...u, progress } : u));
                     } else if (event.type === HttpEventType.Response && event.body) {
                         this.uploads.update(list => list.filter(u => u.id !== id));
-                        resolve(event.body.url);
+                        resolve(event.body);
                     }
                 },
                 error: () => {

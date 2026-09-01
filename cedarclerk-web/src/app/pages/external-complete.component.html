@@ -1,0 +1,43 @@
+<div class="door">
+    <app-button class="theme-toggle" variant="paper" surface="chrome" size="sm" [title]="t().common.toggleTheme"
+                (clicked)="theme.toggle()">
+        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
+    </app-button>
+
+    <app-paper-card class="auth-card" bright [rotate]="0.4">
+        <div class="auth-header">
+            <app-cedar-logo [size]="28"></app-cedar-logo>
+            <div class="auth-title">{{ t().externalAuth.completeTitle }}</div>
+            <div class="auth-tagline">{{ t().externalAuth.completeTagline }}</div>
+        </div>
+
+        <!--Same live preview as /register: a name is a public address the moment it is taken, and
+        there is still no rename.-->
+        <div class="username-field">
+            <app-input inputId="cc-ext-username" [label]="t().register.username"
+                       placeholder="alexwriter" autocomplete="off"
+                       [hint]="t().register.usernameHint(blogHost())"
+                       [value]="username()" (valueChange)="onUsernameInput($any($event) ?? '')"
+                       (keyup.enter)="submit()" />
+            @if (usernameNote()) {
+            <div class="username-note" [class.ok]="usernameTone() === 'ok'"
+                 [class.bad]="usernameTone() === 'bad'">{{ usernameNote() }}</div>
+            }
+        </div>
+
+        <app-input class="invite" inputId="cc-ext-invite" [label]="t().register.inviteCode"
+                   placeholder="CEDAR-MOO-0" autocomplete="off"
+                   [value]="inviteCode" (valueChange)="inviteCode = $any($event) ?? ''"
+                   (keyup.enter)="submit()" />
+
+        @if (error()) {
+        <div class="field-error">{{ error() }}</div>
+        }
+
+        <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="submit()">
+            {{ busy() ? '…' : t().externalAuth.completeSubmit }}
+        </app-button>
+
+        <app-lang-switch></app-lang-switch>
+    </app-paper-card>
+</div>

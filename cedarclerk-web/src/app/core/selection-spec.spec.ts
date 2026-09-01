@@ -1,4 +1,4 @@
-import { NodeLike, describeSelection, fileNameOf } from './selection-spec';
+import { NodeLike, describeSelection, fileNameOf, mediaPathOf } from './selection-spec';
 
 function node(typeName: string, attrs: Record<string, unknown> = {}, childCount?: number): NodeLike {
     return { typeName, attrs, childCount };
@@ -26,12 +26,21 @@ describe('describeSelection', () => {
         expect(spec.altMissing).toBe(false);
     });
 
-    // The kit's image panel shows a resolution, a byte size and the asset folder. None of the three
-    // is on the node, so none of them may appear — not even as an empty row, which would assert the
-    // property exists and is unfilled (ADR-159 clause 6).
-    it('invents no resolution, size or asset path', () => {
+    // Resolution, byte size and the originating file belong to the file, not to the document: a
+    // copy here would go stale the moment the bytes change. The node carries the link and nothing
+    // else, and a node without even that produces no such rows at all (ADR-238 clause 3).
+    it('invents no resolution, size or file name', () => {
         const spec = describeSelection(node('image', { src: 'a.png', alt: 'x' }))!;
         expect(Object.keys(spec).sort()).toEqual(['alt', 'altMissing', 'kind', 'source', 'typeName']);
+    });
+
+    it('carries the asset link when the node has one, and says nothing when it has none', () => {
+        expect(describeSelection(node('image', { src: 'a.png', assetId: 'A1' }))!.assetId).toBe('A1');
+        expect(describeSelection(node('video', { src: 'a.mp4', assetId: 'A2' }))!.assetId).toBe('A2');
+        expect(describeSelection(node('audio', { src: 'a.mp3', assetId: 'A3' }))!.assetId).toBe('A3');
+        // The ordinary case, not an error: every document written before the attribute existed.
+        expect(describeSelection(node('image', { src: 'a.png' }))!.assetId).toBeUndefined();
+        expect(describeSelection(node('image', { src: 'a.png', assetId: null }))!.assetId).toBeUndefined();
     });
 
     it('flags a missing alt, because that is the one claim the document can be wrong about', () => {
@@ -85,5 +94,23 @@ describe('fileNameOf', () => {
 
     it('names a data URI by its type rather than printing the payload', () => {
         expect(fileNameOf('data:image/png;base64,AAAA')).toBe('image/png');
+    });
+});
+
+describe('mediaPathOf', () => {
+    // The second key into an asset row. Without it the panel would light up only for pictures
+    // inserted after the link shipped, and stay blank on every existing document forever.
+    it('is the asset path behind our own media, absolute or relative, stamped or not', () => {
+        expect(mediaPathOf('/media/2026/08/fog.png')).toBe('2026/08/fog.png');
+        expect(mediaPathOf('https://cedarclerk.example/media/2026/08/fog.png?v=1723')).toBe('2026/08/fog.png');
+        expect(mediaPathOf('/media/fog.png#top')).toBe('fog.png');
+    });
+
+    it('answers nothing for a source that is not one of ours', () => {
+        expect(mediaPathOf('https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg')).toBeNull();
+        expect(mediaPathOf('data:image/png;base64,AAAA')).toBeNull();
+        expect(mediaPathOf('/media/')).toBeNull();
+        expect(mediaPathOf(undefined)).toBeNull();
+        expect(mediaPathOf(null)).toBeNull();
     });
 });

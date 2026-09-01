@@ -69,8 +69,9 @@ export class AdminComponent implements OnInit {
     newExpiresAt = '';
     newMaxUses: number | null = null;
 
-    // Step 2 — one expanded row at a time; the actions are destructive-adjacent enough that
-    // having six accounts' worth of controls on screen at once invites a misclick.
+    // Step 2 — one account at a time; the actions are destructive-adjacent enough that having six
+    // accounts' worth of controls on screen at once invites a misclick. T-257 moved the controls
+    // from an inline row into a modal, so this now names the modal's subject.
     expandedId = signal<string | null>(null);
     deleteTarget = signal<AdminUser | null>(null);
     busy = signal(false);
@@ -202,16 +203,22 @@ export class AdminComponent implements OnInit {
         return initialOf(email);
     }
 
-    toggleExpanded(u: AdminUser) {
-        if (this.expandedId() === u.id) {
-            this.expandedId.set(null);
-            return;
-        }
+    /** Re-read from the list rather than held, so every `run()` reload refreshes the open modal. */
+    modalUser(): AdminUser | null {
+        const id = this.expandedId();
+        return id ? this.users().find(u => u.id === id) ?? null : null;
+    }
+
+    openUser(u: AdminUser) {
         this.expandedId.set(u.id);
         // Seed the form from what the account currently has, so "save" without touching anything
         // is a no-op rather than a silent reset to Free.
         this.planTier = u.planTier;
         this.planExpiresAt = u.planExpiresAt ? u.planExpiresAt.slice(0, 10) : '';
+    }
+
+    closeUser() {
+        this.expandedId.set(null);
     }
 
     // Every action reloads rather than patching local state: an admin change can move several
@@ -265,8 +272,11 @@ export class AdminComponent implements OnInit {
     }
 
     // Two steps, like deleting a draft: the modal names the account so the wrong row cannot be
-    // dismissed with a reflex click.
+    // dismissed with a reflex click. The account modal closes rather than stacking under this one —
+    // ModalComponent binds document:keydown.escape on every mounted instance, so two on screen mean
+    // one Escape dismisses both, taking the destructive question away with its context (ADR-238).
     askDelete(u: AdminUser) {
+        this.expandedId.set(null);
         this.deleteTarget.set(u);
     }
 

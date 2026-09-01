@@ -215,6 +215,7 @@ public static class ProjectEndpoints
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
 
             return Results.Created($"/api/projects/{project.Id}", new { project.Id, project.Name, documentId = draft.Id });
         });
@@ -430,6 +431,7 @@ public static class ProjectEndpoints
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
             await db.SaveChangesAsync();
+            await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id, draft.Title, draft.DocumentType });
         });
 

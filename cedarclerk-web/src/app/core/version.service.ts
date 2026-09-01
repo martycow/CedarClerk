@@ -19,12 +19,25 @@ export class VersionService {
     // ADR-108's `upstreamAuthHost` is gone with ADR-117. It existed to warn that the account was
     // shared with another installation while the data here was not — a warning that has nothing left
     // to warn about now the desktop keeps no data of its own. One identity, one data set.
+    // T-003 — which sign-in buttons the two doors may draw. Read from the same call for the same
+    // reason as openRegistration: /login and /register run before there is a session to ask with.
+    readonly googleAuth = signal(false);
+    readonly telegramBot = signal<string | null>(null);
+
     constructor() {
-        firstValueFrom(this.http.get<{ version: string; openRegistration?: boolean }>('/api/health'))
+        firstValueFrom(this.http.get<HealthResponse>('/api/health'))
             .then(r => {
                 this.version.set(r.version);
                 this.openRegistration.set(r.openRegistration ?? false);
+                this.googleAuth.set(r.externalAuth?.google ?? false);
+                this.telegramBot.set(r.externalAuth?.telegramBot ?? null);
             })
             .catch(() => { /* chrome, not critical — silently absent if health is unreachable */ });
     }
+}
+
+interface HealthResponse {
+    version: string;
+    openRegistration?: boolean;
+    externalAuth?: { google?: boolean; telegramBot?: string | null } | null;
 }

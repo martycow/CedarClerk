@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using CedarClerk.Core;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Localization;
 using CedarClerk.Server.Translation;
 using Microsoft.EntityFrameworkCore;
@@ -81,7 +82,8 @@ public static class FormPresetEndpoints
         // Same gates as post auto-translate (Pro Plus + the daily AI quota); runs synchronously
         // rather than as an AiJob — a form is a handful of short strings, one chunk, seconds.
         group.MapPost("/{id:guid}/translate", async (Guid id, TranslatePresetRequest req, ClaimsPrincipal user,
-            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory, CancellationToken ct) =>
+            CedarDbContext db, IConfiguration cfg, IHttpClientFactory httpFactory,
+            ProductAnalytics analytics, CancellationToken ct) =>
         {
             if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
                 return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
@@ -119,7 +121,7 @@ public static class FormPresetEndpoints
             if (texts.All(string.IsNullOrWhiteSpace))
                 return Results.BadRequest(new { error = ErrorMessages.FormHasNoText });
 
-            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost) is { } refusal)
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost, analytics, "form_preset") is { } refusal)
                 return refusal;
 
             IReadOnlyList<string> translated;

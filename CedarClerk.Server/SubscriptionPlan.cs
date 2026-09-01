@@ -1,5 +1,6 @@
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Analytics;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -77,9 +78,29 @@ public static class SubscriptionPlan
         return Results.Json(new { error }, statusCode: statusCode);
     }
 
-    /// <summary>The refusal to return, or null when the call is paid for.</summary>
-    public static async Task<IResult?> ChargeAiOrRefuseAsync(CedarDbContext db, string userId, int credits) =>
-        await TryChargeAiAsync(db, userId, credits) switch
+    /// <summary>
+    /// The refusal to return, or null when the call is paid for. Every AI call in the app comes
+    /// through here, which is why <c>ai_used</c> is recorded here rather than at six call sites —
+    /// and why a refusal is recorded too: "asked and was turned away" is the half of AI spend that
+    /// says whether the limits are set right (<c>docs/product/METRICS.md</c>).
+    /// </summary>
+    public static async Task<IResult?> ChargeAiOrRefuseAsync(
+        CedarDbContext db, string userId, int credits, ProductAnalytics analytics, string kind)
+    {
+        var charge = await TryChargeAiAsync(db, userId, credits);
+        analytics.Track(userId, Consts.Analytics.Events.AiUsed, new()
+        {
+            ["kind"] = kind,
+            ["credits"] = credits,
+            ["outcome"] = charge switch
+            {
+                AiCharge.DailyLimit => "daily_limit",
+                AiCharge.NoCredits => "no_credits",
+                _ => "charged",
+            },
+        });
+
+        return charge switch
         {
             AiCharge.DailyLimit => Results.Json(
                 new { error = ErrorMessages.AiDailyLimitReached(PlanLimitations.AiDailyLimit) },
@@ -89,6 +110,7 @@ public static class SubscriptionPlan
                 statusCode: StatusCodes.Status402PaymentRequired),
             _ => null,
         };
+    }
 
     public static async Task<bool> TryConsumeAiCallAsync(CedarDbContext db, string userId)
     {

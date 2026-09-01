@@ -570,6 +570,23 @@ public class DraftGlossaryExclusion
     public string Language { get; set; } = Languages.Russian;
 }
 
+// ADR-238 — where a term is actually used, recorded when the text changes and when the term does.
+// A pair with no occurrences has no row at all: the count reads rows, and a stored zero would be a
+// second way to say "nowhere" that every query would then have to exclude.
+public class GlossaryTermUsage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid GlossaryTermId { get; set; }
+    public Guid DraftId { get; set; }
+    /// <summary>
+    /// Counted over the document's text in the term's own language — the primary body or the
+    /// translation row, whichever holds it. A term never counts against a language it is not in.
+    /// </summary>
+    public int Occurrences { get; set; }
+    public DateTime ScannedAt { get; set; } = DateTime.UtcNow;
+}
+
 // A real, named, user-managed entity (create/rename/delete) — unlike Tags, which stay a flat
 // unmanaged string. See the ADR following ADR-038, docs/DECISIONS.md.
 public class Folder

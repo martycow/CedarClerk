@@ -1,12 +1,14 @@
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Server.Publishing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Configuration;
 using CedarClerk.Server.Tenancy;
 
 namespace CedarClerk.Tests;
@@ -86,7 +88,12 @@ public class PublishJobRunnerTests
     }
 
     private static PublishJobRunner Runner(ServiceProvider provider) =>
-        new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<PublishJobRunner>.Instance);
+        new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<PublishJobRunner>.Instance,
+            DisabledAnalytics);
+
+    /// <summary>No client and no configuration, so <see cref="ProductAnalytics.Track"/> is a no-op.</summary>
+    private static ProductAnalytics DisabledAnalytics =>
+        new(null, new ConfigurationBuilder().Build(), NullLogger<ProductAnalytics>.Instance);
 
     [Fact]
     public async Task A_queued_job_runs_and_records_what_the_network_returned()
