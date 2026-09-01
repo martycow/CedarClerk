@@ -67,7 +67,7 @@ see them.
   defect. `/privacy` already names PostHog — it is dated 1 September 2026 and goes to the lawyer with
   the rest of the text under the `BUSINESS.md` §2 gate.
 - Production: **0.20.0 on the droplet, deployed 01.09.2026**, `LIVE` = `4755566`, `LIVE-PREV` = `95fa976`. Everything that had been queued since 0.12.0 is live: the `UI_V2` port and fidelity pass, multitenancy (ADR-206…213), the showcase site and screen, the reference board (ADR-217…219), the 0.17.0 maintainer batch, Waves 1–2, the dialogue tool, and sprint v0.2.0. **The `95fa976` project-frame design (ADR-234 as it was then) was live for three hours and this deploy removed it** — reverted on master by Marty's call, recoverable from the reflog. `LIVE`/`LIVE-PREV` never go to origin (the local-tag rule in CLAUDE.md); the `0.20.0` version tag is local so far.
-- **The version string can no longer tell two builds apart**: the deploy before this one also called itself 0.20.0, so the health check's version match proved nothing. What proved the swap was `GET /api/teams` answering 401 instead of 404. Bump `Consts.CurrentVersion` before the next deploy, or the same blind spot returns.
+- **The version string can no longer tell two builds apart**: the deploy before this one also called itself 0.20.0, so the health check's version match proved nothing. What proved the swap was `GET /api/teams` answering 401 instead of 404. Bumped to 0.20.1 on 01.09.2026 for exactly this reason; the rule stands for every deploy after it.
 - Sprint v0.2.0 is **closed on master (01.09.2026)**: T-331/T-337/T-338/T-350/T-353/T-358/T-359/T-361
   are done, and T-358 closed T-301/T-302/T-304 with them (CHANGELOG 01.09, ADR-234/235). Three
   migrations rode along — `BotKnownChatAdminsSyncedAt`, `DraftCoverImage`, `AddTeams`. Every eye-check
@@ -76,7 +76,8 @@ see them.
   external-sign-in work of the same day (ADR-236/237): T-239, T-240, T-256, T-257 and T-260 are
   built, T-270 was found already shipped and closed as such, and T-187/T-198 landed
   `docs/tech/QA.md` and `docs/archive/incidents.md`. One migration, `AddGlossaryTermUsage`, add-table
-  only. **Not deployed, and `Consts.CurrentVersion` still reads 0.20.0** — the note above about a
-  version string that cannot tell two builds apart applies to the next deploy as written.
+  only. **Committed to master as `3b93004`, not deployed.**
+  `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
+  from the one on the droplet — which the previous pair of deploys could not do.
 - On `master`; `showcase_menu_and_layout` is merged in and no branch is active. The `UI_V2` port is merged into master and its branch rows are closed.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.
