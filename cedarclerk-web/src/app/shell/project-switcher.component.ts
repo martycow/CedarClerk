@@ -1,7 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, computed, inject, input, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { avatarFill } from '../core/avatar-color.util';
+import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 import { IconComponent } from '../shared/icon.component';
 
 export interface SidebarProject {
@@ -20,13 +21,15 @@ export interface SidebarProject {
     host: {
         'data-surface': 'paper',
         '[class.is-inline]': "variant() === 'inline'",
+        '[class.is-compact]': "variant() === 'compact'",
         '(document:click)': 'onDocumentClick($event)',
         '(document:keydown.escape)': 'onEscape()',
     },
     template: `
         @if (projects().length) {
             <button #trigger type="button" class="side-project" aria-haspopup="true"
-                    [attr.aria-expanded]="open()" [attr.title]="hint() || null" (click)="toggle()">
+                    [attr.aria-expanded]="open()" [attr.title]="hint() || null"
+                    [attr.aria-label]="variant() === 'compact' ? name() : null" (click)="toggle()">
                 <ng-container *ngTemplateOutlet="face" />
                 <app-icon name="caret-down" size="xs" />
             </button>
@@ -37,25 +40,26 @@ export interface SidebarProject {
                 }
             </div>
         } @else {
-            <a class="side-project" [routerLink]="fallbackLink()" [attr.title]="hint() || null">
+            <a class="side-project" [routerLink]="fallbackLink()" [attr.title]="hint() || null"
+               [attr.aria-label]="variant() === 'compact' ? name() : null">
                 <ng-container *ngTemplateOutlet="face" />
             </a>
         }
 
         <ng-template #face>
-            @if (variant() === 'card') {
+            @if (variant() !== 'inline') {
                 @if (project()?.id) {
                     <span class="side-project-tile" [style.background]="fill()">{{ initials() }}</span>
                 } @else {
                     <span class="side-project-tile is-hub"><app-icon name="folder-open" size="sm" /></span>
                 }
             }
-            <span class="side-project-text">
+            @if (variant() !== 'compact') { <span class="side-project-text">
                 <span class="side-project-name">{{ name() }}</span>
                 @if (variant() === 'card' && project()?.kind) {
                     <span class="side-project-kind">{{ project()!.kind }}</span>
                 }
-            </span>
+            </span> }
         </ng-template>
     `,
     styles: [`
@@ -128,6 +132,15 @@ export interface SidebarProject {
         :host(.is-inline) .side-project:hover { background: var(--hover); }
         :host(.is-inline) .side-project-name { font-size: var(--fs-15); }
 
+        :host(.is-compact) .side-project {
+            justify-content: center;
+            width: 72px;
+            min-height: var(--hit-touch);
+            padding: 0 var(--space-2);
+        }
+
+        :host(.is-compact) .side-project-panel { min-width: 220px; }
+
         .side-project-panel {
             position: absolute;
             top: calc(100% + var(--space-1));
@@ -163,18 +176,26 @@ export interface SidebarProject {
         .side-project-item.is-on { font-weight: 700; background: var(--hover); }
     `],
 })
-export class ProjectSwitcherComponent {
+export class ProjectSwitcherComponent implements OnDestroy {
     readonly project = input<SidebarProject | null>(null);
     readonly projects = input<readonly SidebarProject[]>([]);
     readonly hint = input('');
-    readonly variant = input<'card' | 'inline'>('card');
+    readonly variant = input<'card' | 'inline' | 'compact'>('card');
     readonly fallbackName = input('');
     readonly fallbackLink = input<string | readonly unknown[]>('/projects');
 
     private readonly el = inject(ElementRef<HTMLElement>);
+    private readonly overlays = inject(OverlayCoordinatorService);
     private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
 
     protected readonly open = signal(false);
+    private readonly unregisterPeer = this.overlays.registerDismissablePeer(activeElement => {
+        const returnFocus = activeElement && this.el.nativeElement.contains(activeElement)
+            ? this.trigger()?.nativeElement ?? null
+            : null;
+        if (this.open()) this.open.set(false);
+        return returnFocus;
+    });
 
     protected readonly fill = computed(() => avatarFill(this.project()?.id ?? null));
     /** A project whose name the list has not answered yet says so rather than borrowing a word. */
@@ -185,12 +206,17 @@ export class ProjectSwitcherComponent {
     });
     protected readonly initials = computed(() => {
         const name = this.project()?.name ?? '';
+        if (!name) return '…';
         const words = name.split(/\s+/).filter(Boolean);
         const letters = words.length > 1 ? words[0][0] + words[1][0] : name.slice(0, 2);
         return letters.toUpperCase();
     });
 
     toggle(): void { this.open.set(!this.open()); }
+
+    ngOnDestroy(): void {
+        this.unregisterPeer();
+    }
 
     onEscape(): void {
         if (!this.open()) return;

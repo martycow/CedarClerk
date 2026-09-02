@@ -1,18 +1,18 @@
-<div class="page">
+<div class="page" data-layout="operational">
     <app-page-header [title]="t().projects.shelfTitle" [meta]="headerMeta()">
+        @if (hasProjectData()) {
         <app-button primary variant="pine" (clicked)="startCreate()">
             <app-icon name="plus" weight="bold" size="sm" />
             {{ t().projects.newProject }}
         </app-button>
+        }
     </app-page-header>
 
     <div class="toolbar">
         <app-index-tabs [items]="filterTabs()" [value]="filter()" [label]="t().projects.colState"
                         (selected)="pickFilter($event)" />
         <span class="spacer"></span>
-        <label class="named-elsewhere" for="projects-search">{{ t().projects.search }}</label>
-        <app-input class="search" inputId="projects-search" type="search"
-                   [placeholder]="t().projects.search"
+        <app-input class="search" type="search" [label]="t().projects.search"
                    [ngModel]="search()" (ngModelChange)="search.set($event)" />
     </div>
 
@@ -45,13 +45,16 @@
                 </a>
             } @empty {
                 <app-empty-state class="new-card" icon="squares-four" [title]="t().projects.sharedEmpty"
-                                 [text]="t().projects.sharedEmptyHint" />
+                                 [text]="t().projects.sharedEmptyHint">
+                    @if (!hasProjectData()) {
+                    <app-button variant="pine" (clicked)="startCreate()">{{ t().projects.newProject }}</app-button>
+                    }
+                </app-empty-state>
             }
         </div>
     } @else {
         <!--T-332 — cards, not a cold row list: the cover leads, the counts are the plate's own
-        strip. A card is a door to the hub, so it is an anchor (ADR-163). The last cell is the
-        invitation to start the next project, whatever the filter says.-->
+        strip. A card is a door to the hub, so it is an anchor (ADR-163).-->
         <div class="cards">
             @for (p of visible(); track p.id) {
                 <a class="card project-card" [class.dim]="!!p.archivedAt"
@@ -82,12 +85,15 @@
             } @empty {
                 @if (projects().length > 0) {
                     <app-empty-state class="new-card is-note" [icon]="null" [text]="t().projects.emptyFiltered" />
+                } @else {
+                    <app-empty-state class="new-card" icon="plus" [title]="t().projects.startNew"
+                                     [text]="t().projects.startNewHint">
+                        @if (!hasProjectData()) {
+                        <app-button variant="pine" (clicked)="startCreate()">{{ t().projects.newProject }}</app-button>
+                        }
+                    </app-empty-state>
                 }
             }
-            <app-empty-state class="new-card" icon="plus" [title]="t().projects.startNew"
-                             [text]="t().projects.startNewHint">
-                <app-button variant="paper" size="sm" (clicked)="startCreate()">{{ t().projects.newProject }}</app-button>
-            </app-empty-state>
         </div>
     }
 </div>

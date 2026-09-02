@@ -255,23 +255,24 @@ export class CalendarComponent implements OnInit {
         return out;
     });
 
+    /** Tickets drawn in the current month/week projection, including its leading and trailing days. */
+    visibleTickets = computed(() => this.cells().flatMap(cell => cell.tickets));
+    visiblePosts = computed(() => this.visibleTickets().filter(ticket => ticket.kind === 'post'));
+    isVisiblePeriodEmpty = computed(() => this.visibleTickets().length === 0);
     isEmptyBoard = computed(() => !this.scheduled().length && !this.slots().length);
 
-    /** Posts still to go out — the header's count, whatever month is on screen. */
-    pendingCount = computed(() => this.scheduled().filter(p => p.status === 'Pending').length);
+    /** Posts still to go out in the period the header names. */
+    pendingCount = computed(() => this.visiblePosts().filter(ticket => ticket.status === 'Pending').length);
 
-    /** Unfilled slot occurrences in the visible weeks. */
-    openSlotCount = computed(() => {
-        let n = 0;
-        for (const tickets of this.slotTickets().values()) n += tickets.length;
-        return n;
-    });
+    /** Unfilled slot occurrences in the cells the person can currently see. */
+    openSlotCount = computed(() =>
+        this.visibleTickets().filter(ticket => ticket.kind === 'slot').length);
 
     /** The legend — each network on the board behind its series dot — and the two counts. */
     headerMeta = computed<HeaderMeta[]>(() => {
         const meta: HeaderMeta[] = this.legendNetworks().map(n => ({ text: this.networkLabel(n), swatch: networkColor(n) }));
         meta.push({ text: this.t().calendar.scheduledCount(this.pendingCount()) });
-        if (this.slots().length) meta.push({ text: this.t().calendar.openSlots(this.openSlotCount()) });
+        if (this.openSlotCount()) meta.push({ text: this.t().calendar.openSlots(this.openSlotCount()) });
         meta.push({ text: this.t().calendar.timeZone(displayTimeZone()) });
         return meta;
     });
@@ -301,7 +302,7 @@ export class CalendarComponent implements OnInit {
 
     /** Networks actually on the board, for the legend. */
     legendNetworks = computed(() => {
-        const seen = new Set(this.scheduled().map(p => p.network || 'telegram'));
+        const seen = new Set(this.visiblePosts().map(ticket => ticket.network));
         return ['telegram', 'bluesky', 'discord', 'x', 'blog'].filter(n => seen.has(n));
     });
 
@@ -346,30 +347,81 @@ export class CalendarComponent implements OnInit {
             this.error.set(this.t().calendar.invalidWallTime);
             return;
         }
-        const nextUtc = next.toISOString();
-
-        const before = this.scheduled();
-        this.rescheduleBusy.set(true);
         this.error.set('');
-        this.scheduled.update(list => list.map(p => p.id === id ? { ...p, scheduledAtUtc: nextUtc } : p));
-        try {
-            await this.calendarApi.reschedule(id, nextUtc);
-        } catch (e) {
-            this.scheduled.set(before);
-            this.error.set(httpErrorMessage(e, this.t().calendar.rescheduleFailed));
-        } finally {
-            this.rescheduleBusy.set(false);
-        }
+        await this.movePendingPost(id, next.toISOString(), message => this.error.set(message));
     }
 
-    // ─── Ticket click ─────────────────────────────────────────────────────────────────────────
+    // ─── Ticket activation and reschedule ─────────────────────────────────────────────────────
+
+    rescheduleTicket = signal<CalendarTicket | null>(null);
+    rescheduleAt = '';
+    rescheduleError = signal('');
 
     openTicket(ticket: CalendarTicket) {
         if (ticket.kind === 'slot') return;
-        if (ticket.status === 'Sent') {
+        if (ticket.status === 'Pending') {
+            this.openRescheduleDialog(ticket);
+        } else if (ticket.status === 'Sent') {
             this.router.navigate(['/posts'], { queryParams: { draft: ticket.draftId } });
         } else if (ticket.draftId) {
             this.router.navigate(['/editor'], { queryParams: { draft: ticket.draftId } });
+        }
+    }
+
+    openRescheduleDialog(ticket: CalendarTicket) {
+        if (ticket.kind !== 'post' || ticket.status !== 'Pending') return;
+        this.scheduleOpen.set(false);
+        this.rescheduleError.set('');
+        this.rescheduleAt = `${ticket.day}T${ticket.time}`;
+        this.rescheduleTicket.set(ticket);
+    }
+
+    closeRescheduleDialog() {
+        if (this.rescheduleBusy()) return;
+        this.rescheduleTicket.set(null);
+        this.rescheduleError.set('');
+    }
+
+    canReschedule(): boolean {
+        return !!this.rescheduleTicket() && !!this.rescheduleAt && !this.rescheduleBusy();
+    }
+
+    async confirmReschedule() {
+        const ticket = this.rescheduleTicket();
+        if (!ticket || !this.canReschedule()) return;
+        const [day, time] = this.rescheduleAt.split('T');
+        const instant = wallClockToInstant(day, time);
+        if (!instant) {
+            this.rescheduleError.set(this.t().calendar.invalidWallTime);
+            return;
+        }
+
+        this.rescheduleError.set('');
+        if (await this.movePendingPost(ticket.id, instant.toISOString(), message => this.rescheduleError.set(message))) {
+            this.rescheduleTicket.set(null);
+        }
+    }
+
+    private async movePendingPost(id: string, nextUtc: string, onError: (message: string) => void): Promise<boolean> {
+        if (this.rescheduleBusy()) return false;
+        const post = this.scheduled().find(item => item.id === id);
+        if (!post || post.status !== 'Pending') {
+            onError(this.t().calendar.rescheduleFailed);
+            return false;
+        }
+
+        const before = this.scheduled();
+        this.rescheduleBusy.set(true);
+        this.scheduled.update(list => list.map(item => item.id === id ? { ...item, scheduledAtUtc: nextUtc } : item));
+        try {
+            await this.calendarApi.reschedule(id, nextUtc);
+            return true;
+        } catch (e) {
+            this.scheduled.set(before);
+            onError(httpErrorMessage(e, this.t().calendar.rescheduleFailed));
+            return false;
+        } finally {
+            this.rescheduleBusy.set(false);
         }
     }
 
@@ -385,6 +437,7 @@ export class CalendarComponent implements OnInit {
     scheduleError = signal('');
 
     async openScheduleDialog() {
+        this.rescheduleTicket.set(null);
         this.scheduleError.set('');
         this.scheduleDraftId = '';
         this.scheduleTargetId = '';

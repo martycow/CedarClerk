@@ -63,6 +63,7 @@ describe('SpecRowComponent', () => {
         const el = fixture.nativeElement as HTMLElement;
         expect(el.querySelector('.label')!.textContent!.trim()).toBe('Файл');
         expect(el.querySelector('.text')!.textContent!.trim()).toBe('fog_pass_02.png');
+        expect(el.querySelector('.text')!.getAttribute('title')).toBe('fog_pass_02.png');
     });
 
     it('carries the field and warn variants as host classes so the two can combine', () => {
@@ -76,6 +77,20 @@ describe('SpecRowComponent', () => {
         fixture.detectChanges();
         expect(el.classList.contains('field')).toBe(true);
         expect(el.classList.contains('warn')).toBe(true);
+    });
+
+    it('wraps a long value only when the consumer opts in', () => {
+        const fixture = create();
+        const el = fixture.nativeElement as HTMLElement;
+        expect(el.classList).not.toContain('wrap');
+
+        fixture.componentRef.setInput('wrap', true);
+        fixture.detectChanges();
+        expect(el.classList).toContain('wrap');
+        expect(el.querySelector('.text')!.hasAttribute('title')).toBe(false);
+        const css = styleText('.wrap');
+        expect(css).toMatch(/\.wrap[^{]*\.text[^{]*\{[^}]*white-space:\s*normal/s);
+        expect(css).toMatch(/overflow-wrap:\s*anywhere/);
     });
 
     // The defect ADR-238 clause 1 names: drawn on the ink, the box appeared on exactly the rows

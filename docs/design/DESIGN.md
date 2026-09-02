@@ -97,6 +97,26 @@ Paper is cut square and wood is eased: 4px is a field, 8px a plaque. Nothing on 
 ```
 Roughly a ×2 progression, not a strict 4px-multiple ramp.
 
+### Workspace measures (ADR-246)
+
+Page width is an explicit content contract, not the accidental remainder after a fixed dock. A `.page`
+names one of four layouts with `data-layout`: `focus` and `form` stop at `--measure-focus` /
+`--measure-form` (960px), `editorial` stops at `--measure-editorial` (1440px), and `operational`
+uses the available width. The base `.page` is fluid so an operational screen never inherits a hidden
+1920px ceiling.
+
+Operational two- and three-pane screens build on `.split-workspace` and `.split-pane`. The list and
+inspector columns use bounded tracks (`--pane-list-min/max`, `--pane-inspector-min/max`), while the
+working centre is `minmax(--pane-working-min, 1fr)`. A pane owns its contents and minimum size; a page
+must not copy a 280/300/320/340px dock width into component CSS. One visual axis has one scroll owner,
+and every grid child that may shrink declares `min-width: 0` and `min-height: 0`.
+
+The modifiers name the actual topology: `.is-two` is list + working pane and `.is-main-inspector` is
+working pane + inspector. A generic three-pane workspace becomes one natural-height column below
+1320px; main + inspector follows at 1100px, and two-pane workspaces at 900px. The stacked workspace
+owns vertical scrolling, while its `.split-pane` children release their internal overflow. A page may
+switch the shared split off entirely when an optional pane is closed; it must not leave an empty track.
+
 ### Density (tokens v2, ADR-071)
 Comfortable is the default, declared in `:root`; `[data-density="compact"]` overrides it on a page root. **Not one colour differs between the two** — density is spacing, size, radius and separation only.
 ```
@@ -223,6 +243,13 @@ The one after it: **an ink is derived against the wash it lands on, not against 
 ## Component patterns (convention, not enforced)
 
 There is **still no shared button abstraction** — `.btn-accent`/`.btn-ghost` are copy-pasted between component stylesheets with drifting values (e.g. `.btn-ghost` padding differs between the editor and settings). But the modal gap closed: `shared/` now holds ~15 reusable components including a real `app-modal` (used across the app), `app-icon`, `page-header`, `account-menu`, the pickers, the appearance panel and more — `docs/design/UI-INVENTORY.md` §Shared is the census. The paragraph below survives as the button-pattern reference.
+
+Selectable lists use the global `.row` anatomy: `.row-main` contains one truncating `.row-title` and
+one `.row-meta`; state and actions remain in non-shrinking columns. Selection is `.is-on`, shown by the
+accent wash and a 3px inset rule. Placeholder-only fields and ambiguous chip colour are not labels or
+selection semantics: controls keep a visible label, and pick-one/pick-many states remain readable
+without colour. An empty region offers one primary next action; a page does not repeat that action in
+its header, body and inspector at once (ADR-246).
 
 De-facto pattern from `editor.component.css` (lines 458–537), useful as a reference if/when this gets formalized into a real shared component:
 ```css

@@ -60,13 +60,6 @@
     color: var(--wood-ink-soft);
 }
 
-.mg-grid {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    gap: var(--space-4);
-}
-
 .shelf-list,
 .sheet,
 .inspector {
@@ -76,20 +69,11 @@
     overflow: hidden;
 }
 
-.shelf-list {
-    flex: none;
-    width: 280px;
-}
-
 .sheet {
-    flex: 1;
     min-width: 0;
 }
 
-.inspector {
-    flex: none;
-    width: 300px;
-}
+.inspector .card-body { min-width: 0; }
 
 .card-head {
     border-bottom: 1px solid var(--paper-edge);
@@ -117,7 +101,8 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: var(--space-4);
 }
 
@@ -192,9 +177,14 @@
 
 .publish-journey {
     display: grid;
-    grid-template-columns: auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto;
+    grid-template-columns:
+        minmax(0, auto) minmax(4px, 1fr)
+        minmax(0, auto) minmax(4px, 1fr)
+        minmax(0, auto) minmax(4px, 1fr)
+        minmax(0, auto) minmax(4px, 1fr)
+        minmax(0, auto);
     align-items: start;
-    gap: var(--space-2);
+    gap: var(--space-1);
     margin-top: var(--space-4);
 }
 
@@ -203,13 +193,13 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-1);
-    min-width: 68px;
+    min-width: 0;
     text-align: center;
     color: var(--t3);
 }
 
 .journey-step strong { font-size: var(--fs-ui); color: var(--t2); }
-.journey-step small { max-width: 14ch; font-size: var(--fs-caption); }
+.journey-step small { max-width: 14ch; font-size: var(--fs-caption); overflow-wrap: anywhere; }
 .journey-step.is-done strong { color: var(--text); }
 
 .journey-mark {
@@ -407,6 +397,10 @@
 }
 
 .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--hit-target);
     border: 1px solid var(--border);
     background: none;
     color: var(--t2);
@@ -415,6 +409,10 @@
     font-size: var(--fs-meta);
     font-family: inherit;
     cursor: pointer;
+}
+
+.pill-marker:not(.is-visible) {
+    visibility: hidden;
 }
 
 .pill.on {
@@ -549,8 +547,11 @@
 .form-editor {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 10px;
+    gap: var(--space-4);
+    width: 100%;
+    max-width: var(--measure-form);
+    min-width: 0;
+    margin-right: auto;
 }
 
 .form-save-row {
@@ -687,6 +688,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
+    min-width: 0;
 }
 
 .form-block-title {
@@ -757,13 +759,13 @@
 
 .q-label-row {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
 }
 
-.q-label-row .post-card-lang {
-    flex: none;
-}
+.q-label-row .form-field-label,
+.option-field .form-field-label { display: flex; align-items: center; gap: 5px; }
 
 /* Option rows: one option = one row of per-language inputs sharing a stable id, so a comma
    field can't desync the languages. */
@@ -780,7 +782,15 @@
 }
 
 .option-row .option-input {
+    width: 100%;
+    min-width: 0;
+}
+
+.option-field {
+    display: flex;
     flex: 1;
+    flex-direction: column;
+    gap: 5px;
     min-width: 0;
 }
 
@@ -817,6 +827,9 @@
 .lang-chip-act {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    width: var(--hit-target);
+    min-height: var(--hit-target);
     border: none;
     background: none;
     color: inherit;
@@ -930,8 +943,8 @@
     align-items: center;
     justify-content: center;
     flex: none;
-    width: 28px;
-    height: 28px;
+    width: var(--hit-target);
+    height: var(--hit-target);
     padding: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);

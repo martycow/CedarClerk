@@ -118,7 +118,7 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | Term | Russian | Meaning | Source |
 |---|---|---|---|
 | Project | проект | A game as a container for documents, tasks, sprints and an asset index; always holds ≥1 document, is archived rather than deleted | `Entities.IndieDev.cs` |
-| ProjectType | тип проекта | fullgame/jam/prototype/released — decides only the starting document at creation, and nothing after | `Core/ProjectTypes.cs` |
+| ProjectType | тип проекта | The creation offer is empty/blog/fullgame/product; legacy jam/prototype/released values still parse. It decides only the starting document at creation, and nothing after | `Core/ProjectTypes.cs` |
 | GameTask | задача | A set of fixed fields, not a document (ADR-106 boundary): Description is plain text; named GameTask because Task is taken by async | `Entities.IndieDev.cs` |
 | Sprint | спринт | A name + two dates + a non-reusable number from the project's counter (not MAX+1); no status column — planned/current/finished is derived from the dates (ADR-111) | `Entities.IndieDev.cs`, `Core/SprintStates.cs` |
 | Build | билд | A record of a game version: number, notes, date, contents; an entity, not a tag, and knows nothing about git (ADR-112) | `Entities.IndieDev.cs` |

@@ -1,6 +1,7 @@
 @if (open()) {
 <div class="so-scrim" (click)="close()">
-    <div class="so-panel" data-surface="paper" role="dialog" [attr.aria-label]="t().search.title"
+    <div #panel class="so-panel" data-surface="paper" role="dialog" aria-modal="true" tabindex="-1"
+         [attr.aria-label]="t().search.title"
          (click)="$event.stopPropagation()">
         <div class="so-input-row">
             <app-icon name="magnifying-glass" size="sm"></app-icon>
@@ -8,6 +9,9 @@
                    [ngModel]="query()" (ngModelChange)="onQueryChange($event)"
                    (keydown)="onInputKeydown($event)"
                    [placeholder]="t().search.placeholder" [attr.aria-label]="t().search.title"
+                   role="combobox" aria-autocomplete="list" [attr.aria-expanded]="results().length > 0"
+                   [attr.aria-controls]="results().length ? 'cedar-search-results' : null"
+                   [attr.aria-activedescendant]="results().length ? 'cedar-search-option-' + index() : null"
                    autocomplete="off" spellcheck="false">
             <span class="so-kbd" aria-hidden="true">Esc</span>
         </div>
@@ -17,10 +21,10 @@
         } @else if (failed()) {
         <p class="so-note so-failed">{{ t().search.failed }}</p>
         } @else if (results().length) {
-        <ul class="so-results" role="listbox" [attr.aria-label]="t().search.title">
+        <ul id="cedar-search-results" class="so-results" role="listbox" [attr.aria-label]="t().search.title">
             @for (hit of results(); track hit.id + hit.snippet; let i = $index) {
             <li role="presentation">
-                <button type="button" class="so-row" role="option"
+                <button type="button" class="so-row" role="option" [id]="'cedar-search-option-' + i"
                         [class.active]="i === index()" [attr.aria-selected]="i === index()"
                         (mouseenter)="index.set(i)" (click)="openHit(hit)">
                     <app-icon [name]="iconOf(hit)" size="sm"></app-icon>

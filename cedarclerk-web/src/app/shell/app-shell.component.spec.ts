@@ -1,13 +1,16 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { CommentsService } from '../core/comments.service';
-import { DebugLogService } from '../core/debug-log.service';
 import { LocaleService } from '../core/i18n/locale.service';
+import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 import { ThemeService } from '../core/theme.service';
+import { ModalComponent } from '../shared/modal.component';
+import { PopoverComponent } from '../shared/popover.component';
 import { AppShellComponent } from './app-shell.component';
 
 @Component({ template: '' })
@@ -60,6 +63,7 @@ describe('app shell', () => {
         TestBed.inject(LocaleService).uiLang.set('en');
         router = TestBed.inject(Router);
         localStorage.removeItem('cedar-project');
+        localStorage.removeItem('cedar-sidebar-mode');
         fixture = TestBed.createComponent(AppShellComponent);
         fixture.detectChanges();
     });
@@ -76,14 +80,21 @@ describe('app shell', () => {
         expect(main.getAttribute('data-surface')).toBe('paper');
     });
 
-    it('collapses to the rail on the editor and nowhere else', async () => {
+    it('keeps one sidebar mode across routes and persists an explicit change', async () => {
         await go('/drafts');
         expect(fixture.componentInstance.mode()).toBe('full');
         expect(el().querySelector('app-sidebar')!.classList).not.toContain('is-rail');
         await go('/editor?draft=1');
+        expect(fixture.componentInstance.mode()).toBe('full');
+        const toggle = el().querySelector('app-sidebar .side-mode') as HTMLButtonElement;
+        toggle.click();
+        fixture.detectChanges();
         expect(fixture.componentInstance.mode()).toBe('rail');
         expect(el().querySelector('app-sidebar')!.classList).toContain('is-rail');
         expect(el().querySelector('app-sidebar .side-label')).toBeNull();
+        expect(localStorage.getItem('cedar-sidebar-mode')).toBe('rail');
+        await go('/drafts');
+        expect(fixture.componentInstance.mode()).toBe('rail');
     });
 
     it('counts unread feedback on Metrics, and draws nothing at zero', () => {
@@ -234,6 +245,46 @@ describe('app shell', () => {
         expect(entries.map(a => a.getAttribute('href'))).toEqual(['/projects/p1', '/projects/p2', '/projects']);
     });
 
+    it('refreshes the switcher when a project is created after the shell list loaded', async () => {
+        TestBed.inject(AuthService).indieDev.set(true);
+        fixture.detectChanges();
+        await flushProjects([]);
+
+        await router.navigateByUrl('/projects/p-new');
+        fixture.detectChanges();
+        for (const probe of TestBed.inject(HttpTestingController)
+                 .match(r => /^\/api\/projects\/[^/]+\/access$/.test(r.url))) {
+            probe.flush({ role: 'owner', canWrite: true, archived: false });
+        }
+        TestBed.inject(HttpTestingController)
+            .expectOne(r => r.url.startsWith('/api/projects') && !r.url.includes('/access'))
+            .flush([{ id: 'p-new', name: 'New project', projectType: 'empty' }]);
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(el().querySelector('app-project-switcher .side-project-name')!.textContent!.trim())
+            .toBe('New project');
+    });
+
+    it('dismisses the open project switcher before the global search modal opens', async () => {
+        TestBed.inject(AuthService).indieDev.set(true);
+        await go('/projects/p1');
+        await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
+        const card = el().querySelector('app-project-switcher .side-project') as HTMLButtonElement;
+        card.click();
+        fixture.detectChanges();
+        const entry = el().querySelector('app-project-switcher .side-project-item') as HTMLAnchorElement;
+        entry.focus();
+        expect(card.getAttribute('aria-expanded')).toBe('true');
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+        await Promise.resolve();
+
+        expect(card.getAttribute('aria-expanded')).toBe('false');
+        expect(el().querySelector('.so-panel[aria-modal="true"]')).toBeTruthy();
+    });
+
     it('carries the open project screen across the switcher', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/projects/p1/assets');
@@ -298,18 +349,98 @@ describe('app shell', () => {
     // ADR-239 clause 11 — the console is an overlay: shut by default, opened from the menu or the
     // shortcut, and reserving no height on the shell while shut.
     it('keeps the console shut, and toggles it from the menu and from Ctrl+`', () => {
-        const log = TestBed.inject(DebugLogService);
-        expect(log.open()).toBe(false);
+        const overlays = TestBed.inject(OverlayCoordinatorService);
+        expect(overlays.active()).toBeNull();
         expect(el().querySelector('.console-overlay')).toBeNull();
 
         menuItem('Debug console').click();
         fixture.detectChanges();
-        expect(log.open()).toBe(true);
+        expect(overlays.active()).toBe('debug');
         expect(el().querySelector('.console-overlay[role="dialog"]')).toBeTruthy();
 
         document.dispatchEvent(new KeyboardEvent('keydown', { key: '`', ctrlKey: true, bubbles: true }));
         fixture.detectChanges();
-        expect(log.open()).toBe(false);
+        expect(overlays.active()).toBeNull();
         expect(el().querySelector('.console-overlay')).toBeNull();
+    });
+
+    it('keeps exactly one shell overlay active across menu and keyboard entry points', () => {
+        const overlays = TestBed.inject(OverlayCoordinatorService);
+
+        menuItem('Appearance').click();
+        fixture.detectChanges();
+        expect(overlays.active()).toBe('appearance');
+        expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(1);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+        expect(overlays.active()).toBe('search');
+        expect(el().querySelector('app-appearance-panel app-modal')).toBeNull();
+        expect(el().querySelector('.so-panel[aria-modal="true"]')).toBeTruthy();
+        expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(1);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: '`', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+        expect(overlays.active()).toBe('debug');
+        expect(el().querySelector('.so-panel')).toBeNull();
+        expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(1);
+    });
+
+    it('does not open a shell overlay while a page modal owns the top layer', async () => {
+        const overlays = TestBed.inject(OverlayCoordinatorService);
+        const pageModal = TestBed.createComponent(ModalComponent);
+        pageModal.detectChanges();
+        await Promise.resolve();
+        expect(overlays.modalOpen()).toBe(true);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: '`', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+
+        expect(overlays.active()).toBeNull();
+        expect(el().querySelector('.so-panel')).toBeNull();
+        expect(el().querySelector('.console-overlay')).toBeNull();
+        pageModal.destroy();
+    });
+
+    it('dismisses the account popover synchronously, keeps one modal, and restores the trigger after a peer chain', async () => {
+        const entries = openAccountMenu();
+        const trigger = el().querySelector('app-account-menu .account-trigger') as HTMLButtonElement;
+        const focusedEntry = entries.find(entry => menuText(entry) === 'Profile') as HTMLAnchorElement;
+        const accountDebug = fixture.debugElement.query(By.css('app-account-menu'));
+        const popover = accountDebug.query(By.directive(PopoverComponent)).componentInstance as PopoverComponent;
+        const close = vi.spyOn(popover, 'close');
+        focusedEntry.focus();
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+        expect(popover.isOpen()).toBe(false);
+        expect(close).toHaveBeenCalledOnce();
+        fixture.detectChanges();
+        await Promise.resolve();
+        expect(document.activeElement).toBe(el().querySelector('.so-input'));
+        expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(1);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: '`', code: 'Backquote', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+        await Promise.resolve();
+        expect(el().querySelector('.so-panel')).toBeNull();
+        expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(1);
+
+        (document.activeElement as HTMLElement).dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        await Promise.resolve();
+        expect(close).toHaveBeenCalledOnce();
+        expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(0);
+        expect(document.activeElement).toBe(trigger);
+    });
+
+    it('closes the account popover before opening Feedback', () => {
+        menuItem('Send feedback').click();
+        fixture.detectChanges();
+
+        expect(el().querySelector('app-account-menu .popover-panel')).toBeNull();
+        expect(el().querySelector('app-feedback-panel [aria-modal="true"]')).toBeTruthy();
+        expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(1);
     });
 });

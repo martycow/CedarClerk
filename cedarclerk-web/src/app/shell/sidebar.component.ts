@@ -35,7 +35,8 @@ export interface SidebarUser {
 
 // The navigation (ADR-239 clause 4): a paper column with one hairline edge. Every item is an anchor
 // and the current one carries aria-current. The 92px rail is the same list drawn as icon over
-// caption, decided by the route and never by width (clause 5, ADR-147).
+// caption. Both modes keep the same project context, order and foot; the person chooses the mode
+// explicitly (ADR-246 clause 1).
 @Component({
     selector: 'app-sidebar',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,9 +51,10 @@ export interface SidebarUser {
             @if (mode() === 'full') { <span class="side-wordmark">{{ brand() }}</span> }
         </a>
 
-        @if (mode() === 'full' && project(); as project) {
+        @if (project(); as project) {
             <app-project-switcher class="side-switcher" [project]="project" [projects]="projects()"
-                                  [hint]="projectHint()" [fallbackName]="allProjectsLabel()" />
+                                  [hint]="projectHint()" [fallbackName]="allProjectsLabel()"
+                                  [variant]="mode() === 'full' ? 'card' : 'compact'" />
         }
 
         <nav class="side-nav" [attr.aria-label]="navLabel() || null">
@@ -74,15 +76,19 @@ export interface SidebarUser {
             </div>
         </nav>
 
+        <button type="button" class="side-mode" [attr.aria-label]="modeLabel()" [attr.title]="modeLabel()"
+                (click)="modeChange.emit(mode() === 'full' ? 'rail' : 'full')">
+            <app-icon [name]="mode() === 'full' ? 'caret-left' : 'caret-right'" size="sm" />
+            @if (mode() === 'full') { <span>{{ collapseLabel() }}</span> }
+        </button>
+
         <div class="side-user">
             <app-account-menu [face]="mode() === 'full' ? 'row' : 'avatar'" (openAppearance)="openAppearance.emit()" />
-            @if (mode() === 'full') {
-                <a class="side-bell" routerLink="/posts" [attr.title]="alertsTitle() || null"
-                   [attr.aria-label]="alertsTitle() || null">
-                    <app-icon name="chat-teardrop" size="sm" />
-                    @if (alerts() > 0) { <span class="side-dot" aria-hidden="true"></span> }
-                </a>
-            }
+            <a class="side-bell" routerLink="/posts" [attr.title]="alertsTitle() || null"
+               [attr.aria-label]="alertsTitle() || null">
+                <app-icon name="chat-teardrop" size="sm" />
+                @if (alerts() > 0) { <span class="side-dot" aria-hidden="true"></span> }
+            </a>
         </div>
 
         <ng-template #entry let-item>
@@ -217,6 +223,27 @@ export interface SidebarUser {
 
         .side-user app-account-menu { flex: 1; min-width: 0; }
 
+        .side-mode {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            flex: none;
+            box-sizing: border-box;
+            min-height: var(--hit-target);
+            margin: 0 var(--space-3) var(--space-2);
+            padding: 0 var(--space-3);
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--t2);
+            font-family: var(--font-sans);
+            font-size: var(--fs-13);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .side-mode:hover { border-color: var(--border); background: var(--hover); color: var(--text); }
+
         .side-bell {
             position: relative;
             display: inline-flex;
@@ -243,6 +270,7 @@ export interface SidebarUser {
 
         :host(.is-rail) { width: var(--sidebar-rail-w); }
         :host(.is-rail) .side-brand { justify-content: center; padding: 0; }
+        :host(.is-rail) .side-switcher { width: 72px; margin: 0 auto var(--space-3); }
         :host(.is-rail) .side-nav { align-items: center; padding: var(--space-3) 0; }
         :host(.is-rail) .side-group { align-items: center; gap: var(--space-1); }
         :host(.is-rail) .side-group + .side-group { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); }
@@ -259,7 +287,8 @@ export interface SidebarUser {
         }
 
         :host(.is-rail) .side-text { flex: none; max-width: 100%; text-align: center; }
-        :host(.is-rail) .side-user { justify-content: center; padding: 0; }
+        :host(.is-rail) .side-mode { justify-content: center; width: 72px; margin-inline: auto; padding: 0; }
+        :host(.is-rail) .side-user { justify-content: center; padding: 0 var(--space-2); }
         :host(.is-rail) .side-user app-account-menu { flex: none; }
     `],
 })
@@ -278,10 +307,17 @@ export class SidebarComponent {
     readonly brandLabel = input('');
     readonly allProjectsLabel = input('');
     readonly alertsTitle = input('');
+    readonly collapseLabel = input('');
+    readonly expandLabel = input('');
     readonly picked = output<string>();
     readonly openAppearance = output<void>();
+    readonly modeChange = output<'full' | 'rail'>();
 
     countOf(item: NavItem): string {
         return indexTabBadgeLabel(item.count);
+    }
+
+    modeLabel(): string {
+        return this.mode() === 'full' ? this.collapseLabel() : this.expandLabel();
     }
 }

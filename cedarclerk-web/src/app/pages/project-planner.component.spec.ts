@@ -106,6 +106,15 @@ describe('project planner', () => {
             .toEqual(['Autumn build', 'Winter build', 'Spring build', t.planner.noSprint, 'Summer build']);
     });
 
+    it('uses the operational split and omits the no-sprint paper when there is no pile', () => {
+        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+        expect(el().querySelectorAll('.grid.split-workspace > .split-pane')).toHaveLength(2);
+
+        fixture.componentInstance.tasks.update(list => list.filter(task => task.sprintId));
+        fixture.detectChanges();
+        expect(cardNames()).not.toContain(t.planner.noSprint);
+    });
+
     // ADR-168 rule 4 — the same tag the hub hangs, and it is a link (ADR-163).
     it('hangs each task as a tag addressed at the board', () => {
         const plates = tags().map(x => x.querySelector('.tt-plate') as HTMLAnchorElement);
@@ -163,6 +172,9 @@ describe('project planner', () => {
         expect(specValue(t.planner.state.finished)).toBe('1');
         expect(specValue(t.tasks.filterOpen)).toBe('2');   // t-late and t-pile
         expect(specValue(t.planner.noSprint)).toBe('1');   // t-pile
+        const current = [...side().querySelectorAll('app-spec-row')]
+            .find(row => row.querySelector('.label')?.textContent?.trim() === t.planner.state.current)!;
+        expect(current.classList).toContain('wrap');
     });
 
     // ADR-239 clause 6 — what the rule used to say is the header's kicker and meta line.
@@ -179,5 +191,22 @@ describe('project planner', () => {
         expect(empty.textContent).toContain(t.planner.empty);
         expect(empty.querySelector('app-button')?.textContent?.trim()).toBe(t.planner.newSprint);
         expect(el().querySelector('app-page-header app-button')).toBeNull();
+    });
+
+    it('uses shared paper buttons for sprint modal actions', () => {
+        fixture.componentInstance.startCreating();
+        fixture.detectChanges();
+        expect(el().querySelector('label[for="sprint-start"]')).not.toBeNull();
+        expect(el().querySelector('#sprint-start')).not.toBeNull();
+        expect(el().querySelector('label[for="sprint-end"]')).not.toBeNull();
+        expect(el().querySelector('#sprint-end')).not.toBeNull();
+        expect(el().querySelector('.modal-foot-row .btn.paper')).not.toBeNull();
+        expect(el().querySelector('.modal-foot-row .btn.pine')).not.toBeNull();
+        expect(el().querySelector('.modal-foot-row .btn-accent, .modal-foot-row .btn-ghost')).toBeNull();
+
+        fixture.componentInstance.creating.set(false);
+        fixture.componentInstance.startEditing(SPRINTS[0]);
+        fixture.detectChanges();
+        expect(el().querySelector('.modal-foot-row .btn.danger')).not.toBeNull();
     });
 });

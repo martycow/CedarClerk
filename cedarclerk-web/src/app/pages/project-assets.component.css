@@ -17,6 +17,11 @@
 .source-strip {
     display: flex;
     flex: none;
+    flex-wrap: wrap;
+    align-self: flex-start;
+    min-width: 0;
+    width: fit-content;
+    max-width: 100%;
 }
 
 .refile-note {
@@ -46,7 +51,12 @@
     min-height: 0;
 }
 
-.assets-grid.with-inspector { grid-template-columns: minmax(0, 1fr) 360px; }
+.assets-grid.with-inspector {
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(var(--pane-inspector-min), var(--pane-inspector-max));
+    gap: var(--pane-gap);
+}
 
 .index {
     display: flex;
@@ -59,7 +69,8 @@
 .index-head {
     display: flex;
     flex: none;
-    align-items: center;
+    align-items: flex-end;
+    flex-wrap: wrap;
     gap: var(--space-3);
     padding: var(--space-2) var(--space-4);
     border-bottom: 1px solid var(--paper-edge);
@@ -82,17 +93,6 @@
 
 .search {
     width: 200px;
-}
-
-.named-elsewhere {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
 }
 
 /* The opened file scrolls as its own column: a tall inspector on a short window must not be
@@ -499,4 +499,24 @@
     justify-content: center;
     gap: var(--space-3);
     padding: var(--space-3);
+}
+
+@media (max-width: 900px) {
+    .assets-grid.with-inspector {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        grid-auto-rows: auto;
+        align-content: start;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .assets-grid.with-inspector > .index,
+    .assets-grid.with-inspector > .inspector,
+    .assets-grid.with-inspector .index-body {
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .assets-grid.with-inspector .index-body { flex: none; }
 }

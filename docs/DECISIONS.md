@@ -258,3 +258,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-243 — Discovery is an opt-in public commons for projects and independent blogs](adr/ADR-243.md)
 - [ADR-244 — Every account owns its display timezone](adr/ADR-244.md)
 - [ADR-245 — A Showcase is an ordered page of safe blocks](adr/ADR-245.md)
+- [ADR-246 — One navigation and four workspace measures](adr/ADR-246.md)

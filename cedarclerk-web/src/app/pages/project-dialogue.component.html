@@ -1,4 +1,4 @@
-<div class="page">
+<div class="page" data-layout="operational">
     <app-page-header [title]="name() || t().projects.dialogues.title" [kicker]="t().projects.dialogues.title" [meta]="headerMeta()">
         <app-button primary variant="pine" (clicked)="addNode()">
             <app-icon name="plus" size="sm" weight="bold" />
@@ -73,16 +73,19 @@
         <aside class="dock">
             @if (selected(); as node) {
                 <section class="card dock-card" [attr.aria-label]="t().projects.dialogues.nodeTitle">
-                    <span class="label">{{ t().projects.dialogues.nodeTitle }}</span>
                     <div class="d-form">
                         <app-input [label]="t().projects.dialogues.nodeTitle" inputId="dialogue-node-title"
                                    [value]="node.title" (valueChange)="setTitle($any($event) ?? '')" />
                         <label class="field">
                             <span class="field-label">{{ t().projects.dialogues.nodeBody }}</span>
-                            <textarea class="d-body" rows="14" spellcheck="false"
+                            <textarea id="dialogue-node-body" class="d-body" rows="14" spellcheck="false"
+                                      aria-describedby="dialogue-body-hint dialogue-line-id-warning"
                                       [ngModel]="node.body" (ngModelChange)="setBody($event)"></textarea>
                         </label>
-                        <p class="hint">{{ t().projects.dialogues.bodyHint }}</p>
+                        <p id="dialogue-body-hint" class="hint">{{ t().projects.dialogues.bodyHint }}</p>
+                        <p id="dialogue-line-id-warning" class="line-id-warning">
+                            {{ t().projects.dialogues.lineIdWarning }}
+                        </p>
                         <app-button variant="danger" size="sm" (clicked)="confirmDeleteNode.set(node)">
                             <app-icon name="trash" size="xs" />
                             {{ t().projects.dialogues.deleteNode }}
@@ -103,11 +106,22 @@
                         {{ t().projects.dialogues.exportYarn }}
                     </app-button>
 
-                    <app-input [label]="t().projects.dialogues.languagesLabel" inputId="dialogue-sheet-languages"
-                               [value]="sheetLanguages()" (valueChange)="sheetLanguages.set($any($event) ?? '')" />
+                    <fieldset class="language-picker">
+                        <legend class="field-label">{{ t().projects.dialogues.languagesLabel }}</legend>
+                        <div class="language-grid">
+                            @for (code of contentLanguages; track code) {
+                                <label class="language-option">
+                                    <input type="checkbox" [checked]="sheetLanguages().includes(code)"
+                                           (change)="toggleSheetLanguage(code, $any($event.target).checked)">
+                                    <span class="language-code">{{ code.toUpperCase() }}</span>
+                                    <span class="language-name" [title]="endonym(code)">{{ endonym(code) }}</span>
+                                </label>
+                            }
+                        </div>
+                    </fieldset>
                     <p class="hint">{{ t().projects.dialogues.languagesHint }}</p>
                     @if (languages().length) {
-                        <p class="hint">{{ languages().join(', ') }}</p>
+                        <p class="hint">{{ t().projects.dialogues.languagesIncluded(languages().join(', ')) }}</p>
                     }
                     <app-button variant="paper" size="sm" [disabled]="downloading() !== null"
                                 (clicked)="download('xlsx')">

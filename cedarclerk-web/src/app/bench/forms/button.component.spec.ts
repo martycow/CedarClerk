@@ -60,6 +60,11 @@ describe('bench Button', () => {
         expect(css).toMatch(/data-surface=paper[^}]*\.btn\.sm[^}]*min-height:\s*var\(--hit-surface, var\(--hit-chrome\)\)/s);
     });
 
+    it('lets the nearest paper surface raise the regular button to the touch floor', () => {
+        const css = (ButtonComponent as any).ɵcmp.styles.join('');
+        expect(css).toMatch(/data-surface=paper[^}]*\.btn[^,{]*\{[^}]*min-height:\s*var\(--hit-surface, var\(--hit-target\)\)/s);
+    });
+
     // Both halves of the port's own rules, read off the compiled stylesheet. The length assertion
     // is the control: an empty styles array would satisfy every not.toContain below it.
     it('re-declares no focus ring and keeps no cb- name', () => {

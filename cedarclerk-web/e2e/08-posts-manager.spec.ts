@@ -21,7 +21,7 @@ test('search narrows the post list', async ({ page, context }) => {
     await createDraft(context, 'Other manager post');
     await page.goto('/posts');
 
-    await page.locator('.post-search').fill('Searchable');
+    await page.getByRole('searchbox', { name: 'Search title or tag' }).fill('Searchable');
     await expect(page.locator('.post-card', { hasText: 'Searchable in manager' })).toBeVisible();
     await expect(page.locator('.post-card', { hasText: 'Other manager post' })).toHaveCount(0);
 });

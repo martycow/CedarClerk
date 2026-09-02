@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -6,22 +6,25 @@ import { DOCUMENT_TYPE_ICONS, DocumentType } from '../core/projects.service';
 import { DraftSearchHit, SearchService } from '../core/search.service';
 import { IconComponent } from './icon.component';
 import { IconName } from './icon-data.generated';
+import { OverlayCoordinatorService, OverlayLayerLease } from '../core/overlay-coordinator.service';
 
-// Wave 1 item 2 — the Ctrl+K palette. Mounted once by the bench shell, so the shortcut works on
-// every authenticated screen; it owns its own open state and listens for the key itself, which
-// keeps the shell's edit to one template line.
+// Wave 1 item 2 — the Ctrl+K palette. Mounted once by the shell; the shell owns the shortcut and
+// the overlay coordinator keeps this palette mutually exclusive with every other transient layer.
 @Component({
     selector: 'app-search-overlay',
     imports: [FormsModule, IconComponent],
     templateUrl: 'search-overlay.component.html',
     styleUrls: ['search-overlay.component.css'],
+    host: { '(document:keydown)': 'onDialogKeydown($event)' },
 })
-export class SearchOverlayComponent {
+export class SearchOverlayComponent implements OnDestroy {
     private searchApi = inject(SearchService);
     private router = inject(Router);
+    private overlays = inject(OverlayCoordinatorService);
+    private host = inject(ElementRef<HTMLElement>);
     t = inject(LocaleService).t;
 
-    open = signal(false);
+    open = computed(() => this.overlays.active() === 'search');
     query = signal('');
     results = signal<DraftSearchHit[]>([]);
     loading = signal(false);
@@ -31,32 +34,57 @@ export class SearchOverlayComponent {
     index = signal(0);
 
     private queryInput = viewChild<ElementRef<HTMLInputElement>>('queryInput');
+    private panel = viewChild<ElementRef<HTMLElement>>('panel');
     private debounceTimer?: ReturnType<typeof setTimeout>;
     // Answers can land out of order on a slow link; only the newest request may write state.
     private request = 0;
+    private layer?: OverlayLayerLease;
+    private wasOpen = false;
 
-    @HostListener('document:keydown', ['$event'])
-    onGlobalKeydown(event: KeyboardEvent) {
-        if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
-            event.preventDefault();
-            if (this.open()) this.close();
-            else this.openOverlay();
-        }
+    constructor() {
+        effect(() => {
+            const open = this.open();
+            if (open && !this.wasOpen) this.startOpen();
+            else if (this.wasOpen && !open) this.finishClose();
+            this.wasOpen = open;
+        });
     }
 
     openOverlay() {
-        this.open.set(true);
+        if (!this.overlays.open('search')) return;
         this.query.set('');
         this.results.set([]);
         this.searched.set(false);
         this.failed.set(false);
         this.index.set(0);
-        // The input renders on the next tick — @if has not put it in the DOM yet.
-        setTimeout(() => this.queryInput()?.nativeElement.focus());
+    }
+
+    toggleOverlay() {
+        if (this.open()) this.close();
+        else this.openOverlay();
     }
 
     close() {
-        this.open.set(false);
+        this.overlays.close('search');
+    }
+
+    ngOnDestroy(): void {
+        clearTimeout(this.debounceTimer);
+        this.layer?.release();
+    }
+
+    private startOpen() {
+        this.layer = this.overlays.registerLayer(this.host.nativeElement, 'search');
+        queueMicrotask(() => {
+            if (!this.open()) return;
+            const panel = this.panel()?.nativeElement;
+            if (panel) this.overlays.focusFirst(panel, this.queryInput()?.nativeElement);
+        });
+    }
+
+    private finishClose() {
+        this.layer?.release();
+        this.layer = undefined;
         clearTimeout(this.debounceTimer);
         this.request++;
         this.loading.set(false);
@@ -100,10 +128,6 @@ export class SearchOverlayComponent {
 
     onInputKeydown(event: KeyboardEvent) {
         switch (event.key) {
-            case 'Escape':
-                event.preventDefault();
-                this.close();
-                break;
             case 'ArrowDown':
                 event.preventDefault();
                 this.move(1);
@@ -118,6 +142,18 @@ export class SearchOverlayComponent {
                 if (hit) this.openHit(hit);
                 break;
             }
+        }
+    }
+
+    onDialogKeydown(event: KeyboardEvent): void {
+        if (!this.open() || !this.layer?.isTop()) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            this.close();
+        } else if (event.key === 'Tab') {
+            const panel = this.panel()?.nativeElement;
+            if (panel) this.overlays.trapTab(panel, event);
         }
     }
 

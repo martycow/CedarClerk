@@ -126,7 +126,8 @@ export class ProjectPlannerComponent {
             .filter(s => s.state !== 'finished')
             .map(s => ({ sprint: s, tasks: byId.get(s.id) ?? [] }));
 
-        groups.push({ sprint: null, tasks: tasks.filter(t => !t.sprintId) });
+        const unplanned = tasks.filter(t => !t.sprintId);
+        if (unplanned.length) groups.push({ sprint: null, tasks: unplanned });
 
         groups.push(...sprints
             .filter(s => s.state === 'finished')

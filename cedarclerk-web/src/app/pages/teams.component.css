@@ -22,10 +22,7 @@
 /* A list you pick from, the sheet you edit on, and an inspector that says what the selection
    amounts to — three cards side by side, the middle one taking the width. */
 .tm-grid {
-    display: flex;
     flex: 1;
-    min-height: 0;
-    gap: var(--space-4);
 }
 
 .card {
@@ -42,9 +39,7 @@
     gap: var(--space-4);
 }
 
-.tm-list-card { flex: none; width: var(--bench-dock-w); }
-.tm-sheet { flex: 1; }
-.inspector { flex: none; width: var(--bench-dock-w-wide); }
+.tm-create-card { flex: none; }
 
 /* ---------- the list ---------- */
 .tm-list { padding-top: var(--space-2); }
@@ -57,8 +52,9 @@
 
 .tm-row > app-icon { color: var(--t3); }
 .tm-row.is-on > app-icon { color: var(--accent); }
-/* A team somebody else owns is shown, not offered: there is nothing here to pick it for. */
-.tm-row.is-joined { cursor: default; }
+/* Joined teams are read-only here, but remain selectable so their owner, role and status have a
+   real detail surface instead of leaving a joined-only account in a false empty state. */
+.tm-row.is-joined { cursor: pointer; }
 
 .tm-row-body {
     display: flex;
@@ -110,6 +106,7 @@
 .tm-invite {
     display: flex;
     align-items: flex-end;
+    flex-wrap: wrap;
     gap: var(--space-2);
 }
 
@@ -143,8 +140,10 @@
 
 /* ---------- the people ---------- */
 .tm-members {
-    flex: 1;
+    flex: none;
+    min-height: auto;
     margin: 0 calc(var(--space-4) * -1);
+    overflow: visible;
 }
 
 .tm-member {
@@ -175,6 +174,25 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
+}
+
+@media (max-width: 1100px) {
+    .tm-member {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+    }
+
+    .tm-member > .tm-pick,
+    .tm-member-actions {
+        grid-column: 1 / -1;
+    }
+
+    .tm-member-actions { justify-self: end; }
+}
+
+@media (max-width: 600px) {
+    .tm-invite > * { width: 100%; }
+    .tm-head { flex-wrap: wrap; }
 }
 
 .mini, .mini-remove {

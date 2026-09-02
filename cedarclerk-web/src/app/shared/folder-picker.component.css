@@ -1,3 +1,10 @@
+:host {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
 .icon-sm { width: 14px; height: 14px; }
 .icon-xs { width: 12px; height: 12px; }
 .icon { width: 20px; height: 20px; }
@@ -6,7 +13,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
     min-height: var(--hit-target);
     border: 1px solid rgba(110, 86, 50, .4);
@@ -27,6 +36,12 @@
 .folder-trigger:hover {
     color: var(--text);
     background: var(--surface);
+}
+
+.folder-trigger:not(.compact) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
 }
 
 .folder-trigger:active {

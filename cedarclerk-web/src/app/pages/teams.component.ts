@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -25,7 +26,7 @@ type StateTone = 'ok' | 'muted' | 'warn' | 'danger';
 @Component({
     selector: 'app-teams',
     imports: [
-        FormsModule, IconComponent, ButtonComponent, InputComponent, SpecRowComponent, HintDotComponent,
+        FormsModule, NgTemplateOutlet, IconComponent, ButtonComponent, InputComponent, SpecRowComponent, HintDotComponent,
         PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'teams.component.html',
@@ -60,6 +61,7 @@ export class TeamsComponent {
     renameName = signal('');
 
     selected = computed(() => this.teams().find(t => t.id === this.selectedId()) ?? null);
+    selectedJoined = computed(() => this.joined().find(t => t.id === this.selectedId()) ?? null);
 
     headerMeta = computed<HeaderMeta[]>(() => [{ text: this.t().teams.count(this.teams().length) }]);
 
@@ -74,10 +76,16 @@ export class TeamsComponent {
             const [own, joined] = await Promise.all([this.api.list(), this.api.joined()]);
             this.teams.set(own);
             this.joined.set(joined);
-            // Keep the selection where it was; fall to the first team when it is gone.
-            const keep = own.find(t => t.id === this.selectedId()) ?? own[0] ?? null;
+            // Keep either kind of selection: a joined-only account still has a real subject to
+            // inspect even though it owns no editable member list.
+            const keep = own.find(t => t.id === this.selectedId())
+                ?? joined.find(t => t.id === this.selectedId())
+                ?? own[0]
+                ?? joined[0]
+                ?? null;
             this.selectedId.set(keep?.id ?? null);
-            if (keep) await this.loadMembers(keep.id); else this.members.set([]);
+            if (keep && own.some(team => team.id === keep.id)) await this.loadMembers(keep.id);
+            else this.members.set([]);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().teams.loadFailed));
         } finally {
@@ -93,6 +101,14 @@ export class TeamsComponent {
         await this.loadMembers(team.id);
     }
 
+    selectJoined(team: JoinedTeam) {
+        this.selectedId.set(team.id);
+        this.members.set([]);
+        this.lastInviteUrl.set(null);
+        this.creating.set(false);
+        this.renaming.set(false);
+    }
+
     private async loadMembers(teamId: string) {
         this.membersLoading.set(true);
         try { this.members.set(await this.api.members(teamId)); }
@@ -102,6 +118,8 @@ export class TeamsComponent {
 
     startCreate() {
         this.newName.set('');
+        this.renameName.set('');
+        this.renaming.set(false);
         this.creating.set(true);
     }
 

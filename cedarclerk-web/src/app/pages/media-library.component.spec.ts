@@ -53,6 +53,7 @@ describe('media library', () => {
 
     async function create(page: LibraryPage = PAGE) {
         TestBed.resetTestingModule();
+        localStorage.removeItem('cedar.mediaView');
         api = new FakeAssets();
         api.page = page;
         TestBed.configureTestingModule({
@@ -65,6 +66,8 @@ describe('media library', () => {
     }
 
     beforeEach(() => create());
+
+    afterEach(() => localStorage.removeItem('cedar.mediaView'));
 
     it('draws the type filter as index tabs, hiding a kind with nothing in it and capping at 99+', () => {
         expect(tileText(t.typeStrip)).toEqual([
@@ -112,5 +115,33 @@ describe('media library', () => {
         expect(empty).not.toBeNull();
         expect(empty.textContent).toContain(t.empty);
         expect(empty.querySelector('button')).not.toBeNull();
+    });
+
+    it('gives search a visible label and declares the standalone operational measure', () => {
+        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+        const search = el().querySelector('app-input.search')!;
+        expect(search.querySelector('label')?.textContent?.trim()).toBe(t.searchLabel);
+        expect(search.querySelector('label')?.getAttribute('for')).toBe('media-search');
+        expect(search.querySelector('input')?.id).toBe('media-search');
+    });
+
+    it('draws list headers, an image thumbnail, and an icon fallback in bounded rows', () => {
+        fixture.componentInstance.setView('list');
+        fixture.detectChanges();
+
+        const head = el().querySelector('.list-head')!;
+        expect(head.textContent).toContain(t.fileColumn);
+        expect(head.textContent).toContain(t.fileType);
+        expect(head.textContent).toContain(t.fileSize);
+        expect(head.textContent).toContain(t.added);
+
+        const rows = [...el().querySelectorAll('button.list-row')] as HTMLButtonElement[];
+        expect(rows.length).toBe(2);
+        expect(rows[0].querySelector('.list-thumbnail img')?.getAttribute('src')).toContain('/media/x/a1');
+        expect(rows[1].querySelector('.list-thumbnail app-icon')).not.toBeNull();
+
+        rows[0].click();
+        fixture.detectChanges();
+        expect(rows[0].getAttribute('aria-pressed')).toBe('true');
     });
 });

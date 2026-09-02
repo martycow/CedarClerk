@@ -110,6 +110,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     socialItchUrlText = '';
 
     languageError = signal<string | null>(null);
+    languageBusy = signal(false);
+    languageSaved = signal(false);
 
     // I12 split profile from the machinery; T-348 splits the machinery again: everything about
     // integrations and social networks is one tab, everything paid is another, and "account"
@@ -608,10 +610,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
     async setUiLanguage(lang: UiLang) {
         if (this.locale.uiLang() === lang) return;
         this.languageError.set(null);
+        this.languageSaved.set(false);
+        this.languageBusy.set(true);
         try {
             await this.auth.saveUiLanguage(lang);
+            this.languageSaved.set(true);
         } catch (e) {
             this.languageError.set(httpErrorMessage(e, this.t().settings.language.failed));
+        } finally {
+            this.languageBusy.set(false);
         }
     }
 

@@ -2492,20 +2492,57 @@ public static partial class BlogEndpoints
         .series-head .series-count { color: var(--wood-ink); font-family: var(--font-mono); font-size: 12px; }
         .series-part-no { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--accent); }
 
-        /* ── Showcase (ADR-134) — the same materials, a wider head ───────────────────────────────────── */
-        .showcase-head { display: flex; gap: 20px; align-items: flex-start; margin: 0 0 24px; }
-        .showcase-cover { width: 180px; border: 1px solid var(--paper-edge); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper); flex: none; }
-        .showcase-head-text h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; line-height: 1.22; margin: 0 0 6px; }
-        .showcase-desc { color: var(--wood-ink); font-size: 15px; line-height: 1.55; margin: 0 0 12px; }
-        .showcase-head .post-game a { color: var(--wood-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-        .showcase-head .post-game a:hover { color: var(--rail-ink); }
+        /* ── Showcase (ADR-134/216) — a Project site, not a narrow blog index column ────────────────── */
+        .site-main--showcase { max-width: 1440px; }
+        .site-main--showcase > .back-link { margin-bottom: var(--space-4); }
+        .showcase-page { display: grid; gap: var(--space-5); min-width: 0; }
+        .showcase-head {
+            display: grid; grid-template-columns: minmax(0, 6fr) minmax(360px, 4fr);
+            min-width: 0; min-height: 440px; margin: 0; overflow: hidden;
+            background-color: var(--paper-bright); background-image: var(--tex-paper);
+            border: var(--border-paper); border-top: 4px solid var(--pine-deep);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-sheet); color: var(--text);
+        }
+        .showcase-visual { min-width: 0; min-height: 440px; overflow: hidden; border-right: var(--border-paper); background-color: var(--pine-deep); background-image: var(--tex-wood), var(--grad-pine); }
+        .showcase-cover { display: block; width: 100%; height: 100%; min-height: 440px; padding: var(--space-5); object-fit: contain; }
+        .showcase-cover-placeholder {
+            display: grid; place-items: center; width: 100%; height: 100%; min-height: 440px;
+            background-color: var(--pine-deep); background-image: var(--tex-wood), var(--grad-pine);
+        }
+        .showcase-monogram {
+            display: grid; place-items: center; min-width: calc(var(--space-8) + var(--space-8)); min-height: calc(var(--space-8) + var(--space-8));
+            padding: var(--space-5); border: 1px solid var(--brass-edge); border-radius: var(--radius-plaque);
+            background: color-mix(in srgb, var(--sheet) 12%, transparent); box-shadow: var(--shadow-rail);
+            color: var(--text-on-pine); font-family: var(--font-display); font-size: var(--fs-34); font-weight: 700;
+            text-shadow: 0 1px 1px var(--rail-edge);
+        }
+        .showcase-head-text { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: clamp(var(--space-6), 5vw, var(--space-8)); }
+        .showcase-kicker { color: var(--accent); font-size: var(--fs-12); font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+        .showcase-head-text h1 { font-family: var(--font-display); font-size: var(--fs-34); font-weight: 700; line-height: 1.15; margin: var(--space-2) 0 var(--space-3); overflow-wrap: anywhere; text-wrap: balance; }
+        .showcase-desc { color: var(--t2); font-size: var(--fs-15); line-height: 1.65; margin: 0 0 var(--space-4); max-width: 72ch; }
+        .showcase-hero-empty { color: var(--t2); font-size: var(--fs-14); margin: 0 0 var(--space-4); }
+        .showcase-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+        .showcase-press-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border: var(--border-paper); border-radius: var(--radius-plaque); background: var(--sheet); box-shadow: var(--shadow-paper-sm); color: var(--text); font-size: var(--fs-14); font-weight: 700; }
+        .showcase-press-link:hover { background: var(--alt); border-color: var(--border-strong); }
+        .showcase-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: var(--space-3); margin: auto 0 0; padding: var(--space-5) 0 0; }
+        .showcase-fact { min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--paper-edge); }
+        .showcase-fact dt { color: var(--t2); font-size: var(--fs-12); }
+        .showcase-fact dd { margin: var(--space-1) 0 0; color: var(--text); font-size: var(--fs-21); font-weight: 700; }
+        .showcase-block { min-width: 0; padding: clamp(var(--space-5), 3vw, var(--space-6)); background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-lg); box-shadow: var(--shadow-paper-sm); color: var(--text); }
+        .showcase-page .showcase-section { margin: 0 0 var(--space-3); color: var(--t2); }
+        .showcase-block--follow { border-top: 3px solid var(--accent); }
+        .showcase-empty { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-4); min-height: 104px; padding: var(--space-5); background: var(--alt); border: 1px dashed var(--paper-edge); border-radius: var(--radius-paper); color: var(--text); }
+        .showcase-empty-mark { width: var(--space-3); height: var(--space-3); margin: 0 var(--space-2); border-radius: var(--radius-stamp); background: var(--accent); box-shadow: 0 0 0 var(--space-2) var(--asoft); }
+        .showcase-empty-copy { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+        .showcase-empty-copy strong { font-family: var(--font-display); font-size: var(--fs-17); }
+        .showcase-empty-copy span { color: var(--t2); font-size: var(--fs-14); }
         .showcase-links { display: flex; flex-wrap: wrap; gap: 8px; }
         /* A pine plaque: the one colour in the system that acts (ADR-169 — a pine button as a link is a
            pine button). */
         .showcase-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid var(--pine-deep); border-radius: var(--radius-plaque); background: var(--grad-pine); box-shadow: var(--shadow-pine-btn); color: var(--text-on-pine); font-size: 14px; font-weight: 700; text-shadow: 0 1px 1px rgba(18, 26, 20, .45); }
         .showcase-link:hover { filter: brightness(1.07); }
         .showcase-section { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--wood-ink); margin: 30px 0 12px; }
-        .roadmap-list { display: flex; flex-direction: column; gap: 8px; }
+        .site-main--showcase .roadmap-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-2); }
         .roadmap-row { display: flex; align-items: center; gap: 12px; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 12px 18px; color: var(--text); }
         /* Ink and wash are one pair (ADR-145): each tone takes the wash mixed from its own ink. */
         .roadmap-status { flex: none; font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; border: 1.6px solid currentColor; border-radius: var(--radius-stamp); padding: 2px 9px; opacity: .92; }
@@ -2518,7 +2555,7 @@ public static partial class BlogEndpoints
         .showcase-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin: 0 0 6px; }
         .showcase-shot { display: block; border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); overflow: hidden; line-height: 0; }
         .showcase-shot img { width: 100%; height: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
-        .download-list { display: flex; flex-direction: column; gap: 8px; }
+        .site-main--showcase .download-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-2); }
         .download-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; background-color: var(--sheet); background-image: var(--tex-paper); border: var(--border-paper); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper-sm); padding: 12px 18px; color: var(--text); }
         .download-version { font-family: var(--font-mono); font-weight: 700; }
         .download-date { font-family: var(--font-mono); font-size: 12px; color: var(--t2); }
@@ -2536,7 +2573,21 @@ public static partial class BlogEndpoints
         .games-name { font-family: var(--font-display); font-size: 15px; font-weight: 700; }
         .post-game { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--t2); margin: 0 0 10px; }
         .post-game a { color: var(--accent); }
-        @media (max-width: 560px) { .showcase-head { flex-direction: column; } .showcase-cover { width: 100%; } }
+        .showcase-page .showcase-trailer, .showcase-page .showcase-gallery { margin-bottom: 0; }
+        .showcase-page .showcase-gallery { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); }
+        .showcase-page .post-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-4); }
+        .showcase-page .post-card-title { font-size: var(--fs-21); }
+        @media (max-width: 900px) {
+            .showcase-head { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+            .showcase-visual { min-height: 0; aspect-ratio: 16 / 9; border-right: 0; border-bottom: var(--border-paper); }
+            .showcase-cover, .showcase-cover-placeholder { min-height: 0; }
+        }
+        @media (max-width: 560px) {
+            .showcase-head-text, .showcase-block { padding: var(--space-5); }
+            .showcase-visual { aspect-ratio: 4 / 3; }
+            .showcase-facts { grid-template-columns: minmax(0, 1fr); }
+            .site-main--showcase .roadmap-list, .site-main--showcase .download-list, .showcase-page .post-list, .showcase-page .showcase-gallery { grid-template-columns: minmax(0, 1fr); }
+        }
 
         /* ── Search: a compact paper field on the index bar, grown to full size on its own page ──────── */
         .search-form { display: flex; gap: var(--space-2); min-width: 0; }

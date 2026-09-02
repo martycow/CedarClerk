@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { AppearanceService, ACCENT_PRESETS, AppearancePrefs, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { ThemeService } from '../core/theme.service';
@@ -6,6 +6,7 @@ import { ModalComponent } from './modal.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from './icon.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 
 // Long enough that a slider drag is one write, short enough that closing the modal right after a
 // click never races the save (the modal's own close path flushes it anyway — see apply()).
@@ -30,6 +31,7 @@ export class AppearancePanelComponent {
     appearance = inject(AppearanceService);
     theme = inject(ThemeService);
     t = inject(LocaleService).t;
+    private readonly overlays = inject(OverlayCoordinatorService);
 
     readonly accentPresets = ACCENT_PRESETS;
 
@@ -40,10 +42,23 @@ export class AppearancePanelComponent {
     saveState = signal<'saved' | 'saving' | 'error'>('saved');
     private commitTimer?: ReturnType<typeof setTimeout>;
 
-    // Closed by default; opened from the topbar's palette button (editor.component.html holds
-    // the trigger via a template reference variable, since the button lives in a different part
-    // of that template than this component's own tag).
-    open = signal(false);
+    readonly open = computed(() => this.overlays.active() === 'appearance');
+    private wasOpen = false;
+
+    constructor() {
+        effect(() => {
+            const open = this.open();
+            if (this.wasOpen && !open) {
+                clearTimeout(this.commitTimer);
+                void this.apply();
+            }
+            this.wasOpen = open;
+        });
+    }
+
+    openPanel(): void {
+        this.overlays.open('appearance');
+    }
 
     // FI1: the toggle used to only pick which theme's accent the swatches below edit, while the
     // app's actual theme stayed whatever it already was — indistinguishable from a dead control.
@@ -119,8 +134,7 @@ export class AppearancePanelComponent {
     // Closing must not swallow a debounce still in flight.
     close() {
         clearTimeout(this.commitTimer);
-        this.open.set(false);
-        void this.apply();
+        this.overlays.close('appearance');
     }
 
     async apply() {

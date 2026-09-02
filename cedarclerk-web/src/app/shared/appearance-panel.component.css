@@ -36,7 +36,8 @@
     margin-bottom: 12px;
 }
 
-.ap-field label {
+.ap-field label,
+.ap-field-label {
     display: block;
     font-size: var(--fs-12);
     color: var(--t2);
@@ -57,10 +58,10 @@
 .ap-accents {
     display: flex;
     gap: 6px;
-    margin-bottom: 12px;
 }
 
 .ap-accent {
+    position: relative;
     border: 2px solid transparent;
     background: none;
     border-radius: 50%;
@@ -78,6 +79,15 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
+}
+
+.ap-accent-check {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: var(--paper-bright);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
 }
 
 .ap-checks {

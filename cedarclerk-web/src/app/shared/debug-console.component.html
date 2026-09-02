@@ -1,21 +1,26 @@
 @if (open()) {
-<div class="console-overlay" role="dialog" [attr.aria-label]="t().debug.console" data-surface="paper">
+<div class="console-scrim" (click)="close()">
+<div #panel class="console-overlay" role="dialog" aria-modal="true" tabindex="-1"
+     [attr.aria-label]="t().debug.console" data-surface="paper" (click)="$event.stopPropagation()">
     <div class="journal-head">
         <span class="journal-title">{{ t().debug.console }}</span>
         <span class="spacer"></span>
         <button type="button" class="mini" (click)="clear()" [title]="t().debug.clear" [attr.aria-label]="t().debug.clear"><app-icon name="trash" size="sm"></app-icon></button>
-        <button type="button" class="mini" (click)="open.set(false)" [title]="t().common.close" [attr.aria-label]="t().common.close"><app-icon name="x" size="sm"></app-icon></button>
+        <button type="button" class="mini" (click)="close()" [title]="t().common.close" [attr.aria-label]="t().common.close"><app-icon name="x" size="sm"></app-icon></button>
     </div>
 
     <div class="rows">
         @for (e of entries(); track e.id) {
-        <div class="debug-row" [class.expanded]="expandedId() === e.id" (click)="toggleExpand(e.id)">
-            <app-log-line class="debug-row-summary" surface="paper"
-                          [level]="e.inFlight ? 'info' : e.isError ? 'warn' : 'ok'"
-                          [word]="e.inFlight ? t().debug.pending : '' + e.status"
-                          [at]="e.durationMs !== undefined ? e.durationMs + 'ms' : ''">{{ e.method }} {{ e.url }}</app-log-line>
+        <div class="debug-row" [class.expanded]="expandedId() === e.id">
+            <button type="button" class="debug-row-toggle" [attr.aria-expanded]="expandedId() === e.id"
+                    (click)="toggleExpand(e.id)">
+                <app-log-line class="debug-row-summary" surface="paper"
+                              [level]="e.inFlight ? 'info' : e.isError ? 'warn' : 'ok'"
+                              [word]="e.inFlight ? t().debug.pending : '' + e.status"
+                              [at]="e.durationMs !== undefined ? e.durationMs + 'ms' : ''">{{ e.method }} {{ e.url }}</app-log-line>
+            </button>
             @if (expandedId() === e.id) {
-            <div class="debug-row-detail" (click)="$event.stopPropagation()">
+            <div class="debug-row-detail">
                 @if (e.requestBody !== undefined) {
                 <div class="debug-detail-label">{{ t().debug.request }}</div>
                 <pre>{{ formatBody(e.requestBody) }}</pre>
@@ -30,5 +35,6 @@
         <p class="debug-empty">{{ t().debug.empty }}</p>
         }
     </div>
+</div>
 </div>
 }

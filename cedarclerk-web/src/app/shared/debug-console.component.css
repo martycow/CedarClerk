@@ -4,15 +4,20 @@
 }
 
 /* Over the page, never in its flow: the overlay reserves nothing and leaves no strip behind. */
-.console-overlay {
+.console-scrim {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     z-index: 200;
     display: flex;
+    align-items: flex-end;
+    background: var(--scrim);
+}
+
+.console-overlay {
+    display: flex;
     flex-direction: column;
-    height: 280px;
+    width: 100%;
+    height: min(280px, 100%);
     border-top: 1px solid var(--border);
     background-color: var(--sheet);
     background-image: var(--tex-paper);
@@ -74,10 +79,21 @@
 
 .debug-row {
     border-top: 1px solid var(--paper-edge);
+}
+
+.debug-row-toggle {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
 }
 
-.debug-row:hover {
+.debug-row-toggle:hover {
     background: var(--hover);
 }
 
@@ -105,8 +121,7 @@
     padding: var(--space-2);
     background: var(--alt);
     border-radius: var(--radius-sm);
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 172px;
-    overflow-y: auto;
+    white-space: pre;
+    overflow-x: auto;
+    overflow-y: clip;
 }

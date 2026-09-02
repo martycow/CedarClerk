@@ -1,4 +1,4 @@
-<div class="page settings-page">
+<div class="page settings-page" data-layout="operational">
     <app-page-header [title]="t().settings.crumb" [meta]="headerMeta()">
         @if (tab() === 'profile') {
         <app-button primary variant="pine" (clicked)="saveProfile()" [disabled]="profileBusy()">
@@ -16,7 +16,9 @@
         @if (sections().length > 1) {
         <nav class="seg section-index is-strip" [attr.aria-label]="t().settings.sections">
             @for (s of sections(); track s.id) {
-            <button type="button" [class.is-on]="s.id === activeSection()" (click)="jump(s.id)">{{ s.label }}</button>
+            <button type="button" [class.is-on]="s.id === activeSection()"
+                    [attr.aria-current]="s.id === activeSection() ? 'true' : null"
+                    (click)="jump(s.id)">{{ s.label }}</button>
             }
         </nav>
         }
@@ -128,7 +130,11 @@
                     <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
                         [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade"></textarea>
                     @if (hasProSignature()) {
-                    <input [(ngModel)]="signatureUrlText" [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                    <div class="field-control">
+                        <label for="cc-sig-url">{{ t().settings.profile.signatureUrl }}</label>
+                        <input id="cc-sig-url" type="url" [(ngModel)]="signatureUrlText"
+                               [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                    </div>
                     }
                     <div class="field-actions">
                         <app-button variant="pine" (clicked)="saveSignature()" [disabled]="signatureBusy() || !hasProSignature()">
@@ -208,6 +214,13 @@
                     <app-leaf-tag interactive [state]="locale.uiLang() === 'ru' ? 'active' : 'idle'"
                                   (activated)="setUiLanguage('ru')">RU · Русский</app-leaf-tag>
                 </div>
+                @if (languageBusy()) {
+                    <p class="field-hint language-status" role="status">{{ t().common.saving }}</p>
+                } @else if (languageSaved()) {
+                    <p class="saved-check language-status" role="status">
+                        <app-icon name="check" size="xs"></app-icon>{{ t().common.saved }}
+                    </p>
+                }
                 @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
             </section>
             }
@@ -435,29 +448,32 @@
 
                 @if (selectedPlan) {
                 <div class="payment-step">
-                    <div class="field-hint">{{ t().settings.subscription.payFor(selectedPlan === 'proplus' ? t().settings.subscription.planProPlus : selectedPlan === 'pro' ? t().settings.subscription.planPro : t().settings.subscription.planTrial) }}</div>
-                    <div class="pay-methods">
-                        <button class="pay-method" [class.selected]="payMethod === 'stripe'" [disabled]="!b.providers.stripe"
+                    <div class="field-hint" id="subscription-payment-label">{{ t().settings.subscription.payFor(selectedPlan === 'proplus' ? t().settings.subscription.planProPlus : selectedPlan === 'pro' ? t().settings.subscription.planPro : t().settings.subscription.planTrial) }}</div>
+                    <div class="pay-methods" role="radiogroup" aria-labelledby="subscription-payment-label">
+                        <button type="button" class="pay-method" role="radio" [attr.aria-checked]="payMethod === 'stripe'"
+                                [class.selected]="payMethod === 'stripe'" [disabled]="!b.providers.stripe"
                                 [title]="b.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="payMethod = 'stripe'">
-                            <span class="radio-dot"></span>
+                            <span class="radio-dot" aria-hidden="true"></span>
                             <span>
                                 <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
                                 <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
                             </span>
                         </button>
-                        <button class="pay-method" [class.selected]="payMethod === 'paypal'" [disabled]="!b.providers.paypal"
+                        <button type="button" class="pay-method" role="radio" [attr.aria-checked]="payMethod === 'paypal'"
+                                [class.selected]="payMethod === 'paypal'" [disabled]="!b.providers.paypal"
                                 [title]="b.providers.paypal ? '' : t().settings.subscription.paypalUnavailable" (click)="payMethod = 'paypal'">
-                            <span class="radio-dot"></span>
+                            <span class="radio-dot" aria-hidden="true"></span>
                             <span>
                                 <span class="pay-method-label">{{ t().settings.subscription.paypalLabel }}</span>
                                 <span class="pay-method-desc">{{ t().settings.subscription.paypalDesc }}</span>
                             </span>
                         </button>
-                        <button class="pay-method" [class.selected]="payMethod === 'stars'"
+                        <button type="button" class="pay-method" role="radio" [attr.aria-checked]="payMethod === 'stars'"
+                                [class.selected]="payMethod === 'stars'"
                                 [disabled]="!b.providers.telegramStars || !auth.telegramLinked()"
                                 [title]="!b.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
                                 (click)="payMethod = 'stars'">
-                            <span class="radio-dot"></span>
+                            <span class="radio-dot" aria-hidden="true"></span>
                             <span>
                                 <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
                                 <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
@@ -526,21 +542,23 @@
 
                 @if (hasCreditOrder()) {
                 <div class="payment-step">
-                    <div class="field-hint">{{ t().settings.credits.payWith }}</div>
-                    <div class="pay-methods">
-                        <button class="pay-method" [class.selected]="creditsPayMethod === 'stripe'" [disabled]="!c.providers.stripe"
+                    <div class="field-hint" id="credits-payment-label">{{ t().settings.credits.payWith }}</div>
+                    <div class="pay-methods" role="radiogroup" aria-labelledby="credits-payment-label">
+                        <button type="button" class="pay-method" role="radio" [attr.aria-checked]="creditsPayMethod === 'stripe'"
+                                [class.selected]="creditsPayMethod === 'stripe'" [disabled]="!c.providers.stripe"
                                 [title]="c.providers.stripe ? '' : t().settings.subscription.stripeUnavailable" (click)="creditsPayMethod = 'stripe'">
-                            <span class="radio-dot"></span>
+                            <span class="radio-dot" aria-hidden="true"></span>
                             <span>
                                 <span class="pay-method-label">{{ t().settings.subscription.stripeLabel }}</span>
                                 <span class="pay-method-desc">{{ t().settings.subscription.stripeDesc }}</span>
                             </span>
                         </button>
-                        <button class="pay-method" [class.selected]="creditsPayMethod === 'stars'"
+                        <button type="button" class="pay-method" role="radio" [attr.aria-checked]="creditsPayMethod === 'stars'"
+                                [class.selected]="creditsPayMethod === 'stars'"
                                 [disabled]="!c.providers.telegramStars || !auth.telegramLinked()"
                                 [title]="!c.providers.telegramStars ? t().settings.subscription.starsUnavailable : (!auth.telegramLinked() ? t().settings.subscription.starsNeedsLink : '')"
                                 (click)="creditsPayMethod = 'stars'">
-                            <span class="radio-dot"></span>
+                            <span class="radio-dot" aria-hidden="true"></span>
                             <span>
                                 <span class="pay-method-label">{{ t().settings.subscription.starsLabel }}</span>
                                 <span class="pay-method-desc">{{ t().settings.subscription.starsDesc }}</span>
@@ -687,10 +705,16 @@
                                 @if (signatureOpenId() === c.id) {
                                 <li class="signature-editor">
                                     <p class="field-hint">{{ t().settings.integrations.signatureHint }}</p>
-                                    <input [(ngModel)]="sigText" [disabled]="sigBusy()"
-                                           [placeholder]="t().settings.profile.signaturePlaceholder">
-                                    <input [(ngModel)]="sigUrl" [disabled]="sigBusy()" type="url"
-                                           [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                                    <div class="field-control">
+                                        <label [attr.for]="'cc-channel-signature-' + c.id">{{ t().settings.integrations.signatureTextLabel }}</label>
+                                        <input [id]="'cc-channel-signature-' + c.id" [(ngModel)]="sigText" [disabled]="sigBusy()"
+                                               [placeholder]="t().settings.profile.signaturePlaceholder">
+                                    </div>
+                                    <div class="field-control">
+                                        <label [attr.for]="'cc-channel-signature-url-' + c.id">{{ t().settings.integrations.signatureUrlLabel }}</label>
+                                        <input [id]="'cc-channel-signature-url-' + c.id" [(ngModel)]="sigUrl" [disabled]="sigBusy()" type="url"
+                                               [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                                    </div>
                                     <div class="connect-row">
                                         <app-button variant="pine" size="sm" (clicked)="saveChannelSignature(c)" [disabled]="sigBusy()">
                                             {{ sigSavedId() === c.id ? t().settings.saved : t().settings.integrations.signatureSave }}
@@ -742,9 +766,12 @@
                                 {{ manualChannelOpen() ? t().settings.integrations.manualHide : t().settings.integrations.manualAdd }}
                             </app-button>
                             @if (manualChannelOpen()) {
-                            <div class="connect-row">
-                                <input [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
-                                       [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()">
+                            <div class="connect-row labelled-connect-row">
+                                <div class="field-control">
+                                    <label for="cc-manual-channel">{{ t().settings.integrations.manualLabel }}</label>
+                                    <input id="cc-manual-channel" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
+                                           [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()">
+                                </div>
                                 <app-button variant="pine" size="sm" (clicked)="connectChannel()" [disabled]="channelBusy() || !newChannelChatId.trim()">
                                     {{ t().settings.integrations.connect }}
                                 </app-button>
@@ -781,9 +808,16 @@
                             </div>
                             @if (!blueskyAccount()) {
                             <p class="field-hint">{{ t().settings.integrations.blueskyConnectHint }}</p>
-                            <div class="connect-row">
-                                <input [(ngModel)]="blueskyHandle" [placeholder]="t().settings.integrations.blueskyHandle">
-                                <input type="password" [(ngModel)]="blueskyAppPassword" [placeholder]="t().settings.integrations.blueskyAppPassword">
+                            <div class="connect-row labelled-connect-row">
+                                <div class="field-control">
+                                    <label for="cc-bluesky-handle">{{ t().settings.integrations.blueskyHandleLabel }}</label>
+                                    <input id="cc-bluesky-handle" [(ngModel)]="blueskyHandle"
+                                           [placeholder]="t().settings.integrations.blueskyHandle">
+                                </div>
+                                <div class="field-control">
+                                    <label for="cc-bluesky-app-password">{{ t().settings.integrations.blueskyAppPassword }}</label>
+                                    <input id="cc-bluesky-app-password" type="password" [(ngModel)]="blueskyAppPassword">
+                                </div>
                                 <app-button variant="pine" size="sm" (clicked)="connectBluesky()"
                                         [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
                                     {{ blueskyBusy() ? '…' : t().settings.integrations.connect }}
@@ -869,8 +903,12 @@
                             </div>
                             @if (!discordAccount()) {
                             <p class="field-hint">{{ t().settings.integrations.discordConnectHint }}</p>
-                            <div class="connect-row">
-                                <input [(ngModel)]="discordWebhookUrl" [placeholder]="t().settings.integrations.discordWebhookUrl">
+                            <div class="connect-row labelled-connect-row">
+                                <div class="field-control">
+                                    <label for="cc-discord-webhook">{{ t().settings.integrations.discordWebhookLabel }}</label>
+                                    <input id="cc-discord-webhook" type="url" [(ngModel)]="discordWebhookUrl"
+                                           [placeholder]="t().settings.integrations.discordWebhookUrl">
+                                </div>
                                 <app-button variant="pine" size="sm" (clicked)="connectDiscord()"
                                         [disabled]="discordBusy() || !discordWebhookUrl.trim()">
                                     {{ discordBusy() ? '…' : t().settings.integrations.connect }}

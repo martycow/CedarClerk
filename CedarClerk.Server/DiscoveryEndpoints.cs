@@ -34,6 +34,7 @@ public static class DiscoveryEndpoints
             var type = ctx.Request.Query["type"].FirstOrDefault() switch
             {
                 "projects" => "projects",
+                "devlogs" => "devlogs",
                 "blogs" => "blogs",
                 _ => "all",
             };
@@ -179,7 +180,7 @@ public static class DiscoveryEndpoints
             """;
     }
 
-    private static string Render(bool ru, Snapshot snapshot, string type, string? category, string query)
+    public static string Render(bool ru, Snapshot snapshot, string type, string? category, string query)
     {
         string T(string russian, string english) => ru ? russian : english;
         var settings = snapshot.Settings;
@@ -187,22 +188,95 @@ public static class DiscoveryEndpoints
         var projects = projectPool.Where(i => category is null || i.Category == category).ToList();
         var blogs = snapshot.Blogs.Where(i => Matches(i, query)).ToList();
         if (type == "projects") blogs = [];
-        if (type == "blogs") projects = [];
+        if (type == "blogs")
+        {
+            projects = [];
+            blogs = blogs.Where(i => i.Kind == "blog").ToList();
+        }
+        if (type == "devlogs")
+        {
+            projects = [];
+            blogs = blogs.Where(i => i.Kind == "devlog").ToList();
+        }
 
         var stage = snapshot.Stage is { } candidate
             && Matches(candidate, query)
             && (type != "projects" || candidate.Kind == "project")
-            && (type != "blogs" || candidate.Kind != "project")
+            && (type != "blogs" || candidate.Kind == "blog")
+            && (type != "devlogs" || candidate.Kind == "devlog")
             && (candidate.Kind != "project" || category is null || candidate.Category == category)
                 ? candidate
                 : settings.ShowScreenshotSaturday && type != "projects"
-                    ? blogs.FirstOrDefault(i => i.ScreenshotSaturday) ?? projects.FirstOrDefault()
+                    ? blogs.FirstOrDefault(i => i.ScreenshotSaturday) ?? projects.FirstOrDefault() ?? blogs.FirstOrDefault()
                     : projects.FirstOrDefault() ?? blogs.FirstOrDefault();
         var projectCards = string.Join("", projects.Take(4).Select((p, index) => ProjectCard(p, ru, index == 0)));
-        var blogCards = string.Join("", blogs.Where(b => b.Kind == "blog").Take(3).Select(b => BlogCard(b)));
-        var devlogs = string.Join("", blogs.Where(b => b.Kind == "devlog").Take(4).Select(b => BlogCard(b)));
-        var categoryCards = string.Join("", DiscoveryCategories.All.Select(c => CategoryCard(c, projectPool, ru, query)));
+        var blogCards = string.Join("", blogs.Where(b => b.Kind == "blog").Take(3).Select(BlogCard));
+        var devlogs = string.Join("", blogs.Where(b => b.Kind == "devlog").Take(4).Select(BlogCard));
+        var categoryCards = string.Join("", DiscoveryCategories.All
+            .Where(c => projectPool.Any(p => p.Category == c))
+            .Select(c => CategoryCard(c, projectPool, ru, query)));
         var langSuffix = ru ? "&lang=ru" : "&lang=en";
+
+        var section = 0;
+        string NextSection() => (++section).ToString("00");
+        var feedColumns = new List<string>();
+        if (settings.ShowBlogs && type != "projects" && blogCards.Length > 0)
+        {
+            feedColumns.Add($"""
+                <div class="feed-col">
+                    <p class="column-note">{T("Каждая работа здесь опубликована самим автором.", "Every item here was shared publicly by its author.")}</p>
+                    <header class="section-head"><div><span>{NextSection()}</span><h2>{T("Из независимых блогов", "From independent blogs")}</h2></div><a href="/discovery?type=blogs{langSuffix}">{T("Все блоги", "All blogs")}</a></header>
+                    <div class="blog-list">{blogCards}</div>
+                </div>
+                """);
+        }
+        if (settings.ShowProjects && type != "blogs" && projectCards.Length > 0)
+        {
+            feedColumns.Add($"""
+                <div class="feed-col">
+                    <p class="column-note">{T("Свежие проекты независимых авторов во всех форматах.", "Fresh projects from independent makers across every medium.")}</p>
+                    <header class="section-head"><div><span>{NextSection()}</span><h2>Project Showcase</h2></div><a href="/discovery?type=projects{langSuffix}">{T("Все проекты", "All projects")}</a></header>
+                    <div class="project-list">{projectCards}</div>
+                </div>
+                """);
+        }
+
+        var feed = feedColumns.Count == 0 ? "" : $"""
+            <section class="feed wrap{(feedColumns.Count == 1 ? " is-single" : "")}">
+                {string.Join("", feedColumns)}
+            </section>
+            """;
+        var devlogSection = settings.ShowBlogs && type != "projects" && devlogs.Length > 0
+            ? $"""
+                <section class="devlogs wrap"><header class="section-head"><div><span>{NextSection()}</span><h2>{T("Девлоги из проектов", "Project devlogs")}</h2></div></header><div class="devlog-grid">{devlogs}</div></section>
+                """
+            : "";
+        var categorySection = settings.ShowProjects && type != "blogs" && type != "devlogs" && categoryCards.Length > 0
+            ? $"""
+                <section id="categories" class="categories wrap"><header class="section-head"><div><span>{NextSection()}</span><h2>{T("Категории проектов", "Project categories")}</h2></div></header><div class="category-grid">{categoryCards}</div></section>
+                """
+            : "";
+        var hasResults = stage is not null || feedColumns.Count > 0 || devlogs.Length > 0 || categorySection.Length > 0;
+        var stageHasRail = stage is not null && projects.Any(p => p.Url != stage.Url);
+        var globalEmpty = snapshot.EligibleItems == 0;
+        var emptyStage = EmptyStage(ru, !globalEmpty);
+        var stageContent = hasResults ? Stage(stage, projects, ru,
+            settings.ShowScreenshotSaturday && (stage is null || stage.ScreenshotSaturday)) : emptyStage;
+        var typeQuery = type == "all" ? "" : $"&type={Uri.EscapeDataString(type)}";
+        var categoryQuery = category is null ? "" : $"&category={Uri.EscapeDataString(category)}";
+        var searchQuery = string.IsNullOrWhiteSpace(query) ? "" : $"&q={Uri.EscapeDataString(query)}";
+        var currentStateQuery = typeQuery + categoryQuery + searchQuery;
+        var shuffle = hasResults && projects.Count + blogs.Count > 1
+            ? $"""<a class="shuffle" href="/discovery?shuffle={Guid.NewGuid():N}&lang={(ru ? "ru" : "en")}{currentStateQuery}">{Icons.Svg("arrows-clockwise", 16)} {T("Перемешать находки", "Shuffle discoveries")}</a>"""
+            : "";
+        var categoriesNav = settings.ShowProjects && type != "blogs" && type != "devlogs" && categoryCards.Length > 0
+            ? $"""<a href="#categories">{T("Категории", "Categories")}</a>"""
+            : "";
+        var searchType = type == "all" ? "" : $"""<input type="hidden" name="type" value="{E(type)}">""";
+        var searchCategory = category is null ? "" : $"""<input type="hidden" name="category" value="{E(category)}">""";
+        var startPublishing = settings.Enabled && globalEmpty
+            ? ""
+            : $"""<a class="start" href="/welcome#waitlist">{T("Начать публиковать", "Start publishing")}</a>""";
 
         var light = DesignTokens.Declarations(DesignTokens.Light, DesignTokens.MaterialsLight);
         var title = T("Discovery — проекты и блоги независимых авторов · Cedar Clerk",
@@ -226,60 +300,40 @@ public static class DiscoveryEndpoints
                 <header class="topbar">
                     <a class="brand" href="/welcome"><img src="/favicon.png" alt=""><span>Cedar Clerk</span></a>
                     <nav class="main-nav" aria-label="{T("Главная навигация", "Primary navigation")}">
-                        <a class="active" href="/discovery">Discovery</a>
-                        <a href="/discovery?type=blogs{langSuffix}">{T("Девлоги", "Devlogs")}</a>
-                        <a href="/discovery?type=projects{langSuffix}">{T("Проекты", "Projects")}</a>
-                        <a href="/discovery?type=blogs{langSuffix}">{T("Блоги", "Blogs")}</a>
-                        <a href="#categories">{T("Категории", "Categories")}</a>
+                        <a class="active" href="/discovery?lang={(ru ? "ru" : "en")}" aria-current="page">Discovery</a>
+                        {categoriesNav}
                     </nav>
-                    <form class="search" method="get" action="/discovery">
-                        <input type="search" name="q" value="{E(query)}" placeholder="{T("Найти проект или блог", "Find a project or blog")}" aria-label="{T("Поиск", "Search")}">
-                        <input type="hidden" name="lang" value="{(ru ? "ru" : "en")}">
-                    </form>
-                    <div class="lang"><a href="/discovery?lang=ru"{(ru ? " aria-current=\"page\"" : "")}>RU</a><a href="/discovery?lang=en"{(!ru ? " aria-current=\"page\"" : "")}>EN</a></div>
+                    <div class="lang"><a href="/discovery?lang=ru{currentStateQuery}"{(ru ? " aria-current=\"page\"" : "")}>RU</a><a href="/discovery?lang=en{currentStateQuery}"{(!ru ? " aria-current=\"page\"" : "")}>EN</a></div>
                     <a class="sign" href="/login">{T("Войти", "Sign in")}</a>
-                    <a class="start" href="/welcome#waitlist">{T("Начать публиковать", "Start publishing")}</a>
+                    {startPublishing}
                 </header>
 
                 {(settings.Enabled ? $"""
-                <main>
-                    <section class="stage">
-                        {Stage(stage, projects, ru, settings.ShowScreenshotSaturday && (stage is null || stage.ScreenshotSaturday))}
+                <main data-layout="editorial">
+                    <section class="stage{(stageHasRail ? " has-rail" : "")}{(!hasResults ? " is-empty" : "")}">
+                        {stageContent}
                         <div class="stage-controls">
+                            <form class="search" method="get" action="/discovery">
+                                <label for="discovery-search">{T("Поиск в Discovery", "Search Discovery")}</label>
+                                <input id="discovery-search" type="search" name="q" value="{E(query)}" placeholder="{T("Проект, блог или автор", "Project, blog or author")}">
+                                <input type="hidden" name="lang" value="{(ru ? "ru" : "en")}">
+                                {searchType}
+                                {searchCategory}
+                            </form>
                             <nav class="segments" aria-label="{T("Тип материалов", "Content type")}">
-                                {Segment("all", type, T("Всё", "All"), ru)}
-                                {Segment("projects", type, T("Проекты", "Projects"), ru)}
-                                {Segment("blogs", type, T("Блоги", "Blogs"), ru)}
+                                {Segment("all", type, T("Всё", "All"), ru, query)}
+                                {Segment("projects", type, T("Проекты", "Projects"), ru, query)}
+                                {Segment("devlogs", type, T("Девлоги", "Devlogs"), ru, query)}
+                                {Segment("blogs", type, T("Блоги", "Blogs"), ru, query)}
                             </nav>
-                            <a class="shuffle" href="/discovery?shuffle={Guid.NewGuid():N}&lang={(ru ? "ru" : "en")}">{Icons.Svg("arrows-clockwise", 16)} {T("Перемешать находки", "Shuffle discoveries")}</a>
+                            {shuffle}
                         </div>
                     </section>
 
                     <h1 class="sr-only">{E(settings.Title.Pick(ru))}</h1>
-                    <section class="feed wrap">
-                        {(settings.ShowBlogs && type != "projects" ? $"""
-                        <div class="feed-col">
-                            <p class="column-note">{T("Каждая работа здесь опубликована самим автором.", "Every item here was shared publicly by its author.")}</p>
-                            <header class="section-head"><div><span>01</span><h2>{T("Из независимых блогов", "From independent blogs")}</h2></div><a href="/discovery?type=blogs{langSuffix}">{T("Все блоги", "All blogs")}</a></header>
-                            <div class="blog-list">{(blogCards.Length == 0 ? Empty(T("Пока нет подходящих записей.", "No matching entries yet.")) : blogCards)}</div>
-                        </div>
-                        """ : "")}
-                        {(settings.ShowProjects && type != "blogs" ? $"""
-                        <div class="feed-col">
-                            <p class="column-note">{T("Свежие проекты независимых авторов во всех форматах.", "Fresh projects from independent makers across every medium.")}</p>
-                            <header class="section-head"><div><span>02</span><h2>Project Showcase</h2></div><a href="/discovery?type=projects{langSuffix}">{T("Все проекты", "All projects")}</a></header>
-                            <div class="project-list">{(projectCards.Length == 0 ? Empty(T("Пока нет подходящих проектов.", "No matching projects yet.")) : projectCards)}</div>
-                        </div>
-                        """ : "")}
-                    </section>
-
-                    {(settings.ShowBlogs && devlogs.Length > 0 && type != "projects" ? $"""
-                    <section class="devlogs wrap"><header class="section-head"><div><span>03</span><h2>{T("Девлоги из проектов", "Project devlogs")}</h2></div></header><div class="devlog-grid">{devlogs}</div></section>
-                    """ : "")}
-
-                    {(settings.ShowProjects && type != "blogs" ? $"""
-                    <section id="categories" class="categories wrap"><header class="section-head"><div><span>04</span><h2>{T("Категории проектов", "Project categories")}</h2></div></header><div class="category-grid">{categoryCards}</div></section>
-                    """ : "")}
+                    {feed}
+                    {devlogSection}
+                    {categorySection}
                 </main>
                 """ : Disabled(ru))}
 
@@ -312,7 +366,7 @@ public static class DiscoveryEndpoints
                 <div class="stage-shade"></div><div class="stage-copy">
                     <span class="eyebrow">{eyebrow}</span><h2>{heading}</h2>
                     <p>{E(stageText)}</p>
-                    <div class="stage-by">{avatar}<span>{E(stage.Author)} <i>·</i> {E(CategoryLabel(stage.Category, ru))}</span></div>
+                    <div class="stage-by">{avatar}<span>{E(stage.Author)} <i>·</i> {E(KindLabel(stage, ru))}</span></div>
                     <a href="{E(stage.Url)}">{T("Открыть эту работу", "See this stage")} {Icons.Svg("arrow-right", 16)}</a>
                 </div>
             </article>
@@ -356,13 +410,33 @@ public static class DiscoveryEndpoints
             """;
     }
 
-    private static string Segment(string value, string selected, string label, bool ru) =>
-        $"<a href=\"/discovery?type={value}&lang={(ru ? "ru" : "en")}\"{(selected == value ? " aria-current=\"page\"" : "")}>{E(label)}</a>";
+    private static string Segment(string value, string selected, string label, bool ru, string query)
+    {
+        var queryPart = string.IsNullOrWhiteSpace(query) ? "" : "&q=" + Uri.EscapeDataString(query);
+        return $"<a href=\"/discovery?type={value}&lang={(ru ? "ru" : "en")}{queryPart}\"{(selected == value ? " aria-current=\"page\"" : "")}>{E(label)}</a>";
+    }
 
-    private static string Empty(string text) => $"<div class=\"empty\">{E(text)}</div>";
+    private static string EmptyStage(bool ru, bool filtered)
+    {
+        var heading = filtered
+            ? (ru ? "Ничего не совпало" : "Nothing matches this view")
+            : (ru ? "Эта поляна пока свободна" : "This clearing is waiting for its first story");
+        var copy = filtered
+            ? (ru ? "Сбросьте поиск и фильтры — возможно, нужная работа уже рядом."
+                : "Clear the search and filters — the work you want may already be here.")
+            : (ru ? "Здесь появятся только публично опубликованные работы авторов, которые сами включили показ в Discovery."
+                : "Only publicly published work from authors who explicitly opt in to Discovery will appear here.");
+        var href = filtered ? $"/discovery?lang={(ru ? "ru" : "en")}" : "/welcome#waitlist";
+        var action = filtered ? (ru ? "Сбросить фильтры" : "Clear filters")
+            : (ru ? "Опубликовать первую работу" : "Publish the first project");
+        return $"""
+            <div class="stage-empty discovery-empty"><span class="eyebrow">DISCOVERY</span><h2>{heading}</h2>
+            <p>{copy}</p><a class="stage-empty-action" href="{href}">{action} {Icons.Svg("arrow-right", 16)}</a></div>
+            """;
+    }
 
     private static string Disabled(bool ru) => $"""
-        <main class="disabled wrap"><img src="/og-default.png" alt=""><span class="eyebrow">DISCOVERY</span>
+        <main class="disabled wrap" data-layout="editorial"><img src="/og-default.png" alt=""><span class="eyebrow">DISCOVERY</span>
         <h1>{(ru ? "Discovery сейчас на паузе" : "Discovery is taking a short pause")}</h1>
         <p>{(ru ? "Блоги и Showcase по-прежнему доступны по адресам их авторов." : "Blogs and Showcases remain available at their authors' own addresses.")}</p>
         <a class="start" href="/welcome">{(ru ? "На главную" : "Back to Cedar Clerk")}</a></main>
@@ -443,52 +517,59 @@ public static class DiscoveryEndpoints
         * { box-sizing: border-box; }
         .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
         html { scroll-behavior: smooth; }
-        body { margin:0; background:var(--canvas); color:var(--text); font-family:var(--font-sans); line-height:1.5; }
+        body { min-height:100vh; margin:0; display:flex; flex-direction:column; background:var(--canvas); color:var(--text); font-family:var(--font-sans); line-height:1.5; }
+        main[data-layout="editorial"] { flex:1 0 auto; }
         a { color:inherit; }
         img { display:block; max-width:100%; }
-        .wrap { width:min(1180px, calc(100% - 40px)); margin:0 auto; }
+        .wrap { width:min(1380px, calc(100% - 40px)); margin:0 auto; }
         .grow { flex:1; }
-        .topbar { position:sticky; top:0; z-index:20; min-height:68px; padding:10px max(20px, calc((100vw - 1240px)/2)); display:flex; align-items:center; gap:20px; background:var(--paper-bright); border-bottom:1px solid var(--rule-ink-soft); box-shadow:var(--shadow-paper-sm); }
+        .topbar { position:sticky; top:0; z-index:20; min-height:68px; padding:10px max(20px, calc((100vw - 1380px)/2)); display:flex; align-items:center; gap:20px; background:var(--paper-bright); border-bottom:1px solid var(--rule-ink-soft); box-shadow:var(--shadow-paper-sm); }
         .brand { display:flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:700; text-decoration:none; white-space:nowrap; }
         .brand img { width:28px; height:28px; object-fit:contain; }
         .main-nav { display:flex; align-items:center; gap:20px; font-size:13px; }
         .main-nav a { text-decoration:none; color:var(--t2); padding:8px 0; border-bottom:2px solid transparent; }
         .main-nav a:hover,.main-nav a.active { color:var(--accent); border-color:var(--accent); }
-        .search { flex:1; min-width:150px; }
+        .search { flex:1 1 360px; max-width:560px; min-width:280px; display:grid; grid-template-columns:auto minmax(180px,1fr); align-items:center; gap:9px; }
+        .search label { color:var(--brass); font:700 11px var(--font-sans); white-space:nowrap; }
         .search input { width:100%; height:38px; border:var(--border-paper); border-radius:var(--radius-field); background:var(--sheet); color:var(--text); padding:0 12px; font:inherit; font-size:13px; box-shadow:var(--shadow-field-inset); }
-        .search input:focus-visible,.segments a:focus-visible,.shuffle:focus-visible,.start:focus-visible { outline:2px solid var(--focus-halo); outline-offset:2px; }
-        .lang { display:flex; gap:2px; font:11px var(--font-mono); }
+        .search input:focus-visible,.segments a:focus-visible,.shuffle:focus-visible,.stage-empty-action:focus-visible,.start:focus-visible { outline:2px solid var(--focus-halo); outline-offset:2px; }
+        .lang { display:flex; gap:2px; margin-left:auto; font:11px var(--font-mono); }
         .lang a { padding:5px 6px; text-decoration:none; border-radius:var(--radius-stamp); color:var(--t2); }
         .lang a[aria-current] { background:var(--asoft); color:var(--accent); }
         .sign { font-size:13px; text-decoration:none; white-space:nowrap; }
         .start { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:8px 15px; color:var(--text-on-pine); background:var(--grad-pine); border:1px solid var(--pine-deep); border-radius:var(--radius-plaque); font-weight:700; font-size:13px; text-decoration:none; box-shadow:var(--shadow-pine-btn); white-space:nowrap; }
-        .stage { display:grid; grid-template-columns:minmax(0,1fr) 310px; background:var(--pine-deep); color:var(--text-on-pine); min-height:410px; }
-        .stage-feature { grid-column:1; display:grid; grid-template-columns:minmax(0,1.08fr) minmax(320px,1fr); min-height:350px; overflow:hidden; }
-        .stage-feature>img { width:100%; height:100%; min-height:350px; object-fit:cover; }
+        .stage { display:grid; grid-template-columns:minmax(0,1fr); background:var(--pine-deep); color:var(--text-on-pine); min-height:330px; }
+        .stage.has-rail { grid-template-columns:minmax(0,1fr) minmax(250px,300px); }
+        .stage-feature { grid-column:1; display:grid; grid-template-columns:minmax(0,1.08fr) minmax(300px,1fr); min-height:270px; overflow:hidden; }
+        .stage-feature>img { width:100%; height:100%; min-height:270px; object-fit:cover; }
         .stage-shade { display:none; }
-        .stage-copy { align-self:center; max-width:590px; padding:34px 38px; }
+        .stage-copy { align-self:center; max-width:590px; padding:28px 34px; }
         .eyebrow { display:block; font:700 11px var(--font-mono); letter-spacing:.16em; text-transform:uppercase; color:var(--brass); }
         .eyebrow svg { vertical-align:-2px; margin-right:6px; }
-        .stage-copy h2 { margin:12px 0 26px; padding-bottom:16px; border-bottom:1px solid color-mix(in srgb,var(--brass) 55%,transparent); font:700 clamp(32px,4vw,54px)/1 var(--font-display); }
+        .stage-copy h2 { margin:10px 0 18px; padding-bottom:13px; border-bottom:1px solid color-mix(in srgb,var(--brass) 55%,transparent); font:700 clamp(30px,4vw,48px)/1 var(--font-display); }
         .stage-copy p { margin:0 0 18px; font:17px var(--font-serif); }
         .stage-by { display:flex; align-items:center; gap:10px; margin:0 0 18px; font-size:13px; }
         .stage-by i { color:var(--brass); font-style:normal; padding:0 4px; }
         .stage-avatar { width:38px; height:38px; border-radius:50%; object-fit:cover; border:1px solid var(--brass); }
         .stage-copy>a { display:inline-flex; align-items:center; gap:12px; min-height:42px; padding:9px 16px; color:#fff; background:linear-gradient(180deg,#d5a245,#b97b21); border:1px solid #dfb763; border-radius:var(--radius-plaque); box-shadow:0 2px 0 #6e4618; font-weight:700; text-decoration:none; }
-        .stage-rail { padding:20px; display:flex; flex-direction:column; gap:12px; border-left:1px solid rgba(255,255,255,.13); background:color-mix(in srgb,var(--pine-deep) 85%,black); }
-        .stage-rail a { display:grid; grid-template-columns:92px 1fr; gap:12px; min-height:82px; padding:8px; color:var(--text-on-pine); text-decoration:none; border:1px solid rgba(255,255,255,.13); border-radius:var(--radius-paper); background:rgba(255,255,255,.045); }
-        .stage-rail img { width:92px; height:66px; object-fit:cover; border-radius:calc(var(--radius-paper) - 2px); }
+        .stage-rail { padding:14px; display:flex; flex-direction:column; gap:8px; border-left:1px solid rgba(255,255,255,.13); background:color-mix(in srgb,var(--pine-deep) 85%,black); }
+        .stage-rail a { display:grid; grid-template-columns:76px minmax(0,1fr); gap:10px; min-height:64px; padding:6px; color:var(--text-on-pine); text-decoration:none; border:1px solid rgba(255,255,255,.13); border-radius:var(--radius-paper); background:rgba(255,255,255,.045); }
+        .stage-rail img { width:76px; height:54px; object-fit:cover; border-radius:calc(var(--radius-paper) - 2px); }
         .stage-rail span { align-self:center; min-width:0; }
         .stage-rail small { display:block; color:var(--brass); font:9px var(--font-mono); text-transform:uppercase; letter-spacing:.08em; }
         .stage-rail b { display:block; margin-top:4px; font:14px var(--font-display); overflow:hidden; text-overflow:ellipsis; }
-        .stage-empty { grid-column:1/-1; align-self:center; justify-self:center; text-align:center; max-width:620px; padding:70px 24px; }
-        .stage-empty h2 { margin:10px 0; font:700 clamp(34px,6vw,64px)/1 var(--font-display); }
-        .stage-controls { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:60px; padding:10px max(24px,calc((100vw - 1380px)/2)); border-top:1px solid rgba(255,255,255,.14); }
+        .stage-empty { grid-column:1/-1; align-self:center; justify-self:center; text-align:center; max-width:680px; padding:44px 24px; }
+        .stage-empty h2 { margin:10px 0; font:700 clamp(32px,5vw,54px)/1 var(--font-display); }
+        .stage-empty p { margin:0 auto 20px; max-width:58ch; }
+        .stage-empty-action { display:inline-flex; align-items:center; gap:9px; min-height:42px; padding:9px 16px; border:1px solid var(--brass); border-radius:var(--radius-plaque); background:var(--paper-bright); color:var(--accent); font-weight:700; text-decoration:none; }
+        .stage-controls { grid-column:1/-1; display:flex; align-items:center; justify-content:flex-start; gap:12px; min-height:60px; padding:10px max(24px,calc((100vw - 1380px)/2)); border-top:1px solid rgba(255,255,255,.14); }
         .segments { display:flex; padding:4px; border:1px solid rgba(255,255,255,.18); border-radius:var(--radius-plaque); }
         .segments a { min-height:34px; padding:8px 18px; border-radius:calc(var(--radius-plaque) - 2px); text-decoration:none; font-size:13px; color:color-mix(in srgb,var(--text-on-pine) 70%,transparent); }
         .segments a[aria-current] { background:var(--paper-bright); color:var(--accent); }
         .shuffle { display:flex; align-items:center; gap:8px; color:var(--text-on-pine); text-decoration:none; font-size:13px; }
         .feed { display:grid; grid-template-columns:1fr 1fr; gap:0; padding:18px 0 24px; }
+        .feed.is-single { grid-template-columns:minmax(0,760px); }
+        .feed.is-single .feed-col { padding-inline:0; border-right:0; }
         .feed-col { min-width:0; }
         .feed-col:first-child { padding-right:48px; border-right:1px solid var(--rule-ink); }
         .feed-col:last-child { padding-left:48px; }
@@ -518,7 +599,6 @@ public static class DiscoveryEndpoints
         .project-card:not(.featured) .project-body>p { display:none; }
         .project-body { padding:18px; align-self:center; }
         .linked { display:block; margin-top:12px; color:var(--accent); font-size:11px; text-decoration:none; }
-        .empty { padding:30px; text-align:center; color:var(--t2); background:var(--sheet); border:1px dashed var(--rule-ink); border-radius:var(--radius-paper); }
         .devlogs,.categories { padding:46px 0 24px; }
         .devlog-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 32px; }
         .category-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
@@ -534,9 +614,9 @@ public static class DiscoveryEndpoints
         footer { margin-top:64px; color:var(--rail-ink); background:var(--rail-mid); background-image:var(--tex-wood),var(--surface-rail); border-top:2px solid var(--rail-edge); }
         .footer-inner { min-height:88px; display:flex; align-items:center; gap:22px; font-size:12px; }
         .footer-inner>a:not(.brand) { color:var(--rail-ink-soft); text-decoration:none; }
-        @media(max-width:1050px){ .main-nav{display:none}.stage{grid-template-columns:1fr 270px}.stage-feature{grid-template-columns:1fr}.stage-feature>img{height:260px;min-height:260px}.stage-copy{padding:28px}.feed-col:first-child{padding-right:28px}.feed-col:last-child{padding-left:28px}.category-grid{grid-template-columns:repeat(3,1fr)} }
-        @media(max-width:760px){ .topbar{gap:10px;flex-wrap:wrap}.search{order:2;flex-basis:100%}.sign{margin-left:auto}.topbar .lang{display:none}.stage{grid-template-columns:1fr}.stage-feature{grid-column:1}.stage-rail{display:grid;grid-template-columns:1fr 1fr;border-left:0}.stage-controls{flex-wrap:wrap}.feed{grid-template-columns:1fr}.feed-col:first-child{padding-right:0;border-right:0}.feed-col:last-child{padding-left:0;padding-top:38px}.devlog-grid{grid-template-columns:1fr}.category-grid{grid-template-columns:1fr 1fr}.footer-inner{flex-wrap:wrap;padding:22px 0}.footer-inner .grow{display:none}.project-card.featured{grid-template-columns:135px 1fr} }
-        @media(max-width:480px){ .brand span{display:none}.start{padding:8px 10px}.stage-rail{grid-template-columns:1fr}.segments{width:100%}.segments a{flex:1;text-align:center;padding-inline:10px}.shuffle{width:100%;justify-content:center}.blog-card{grid-template-columns:96px 1fr}.blog-thumb img{width:96px;height:88px}.project-card.featured{grid-template-columns:1fr}.project-card.featured .project-image{height:180px}.wrap{width:min(100% - 28px,1180px)} }
+        @media(max-width:1050px){ .main-nav{display:none}.stage.has-rail{grid-template-columns:1fr 250px}.stage-feature{grid-template-columns:1fr}.stage-feature>img{height:230px;min-height:230px}.stage-copy{padding:26px}.feed-col:first-child{padding-right:28px}.feed-col:last-child{padding-left:28px}.category-grid{grid-template-columns:repeat(3,1fr)} }
+        @media(max-width:760px){ .topbar{gap:10px;flex-wrap:wrap}.sign{margin-left:auto}.topbar .lang{display:none}.stage.has-rail{grid-template-columns:1fr}.stage-feature{grid-column:1}.stage-rail{display:grid;grid-template-columns:1fr 1fr;border-left:0}.stage-controls{flex-wrap:wrap}.search{flex-basis:100%;max-width:none}.feed,.feed.is-single{grid-template-columns:1fr}.feed-col:first-child{padding-right:0;border-right:0}.feed-col:last-child{padding-left:0;padding-top:38px}.devlog-grid{grid-template-columns:1fr}.category-grid{grid-template-columns:1fr 1fr}.footer-inner{flex-wrap:wrap;padding:22px 0}.footer-inner .grow{display:none}.project-card.featured{grid-template-columns:135px 1fr} }
+        @media(max-width:480px){ .brand span{display:none}.start{padding:8px 10px}.search{min-width:0;grid-template-columns:1fr}.search label{white-space:normal}.stage-rail{grid-template-columns:1fr}.segments{width:100%}.segments a{flex:1;text-align:center;padding-inline:10px}.shuffle{width:100%;justify-content:center}.blog-card{grid-template-columns:96px 1fr}.blog-thumb img{width:96px;height:88px}.project-card.featured{grid-template-columns:1fr}.project-card.featured .project-image{height:180px}.wrap{width:min(100% - 28px,1380px)} }
         @media(max-width:340px){.category-grid{grid-template-columns:1fr}}
         @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
         """;

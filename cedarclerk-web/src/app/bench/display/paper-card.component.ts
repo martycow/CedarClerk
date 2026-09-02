@@ -48,6 +48,9 @@ import { booleanAttribute, Component, computed, input, numberAttribute, output }
                 padding: var(--paper-card-pad, var(--space-4) var(--space-4) calc(var(--space-4) + var(--space-1)));
                 background-color: var(--sheet);
                 background-image: var(--tex-paper);
+                color: var(--text);
+                --surface-ink: var(--text);
+                --surface-ink-soft: var(--t2);
                 transition: transform var(--dur-tap, 150ms) var(--ease-swing);
             }
 

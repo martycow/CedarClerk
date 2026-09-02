@@ -274,7 +274,11 @@
 
 .block-menu button:hover:not(:disabled) { background: var(--hover); }
 
-.block-menu button.on { color: var(--accent); }
+.block-menu button.on {
+    color: var(--accent);
+    font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
 
 .block-menu button:disabled { opacity: .6; cursor: default; }
 
@@ -290,7 +294,11 @@
 
 .strip .block-menu button:hover:not(:disabled) { color: var(--text); background: var(--hover); }
 
-.strip .block-menu button.on { color: var(--accent); }
+.strip .block-menu button.on {
+    color: var(--accent);
+    font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
 
 /* Same defect, same reason: the footnote panel's own Insert button is a class the strip's element
    rule out-specifies, so it too came out cream on cream. */
@@ -522,14 +530,21 @@
 /* The Write tab: one card holding the strip and the sheet, the inspector card beside it
    (Editor.png). The frame's body carries the gutters, so this pads nothing. */
 .main {
-    display: flex;
+    display: grid;
     flex: 1;
-    width: min(100%, 1920px);
+    width: 100%;
+    min-width: 0;
     min-height: 0;
-    margin-inline: auto;
-    gap: var(--space-4);
+    margin-inline: 0;
+    gap: var(--pane-gap);
+    overflow: hidden;
     box-sizing: border-box;
 }
+
+/* The shared workspace owns the two-column form while Details is open. This fallback belongs
+   only to the inspector-free state; otherwise equal selector specificity lets this component
+   override the global main/inspector tracks after Angular mounts its scoped stylesheet. */
+.main:not(.split-workspace) { grid-template-columns: minmax(0, 1fr); }
 
 .main.is-hidden,
 .preview-slot.is-hidden,
@@ -539,16 +554,15 @@
 
 /* On a phone the preview's three columns are one, and nothing may push the page sideways. */
 @media (max-width: 759px) {
-    .main { flex-direction: column; }
-    .inspector { width: 100%; }
+    .inspector { width: auto; }
 }
 
 .preview-slot {
     display: flex;
     flex: 1;
-    width: min(100%, 1920px);
+    width: 100%;
     min-height: 0;
-    margin-inline: auto;
+    margin-inline: 0;
 }
 
 /* The strip at the head of the card, the worktop under it; the worktop's own frame is dropped so
@@ -576,8 +590,8 @@
 }
 
 .inspector {
-    flex: none;
-    width: 320px;
+    width: auto;
+    min-width: 0;
 }
 
 .insp-count {
@@ -800,7 +814,7 @@
     width: 100%;
     margin: 0 auto;
     padding: var(--space-6) clamp(var(--space-3), 2vw, var(--space-5)) var(--space-4);
-    box-sizing: content-box;
+    box-sizing: border-box;
 }
 
 [data-surface="chrome"] .state-link {
@@ -987,9 +1001,9 @@
 .publish-slot {
     display: flex;
     flex: 1;
-    width: min(100%, 1920px);
+    width: 100%;
     min-height: 0;
-    margin-inline: auto;
+    margin-inline: 0;
     overflow: auto;
 }
 
@@ -1011,10 +1025,15 @@
 
 .pub-columns {
     display: grid;
-    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(280px, 340px);
+    grid-template-columns:
+        minmax(var(--pane-list-min), var(--pane-list-max))
+        minmax(0, 1fr)
+        minmax(var(--pane-inspector-min), var(--pane-inspector-max));
     gap: var(--space-4);
     align-items: start;
 }
+
+.pub-columns > * { min-width: 0; }
 
 .pub-rack, .pub-main, .pub-summary, .pub-compat, .pub-utility {
     box-sizing: border-box;
@@ -1100,7 +1119,7 @@
 
 /* Between a tablet and a desktop the rack is a strip and the review follows the settings; on a
    phone everything is one column in reading order. Page rules, not shell rules (ADR-147). */
-@media (max-width: 1179px) {
+@media (max-width: 1320px) {
     .pub-columns { grid-template-columns: minmax(0, 1fr); }
     .pub-rack .dest-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 }
@@ -1126,7 +1145,7 @@
    buttons carrying their own explanation, not a checkbox whose meaning has to be inferred. */
 .mode-toggle {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
 }
 
@@ -1141,6 +1160,8 @@
     padding: 9px 11px;
     cursor: pointer;
     font-family: inherit;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .mode-toggle button.on {
@@ -1261,9 +1282,8 @@
     margin-bottom: 10px;
 }
 
-/* T-318 — the rendered store markup and the share URL both ride .revision-preview's bounded box
-   (component-style budget: restating it cost real bytes); .copy-preview/.preview-share-url on the
-   same elements are locator classes only. */
+/* T-318 — rendered store markup and the share URL use one bounded preview class. */
+.copy-preview { max-height: 240px; overflow: auto; }
 
 .blog-lang-badges {
     display: flex;
@@ -1781,6 +1801,7 @@
     width: 100%;
     padding: 6px 4px;
     border: none;
+    border-left: 3px solid transparent;
     border-bottom: 1px solid var(--border);
     border-radius: 6px 6px 0 0;
     background: none;
@@ -1794,7 +1815,9 @@
 
 .revision-row.selected {
     background: var(--asoft);
+    border-left-color: var(--accent);
     border-bottom-color: var(--abord);
+    font-weight: 600;
 }
 
 .revision-when { color: var(--text); }
@@ -1865,8 +1888,6 @@
 }
 
 .revision-preview {
-    max-height: 240px;
-    overflow: auto;
     margin: 4px 0 0;
     padding: 10px 12px;
     border: 1px solid var(--border);
@@ -1880,8 +1901,6 @@
 }
 
 .revision-unified {
-    max-height: 280px;
-    overflow: auto;
     margin-top: var(--space-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -1890,7 +1909,7 @@
     font-size: var(--fs-12);
 }
 
-.revision-unified.compact { max-height: 180px; }
+.revision-unified.compact { max-height: 180px; overflow: auto; }
 
 .revision-diff-row {
     display: grid;
@@ -2372,7 +2391,6 @@
    shelf keeps its rows readable at 280px; the toolbar's fit already drops captions and re-rows. */
 @media (max-width: 1180px) {
     .main { gap: var(--space-3); }
-    .inspector { width: 280px; }
 }
 
 /* On a touch screen the paper floor makes every button 44px (styles.scss), which turns a tag leaf

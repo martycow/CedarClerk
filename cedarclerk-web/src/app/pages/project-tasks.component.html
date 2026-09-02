@@ -1,13 +1,15 @@
-<div class="page">
+<div class="page" data-layout="operational">
     <app-page-header [title]="t().projects.tasks.title" [meta]="headerMeta()">
         <app-button secondary variant="paper" [link]="['/projects', projectId(), 'planner']">
             <app-icon name="flag" size="sm" />
             {{ t().projects.tasks.sprints }}
         </app-button>
-        <app-button primary variant="pine" [disabled]="busy()" (clicked)="startCreating()">
-            <app-icon name="plus" weight="bold" size="sm" />
-            {{ t().projects.tasks.newTask }}
-        </app-button>
+        @if (tasks().length > 0) {
+            <app-button primary variant="pine" [disabled]="busy()" (clicked)="startCreating()">
+                <app-icon name="plus" weight="bold" size="sm" />
+                {{ t().projects.tasks.newTask }}
+            </app-button>
+        }
     </app-page-header>
 
     <div class="toolbar">
@@ -46,10 +48,8 @@
 
         <span class="spacer"></span>
 
-        <!--app-input names its field with a visible label or with nothing; this one is a toolbar
-        search that has never had a caption, so the name is given from outside.-->
-        <label class="named-elsewhere" for="tasks-search">{{ t().projects.tasks.search }}</label>
-        <app-input class="search-input" inputId="tasks-search" type="search"
+        <app-input class="search-input" inputId="tasks-search" type="search" [dense]="true"
+                   [label]="t().projects.tasks.search"
                    [placeholder]="t().projects.tasks.search"
                    [value]="search()" (valueChange)="search.set($any($event) ?? '')" />
     </div>
@@ -101,7 +101,14 @@
                                 </span>
                             </a>
                         } @empty {
-                            <app-empty-state [icon]="null" [text]="columnEmpty(status)" />
+                            <app-empty-state [icon]="null" [text]="columnEmpty(status)">
+                                @if (tasks().length === 0 && status === 'backlog') {
+                                    <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating('backlog')">
+                                        <app-icon name="plus" weight="bold" size="sm" />
+                                        {{ t().projects.tasks.newTask }}
+                                    </app-button>
+                                }
+                            </app-empty-state>
                         }
                     </div>
                 </section>
@@ -144,7 +151,14 @@
                     </a>
                 } @empty {
                     <app-empty-state class="list-empty" [icon]="null"
-                                     [text]="tasks().length ? t().projects.tasks.emptyFiltered : t().projects.tasks.emptyHint" />
+                                     [text]="tasks().length ? t().projects.tasks.emptyFiltered : t().projects.tasks.emptyHint">
+                        @if (tasks().length === 0) {
+                            <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating('backlog')">
+                                <app-icon name="plus" weight="bold" size="sm" />
+                                {{ t().projects.tasks.newTask }}
+                            </app-button>
+                        }
+                    </app-empty-state>
                 }
             </div>
         </div>
@@ -155,24 +169,25 @@
 @if (openTask(); as task) {
     <app-modal [width]="560" (closed)="close()">
         <span modal-title class="modal-head-row">
-            <span class="tag" [class.ok]="statusTone(task.status) === 'ok'"
-                  [class.warn]="statusTone(task.status) === 'warn'"
-                  [class.muted]="statusTone(task.status) === 'muted'">{{ t().projects.tasks.status[task.status] }}</span>
+            <span class="modal-heading">{{ t().projects.tasks.editTask }}</span>
+            <span class="tag" [class.ok]="statusTone(draftStatus()) === 'ok'"
+                  [class.warn]="statusTone(draftStatus()) === 'warn'"
+                  [class.muted]="statusTone(draftStatus()) === 'muted'">{{ t().projects.tasks.status[draftStatus()] }}</span>
             @if (task.archivedAt) {
                 <span class="tag muted">{{ t().projects.tasks.archived }}</span>
             }
         </span>
 
         <div class="task-modal">
-            <app-input class="task-title-input" [serif]="true" [placeholder]="t().projects.tasks.titlePlaceholder"
+            <app-input class="task-title-input" [serif]="true" [label]="t().projects.tasks.fieldName"
+                       [placeholder]="t().projects.tasks.titlePlaceholder"
                        [value]="draftTitle()" (valueChange)="draftTitle.set($any($event) ?? '')"
                        inputId="task-title" />
-            <label class="named-elsewhere" for="task-title">{{ t().projects.tasks.titlePlaceholder }}</label>
 
             <div class="field-grid">
                 <div class="field">
                     <label for="task-status">{{ t().projects.tasks.fieldStatus }}</label>
-                    <select id="task-status" [ngModel]="task.status" (ngModelChange)="setStatus(task, $event)" [disabled]="busy()">
+                    <select id="task-status" [ngModel]="draftStatus()" (ngModelChange)="draftStatus.set($event)" [disabled]="busy()">
                         @for (status of statuses; track status) {
                             <option [value]="status">{{ t().projects.tasks.status[status] }}</option>
                         }
@@ -180,7 +195,7 @@
                 </div>
                 <div class="field">
                     <label for="task-priority">{{ t().projects.tasks.fieldPriority }}</label>
-                    <select id="task-priority" [ngModel]="task.priority" (ngModelChange)="setPriority(task, $event)" [disabled]="busy()">
+                    <select id="task-priority" [ngModel]="draftPriority()" (ngModelChange)="draftPriority.set($event)" [disabled]="busy()">
                         @for (p of priorities; track p) {
                             <option [value]="p">{{ t().projects.tasks.priorityFull(p) }}</option>
                         }
@@ -195,11 +210,9 @@
                                [placeholder]="t().projects.tasks.assigneePlaceholder"
                                [value]="draftAssignee()" (valueChange)="draftAssignee.set($any($event) ?? '')" />
                 </div>
-                <!--Saved on change rather than with the rest: it moves the task between planner
-                groups, which is a move, not an edit of text.-->
                 <div class="field">
                     <label for="task-sprint">{{ t().projects.planner.assignSprint }}</label>
-                    <select id="task-sprint" [ngModel]="task.sprintId ?? ''" (ngModelChange)="setSprint(task, $event)"
+                    <select id="task-sprint" [ngModel]="draftSprintId()" (ngModelChange)="draftSprintId.set($event)"
                             [disabled]="busy()">
                         <option value="">{{ t().projects.planner.unassigned }}</option>
                         @for (s of sprints(); track s.id) {
@@ -212,7 +225,7 @@
                 @if (builds().length) {
                 <div class="field">
                     <label for="task-build">{{ t().projects.builds.assignBuild }}</label>
-                    <select id="task-build" [ngModel]="task.buildId ?? ''" (ngModelChange)="setBuild(task, $event)"
+                    <select id="task-build" [ngModel]="draftBuildId()" (ngModelChange)="draftBuildId.set($event)"
                             [disabled]="busy()">
                         <option value="">{{ t().projects.builds.unassigned }}</option>
                         @for (b of builds(); track b.id) {
@@ -221,13 +234,13 @@
                     </select>
                 </div>
                 }
-                <!--T-159 (ADR-134) — opt-in onto the public roadmap; saved on change like the
-                sprint above, and only the title and status ever leave.-->
-                <div class="field">
+                <!--T-159 (ADR-134) — opt-in onto the public roadmap; only the title and status
+                ever leave the account. It is part of the same explicit Save as the card fields.-->
+                <div class="field roadmap-field">
                     <label>{{ t().projects.tasks.fieldPublicRoadmap }}</label>
                     <label class="roadmap-toggle">
-                        <input type="checkbox" [ngModel]="task.isPublicRoadmap"
-                               (ngModelChange)="setPublicRoadmap(task, $event)" [disabled]="busy()">
+                        <input type="checkbox" [ngModel]="draftPublicRoadmap()"
+                               (ngModelChange)="draftPublicRoadmap.set($event)" [disabled]="busy()">
                         <span>{{ t().projects.tasks.publicRoadmapHint }}</span>
                     </label>
                 </div>
@@ -317,7 +330,7 @@
                 {{ t().projects.tasks.save }}
             </app-button>
             <app-button variant="pine" [disabled]="busy()" (clicked)="toggleDone(task)">
-                {{ task.status === 'done' ? t().projects.tasks.reopen : t().projects.tasks.markDone }}
+                {{ draftStatus() === 'done' ? t().projects.tasks.reopen : t().projects.tasks.markDone }}
             </app-button>
         </div>
     </app-modal>

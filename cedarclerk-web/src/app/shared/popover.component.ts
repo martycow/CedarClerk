@@ -1,4 +1,5 @@
 import { Component, ElementRef, HostListener, OnDestroy, ViewChild, inject, input, signal } from '@angular/core';
+import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 
 @Component({
     selector: 'app-popover',
@@ -7,6 +8,15 @@ import { Component, ElementRef, HostListener, OnDestroy, ViewChild, inject, inpu
 })
 export class PopoverComponent implements OnDestroy {
     private readonly host = inject(ElementRef<HTMLElement>);
+    private readonly overlays = inject(OverlayCoordinatorService);
+    private readonly unregisterPeer = this.overlays.registerDismissablePeer(activeElement => {
+        const returnFocus = activeElement && this.host.nativeElement.contains(activeElement)
+            ? this.triggerRef?.nativeElement.querySelector<HTMLElement>('[trigger]')
+                ?? this.triggerRef?.nativeElement ?? null
+            : null;
+        if (this.isOpen()) this.close();
+        return returnFocus;
+    });
 
     align = input<'left' | 'right'>('left');
 
@@ -49,6 +59,7 @@ export class PopoverComponent implements OnDestroy {
     }
 
     ngOnDestroy() {
+        this.unregisterPeer();
         document.removeEventListener('scroll', this.onAncestorScroll, { capture: true });
     }
 
@@ -87,7 +98,7 @@ export class PopoverComponent implements OnDestroy {
 
     @HostListener('document:keydown.escape')
     onEscape() {
-        this.close();
+        if (this.isOpen()) this.close();
     }
 
     // An outside click closes this, and a full-screen backdrop used to be what caught it. The

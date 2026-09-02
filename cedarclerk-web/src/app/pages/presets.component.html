@@ -1,8 +1,10 @@
-<div class="page presets">
+<div class="page presets" data-layout="form">
     <app-page-header [title]="t().presets.crumb" [meta]="headerMeta()">
+        @if (!loading() && presets().length > 0 && editingId() === null) {
         <app-button primary variant="pine" (clicked)="startNew()">
             <app-icon name="plus" weight="bold" size="sm" /> {{ t().presets.newPreset }}
         </app-button>
+        }
     </app-page-header>
 
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
@@ -81,8 +83,10 @@
     <div class="pr-types">
         @for (type of baseTypes; track type) {
         <button type="button" class="pr-type-btn" [class.on]="form().baseType === type"
+                [attr.aria-pressed]="form().baseType === type"
                 (click)="pickBaseType(type)">
             <app-icon [name]="typeIcons[type]" size="sm" /> {{ baseTypeName(type) }}
+            @if (form().baseType === type) { <app-icon class="pr-choice-check" name="check" weight="bold" size="sm" /> }
         </button>
         }
     </div>
@@ -100,8 +104,10 @@
     <div class="pr-types">
         @for (type of projectTypes; track type) {
         <button type="button" class="pr-type-btn" [class.on]="form().projectType === type"
+                [attr.aria-pressed]="form().projectType === type"
                 (click)="pickProjectType(type)">
             <app-icon [name]="projectTypeIcons[type]" size="sm" /> {{ projectTypeName(type) }}
+            @if (form().projectType === type) { <app-icon class="pr-choice-check" name="check" weight="bold" size="sm" /> }
         </button>
         }
     </div>
@@ -111,13 +117,17 @@
     <span class="label">{{ t().presets.project.documentTypeLabel }}</span>
     <div class="pr-types">
         <button type="button" class="pr-type-btn" [class.on]="form().projectDocumentType === null"
+                [attr.aria-pressed]="form().projectDocumentType === null"
                 (click)="pickProjectDocumentType(null)">
-            {{ t().presets.project.documentTypeDefault }}
+            {{ t().presets.project.documentTypeDefault(defaultProjectDocumentTypeName()) }}
+            @if (form().projectDocumentType === null) { <app-icon class="pr-choice-check" name="check" weight="bold" size="sm" /> }
         </button>
         @for (type of baseTypes; track type) {
         <button type="button" class="pr-type-btn" [class.on]="form().projectDocumentType === type"
+                [attr.aria-pressed]="form().projectDocumentType === type"
                 (click)="pickProjectDocumentType(type)">
             <app-icon [name]="typeIcons[type]" size="sm" /> {{ baseTypeName(type) }}
+            @if (form().projectDocumentType === type) { <app-icon class="pr-choice-check" name="check" weight="bold" size="sm" /> }
         </button>
         }
     </div>
@@ -149,6 +159,7 @@
             <app-icon name="newspaper" size="sm" />
             }
             {{ destinationName(d) }}
+            @if (form().destinations.includes(d)) { <app-icon class="pr-choice-check" name="check" weight="bold" size="sm" /> }
         </button>
         }
     </div>
@@ -160,7 +171,8 @@
         @for (l of contentLanguages; track l) {
         <button type="button" class="pr-type-btn" [class.on]="form().languages.includes(l)"
                 [attr.aria-pressed]="form().languages.includes(l)" (click)="toggleLanguage(l)">
-            {{ l.toUpperCase() }}
+            {{ languageLabel(l) }}
+            @if (form().languages.includes(l)) { <app-icon class="pr-choice-check" name="check" weight="bold" size="sm" /> }
         </button>
         }
     </div>
@@ -170,8 +182,8 @@
     }
 
     <div class="pr-form-actions">
-        <app-button variant="paper" size="sm" (clicked)="cancel()">{{ t().common.cancel }}</app-button>
-        <app-button variant="pine" size="sm" [disabled]="busy() || !canSave()" (clicked)="save()">
+        <app-button variant="paper" (clicked)="cancel()">{{ t().common.cancel }}</app-button>
+        <app-button variant="pine" [disabled]="busy() || !canSave()" (clicked)="save()">
             {{ busy() ? '…' : t().common.save }}
         </app-button>
     </div>

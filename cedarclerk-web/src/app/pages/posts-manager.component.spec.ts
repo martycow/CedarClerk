@@ -3,13 +3,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PostsManagerComponent } from './posts-manager.component';
 import { DraftMeta, DraftsService } from '../core/drafts.service';
-import { FormPresetsService } from '../core/form-presets.service';
+import { blankFormEdit, FormPreset, FormPresetsService } from '../core/form-presets.service';
 import { PostsService } from '../core/posts.service';
 import { PublishService } from '../core/publish.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AuthService } from '../core/auth.service';
 import { en } from '../core/i18n/en';
+
+function sheetFor(marker: string): string {
+    const inline = Array.from(document.querySelectorAll('style')).map(style => style.textContent ?? '');
+    const adopted = Array.from(document.adoptedStyleSheets ?? []).map(
+        sheet => Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n'));
+    const hits = [...inline, ...adopted].filter(text => text.includes(marker));
+    expect(hits.length, `no stylesheet carrying "${marker}" reached the document`).toBeGreaterThan(0);
+    return hits.join('\n').replace(/\/\*[\s\S]*?\*\//g, ' ');
+}
 
 function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
     return {
@@ -40,6 +49,24 @@ const EARLIER = draft('earlier', {
 });
 const DRAFTED = draft('drafted', { title: 'Notes', isPrivate: true });
 const OLD = draft('old', { title: 'Retired', isArchived: true });
+
+const PRESET: FormPreset = {
+    id: 'preset-1',
+    name: 'Game experience',
+    formJson: JSON.stringify(blankFormEdit('ru')),
+    language: 'ru',
+    createdAt: '2026-08-01T09:00:00',
+};
+
+const EDITABLE_PRESET: FormPreset = (() => {
+    const form = blankFormEdit('ru');
+    form.languages.push('en');
+    form.questions.push({
+        id: 'question-1', type: 'text', required: false,
+        label: { ru: 'Имя', en: 'Name' }, options: [],
+    });
+    return { ...PRESET, formJson: JSON.stringify(form) };
+})();
 
 const SNAPSHOTS = [
     { viewCount: 100, likeCount: 4, dislikeCount: 0, commentCount: 1, takenAt: '2026-08-09T03:30:00Z' },
@@ -90,7 +117,17 @@ class FakePublish {
 }
 
 class FakePresets {
-    async list() { return []; }
+    listCalls = 0;
+    nextList: Promise<FormPreset[]> | null = null;
+
+    list() {
+        this.listCalls++;
+        return this.nextList ?? Promise.resolve([]);
+    }
+
+    async create(name: string, formJson: string, language: string) {
+        return { id: 'preset-new', name, formJson, language, createdAt: '2026-08-02T09:00:00' };
+    }
 }
 
 class FakeComments {
@@ -103,6 +140,7 @@ class FakeComments {
 describe('posts manager', () => {
     let fixture: ComponentFixture<PostsManagerComponent>;
     let feedback: CommentsService;
+    let presetsApi: FakePresets;
     const t = en.manager;
 
     const page = () => fixture.componentInstance;
@@ -135,6 +173,7 @@ describe('posts manager', () => {
             ],
         });
         feedback = TestBed.inject(CommentsService);
+        presetsApi = TestBed.inject(FormPresetsService) as unknown as FakePresets;
         TestBed.inject(LocaleService).set('en');
         // A blog lives at its owner's subdomain, and the component asks the server which one.
         TestBed.inject(AuthService).blogUrl.set('https://martycow.cedarclerk.app');
@@ -165,10 +204,26 @@ describe('posts manager', () => {
         expect(el().querySelector('.inspector')).toBeNull();
     });
 
+    it('declares the operational measure and uses the shared fluid pane anatomy', async () => {
+        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+        const postsGrid = el().querySelector('.mg-grid') as HTMLElement;
+        expect(postsGrid.classList.contains('split-workspace')).toBe(true);
+        expect(postsGrid.classList.contains('is-two')).toBe(false);
+        expect([...postsGrid.children].every(child => child.classList.contains('split-pane'))).toBe(true);
+
+        page().presets.set([PRESET]);
+        page().presetsLoaded.set(true);
+        tiles()[2].click();
+        await settle();
+        const formsGrid = el().querySelector('.mg-grid') as HTMLElement;
+        expect(formsGrid.classList.contains('split-workspace')).toBe(true);
+        expect(formsGrid.classList.contains('is-two')).toBe(true);
+        expect([...formsGrid.children].every(child => child.classList.contains('split-pane'))).toBe(true);
+    });
+
     // ADR-239 clause 6 — the screen-level counts are the header's meta line, the same on every
-    // tab; the primary slot holds the forms tab's one command and nothing on Posts until a post
-    // is picked.
-    it('draws the counts in the page header and the tab-level primary action beside them', async () => {
+    // tab. An empty Forms list owns its creation action; once data exists it moves to the header.
+    it('draws the counts and keeps the Forms creation action in exactly one place', async () => {
         expect(header().querySelector('.page-title')?.textContent?.trim()).toBe(t.crumb);
         const meta = [...header().querySelectorAll('.page-meta > span:not(.sep)')].map(s => s.textContent?.trim());
         expect(meta).toEqual([t.rulerPosts(4), t.rulerPublished(2), t.rulerScheduled(1)]);
@@ -176,7 +231,89 @@ describe('posts manager', () => {
 
         tiles()[2].click();
         await settle();
+        expect(header().querySelector('.page-actions .btn')).toBeNull();
+        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
+        expect(el().querySelector('.is-forms')).toBeNull();
+        expect([...el().querySelectorAll('app-button')].filter(x => x.textContent?.trim() === t.forms.newPreset).length).toBe(1);
+
+        page().presets.set([PRESET]);
+        await settle();
         expect(header().querySelector('.page-actions .btn')?.textContent?.trim()).toBe(t.forms.newPreset);
+        expect([...el().querySelectorAll('app-button')].filter(x => x.textContent?.trim() === t.forms.newPreset).length).toBe(1);
+    });
+
+    it('treats a successful empty preset response as loaded instead of fetching it again', async () => {
+        expect(presetsApi.listCalls).toBe(1);
+        expect(page().presetsLoaded()).toBe(true);
+
+        page().setTab('forms');
+        page().setTab('posts');
+        page().setTab('forms');
+        await settle();
+
+        expect(presetsApi.listCalls).toBe(1);
+    });
+
+    it('deduplicates an in-flight preset request and shows its loading state', async () => {
+        let resolveList!: (value: FormPreset[]) => void;
+        presetsApi.nextList = new Promise(resolve => { resolveList = resolve; });
+        page().presets.set([]);
+        page().presetsLoaded.set(false);
+        const callsBefore = presetsApi.listCalls;
+
+        const first = page().loadPresets();
+        const second = page().loadPresets();
+        page().selectedId.set('drafted');
+        await settle();
+
+        expect(el().querySelector('app-form-ref')).toBeNull();
+        expect(el().querySelector('[role="status"]')?.textContent?.trim()).toBe(en.common.loading);
+
+        page().setTab('forms');
+        await settle();
+
+        expect(first).toBe(second);
+        expect(presetsApi.listCalls).toBe(callsBefore + 1);
+        expect(page().presetsLoading()).toBe(true);
+        expect(el().querySelector('[role="status"]')?.textContent?.trim()).toBe(en.common.loading);
+        expect(el().querySelector('.is-forms')).toBeNull();
+
+        resolveList([PRESET]);
+        await first;
+        await settle();
+
+        expect(page().presetsLoaded()).toBe(true);
+        expect(page().presetsLoading()).toBe(false);
+        expect(el().querySelector('.is-forms')).not.toBeNull();
+    });
+
+    it('shows one retryable error instead of presenting a failed preset load as an empty library', async () => {
+        let rejectList!: (reason: Error) => void;
+        presetsApi.nextList = new Promise((_resolve, reject) => { rejectList = reject; });
+        page().presets.set([]);
+        page().presetsLoaded.set(false);
+
+        const load = page().loadPresets();
+        page().setTab('forms');
+        rejectList(new Error('offline'));
+        await load;
+        await settle();
+
+        expect(page().presetsLoaded()).toBe(false);
+        expect(page().presetLoadError()).toBe(t.errors.loadPresets);
+        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
+        expect([...el().querySelectorAll('app-button')]
+            .filter(x => x.textContent?.trim() === t.forms.newPreset).length).toBe(0);
+
+        presetsApi.nextList = Promise.resolve([PRESET]);
+        const retry = el().querySelector('app-empty-state app-button button') as HTMLButtonElement;
+        expect(retry.textContent?.trim()).toBe(en.projects.canvas.retry);
+        retry.click();
+        await settle();
+
+        expect(page().presetsLoaded()).toBe(true);
+        expect(page().presetLoadError()).toBe('');
+        expect(el().querySelector('.is-forms')).not.toBeNull();
     });
 
     // ADR-167 clause 4. The values are the assertion: a shelf that stayed on the library's numbers
@@ -191,6 +328,7 @@ describe('posts manager', () => {
         card('Devlog 12').click();
         await settle();
 
+        expect(card('Devlog 12').getAttribute('aria-current')).toBe('true');
         expect(page().inspectorScope()).toBe('selection');
         expect(rows().every(r => r.getAttribute('data-scope') === 'selection')).toBe(true);
         expect(row(t.inspector.posts)).toBeUndefined();
@@ -232,11 +370,107 @@ describe('posts manager', () => {
         const open = header().querySelector('.open-in-editor a') as HTMLAnchorElement;
         expect(open.tagName).toBe('A');
         expect(open.getAttribute('href')).toBe('/editor?draft=live');
+        expect([...el().querySelectorAll('a')].filter(a => a.textContent?.includes(t.openInEditor)).length).toBe(1);
 
         card('Notes').click();
         await settle();
         const other = header().querySelector('.open-in-editor a') as HTMLAnchorElement;
         expect(other.getAttribute('href')).toBe('/editor?draft=drafted');
+    });
+
+    it('offers a useful action when no post is selected', async () => {
+        const action = sheet().querySelector('app-empty-state app-button button') as HTMLButtonElement;
+        expect(action.textContent?.trim()).toBe(t.selectFirstPost);
+        action.click();
+        await settle();
+        expect(page().selectedId()).toBe('live');
+    });
+
+    it('keeps the publication journey inside a narrow working pane', () => {
+        const css = sheetFor('.publish-journey');
+        expect(css).toMatch(/\.sheet-body[^{}]*\{[^{}]*overflow-x\s*:\s*hidden/i);
+        expect(css).toMatch(/\.publish-journey[^{}]*\{[^{}]*minmax\(0(?:px)?,\s*auto\)/i);
+        expect(css).toMatch(/\.journey-step[^{}]*\{[^{}]*min-width\s*:\s*0(?:px)?/i);
+    });
+
+    it('uses one empty-state surface and one action for search misses and an empty post library', async () => {
+        page().search = 'not in the library';
+        await settle();
+
+        expect(el().querySelector('.post-list app-empty-state')).toBeNull();
+        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
+        expect([...el().querySelectorAll('app-button')]
+            .filter(x => x.textContent?.trim() === t.clearSearch).length).toBe(1);
+
+        page().search = '';
+        page().drafts.set([]);
+        page().selectedId.set(null);
+        await settle();
+
+        expect(el().querySelector('.post-list app-empty-state')).toBeNull();
+        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
+        expect([...el().querySelectorAll('app-button')]
+            .filter(x => x.textContent?.trim() === t.writeFirst).length).toBe(1);
+    });
+
+    it('names the translate icon and marks the selected question type without colour alone', async () => {
+        TestBed.inject(AuthService).planTier.set('Pro');
+        page().presets.set([EDITABLE_PRESET]);
+        page().presetsLoaded.set(true);
+        page().setTab('forms');
+        await page().selectPreset(EDITABLE_PRESET);
+        await settle();
+
+        const pills = [...el().querySelectorAll<HTMLButtonElement>('.pill')];
+        const selectedPills = pills.filter(button => button.classList.contains('on'));
+        expect(pills.length).toBe(6);
+        expect(selectedPills.length).toBe(1);
+        expect(selectedPills[0].getAttribute('aria-pressed')).toBe('true');
+        expect(selectedPills[0].querySelector('.pill-marker.is-visible')).not.toBeNull();
+        expect(pills.filter(button => !button.classList.contains('on'))
+            .every(button => button.querySelector('.pill-marker.is-visible') === null)).toBe(true);
+
+        const translate = [...el().querySelectorAll<HTMLButtonElement>('.lang-chip-act')]
+            .find(button => button.getAttribute('aria-label') === t.forms.translateLang);
+        expect(translate).toBeDefined();
+        expect(translate?.getAttribute('title')).toBe(t.forms.translateLang);
+
+        const questionLabels = [...el().querySelectorAll('.q-label-row .form-field-label')]
+            .map(label => label.textContent?.replace(/\s+/g, ' ').trim());
+        expect(questionLabels).toEqual([
+            `${t.forms.questionPlaceholder} RU`,
+            `${t.forms.questionPlaceholder} EN`,
+        ]);
+
+        page().setQuestionType('question-1', 'choice');
+        fixture.detectChanges();
+        const optionLabels = [...el().querySelectorAll('.option-field .form-field-label')]
+            .map(label => label.textContent?.replace(/\s+/g, ' ').trim());
+        expect(optionLabels).toEqual([
+            `${t.forms.optionPlaceholder} 1 RU`, `${t.forms.optionPlaceholder} 1 EN`,
+            `${t.forms.optionPlaceholder} 2 RU`, `${t.forms.optionPlaceholder} 2 EN`,
+        ]);
+    });
+
+    it('resets the Forms sheet to its first field after tab, selection, and creation changes', async () => {
+        page().presets.set([PRESET]);
+        page().setTab('forms');
+        await settle();
+        await page().selectPreset(PRESET);
+        await settle();
+
+        const body = el().querySelector('.sheet-body') as HTMLElement;
+        body.scrollTop = 240;
+        await page().selectPreset(PRESET);
+        expect(body.scrollTop).toBe(0);
+
+        body.scrollTop = 180;
+        page().setTab('forms');
+        expect(body.scrollTop).toBe(0);
+
+        body.scrollTop = 120;
+        await page().newPreset();
+        expect(body.scrollTop).toBe(0);
     });
 
     it('says a post is not published rather than drawing an empty link', async () => {

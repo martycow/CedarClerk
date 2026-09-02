@@ -3,7 +3,6 @@ import { RouterLink } from '@angular/router';
 import { AnalyticsService } from '../core/analytics.service';
 import { ConsentService } from '../core/consent.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { ButtonComponent } from '../bench/forms/button.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 
 // T-153 / ADR-236 — the app's half of the consent gate; the landing has its own copy in
@@ -14,7 +13,7 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
 // outside the shell (ADR-139), and those are exactly the pages a first-time visitor lands on.
 @Component({
     selector: 'app-consent-banner',
-    imports: [RouterLink, ButtonComponent, PaperCardComponent],
+    imports: [RouterLink, PaperCardComponent],
     template: `
         @if (asking()) {
             <div class="consent" role="dialog" aria-modal="false" [attr.aria-label]="t().consent.title">
@@ -25,12 +24,12 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
                         <a routerLink="/privacy">{{ t().consent.privacy }}</a>
                     </div>
                     <div class="consent-actions">
-                        <app-button variant="paper" size="sm" (clicked)="decline()">
+                        <button type="button" class="btn sm" (click)="decline()">
                             {{ t().consent.decline }}
-                        </app-button>
-                        <app-button variant="pine" size="sm" (clicked)="accept()">
+                        </button>
+                        <button type="button" class="btn primary sm" (click)="accept()">
                             {{ t().consent.accept }}
-                        </app-button>
+                        </button>
                     </div>
                 </app-paper-card>
             </div>
@@ -71,6 +70,11 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
             justify-content: flex-end;
             gap: var(--space-2);
             padding: 0 var(--space-4) var(--space-4);
+        }
+
+        .consent-actions .btn {
+            transition: background var(--dur-tap, 150ms) var(--ease-settle),
+                        color var(--dur-tap, 150ms) var(--ease-settle);
         }
     `],
 })

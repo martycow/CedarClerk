@@ -131,6 +131,12 @@ describe('PaperCardComponent', () => {
             expect(css).toMatch(/filter:\s*var\(--shadow-card-drop\)/);
         });
 
+        it('declares paper ink for content and nested controls', () => {
+            expect(css).toMatch(/\.pc-sheet[^{]*\{[^}]*color:\s*var\(--text\)/s);
+            expect(css).toMatch(/--surface-ink:\s*var\(--text\)/);
+            expect(css).toMatch(/--surface-ink-soft:\s*var\(--t2\)/);
+        });
+
         it('is never glassy and never blurred', () => {
             expect(css).not.toMatch(/backdrop-filter/);
             expect(css).not.toMatch(/blur\(/);
