@@ -259,3 +259,7 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-244 — Every account owns its display timezone](adr/ADR-244.md)
 - [ADR-245 — A Showcase is an ordered page of safe blocks](adr/ADR-245.md)
 - [ADR-246 — One navigation and four workspace measures](adr/ADR-246.md)
+- [ADR-247 — Every browsable collection can be sorted and filtered](adr/ADR-247.md)
+- [ADR-248 — Navigation gives each destination one door](adr/ADR-248.md)
+- [ADR-249 — The editor starts with the document, not its chrome](adr/ADR-249.md)
+- [ADR-250 — Author social links appear at the public blog header](adr/ADR-250.md)
