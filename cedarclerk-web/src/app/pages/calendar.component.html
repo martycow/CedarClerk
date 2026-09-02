@@ -1,171 +1,179 @@
-<!--The content calendar (Wave 2 item 9) — the frozen design-calendar canvas rebuilt on bench
-tokens: dark-wood board, paper day cells, paper tickets with a network dot and a mono time,
-a brass inset ring on today, resin tickets for unfilled queue slots, and a legend row.-->
-<div class="calendar-page" data-density="compact">
+<!--The content calendar (Wave 2 item 9) on the paper-first shell (Calendar.png, ADR-239): the
+month as the title, the networks and counts as the meta line, one Schedule action; a card grid
+whose weeks share the height, today as an accent disc, scheduled posts as tinted chips carrying
+their network's icon, unfilled queue slots as dashed chips.-->
+<div class="page cal-page">
+    <app-page-header [title]="monthLabel()" [meta]="headerMeta()">
+        <div secondary class="cal-controls">
+            <!--Cut #1 taken: month only this wave. Week stays visible but disabled with a "soon"
+            title, so the toggle's future home is already on the board (T-322).-->
+            <div class="seg" role="group" [attr.aria-label]="t().calendar.views">
+                <button type="button" class="is-on" aria-pressed="true">{{ t().calendar.month }}</button>
+                <button type="button" disabled [title]="t().calendar.weekSoon">{{ t().calendar.week }}</button>
+                <button type="button" [class.is-on]="queueOpen()" [attr.aria-pressed]="queueOpen()"
+                        (click)="toggleQueue()">{{ t().calendar.queue.title }}</button>
+            </div>
+            <app-button variant="paper" (clicked)="stepMonth(-1)" [title]="t().calendar.prevMonth">
+                <app-icon name="caret-left" size="sm" [label]="t().calendar.prevMonth"></app-icon>
+            </app-button>
+            <app-button variant="paper" (clicked)="goToday()" [title]="t().calendar.backToToday">{{ t().calendar.todayAction }}</app-button>
+            <app-button variant="paper" (clicked)="stepMonth(1)" [title]="t().calendar.nextMonth">
+                <app-icon name="caret-right" size="sm" [label]="t().calendar.nextMonth"></app-icon>
+            </app-button>
+        </div>
+        <app-button primary variant="pine" (clicked)="openScheduleDialog()">
+            <app-icon name="plus" weight="bold" size="sm"></app-icon>{{ t().calendar.scheduleAction }}
+        </app-button>
+    </app-page-header>
+
     @if (loading()) {
-    <p class="hint">{{ t().common.loading }}</p>
+        <p class="hint">{{ t().common.loading }}</p>
     } @else {
+        @if (error()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ error() }}</p> }
 
-    <div class="cal-toolbar">
-        <!--Cut #1 taken: month only this wave. The Week chip stays visible but disabled with a
-        "soon" title, so the toggle's future home is already on the board.-->
-        <app-button variant="rail" size="sm" surface="chrome" class="on">{{ t().calendar.month }}</app-button>
-        <app-button variant="rail" size="sm" surface="chrome" disabled
-                    [title]="t().calendar.weekSoon">{{ t().calendar.week }}</app-button>
-        <span class="spacer"></span>
-        <app-button variant="rail" size="sm" surface="chrome" (clicked)="stepMonth(-1)"
-                    [title]="t().calendar.prevMonth"><app-icon name="caret-left" size="xs"></app-icon></app-button>
-        <button class="cal-month" (click)="goToday()" [title]="t().calendar.backToToday">{{ monthLabel() }}</button>
-        <app-button variant="rail" size="sm" surface="chrome" (clicked)="stepMonth(1)"
-                    [title]="t().calendar.nextMonth"><app-icon name="caret-right" size="xs"></app-icon></app-button>
-        <app-button variant="paper" size="sm" surface="chrome" (clicked)="toggleQueue()">
-            <app-icon name="timer" size="xs"></app-icon>{{ t().calendar.queue.title }}
-        </app-button>
-        <app-button variant="pine" size="sm" surface="chrome" (clicked)="openScheduleDialog()">
-            <app-icon name="plus" weight="bold" size="xs"></app-icon>{{ t().calendar.schedule }}
-        </app-button>
-    </div>
-
-    @if (error()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ error() }}</p> }
-
-    <div class="cal-layout" [class.with-queue]="queueOpen()">
-    <div class="cal-board" data-surface="chrome">
-        <div class="cal-dows">
-            @for (dow of dowLabels(); track $index) { <div class="cal-dow">{{ dow }}</div> }
-        </div>
-        <div class="cal-grid">
-            @for (cell of cells(); track cell.day) {
-            <div class="cal-cell" [class.dim]="!cell.inMonth" [class.today]="cell.isToday"
-                 [class.drop-target]="dragOverDay() === cell.day"
-                 (dragover)="onDragOver(cell, $event)" (dragleave)="dragOverDay.set(null)"
-                 (drop)="onDrop(cell, $event)">
-                <span class="cal-d">{{ cell.date }}@if (cell.isToday) { <span class="cal-today-word">· {{ t().calendar.today }}</span> }</span>
-                @for (ticket of cell.tickets; track ticket.kind + ticket.id + ticket.sortKey) {
-                <button type="button" class="ticket"
-                        [class.sent]="ticket.status === 'Sent'"
-                        [class.failed]="ticket.status === 'Failed'"
-                        [class.slot]="ticket.kind === 'slot'"
-                        [class.dragging]="draggingId() === ticket.id"
-                        [draggable]="ticket.kind === 'post' && ticket.status === 'Pending'"
-                        (dragstart)="onDragStart(ticket, $event)" (dragend)="onDragEnd()"
-                        (click)="openTicket(ticket)"
-                        [title]="ticket.kind === 'slot' ? t().calendar.slotTicketTitle(ticket.title) : ticket.title + ' · ' + ticket.time">
-                    <span class="net" [style.background]="ticket.kind === 'slot' ? null : networkColor(ticket.network)"></span>
-                    <b>{{ ticket.time }}</b>
-                    <span class="ticket-title">{{ ticket.title }}</span>
-                </button>
-                }
-            </div>
-            }
-        </div>
-    </div>
-
-    @if (queueOpen()) {
-    <!--Item 10 — slot CRUD lives on the calendar, where the resin tickets it produces are.-->
-    <app-shelf-panel class="queue-shelf" [title]="t().calendar.queue.title" [count]="slots().length">
-        <div class="queue-body">
-            <p class="field-hint-inline">{{ t().calendar.queue.hint }}</p>
-            @for (slot of slots(); track slot.id) {
-            <div class="queue-row" [class.off]="!slot.isActive">
-                <span class="net slot-dot"></span>
-                <span class="queue-name">{{ slot.name || slot.targetName }}</span>
-                <span class="queue-when">{{ slotLocalLabel(slot) }}</span>
-                <span class="queue-target">{{ networkLabel(slot.network) }} · {{ slot.targetName }}</span>
-                @if (slot.category) { <span class="queue-cat">#{{ slot.category }}</span> }
-                <span class="spacer"></span>
-                <button class="mini" (click)="toggleSlotActive(slot)" [disabled]="slotBusy()"
-                        [title]="slot.isActive ? t().calendar.queue.pause : t().calendar.queue.resume">
-                    <app-icon [name]="slot.isActive ? 'eye' : 'eye-slash'" size="sm"></app-icon>
-                </button>
-                <button class="mini-remove" (click)="removeSlot(slot)" [disabled]="slotBusy()"
-                        [title]="t().calendar.queue.remove" [attr.aria-label]="t().calendar.queue.remove">
-                    <app-icon name="trash" size="sm"></app-icon>
-                </button>
-            </div>
-            } @empty {
-            <p class="field-hint-inline">{{ t().calendar.queue.empty }}</p>
-            }
-
-            <div class="queue-form">
-                <input class="chat-input" [(ngModel)]="slotName" [placeholder]="t().calendar.queue.namePlaceholder">
-                <select [(ngModel)]="slotTargetId" [attr.aria-label]="t().calendar.queue.destination">
-                    @for (target of slotTargets(); track target.id) {
-                    <option [value]="target.id">{{ networkLabel(target.network) }} · {{ target.name }}</option>
-                    }
-                </select>
-                <div class="queue-form-row">
-                    <select [(ngModel)]="slotDay" [attr.aria-label]="t().calendar.queue.weekday">
-                        @for (choice of weekdayChoices(); track choice.value) {
-                        <option [ngValue]="choice.value">{{ choice.label }}</option>
-                        }
-                    </select>
-                    <input type="time" [(ngModel)]="slotTime" [attr.aria-label]="t().calendar.queue.time">
+        <div class="cal-layout" [class.with-queue]="queueOpen()">
+            <div class="card cal-card">
+                <div class="cal-dows">
+                    @for (dow of dowLabels(); track $index) { <div class="label cal-dow">{{ dow }}</div> }
                 </div>
-                <input class="chat-input" [(ngModel)]="slotCategory" [placeholder]="t().calendar.queue.categoryPlaceholder">
-                <app-button variant="pine" size="sm" [disabled]="slotBusy() || !slotTargetId || !slotTime"
-                            (clicked)="createSlot()">
-                    <app-icon name="plus" weight="bold" size="xs"></app-icon>{{ t().calendar.queue.add }}
-                </app-button>
-                <p class="field-hint-inline">{{ t().calendar.queue.dstHint }}</p>
-                @if (slotError()) { <p class="channel-error">{{ slotError() }}</p> }
+                <div class="cal-weeks">
+                    @for (week of weeks(); track week[0].day) {
+                        <div class="cal-week">
+                            @for (cell of week; track cell.day) {
+                                <div class="cal-cell" [class.dim]="!cell.inMonth"
+                                     [class.drop-target]="dragOverDay() === cell.day"
+                                     (dragover)="onDragOver(cell, $event)" (dragleave)="dragOverDay.set(null)"
+                                     (drop)="onDrop(cell, $event)">
+                                    <span class="cal-d" [class.is-today]="cell.isToday"
+                                          [attr.title]="cell.isToday ? t().calendar.today : null">{{ cell.date }}</span>
+                                    @for (ticket of cell.tickets; track ticket.kind + ticket.id + ticket.sortKey) {
+                                        <button type="button" class="chip"
+                                                [class.is-sent]="ticket.status === 'Sent'"
+                                                [class.is-failed]="ticket.status === 'Failed'"
+                                                [class.is-slot]="ticket.kind === 'slot'"
+                                                [class.is-dragging]="draggingId() === ticket.id"
+                                                [draggable]="ticket.kind === 'post' && ticket.status === 'Pending'"
+                                                (dragstart)="onDragStart(ticket, $event)" (dragend)="onDragEnd()"
+                                                (click)="openTicket(ticket)"
+                                                [title]="ticket.kind === 'slot' ? t().calendar.slotTicketTitle(ticket.title) : networkLabel(ticket.network) + ' · ' + ticket.title + ' · ' + ticket.time">
+                                            <app-icon [name]="ticket.kind === 'slot' ? 'clock' : networkIcon(ticket.network)" size="xs"></app-icon>
+                                            <span class="chip-text">
+                                                @if (ticket.kind === 'slot') { {{ t().calendar.weeklySlot(ticket.time) }} }
+                                                @else { {{ ticket.time }} {{ ticket.title }} }
+                                            </span>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
-        </div>
-    </app-shelf-panel>
-    }
-    </div>
 
-    <div class="cal-legend">
-        @for (network of legendNetworks(); track network) {
-        <span class="legend-item"><span class="net" [style.background]="networkColor(network)"></span>{{ networkLabel(network) }}</span>
-        }
-        @if (slots().length) {
-        <span class="legend-item"><span class="net slot-dot"></span>{{ t().calendar.legendSlot }}</span>
-        }
-        <span class="spacer"></span>
+            @if (queueOpen()) {
+                <!--Item 10 — slot CRUD lives on the calendar, where the dashed chips it produces are.-->
+                <aside class="card queue-card" [attr.aria-label]="t().calendar.queue.title">
+                    <div class="queue-head">
+                        <span class="label">{{ t().calendar.queue.title }}</span>
+                        <span class="queue-count">{{ slots().length }}</span>
+                    </div>
+                    <div class="queue-body">
+                        <p class="field-hint-inline">{{ t().calendar.queue.hint }}</p>
+                        @for (slot of slots(); track slot.id) {
+                            <div class="queue-row" [class.off]="!slot.isActive">
+                                <span class="queue-name">{{ slot.name || slot.targetName }}</span>
+                                <span class="queue-when">{{ slotLocalLabel(slot) }}</span>
+                                <span class="queue-target">{{ networkLabel(slot.network) }} · {{ slot.targetName }}</span>
+                                @if (slot.category) { <span class="queue-cat">#{{ slot.category }}</span> }
+                                <span class="spacer"></span>
+                                <button class="mini" (click)="toggleSlotActive(slot)" [disabled]="slotBusy()"
+                                        [title]="slot.isActive ? t().calendar.queue.pause : t().calendar.queue.resume"
+                                        [attr.aria-label]="slot.isActive ? t().calendar.queue.pause : t().calendar.queue.resume">
+                                    <app-icon [name]="slot.isActive ? 'eye' : 'eye-slash'" size="sm"></app-icon>
+                                </button>
+                                <button class="mini-remove" (click)="removeSlot(slot)" [disabled]="slotBusy()"
+                                        [title]="t().calendar.queue.remove" [attr.aria-label]="t().calendar.queue.remove">
+                                    <app-icon name="trash" size="sm"></app-icon>
+                                </button>
+                            </div>
+                        } @empty {
+                            <p class="field-hint-inline">{{ t().calendar.queue.empty }}</p>
+                        }
+
+                        <div class="queue-form">
+                            <input class="chat-input" [(ngModel)]="slotName" [placeholder]="t().calendar.queue.namePlaceholder">
+                            <select [(ngModel)]="slotTargetId" [attr.aria-label]="t().calendar.queue.destination">
+                                @for (target of slotTargets(); track target.id) {
+                                    <option [value]="target.id">{{ networkLabel(target.network) }} · {{ target.name }}</option>
+                                }
+                            </select>
+                            <div class="queue-form-row">
+                                <select [(ngModel)]="slotDay" [attr.aria-label]="t().calendar.queue.weekday">
+                                    @for (choice of weekdayChoices(); track choice.value) {
+                                        <option [ngValue]="choice.value">{{ choice.label }}</option>
+                                    }
+                                </select>
+                                <input type="time" [(ngModel)]="slotTime" [attr.aria-label]="t().calendar.queue.time">
+                            </div>
+                            <input class="chat-input" [(ngModel)]="slotCategory" [placeholder]="t().calendar.queue.categoryPlaceholder">
+                            <app-button variant="pine" size="sm" [disabled]="slotBusy() || !slotTargetId || !slotTime"
+                                        (clicked)="createSlot()">
+                                <app-icon name="plus" weight="bold" size="xs"></app-icon>{{ t().calendar.queue.add }}
+                            </app-button>
+                            <p class="field-hint-inline">{{ t().calendar.queue.dstHint }}</p>
+                            @if (slotError()) { <p class="channel-error">{{ slotError() }}</p> }
+                        </div>
+                    </div>
+                </aside>
+            }
+        </div>
+
         @if (isEmptyBoard()) {
-        <span class="legend-note">{{ t().calendar.empty }}</span>
+            <app-empty-state class="cal-empty" icon="calendar-blank" [title]="t().calendar.emptyTitle"
+                             [text]="t().calendar.emptyText">
+                <app-button variant="paper" size="sm" (clicked)="openScheduleDialog()">{{ t().calendar.scheduleAction }}</app-button>
+            </app-empty-state>
         } @else {
-        <span class="legend-note">{{ t().calendar.legendHint }}</span>
+            <p class="margin-note cal-note">{{ t().calendar.dragHint }}</p>
         }
-    </div>
     }
 
     @if (scheduleOpen()) {
-    <app-modal [width]="440" (closed)="scheduleOpen.set(false)">
-        <app-icon modal-icon name="clock" size="sm"></app-icon>
-        <span modal-title>{{ t().calendar.scheduleTitle }}</span>
+        <app-modal [width]="440" (closed)="scheduleOpen.set(false)">
+            <app-icon modal-icon name="clock" size="sm"></app-icon>
+            <span modal-title>{{ t().calendar.scheduleTitle }}</span>
 
-        <div class="schedule-form">
-            <label class="form-field">
-                <span class="form-field-label">{{ t().calendar.scheduleDraft }}</span>
-                <select [(ngModel)]="scheduleDraftId">
-                    @for (d of scheduleDrafts(); track d.id) {
-                    <option [value]="d.id">{{ d.title || t().drafts.untitled }}</option>
-                    }
-                </select>
-            </label>
-            <label class="form-field">
-                <span class="form-field-label">{{ t().calendar.scheduleDestination }}</span>
-                <select [(ngModel)]="scheduleTargetId">
-                    @for (target of scheduleTargets(); track target.id) {
-                    <option [value]="target.id">{{ networkLabel(target.network) }} · {{ target.name }}</option>
-                    }
-                </select>
-            </label>
-            <label class="form-field">
-                <span class="form-field-label">{{ t().calendar.scheduleWhen }}</span>
-                <input type="datetime-local" [(ngModel)]="scheduleAt">
-            </label>
-            @if (!scheduleTargets().length) {
-            <p class="field-hint-inline">{{ t().calendar.noDestinations }}</p>
-            }
-            @if (scheduleError()) { <p class="channel-error">{{ scheduleError() }}</p> }
-        </div>
+            <div class="schedule-form">
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().calendar.scheduleDraft }}</span>
+                    <select [(ngModel)]="scheduleDraftId">
+                        @for (d of scheduleDrafts(); track d.id) {
+                            <option [value]="d.id">{{ d.title || t().drafts.untitled }}</option>
+                        }
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().calendar.scheduleDestination }}</span>
+                    <select [(ngModel)]="scheduleTargetId">
+                        @for (target of scheduleTargets(); track target.id) {
+                            <option [value]="target.id">{{ networkLabel(target.network) }} · {{ target.name }}</option>
+                        }
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().calendar.scheduleWhen }}</span>
+                    <input type="datetime-local" [(ngModel)]="scheduleAt">
+                </label>
+                @if (!scheduleTargets().length) {
+                    <p class="field-hint-inline">{{ t().calendar.noDestinations }}</p>
+                }
+                @if (scheduleError()) { <p class="channel-error">{{ scheduleError() }}</p> }
+            </div>
 
-        <app-button modal-actions variant="paper" (clicked)="scheduleOpen.set(false)">{{ t().common.cancel }}</app-button>
-        <app-button modal-actions variant="pine" [disabled]="!canSchedule()" (clicked)="confirmSchedule()">
-            {{ scheduleBusy() ? t().common.loading : t().calendar.schedule }}
-        </app-button>
-    </app-modal>
+            <app-button modal-actions variant="paper" (clicked)="scheduleOpen.set(false)">{{ t().common.cancel }}</app-button>
+            <app-button modal-actions variant="pine" [disabled]="!canSchedule()" (clicked)="confirmSchedule()">
+                {{ scheduleBusy() ? t().common.loading : t().calendar.scheduleAction }}
+            </app-button>
+        </app-modal>
     }
 </div>

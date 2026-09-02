@@ -1,10 +1,10 @@
 <div class="door">
-    <app-button class="theme-toggle" variant="paper" surface="chrome" size="sm" [title]="t().common.toggleTheme"
+    <app-button class="theme-toggle" variant="paper" size="sm" [title]="t().common.toggleTheme"
                 (clicked)="theme.toggle()">
         <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
     </app-button>
 
-    <app-paper-card class="auth-card" bright [rotate]="0.4">
+    <section class="card auth-card" data-surface="paper">
         <div class="auth-header">
             <app-cedar-logo [size]="28"></app-cedar-logo>
             <div class="auth-title">{{ t().externalAuth.completeTitle }}</div>
@@ -39,5 +39,5 @@
         </app-button>
 
         <app-lang-switch></app-lang-switch>
-    </app-paper-card>
+    </section>
 </div>

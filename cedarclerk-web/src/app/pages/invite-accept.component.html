@@ -1,22 +1,21 @@
-<app-worktop class="top" [label]="title()">
+<div class="page">
+    <app-page-header [title]="title()" />
     <div class="invite-body">
-        <app-paper-card class="sheet" deckled [seed]="4">
-            <h1 class="invite-title">{{ title() }}</h1>
-
+        <section class="card sheet" data-surface="paper">
             @if (loading()) {
                 <p class="hint">{{ t().projects.loading }}</p>
             } @else if (peek(); as invite) {
                 <p class="invite-line">{{ body(invite) }}</p>
                 <p class="hint">{{ t().projects.canvas.inviteRole }}: {{ roleWord(invite.role) }}</p>
 
-                @if (failed(); as e) { <p class="error-line">{{ e }}</p> }
+                @if (failed(); as e) { <p class="error-line" role="alert">{{ e }}</p> }
 
                 <app-button variant="pine" [disabled]="busy()" (clicked)="accept()">
                     {{ t().projects.canvas.acceptButton }}
                 </app-button>
             } @else {
-                <p class="error-line">{{ failed() ?? t().projects.canvas.acceptFailed }}</p>
+                <p class="error-line" role="alert">{{ failed() ?? t().projects.canvas.acceptFailed }}</p>
             }
-        </app-paper-card>
+        </section>
     </div>
-</app-worktop>
+</div>

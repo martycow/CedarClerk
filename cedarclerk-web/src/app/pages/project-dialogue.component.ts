@@ -1,18 +1,14 @@
-import { Component, ElementRef, OnDestroy, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { DialogueNode, DialoguesService } from '../core/dialogues.service';
-import { RailActionsService } from '../core/rail-actions.service';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 
 /** Node card footprint on the graph — fixed, so edge anchors need no measuring. */
 const NODE_W = 220;
@@ -50,8 +46,7 @@ function safeTitle(title: string): string {
 @Component({
     selector: 'app-project-dialogue',
     imports: [
-        FormsModule, IconComponent, ModalComponent, WorktopComponent, ShelfPanelComponent,
-        StampBadgeComponent, ButtonComponent, InputComponent,
+        FormsModule, IconComponent, ModalComponent, PageHeaderComponent, ButtonComponent, InputComponent,
     ],
     templateUrl: 'project-dialogue.component.html',
     styleUrls: ['project-dialogue.component.css'],
@@ -60,8 +55,6 @@ export class ProjectDialogueComponent implements OnDestroy {
     private api = inject(DialoguesService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
-    private ruler = inject(RulerService);
-    private rail = inject(RailActionsService);
     t = inject(LocaleService).t;
 
     readonly nodeW = NODE_W;
@@ -118,6 +111,12 @@ export class ProjectDialogueComponent implements OnDestroy {
         return this.saving() ? t.saving : this.dirty() ? t.unsaved : t.saved;
     });
 
+    /** The former rule readouts: the node count and the save word as a tag. */
+    headerMeta = computed<HeaderMeta[]>(() => [
+        { text: this.t().projects.dialogues.nodeCount(this.nodes().length) },
+        { text: this.saveWord(), tag: true, tone: this.saving() || this.dirty() ? 'muted' : 'ok' },
+    ]);
+
     constructor() {
         this.route.paramMap.subscribe(params => {
             const projectId = params.get('id') ?? '';
@@ -127,31 +126,12 @@ export class ProjectDialogueComponent implements OnDestroy {
             this.scriptId.set(scriptId);
             void this.load();
         });
-
-        // Attached by hand so a drag works past the stage's edge; registered only for the length
-        // of a gesture, so an idle graph costs nothing.
-        effect(() => {
-            const t = this.t().projects.dialogues;
-            this.ruler.publish({
-                label: this.name(),
-                left: [
-                    { text: t.nodeCount(this.nodes().length) },
-                    { text: this.saveWord() },
-                ],
-            });
-            this.rail.publish({
-                save: { state: this.saving() || this.dirty() ? 'forming' : 'set' },
-                primary: { label: t.addNode, icon: 'plus', run: () => this.addNode() },
-            });
-        });
     }
 
     ngOnDestroy(): void {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         // An uncommitted edit is on screen already — flush it rather than lose it.
         if (this.dirty()) void this.saveNow();
-        this.ruler.clear();
-        this.rail.clear();
         this.detachWindow();
     }
 

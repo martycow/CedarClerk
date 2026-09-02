@@ -5,7 +5,6 @@ import { ProjectBuildsComponent } from './project-builds.component';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
 import { GameTask, TasksService } from '../core/tasks.service';
-import { RulerService } from '../core/ruler.service';
 import { en } from '../core/i18n/en';
 
 const PROJECT = { id: 'p1', name: 'Cedar Quest' } as ProjectDetail;
@@ -30,7 +29,7 @@ const BUILDS: Build[] = [
 ];
 
 // Two released, one unreleased, three attached documents and four tasks carrying a version: the
-// four numbers the shelf prints are four different numbers, so no row can be reading a
+// four numbers the summary prints are four different numbers, so no row can be reading a
 // neighbour's count and still come out right.
 
 function task(over: Partial<GameTask>): GameTask {
@@ -71,11 +70,13 @@ describe('project builds', () => {
     const el = () => fixture.nativeElement as HTMLElement;
     const cards = () => [...el().querySelectorAll('app-paper-card.build')] as HTMLElement[];
     const tags = () => [...el().querySelectorAll('app-task-tag')] as HTMLElement[];
-    const shelf = () => el().querySelector('app-shelf-panel.shelf-right') as HTMLElement;
+    const side = () => el().querySelector('aside.side') as HTMLElement;
     const specValue = (label: string) =>
-        [...shelf().querySelectorAll('app-spec-row')]
+        [...side().querySelectorAll('app-spec-row')]
             .find(r => r.querySelector('.label')?.textContent?.trim() === label)
             ?.querySelector('.text')?.textContent?.trim();
+    const meta = () => [...el().querySelectorAll('app-page-header .page-meta > span:not(.sep)')]
+        .map(x => x.textContent?.trim());
 
     async function create() {
         TestBed.configureTestingModule({
@@ -133,7 +134,7 @@ describe('project builds', () => {
         expect(specValue(t.builds.unreleased)).toBe('1');
     });
 
-    it('counts the shelf out of the versions and tasks already loaded', () => {
+    it('counts the summary out of the versions and tasks already loaded', () => {
         expect(specValue(t.builds.assignBuild)).toBe('4'); // t-loose belongs to no version
         expect(specValue(t.colDocs)).toBe('3');
     });
@@ -146,12 +147,22 @@ describe('project builds', () => {
         expect(nav).toHaveBeenCalledWith(['/editor'], { queryParams: { draft: 'doc-new' } });
     });
 
-    it('publishes the rule while it is open and clears it on the way out', () => {
-        const ruler = TestBed.inject(RulerService);
-        expect(ruler.label()).toBe('Cedar Quest');
-        expect(ruler.left().map(r => r.text)).toEqual([t.builds.sub(3, 1)]);
+    // ADR-239 clause 6 — what the rule used to say is the header's kicker and meta line.
+    it('names the project and the tally in the header', () => {
+        expect(el().querySelector('app-page-header .page-kicker')?.textContent?.trim()).toBe('Cedar Quest');
+        expect(meta()).toEqual([t.builds.sub(3, 1)]);
+    });
 
-        fixture.destroy();
-        expect(ruler.label()).toBe('');
+    it('offers New version once: in the header when there are versions, in the empty state when not', () => {
+        const buttons = () => [...el().querySelectorAll('app-button')]
+            .filter(b => b.textContent?.trim() === t.builds.newBuild);
+        expect(buttons().length).toBe(1);
+        expect(el().querySelector('app-page-header app-button')).toBeTruthy();
+
+        fixture.componentInstance.builds.set([]);
+        fixture.detectChanges();
+        expect(buttons().length).toBe(1);
+        expect(el().querySelector('app-empty-state app-button')).toBeTruthy();
+        expect(el().querySelector('app-empty-state')?.textContent).toContain(t.builds.emptyHint);
     });
 });

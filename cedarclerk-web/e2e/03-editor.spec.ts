@@ -61,7 +61,7 @@ test('a no-op save does not flip the indicator to unsaved', async ({ page, conte
         return false;
 
         function synced() {
-            return (document.querySelector('app-ruler-bar')?.textContent ?? '').includes('Synced');
+            return (document.querySelector('app-document-frame .frame-footer')?.textContent ?? '').includes('Synced');
         }
     });
     expect(settled, 'the editor never held Synced long enough to watch').toBe(true);
@@ -74,7 +74,7 @@ test('a no-op save does not flip the indicator to unsaved', async ({ page, conte
     const words = page.evaluate(async () => {
         const seen = new Set<string>();
         for (let i = 0; i < 60; i++) {
-            const text = (document.querySelector('app-ruler-bar')?.textContent ?? '').replace(/\s+/g, ' ');
+            const text = (document.querySelector('app-document-frame .frame-footer')?.textContent ?? '').replace(/\s+/g, ' ');
             seen.add(text.includes('Synced') ? 'Synced' : text.trim().slice(0, 60));
             await new Promise(r => setTimeout(r, 50));
         }
@@ -84,4 +84,19 @@ test('a no-op save does not flip the indicator to unsaved', async ({ page, conte
     await page.locator('.tiptap').click();
     await page.keyboard.press('End');
     expect(await words).toEqual(['Synced']);
+});
+
+// ADR-239 clause 9 — the Preview tab deep-links by ?tab= and draws the phone from the server's
+// projection (CONTRACT §E8): a seeded draft of one paragraph is exactly one bubble, and the words
+// in it are the document's own. Telegram is picked by its destination row; the channel need not
+// be connected for the projection to answer.
+test('the Preview tab renders a Telegram bubble for a seeded draft', async ({ page, context }) => {
+    const id = await createDraft(context, 'Preview', ['One short paragraph for the phone.']);
+    await page.goto(`/editor?draft=${id}&tab=preview`);
+    await expect(page.getByRole('tab', { name: 'Preview' })).toHaveAttribute('aria-selected', 'true');
+
+    await page.getByRole('tab', { name: /^Telegram/ }).click();
+    const bubbles = page.locator('app-preview-phone .bubble');
+    await expect(bubbles).toHaveCount(1);
+    await expect(bubbles.first()).toContainText('One short paragraph for the phone.');
 });

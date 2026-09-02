@@ -7,7 +7,6 @@ import { IconName, IconWeight } from '../shared/icon-data.generated';
 import { ButtonComponent, ButtonSize, ButtonVariant } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
-import { ResinDropComponent } from '../bench/display/resin-drop.component';
 import { LeafTagComponent, LeafState } from '../bench/display/leaf-tag.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { TaskTagComponent } from '../bench/display/task-tag.component';
@@ -19,17 +18,19 @@ import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { BrassPinComponent } from '../bench/scenery/brass-pin.component';
 import { BrassHookComponent } from '../bench/scenery/brass-hook.component';
-import { BrassNailComponent } from '../bench/scenery/brass-nail.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 
 export type SgSurface = 'paper' | 'chrome';
 
-// T-078 / T-215 — the design-system reference page (ADR-071, ADR-136). One screen showing every
-// token and every bench primitive, in both themes, both density modes and on both surfaces, so a
-// divergence is visible without walking the app looking for it.
+// T-078 / T-215 — the design-system reference page (ADR-071, ADR-136, ADR-239). One screen showing
+// every token, every bench primitive and the page vocabulary, in both themes, both density modes
+// and on both surfaces, so a divergence is visible without walking the app looking for it.
 //
-// One vocabulary only: every control here is a bench component. A styleguide that also drew its
-// own .btn-accent/.sg-input/.sg-badge would be the ambiguity the port exists to end, and it would
-// drift from the components it claims to document the moment either side moved.
+// One vocabulary only: every control here is a bench component or a §B class from styles.scss. A
+// styleguide that also drew its own .btn-accent/.sg-input/.sg-badge would be the ambiguity the
+// port exists to end, and it would drift from the components it claims to document the moment
+// either side moved.
 //
 // Deliberately NOT localized: this is a development surface, not a product screen, and putting
 // ~120 more keys into en.ts/ru.ts to name swatches would be work with no reader.
@@ -38,10 +39,11 @@ export type SgSurface = 'paper' | 'chrome';
     imports: [
         IconComponent, RouterLink,
         ButtonComponent, InputComponent,
-        StampBadgeComponent, ResinDropComponent, LeafTagComponent, PaperCardComponent, TaskTagComponent,
-        SpecRowComponent, BrassPinComponent, BrassHookComponent, BrassNailComponent,
+        StampBadgeComponent, LeafTagComponent, PaperCardComponent, TaskTagComponent,
+        SpecRowComponent, BrassPinComponent, BrassHookComponent,
         WorktopComponent, ModuleTileComponent, LogLineComponent,
         ShelfPanelComponent, IndexTabsComponent,
+        PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'styleguide.component.html',
     styleUrls: ['styleguide.component.css'],
@@ -150,6 +152,22 @@ export class StyleguideComponent {
 
     readonly stampTones: StampTone[] = ['pine', 'brass', 'rust', 'ink'];
     readonly leafStates: LeafState[] = ['idle', 'active', 'dried'];
+
+    readonly headerMeta: HeaderMeta[] = [
+        { text: 'Active', tag: true, tone: 'ok' },
+        { text: 'Blog' },
+        { text: '23 documents' },
+        { text: 'last edit 30 Aug' },
+    ];
+
+    readonly sampleRows = [
+        { title: 'Coyote vs ACME', kind: 'Regular post', when: '30 Aug, 20:11', state: 'live' },
+        { title: 'Apple Bigotry', kind: 'Note', when: '25 Aug, 15:08', state: 'draft' },
+        { title: 'Competition begins', kind: 'Devlog post', when: '12 Aug, 17:54', state: 'archived' },
+    ];
+
+    readonly tagTones = ['ok', 'muted', 'warn', 'danger'] as const;
+    readonly segStates = ['All', 'Live', 'Drafts', 'Archived'];
 
     // Bound through [(value)] so the field's own value channel is exercised on the page rather
     // than described: the ControlValueAccessor half is proved by the unit specs, this half by

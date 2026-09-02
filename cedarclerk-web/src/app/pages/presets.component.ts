@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -13,14 +13,14 @@ import {
 } from '../core/projects.service';
 import { CONTENT_LANGUAGES } from '../core/languages';
 import { EXPORT_DESTINATIONS, EXPORT_DESTINATION_BRANDS, ExportDestinationId } from '../core/export-destinations';
-import { RulerService } from '../core/ruler.service';
 import { IconName } from '../shared/icon-data.generated';
 import { IconComponent } from '../shared/icon.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 
 /** The form behind every kind — one shape, and each kind reads the fields it owns. */
 interface PresetForm {
@@ -42,13 +42,15 @@ interface PresetForm {
 // kind is being managed, exactly as it switches a language on the Glossary.
 @Component({
     selector: 'app-presets',
-    imports: [FormsModule, NgTemplateOutlet, IconComponent, BrandIconComponent, ButtonComponent, WorktopComponent, IndexTabsComponent, HintDotComponent],
+    imports: [
+        FormsModule, NgTemplateOutlet, IconComponent, BrandIconComponent, ButtonComponent, IndexTabsComponent,
+        HintDotComponent, PageHeaderComponent, EmptyStateComponent,
+    ],
     templateUrl: 'presets.component.html',
     styleUrls: ['presets.component.css'],
 })
-export class PresetsComponent implements OnDestroy {
+export class PresetsComponent {
     private api = inject(PresetsService);
-    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     readonly kinds = PRESET_KINDS;
@@ -70,15 +72,11 @@ export class PresetsComponent implements OnDestroy {
     editingId = signal<string | null>(null);
     form = signal<PresetForm>(this.blank());
 
+    headerMeta = computed<HeaderMeta[]>(() => [{ text: this.t().presets.count(this.presets().length) }]);
+
     constructor() {
         void this.load();
-        effect(() => this.ruler.publish({
-            label: this.t().presets.crumb,
-            right: [{ text: this.t().presets.count(this.presets().length) }],
-        }));
     }
-
-    ngOnDestroy() { this.ruler.clear(); }
 
     kindTabs(): IndexTabItem[] {
         return this.kinds.map(k => ({ id: k, label: this.kindLabel(k), hint: this.kindIntro(k) }));

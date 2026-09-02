@@ -1,6 +1,15 @@
-<app-worktop class="top" [grid]="false" [label]="hub.board()?.name ?? ''"
-             [meta]="t().projects.canvas.zoomLevel(zoomPercent()) + ' · ' + t().projects.canvas.itemCount(hub.items().length)">
-    <div class="c-frame">
+<div class="page">
+    <app-page-header [title]="hub.board()?.name ?? t().projects.canvas.untitledBoard"
+                     [kicker]="t().projects.canvas.title" [meta]="headerMeta()">
+        @if (hub.canWrite()) {
+            <app-button primary variant="pine" (clicked)="addNote()">
+                <app-icon name="note" size="sm" />
+                {{ t().projects.canvas.addNote }}
+            </app-button>
+        }
+    </app-page-header>
+
+    <div class="card c-frame">
         <div class="c-tools" data-surface="chrome">
             @if (hub.canWrite()) {
                 <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.addImage"
@@ -31,16 +40,16 @@
                 @if (hub.canWrite()) {
                     <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.bringToFront"
                                 (clicked)="bringToFront()">
-                        <app-icon name="arrow-up" size="xs" />
+                        <app-icon name="arrow-up" size="xs" [label]="t().projects.canvas.bringToFront" />
                     </app-button>
                     <app-button variant="paper" size="sm" surface="chrome"
                                 [title]="allLocked() ? t().projects.canvas.unlock : t().projects.canvas.lock"
                                 (clicked)="toggleLock()">
-                        <app-icon name="lock" size="xs" />
+                        <app-icon name="lock" size="xs" [label]="allLocked() ? t().projects.canvas.unlock : t().projects.canvas.lock" />
                     </app-button>
                     <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.deleteItems"
                                 (clicked)="deleteSelected()">
-                        <app-icon name="trash" size="xs" />
+                        <app-icon name="trash" size="xs" [label]="t().projects.canvas.deleteItems" />
                     </app-button>
                 }
             }
@@ -63,12 +72,11 @@
             </app-button>
             <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomFit"
                         (clicked)="fit()">
-                <app-icon name="arrows-out-simple" size="xs" />
+                <app-icon name="arrows-out-simple" size="xs" [label]="t().projects.canvas.zoomFit" />
             </app-button>
 
-            <span class="c-sep" aria-hidden="true"></span>
-
             @if (hub.peers().length) {
+                <span class="c-sep" aria-hidden="true"></span>
                 <span class="c-peers" [title]="t().projects.canvas.peers(hub.peers().length)">
                     @for (peer of hub.peers(); track peer.connectionId) {
                         <span class="c-peer-face" [style.background]="peerFace(peer.colorIndex)"
@@ -76,7 +84,6 @@
                     }
                 </span>
             }
-            <app-stamp-badge [tone]="statusTone()">{{ statusWord() }}</app-stamp-badge>
         </div>
 
         @if (!hub.canWrite() && hub.status() === 'live') {
@@ -195,11 +202,11 @@
             } @else if (hub.status() === 'connecting') {
                 <p class="c-hint">{{ t().projects.loading }}</p>
             } @else if (hub.status() === 'live' && !hub.items().length) {
-                <p class="c-hint">{{ t().projects.canvas.emptyBoard }}</p>
+                <p class="c-hint margin-note">{{ t().projects.canvas.emptyBoard }}</p>
             }
         </div>
     </div>
-</app-worktop>
+</div>
 
 @if (mediaOpen()) {
     <app-media-picker (picked)="onPicked($event)" (closed)="mediaOpen.set(false)" />

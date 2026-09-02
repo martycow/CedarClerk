@@ -1,8 +1,9 @@
-/* One sheet on the bench wall, no chrome — the same door the legal pages stand at (ADR-166). */
+/* One card on the canvas, no chrome — the same door the legal pages stand at (ADR-166). */
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--surface-page);
+    background: var(--canvas);
+    color: var(--wood-ink);
     font-family: var(--font-sans);
 }
 
@@ -28,7 +29,7 @@
     box-sizing: border-box;
     margin-top: var(--space-6);
     align-self: flex-start;
-    --paper-card-pad: var(--space-7) var(--space-8) var(--space-6);
+    padding: var(--space-7) var(--space-8) var(--space-6);
 
     .dl-header {
         display: flex;

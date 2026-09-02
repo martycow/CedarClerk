@@ -1,55 +1,66 @@
-<div class="teams">
+<div class="page teams">
+    <app-page-header [title]="t().teams.crumb" [meta]="headerMeta()">
+        <app-button primary variant="pine" (clicked)="startCreate()">
+            <app-icon name="plus" weight="bold" size="sm" /> {{ t().teams.newTeam }}
+        </app-button>
+    </app-page-header>
+
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
     @if (loading()) {
     <p class="hint">{{ t().common.loading }}</p>
+    } @else if (!teams().length && !joined().length && !creating()) {
+    <app-empty-state icon="user" [title]="t().teams.noneYet" [text]="t().teams.noneYetHint" [note]="t().teams.intro">
+        <app-button variant="pine" (clicked)="startCreate()">{{ t().teams.newTeam }}</app-button>
+    </app-empty-state>
     } @else {
     <div class="tm-grid">
 
         <!--The teams themselves, and under them the ones this account was invited into: two lists
         of the same object, but only the first is the caller's to edit.-->
-        <app-shelf-panel class="shelf-list" [title]="t().teams.yours" [count]="teams().length" flush>
-            <app-button actions variant="rail" size="sm" (clicked)="startCreate()" [title]="t().teams.newTeam">
-                <app-icon name="plus" weight="bold" size="sm" />
-            </app-button>
-            <div class="tm-list">
+        <section class="card tm-list-card" [attr.aria-label]="t().teams.yours">
+            <div class="card-head">
+                <span class="label">{{ t().teams.yours }}</span>
+                <span class="card-count">{{ teams().length }}</span>
+            </div>
+            <div class="row-list tm-list">
                 @for (team of teams(); track team.id) {
-                <button class="tm-card" [class.on]="selectedId() === team.id" (click)="select(team)">
-                    <span class="tm-card-top">
-                        <app-icon name="user" size="sm" />
-                        <span class="tm-card-name">{{ team.name }}</span>
-                    </span>
-                    <span class="tm-card-meta">
-                        {{ t().teams.memberCount(team.activeCount, team.memberCount) }}
-                        · {{ t().teams.projectCount(team.projectCount) }}
+                <button type="button" class="row tm-row" [class.is-on]="selectedId() === team.id" (click)="select(team)">
+                    <app-icon name="user" size="sm" />
+                    <span class="tm-row-body">
+                        <span class="t">{{ team.name }}</span>
+                        <span class="m">
+                            {{ t().teams.memberCount(team.activeCount, team.memberCount) }}
+                            · {{ t().teams.projectCount(team.projectCount) }}
+                        </span>
                     </span>
                 </button>
                 } @empty {
-                <p class="hint">{{ t().teams.noneYet }}</p>
+                <app-empty-state icon="user" [title]="t().teams.noneYet" [text]="t().teams.noneYetHint">
+                    <app-button variant="pine" size="sm" (clicked)="startCreate()">{{ t().teams.newTeam }}</app-button>
+                </app-empty-state>
                 }
 
                 @if (joined().length) {
-                <p class="tm-group">{{ t().teams.joined }}</p>
+                <p class="tm-group label">{{ t().teams.joined }}</p>
                 @for (team of joined(); track team.id) {
-                <div class="tm-card is-joined">
-                    <span class="tm-card-top">
-                        <app-icon name="user" size="sm" />
-                        <span class="tm-card-name">{{ team.name }}</span>
-                    </span>
-                    <span class="tm-card-meta">
-                        {{ t().teams.ownedBy(team.ownerName) }} · {{ roleWord(team.role) }}
-                        @if (team.status !== 'active') { · {{ statusWord(team.status) }} }
+                <div class="row tm-row is-joined">
+                    <app-icon name="user" size="sm" />
+                    <span class="tm-row-body">
+                        <span class="t">{{ team.name }}</span>
+                        <span class="m">
+                            {{ t().teams.ownedBy(team.ownerName) }} · {{ roleWord(team.role) }}
+                            @if (team.status !== 'active') { · {{ statusWord(team.status) }} }
+                        </span>
                     </span>
                 </div>
                 }
                 }
             </div>
-        </app-shelf-panel>
+        </section>
 
-        <app-worktop class="sheet" scroll
-                     [label]="selected()?.name || t().teams.crumb"
-                     [meta]="selected() ? t().teams.memberCount(selected()!.activeCount, selected()!.memberCount) : ''">
-            <div class="sheet-column">
+        <section class="card tm-sheet" [attr.aria-label]="selected()?.name || t().teams.crumb">
+            <div class="card-body">
 
             @if (creating()) {
             <div class="tm-form">
@@ -80,7 +91,7 @@
             </div>
             } @else {
             <div class="tm-head">
-                <h1 class="tm-title">{{ team.name }}</h1>
+                <h2 class="tm-title">{{ team.name }}</h2>
                 <app-hint-dot [text]="t().teams.intro" />
                 <span class="spacer"></span>
                 <app-button variant="paper" size="sm" (clicked)="startRename()">{{ t().common.edit }}</app-button>
@@ -96,7 +107,7 @@
                            [value]="inviteEmail()" (valueChange)="inviteEmail.set($any($event) ?? '')"
                            (keyup.enter)="invite()" />
                 <label class="tm-invite-role">
-                    <span class="tm-label">{{ t().teams.roleLabel }}</span>
+                    <span class="label">{{ t().teams.roleLabel }}</span>
                     <select class="chat-input" [value]="inviteRole()"
                             (change)="inviteRole.set($any($event.target).value)">
                         @for (role of roles; track role) { <option [value]="role">{{ roleWord(role) }}</option> }
@@ -111,7 +122,7 @@
             blocked by a missing provider key.-->
             @if (lastInviteUrl(); as url) {
             <div class="tm-invite-url">
-                <span class="tm-label">{{ t().teams.inviteLink }}</span>
+                <span class="label">{{ t().teams.inviteLink }}</span>
                 <code>{{ url }}</code>
                 <app-button variant="paper" size="sm" (clicked)="copyInvite()">{{ t().teams.copyLink }}</app-button>
             </div>
@@ -120,14 +131,15 @@
             @if (membersLoading()) {
             <p class="hint">{{ t().common.loading }}</p>
             } @else {
-            <div class="tm-members">
+            <div class="row-list tm-members">
                 @for (m of members(); track m.id) {
-                <div class="tm-member" [class.is-banned]="m.status === 'banned'">
+                <div class="row tm-member" [class.is-banned]="m.status === 'banned'">
                     <div class="tm-member-who">
-                        <span class="tm-member-name">{{ m.name || m.email }}</span>
-                        @if (m.name && m.name !== m.email) { <span class="tm-member-mail">{{ m.email }}</span> }
+                        <span class="t">{{ m.name || m.email }}</span>
+                        @if (m.name && m.name !== m.email) { <span class="m">{{ m.email }}</span> }
                     </div>
-                    <app-stamp-badge [tone]="stateTone(m)" [rotate]="-1">{{ stateWord(m) }}</app-stamp-badge>
+                    <span class="tag" [class.ok]="stateTone(m) === 'ok'" [class.muted]="stateTone(m) === 'muted'"
+                          [class.warn]="stateTone(m) === 'warn'" [class.danger]="stateTone(m) === 'danger'">{{ stateWord(m) }}</span>
 
                     <select class="chat-input tm-pick" [value]="m.role" [disabled]="busy()"
                             [attr.aria-label]="t().teams.roleLabel"
@@ -143,50 +155,51 @@
                         @for (s of statuses; track s) { <option [value]="s">{{ statusWord(s) }}</option> }
                     </select>
 
-                    @if (m.pending) {
-                    <button class="mini" [disabled]="busy()" (click)="resend(m)"
-                            [title]="t().teams.resend" [attr.aria-label]="t().teams.resend">
-                        <app-icon name="paper-plane-tilt" size="sm" />
-                    </button>
-                    }
-                    <button class="mini-remove" [disabled]="busy()" (click)="removeMember(m)"
-                            [title]="t().common.delete" [attr.aria-label]="t().common.delete">
-                        <app-icon name="trash" size="sm" />
-                    </button>
+                    <span class="tm-member-actions">
+                        @if (m.pending) {
+                        <button class="mini" [disabled]="busy()" (click)="resend(m)"
+                                [title]="t().teams.resend" [attr.aria-label]="t().teams.resend">
+                            <app-icon name="paper-plane-tilt" size="sm" />
+                        </button>
+                        }
+                        <button class="mini-remove" [disabled]="busy()" (click)="removeMember(m)"
+                                [title]="t().common.delete" [attr.aria-label]="t().common.delete">
+                            <app-icon name="trash" size="sm" />
+                        </button>
+                    </span>
                 </div>
                 } @empty {
-                <div class="tm-empty">
-                    <app-icon name="user" size="lg" />
-                    <p class="tm-empty-title">{{ t().teams.noMembers }}</p>
-                    <p class="hint">{{ t().teams.noMembersHint }}</p>
-                </div>
+                <app-empty-state icon="user" [title]="t().teams.noMembers" [text]="t().teams.noMembersHint" />
                 }
             </div>
             }
 
-            } @else {
-            <div class="tm-empty">
-                <app-icon name="user" size="lg" />
-                <p class="tm-empty-title">{{ t().teams.noneYet }}</p>
-                <p class="hint">{{ t().teams.noneYetHint }}</p>
-            </div>
+            } @else if (!creating()) {
+            <app-empty-state icon="user" [title]="t().teams.noneYet" [text]="t().teams.noneYetHint">
+                <app-button variant="pine" (clicked)="startCreate()">{{ t().teams.newTeam }}</app-button>
+            </app-empty-state>
             }
             </div>
-        </app-worktop>
+        </section>
 
-        <app-shelf-panel class="inspector" [title]="t().teams.inspector.title"
-                         [count]="selected() ? t().teams.inspector.team : t().teams.inspector.none">
-            @if (selected(); as team) {
-            <app-spec-row scope="selection" [label]="t().teams.inspector.people" [value]="'' + team.memberCount" />
-            <app-spec-row scope="selection" [label]="t().teams.inspector.active" [value]="'' + team.activeCount" />
-            <app-spec-row scope="selection" [label]="t().teams.inspector.projects" [value]="'' + team.projectCount" />
-            <p class="insp-note">{{ t().teams.inspector.reach }}</p>
-            } @else {
-            <p class="insp-note">{{ t().teams.inspector.pick }}</p>
-            }
-            <app-spec-row scope="document" [label]="t().teams.inspector.teams" [value]="'' + teams().length" />
-            <app-spec-row scope="document" [label]="t().teams.inspector.joined" [value]="'' + joined().length" />
-        </app-shelf-panel>
+        <aside class="card inspector" [attr.aria-label]="t().teams.inspector.title">
+            <div class="card-head">
+                <span class="label">{{ t().teams.inspector.title }}</span>
+                <span class="card-count">{{ selected() ? t().teams.inspector.team : t().teams.inspector.none }}</span>
+            </div>
+            <div class="card-body">
+                @if (selected(); as team) {
+                <app-spec-row scope="selection" [label]="t().teams.inspector.people" [value]="'' + team.memberCount" />
+                <app-spec-row scope="selection" [label]="t().teams.inspector.active" [value]="'' + team.activeCount" />
+                <app-spec-row scope="selection" [label]="t().teams.inspector.projects" [value]="'' + team.projectCount" />
+                <p class="insp-note">{{ t().teams.inspector.reach }}</p>
+                } @else {
+                <p class="insp-note">{{ t().teams.inspector.pick }}</p>
+                }
+                <app-spec-row scope="document" [label]="t().teams.inspector.teams" [value]="'' + teams().length" />
+                <app-spec-row scope="document" [label]="t().teams.inspector.joined" [value]="'' + joined().length" />
+            </div>
+        </aside>
     </div>
     }
 </div>

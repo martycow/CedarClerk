@@ -1,85 +1,79 @@
-<div class="d-page">
+<div class="page">
+    <app-page-header [title]="name() || t().projects.dialogues.title" [kicker]="t().projects.dialogues.title" [meta]="headerMeta()">
+        <app-button primary variant="pine" (clicked)="addNode()">
+            <app-icon name="plus" size="sm" weight="bold" />
+            {{ t().projects.dialogues.addNode }}
+        </app-button>
+    </app-page-header>
+
     <div class="d-grid">
-        <app-worktop class="top" [grid]="false" [label]="name()"
-                     [meta]="t().projects.dialogues.nodeCount(nodes().length) + ' · ' + saveWord()">
-            <div class="d-frame">
-                <div class="d-tools" data-surface="chrome">
-                    <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.dialogues.addNode"
-                                (clicked)="addNode()">
-                        <app-icon name="plus" size="xs" />
-                        {{ t().projects.dialogues.addNode }}
-                    </app-button>
+        <div class="card d-frame">
+            <div class="d-tools" data-surface="chrome">
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomOut"
+                            (clicked)="zoomBy(1 / 1.2)">
+                    <span class="visually-hidden">{{ t().projects.canvas.zoomOut }}</span>
+                    <span aria-hidden="true">&minus;</span>
+                </app-button>
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomReset"
+                            (clicked)="zoomBy(1 / view().z)">
+                    {{ t().projects.canvas.zoomLevel(zoomPercent()) }}
+                </app-button>
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomIn"
+                            (clicked)="zoomBy(1.2)">
+                    <span class="visually-hidden">{{ t().projects.canvas.zoomIn }}</span>
+                    <span aria-hidden="true">+</span>
+                </app-button>
+                <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.dialogues.zoomFit"
+                            (clicked)="fit()">
+                    <app-icon name="arrows-out-simple" size="xs" [label]="t().projects.dialogues.zoomFit" />
+                </app-button>
+            </div>
 
-                    <span class="d-spacer"></span>
+            @if (saveError(); as e) { <p class="d-banner is-bad">{{ e }}</p> }
 
-                    <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomOut"
-                                (clicked)="zoomBy(1 / 1.2)">
-                        <span class="visually-hidden">{{ t().projects.canvas.zoomOut }}</span>
-                        <span aria-hidden="true">&minus;</span>
-                    </app-button>
-                    <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomReset"
-                                (clicked)="zoomBy(1 / view().z)">
-                        {{ t().projects.canvas.zoomLevel(zoomPercent()) }}
-                    </app-button>
-                    <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.canvas.zoomIn"
-                                (clicked)="zoomBy(1.2)">
-                        <span class="visually-hidden">{{ t().projects.canvas.zoomIn }}</span>
-                        <span aria-hidden="true">+</span>
-                    </app-button>
-                    <app-button variant="paper" size="sm" surface="chrome" [title]="t().projects.dialogues.zoomFit"
-                                (clicked)="fit()">
-                        <app-icon name="arrows-out-simple" size="xs" />
-                    </app-button>
+            <div #stage class="d-stage" tabindex="0" role="application"
+                 [attr.aria-label]="t().projects.dialogues.surface(name())"
+                 aria-describedby="dialogue-help"
+                 (pointerdown)="onStageDown($event)"
+                 (wheel)="onWheel($event)"
+                 (keydown)="onStageKey($event)">
 
-                    <span class="d-sep" aria-hidden="true"></span>
-                    <app-stamp-badge [tone]="dirty() || saving() ? 'ink' : 'pine'">{{ saveWord() }}</app-stamp-badge>
-                </div>
+                <p id="dialogue-help" class="visually-hidden">{{ t().projects.dialogues.surfaceHelp }}</p>
 
-                @if (saveError(); as e) { <p class="d-banner is-bad">{{ e }}</p> }
-
-                <div #stage class="d-stage" tabindex="0" role="application"
-                     [attr.aria-label]="t().projects.dialogues.surface(name())"
-                     aria-describedby="dialogue-help"
-                     (pointerdown)="onStageDown($event)"
-                     (wheel)="onWheel($event)"
-                     (keydown)="onStageKey($event)">
-
-                    <p id="dialogue-help" class="visually-hidden">{{ t().projects.dialogues.surfaceHelp }}</p>
-
-                    <div class="d-world" [style.transform]="worldTransform()">
-                        <svg class="d-edges" aria-hidden="true">
-                            @for (edge of edges(); track edge.from.id + edge.to.id) {
-                                <path class="d-edge" [attr.d]="edgePath(edge)" />
-                            }
-                        </svg>
-
-                        @for (node of nodes(); track node.id) {
-                            <div class="d-node" [class.is-selected]="selectedId() === node.id"
-                                 [style.transform]="nodeTransform(node)"
-                                 [style.width.px]="nodeW" [style.height.px]="nodeH"
-                                 tabindex="0" role="button"
-                                 [attr.aria-pressed]="selectedId() === node.id"
-                                 [attr.aria-label]="node.title"
-                                 (pointerdown)="onNodeDown($event, node)"
-                                 (keydown)="onNodeKey($event, node)">
-                                <span class="d-node-title">{{ node.title || t().projects.dialogues.untitledNode }}</span>
-                                <pre class="d-node-body">{{ preview(node) }}</pre>
-                            </div>
+                <div class="d-world" [style.transform]="worldTransform()">
+                    <svg class="d-edges" aria-hidden="true">
+                        @for (edge of edges(); track edge.from.id + edge.to.id) {
+                            <path class="d-edge" [attr.d]="edgePath(edge)" />
                         }
-                    </div>
+                    </svg>
 
-                    @if (loading()) {
-                        <p class="d-hint">{{ t().projects.loading }}</p>
-                    } @else if (loadError(); as e) {
-                        <p class="d-hint">{{ e }}</p>
+                    @for (node of nodes(); track node.id) {
+                        <div class="d-node" [class.is-selected]="selectedId() === node.id"
+                             [style.transform]="nodeTransform(node)"
+                             [style.width.px]="nodeW" [style.height.px]="nodeH"
+                             tabindex="0" role="button"
+                             [attr.aria-pressed]="selectedId() === node.id"
+                             [attr.aria-label]="node.title"
+                             (pointerdown)="onNodeDown($event, node)"
+                             (keydown)="onNodeKey($event, node)">
+                            <span class="d-node-title">{{ node.title || t().projects.dialogues.untitledNode }}</span>
+                            <pre class="d-node-body">{{ preview(node) }}</pre>
+                        </div>
                     }
                 </div>
-            </div>
-        </app-worktop>
 
-        <div class="dock">
+                @if (loading()) {
+                    <p class="d-hint">{{ t().projects.loading }}</p>
+                } @else if (loadError(); as e) {
+                    <p class="d-hint">{{ e }}</p>
+                }
+            </div>
+        </div>
+
+        <aside class="dock">
             @if (selected(); as node) {
-                <app-shelf-panel [title]="t().projects.dialogues.nodeTitle">
+                <section class="card dock-card" [attr.aria-label]="t().projects.dialogues.nodeTitle">
+                    <span class="label">{{ t().projects.dialogues.nodeTitle }}</span>
                     <div class="d-form">
                         <app-input [label]="t().projects.dialogues.nodeTitle" inputId="dialogue-node-title"
                                    [value]="node.title" (valueChange)="setTitle($any($event) ?? '')" />
@@ -94,11 +88,14 @@
                             {{ t().projects.dialogues.deleteNode }}
                         </app-button>
                     </div>
-                </app-shelf-panel>
+                </section>
             }
 
-            <app-shelf-panel [title]="t().projects.dialogues.exportXlsx"
-                             [count]="languages().length || null">
+            <section class="card dock-card" [attr.aria-label]="t().projects.dialogues.exportXlsx">
+                <span class="dock-head">
+                    <span class="label">{{ t().projects.dialogues.exportXlsx }}</span>
+                    @if (languages().length) { <span class="dock-count">{{ languages().length }}</span> }
+                </span>
                 <div class="d-form">
                     <app-button variant="paper" size="sm" [disabled]="downloading() !== null"
                                 (clicked)="download('yarn')">
@@ -131,8 +128,8 @@
                     @if (importError(); as e) { <p class="error-line">{{ e }}</p> }
                     @if (exportError(); as e) { <p class="error-line">{{ e }}</p> }
                 </div>
-            </app-shelf-panel>
-        </div>
+            </section>
+        </aside>
     </div>
 </div>
 

@@ -1,19 +1,23 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .invite-body {
     display: flex;
     justify-content: center;
-    padding: var(--space-6) var(--space-3);
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
 }
 
 .sheet {
     width: min(100%, 480px);
-}
-
-.invite-title {
-    margin: 0 0 var(--space-3);
-    font-family: var(--font-display);
-    font-size: var(--fs-27);
-    font-weight: 700;
-    letter-spacing: -.01em;
+    align-self: flex-start;
+    box-sizing: border-box;
+    padding: var(--space-6);
 }
 
 .invite-line {
@@ -29,6 +33,10 @@
 
 .error-line {
     margin: 0 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
     color: var(--danger);
     font-size: var(--fs-ui);
 }

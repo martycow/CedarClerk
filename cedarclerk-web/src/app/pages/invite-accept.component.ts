@@ -7,8 +7,7 @@ import { MembersService } from '../core/members.service';
 import { ProjectAccessService } from '../core/project-access.service';
 import { TeamsService } from '../core/teams.service';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { PageHeaderComponent } from '../shell/page-header.component';
 
 interface InvitePeek {
     /** The project's name, or the team's — the sentence differs, the shape does not. */
@@ -26,7 +25,7 @@ interface InvitePeek {
 // and a second component would have been a copy of this one.
 @Component({
     selector: 'app-invite-accept',
-    imports: [WorktopComponent, PaperCardComponent, ButtonComponent],
+    imports: [PageHeaderComponent, ButtonComponent],
     templateUrl: 'invite-accept.component.html',
     styleUrls: ['invite-accept.component.css'],
 })

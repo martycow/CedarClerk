@@ -1,14 +1,9 @@
-/* The board fills the bench top and never scrolls the page: an endless plane that also carried a
-   scrollbar would be two competing ways to reach the same place. */
+/* The board fills the page and never scrolls it: an endless plane that also carried a scrollbar
+   would be two competing ways to reach the same place. */
 :host {
     display: flex;
     flex: 1;
-    min-height: 0;
-    padding: var(--space-3);
-}
-
-.top {
-    flex: 1;
+    flex-direction: column;
     min-height: 0;
 }
 
@@ -17,8 +12,10 @@
     flex: 1;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
 }
 
+/* The tool strip is the one chrome part left on this screen (CONTRACT §B census). */
 .c-tools {
     display: flex;
     align-items: center;
@@ -26,9 +23,8 @@
     flex-wrap: wrap;
     flex: none;
     padding: var(--space-1) var(--space-2);
-    border-bottom: 1px solid var(--wood-edge);
-    background-color: var(--sign-tile-hi);
-    background-image: var(--tex-wood), var(--grad-sign-tile);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
 }
 
 .c-spacer { flex: 1; }
@@ -37,11 +33,11 @@
     width: 1px;
     align-self: stretch;
     margin: 0 var(--space-1);
-    background: var(--wood-edge);
+    background: var(--border);
 }
 
 .c-count {
-    color: var(--rail-ink);
+    color: var(--t2);
     font-family: var(--font-mono);
     font-size: var(--text-chrome-sm);
 }
@@ -158,7 +154,7 @@
     flex: 1;
     color: var(--text);
     font-family: var(--font-sans);
-    font-size: 20px;
+    font-size: var(--fs-20);
     line-height: 1.35;
     white-space: pre-wrap;
     overflow: hidden;
@@ -174,7 +170,7 @@
     background: transparent;
     color: var(--text);
     font-family: var(--font-sans);
-    font-size: 20px;
+    font-size: var(--fs-20);
     resize: none;
 }
 
@@ -206,7 +202,7 @@
     padding: var(--space-1) var(--space-2);
     color: var(--t2);
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: var(--fs-16);
     font-weight: 700;
 }
 
@@ -226,7 +222,7 @@
     min-width: 0;
     color: var(--text);
     font-family: var(--font-sans);
-    font-size: 16px;
+    font-size: var(--fs-16);
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -268,7 +264,7 @@
     border-radius: 2px 12px 12px 12px;
     color: var(--avatar-ink);
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: var(--fs-12);
     font-weight: 700;
     white-space: nowrap;
 }
@@ -307,6 +303,8 @@
     font-size: var(--fs-ui);
 }
 
+/* The hint on a live, empty board: a hand-written note on the surface, not an empty-state screen —
+   the board is not broken, it is new. */
 .c-hint {
     position: absolute;
     left: 50%;
@@ -316,6 +314,11 @@
     color: var(--t2);
     font-size: var(--fs-ui);
     pointer-events: none;
+}
+
+.c-hint.margin-note {
+    font-size: var(--fs-17);
+    transform: translate(-50%, -50%) rotate(-1.4deg);
 }
 
 .c-form {

@@ -16,7 +16,7 @@ test('a post that does not fit offers a thread, with its parts listed', async ({
 
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
     // Two affordances per card: the checkbox ticks Telegram for publishing, and a click on the
     // card body brings its settings panel forward — which is where the limit checks live.
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
@@ -45,7 +45,7 @@ test('a post that fits is never offered a thread', async ({ page, context }) => 
 
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
     // Bring the Telegram panel forward so the absence below is the panel's, not the modal's.
     await page.locator('.dest-card').nth(1).click();
@@ -80,7 +80,7 @@ test('a connected short-post network offers link and thread as two modes', async
     const id = await createDraft(context, 'Короткий пост', ['Тело поста.']);
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
 
     // Blog, Telegram, then the connected network — an unconnected one renders no checkbox at all.
     const bluesky = page.locator('.dest-card input[type=checkbox]').nth(2);

@@ -92,12 +92,13 @@ export async function withSave(page: Page, action: () => Promise<void>) {
     await expectSynced(page);
 }
 
-// The editor's topbar indicator is gone: ADR-153 dissolved the status bar, and ADR-159 clause 3
-// split what it said in two — the drop on the rail is the state, the rule at the foot of the screen
-// carries the word. So the word is read off the rule, which is also the only half a person reads.
-// "Syncing…" and "Sync failed" are the other two, and neither contains this one.
+// The word is read off the document frame's footer (ADR-239 clause 9): the frame's top bar draws
+// the same state as an icon and a word, but the footer is the line a person reads. "Syncing…" and
+// "Sync failed" are the other two, and neither contains this one.
+export const SYNC_WORD_SELECTOR = 'app-document-frame .frame-footer';
+
 export async function expectSynced(page: Page, timeout = 10_000) {
-    await expect(page.locator('app-ruler-bar')).toContainText('Synced', { timeout });
+    await expect(page.locator(SYNC_WORD_SELECTOR)).toContainText('Synced', { timeout });
 }
 
 // Node's DNS does not resolve *.localhost — only Chromium special-cases it — so anything going

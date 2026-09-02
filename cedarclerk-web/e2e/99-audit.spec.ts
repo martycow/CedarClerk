@@ -71,7 +71,7 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await expect(page.locator('.tiptap')).toBeVisible();
     await shot(page, '20-editor');
 
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
     await shot(page, '21-export-collapsed');
 
     // Both destinations ticked — the state the export window is actually used in.
@@ -103,10 +103,10 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await page.locator('.tiptap').click();
     await shot(page, '26-paragraph-marks');
 
-    // Appearance panel (ADR-057 made it a modal; ADR-069 replaced Apply with autosave). ADR-151
-    // moved its trigger out of the editor's own chrome into the rail's dots menu, and hoisted the
-    // panel into the shell, so it is reachable from every screen rather than from this one.
-    await page.getByRole('button', { name: 'More', exact: true }).click();
+    // Appearance panel (ADR-057 made it a modal; ADR-069 replaced Apply with autosave). ADR-239
+    // clause 4 keeps it in the account menu, opened from the sidebar's user trigger, so it is
+    // reachable from every screen rather than from this one.
+    await page.getByRole('button', { name: 'Account', exact: true }).click();
     await page.getByRole('button', { name: 'Appearance', exact: true }).click();
     await shot(page, '27-appearance');
 });
@@ -254,7 +254,7 @@ for (const device of DEVICES) {
         // email ran off the right edge.
         const id = await createDraft(context, 'Заголовок поста для проверки топбара', ['Текст.']);
         await page.goto(`/editor?draft=${id}`);
-        await expect(page.locator('app-rail-header')).toBeVisible();
+        await expect(page.locator('app-sidebar')).toBeVisible();
         // Captured before the assertion, not after it: at 390px the writer's three columns do not
         // collapse and the sheet is pushed clean out of the viewport, so this shot IS the evidence
         // and the assertion below is what refuses to call it fine (T-237).
@@ -315,7 +315,7 @@ test('@audit thread offer', async ({ page, context }) => {
     const id = await createDraft(context, 'Длинный документ', long);
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
     // The checkbox only ticks the destination — the card body click brings its panel forward.
     await page.locator('.dest-card').nth(1).click();

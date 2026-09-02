@@ -4,8 +4,9 @@ import { of } from 'rxjs';
 import { ProjectComponent } from './project.component';
 import { ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
-import { RulerService } from '../core/ruler.service';
+import { Channel, ChannelsService } from '../core/channels.service';
 import { en } from '../core/i18n/en';
+import { formatInZone } from '../core/display-time';
 import { AssetsService } from '../core/assets.service';
 
 const SUMMARY: ProjectSummary = {
@@ -25,11 +26,17 @@ const DETAIL: ProjectDetail = {
         { id: 'd-old', title: 'Design bible', documentType: 'design', updatedAt: '2026-08-10T09:00:00', isArchived: false, isBlogPublished: false },
         { id: 'd-new', title: 'Devlog #12', documentType: 'post', updatedAt: '2026-08-19T11:00:00', isArchived: false, isBlogPublished: false },
         { id: 'd-mid', title: 'Cave script', documentType: 'script', updatedAt: '2026-08-15T09:00:00', isArchived: false, isBlogPublished: true },
+        { id: 'd-gone', title: 'Old plan', documentType: 'note', updatedAt: '2026-08-01T09:00:00', isArchived: true, isBlogPublished: false },
     ],
     upNext: [
         {
             id: 't1', projectId: 'p1', title: 'Fix saves on quit', status: 'in_progress', priority: 1,
             description: '', assignee: '', sprintId: 's1', buildId: null, dueAt: '2026-01-01T00:00:00',
+            isPublicRoadmap: false, createdAt: '', updatedAt: '', completedAt: null, archivedAt: null, links: [],
+        },
+        {
+            id: 't2', projectId: 'p1', title: 'Second in line', status: 'planned', priority: 3,
+            description: '', assignee: '', sprintId: null, buildId: null, dueAt: null,
             isPublicRoadmap: false, createdAt: '', updatedAt: '', completedAt: null, archivedAt: null, links: [],
         },
     ],
@@ -45,6 +52,10 @@ const DETAIL: ProjectDetail = {
 const BUILDS: Build[] = [
     { id: 'b2', projectId: 'p1', version: '0.4.0', notes: '', releasedAt: null, createdAt: '', released: false, taskCount: 0, doneCount: 0, documents: [], isPublic: false, downloadUrl: null },
     { id: 'b1', projectId: 'p1', version: '0.3.1', notes: '', releasedAt: '2026-08-17T09:00:00', createdAt: '', released: true, taskCount: 3, doneCount: 3, documents: [], isPublic: false, downloadUrl: null },
+];
+
+const CHANNELS: Channel[] = [
+    { id: 'c1', title: 'Dev Dairy', telegramChatId: 1, username: 'devdairy', avatarUrl: null },
 ];
 
 class FakeProjects {
@@ -67,6 +78,11 @@ class FakeBuilds {
     async list() { if (!this.builds) throw new Error('nope'); return structuredClone(this.builds); }
 }
 
+class FakeChannels {
+    channels: Channel[] | null = CHANNELS;
+    async list() { if (!this.channels) throw new Error('nope'); return structuredClone(this.channels); }
+}
+
 class FakeAssets {
     uploaded: File[] = [];
     async upload(file: File) {
@@ -79,187 +95,154 @@ describe('project hub', () => {
     let fixture: ComponentFixture<ProjectComponent>;
     let projects: FakeProjects;
     let builds: FakeBuilds;
-    let assets: FakeAssets;
+    let channels: FakeChannels;
     const t = en.projects;
 
     const el = () => fixture.nativeElement as HTMLElement;
-    const panels = () => [...el().querySelectorAll('app-shelf-panel')];
-    const panel = (title: string) =>
-        panels().find(p => p.getAttribute('aria-label') === title) as HTMLElement;
-    const tiles = () => [...el().querySelectorAll('app-module-tile')] as HTMLElement[];
-    const tileNames = () => tiles().map(x => x.querySelector('.mt-name')?.textContent?.trim());
-    const tileCount = (name: string) =>
-        tiles().find(x => x.querySelector('.mt-name')?.textContent?.trim() === name)
-            ?.querySelector('.mt-count')?.textContent?.trim();
+    const meta = () => [...el().querySelectorAll('app-page-header .page-meta > span:not(.sep)')]
+        .map(x => x.textContent?.trim());
+    const docRows = () => [...el().querySelectorAll('.doc-list a.doc-row')] as HTMLAnchorElement[];
+    const docTitles = () => docRows().map(r => r.querySelector('.doc-title')?.textContent?.trim());
+    const sideCards = () => [...el().querySelectorAll('.hub-side .side-card')] as HTMLElement[];
+    const kvValue = (label: string) => {
+        const cells = [...el().querySelectorAll('.kv > *')];
+        const i = cells.findIndex(c => c.tagName === 'B' && c.textContent?.trim() === label);
+        return i >= 0 ? cells[i + 1] : null;
+    };
 
     async function create() {
         projects = new FakeProjects();
         builds = new FakeBuilds();
-        assets = new FakeAssets();
+        channels = new FakeChannels();
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
                 { provide: ProjectsService, useValue: projects },
                 { provide: BuildsService, useValue: builds },
-                { provide: AssetsService, useValue: assets },
+                { provide: ChannelsService, useValue: channels },
+                { provide: AssetsService, useValue: new FakeAssets() },
                 { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'p1' })) } },
             ],
         });
         fixture = TestBed.createComponent(ProjectComponent);
         fixture.detectChanges();
-        // load() and loadProjects() are two awaits deep before the build list lands.
-        for (let i = 0; i < 5; i++) await Promise.resolve();
+        // load(), loadProjects() and loadChannels() are a few awaits deep before the build list lands.
+        for (let i = 0; i < 6; i++) await Promise.resolve();
         fixture.detectChanges();
     }
 
     beforeEach(create);
 
-    // ADR-160 rule 1: a plate is a door. Documents is the panel on this screen and Metrics has no
-    // per-project number, so the kit's six become four — and this is what would go red if someone
-    // restored one of them with a plausible-looking count.
-    it('hangs one plate per module that has a screen behind it, and no others', () => {
-        expect(tileNames()).toEqual([t.tasks.title, t.railPendingTitle, t.assets.title, t.builds.title]);
-        expect(tileNames()).not.toContain(t.hub.documentsPanel);
-        expect(tileNames()).not.toContain(en.shell.metrics);
-    });
-
-    // ADR-163 — a plate is a door, and a door has an address. router.navigate has no URL to hand
-    // the browser, so middle click, copy link address and the hover preview all died with it.
-    it('gives every plate a real href rather than a click handler', () => {
-        const hrefs = tiles().map(x => x.querySelector('.mt-plate')?.getAttribute('href'));
-        expect(hrefs).toEqual([
-            '/projects/p1/tasks', '/projects/p1/planner', '/projects/p1/assets', '/projects/p1/builds',
+    // ADR-239 clause 6 — the state, the kind, the count and the last edit are the header's meta line.
+    it('says what the project is in the header: state tag, kind, documents, last edit', () => {
+        expect(meta()).toEqual([
+            t.stateActive, t.projectTypes.fullgame.name, t.documentCount(4), expect.stringContaining(t.hub.lastEdit),
         ]);
-        for (const tile of tiles()) expect(tile.querySelector('button')).toBeNull();
+        expect(el().querySelector('app-page-header .page-meta .tag')?.classList.contains('ok')).toBe(true);
     });
 
-    it('gives the up next tag the same address the board would open at', () => {
-        const tag = el().querySelector('app-task-tag .tt-plate')!;
-        expect(tag.tagName).toBe('A');
-        expect(tag.getAttribute('href')).toBe('/projects/p1/tasks?task=t1');
-    });
-
-    it('takes each plate\'s number from the field that actually holds it', () => {
-        expect(tileCount(t.tasks.title)).toBe('8');          // detail.openTaskCount
-        expect(tileCount(t.railPendingTitle)).toBe('S4');    // the sprint covering today
-        expect(tileCount(t.assets.title)).toBe('2481');      // summary.assetCount — not on the detail
-        expect(tileCount(t.builds.title)).toBe('2');         // the build list, fetched beside it
-    });
-
-    // ADR-160 rule 4. 0 would say "no versions yet", which is a different sentence.
-    it('shows a dash, never a zero, when the build list cannot be asked', async () => {
-        TestBed.resetTestingModule();
-        await create();
-        builds.builds = null;
-        fixture.componentInstance.builds.set(null);
-        fixture.detectChanges();
-        expect(tileCount(t.builds.title)).toBe('—');
-    });
-
-    it('shows a dash for assets when the project list did not answer', async () => {
-        fixture.componentInstance.projects.set([]);
-        fixture.detectChanges();
-        expect(tileCount(t.assets.title)).toBe('—');
-        // …and the hero's chalk strip goes quiet rather than inventing a date.
-        expect(el().querySelector('app-worktop .wt-meta')).toBeNull();
-    });
-
-    it('stamps the version off the released build and never off a planned one', () => {
-        const stamps = [...el().querySelectorAll('.hero-stamps app-stamp-badge')].map(s => s.textContent?.trim());
-        expect(stamps).toContain('0.3.1');
-        expect(stamps).not.toContain('0.4.0');
-        expect(stamps).toContain(t.stateActive);
-    });
-
-    // The three regions, by the accessible name each panel carries.
-    it('lays the bench out as projects, the top, and today', () => {
-        expect(panels().length).toBe(3);
-        expect(panel(t.shelfTitle)).toBeTruthy();
-        expect(panel(t.hub.documentsPanel)).toBeTruthy();
-        expect(panel(t.hub.today)).toBeTruthy();
-        expect(el().querySelectorAll('app-worktop').length).toBe(1);
-    });
-
-    it('marks the open project in the switcher and links every row to its own hub', () => {
-        const rows = [...panel(t.shelfTitle).querySelectorAll('a.proj')] as HTMLAnchorElement[];
-        expect(rows.length).toBe(2);
-        expect(rows[0].getAttribute('aria-current')).toBe('page');
-        expect(rows[1].getAttribute('aria-current')).toBeNull();
-        expect(rows.map(r => r.getAttribute('href'))).toEqual(['/projects/p1', '/projects/p2']);
-    });
-
-    // The old body showed three documents per featured type and the latest of the rest; the panel
-    // shows all of them, newest first.
-    it('lists every document, newest first', () => {
-        const titles = [...panel(t.hub.documentsPanel).querySelectorAll('.doc-title')]
-            .map(x => x.textContent?.trim());
-        expect(titles).toEqual(['Devlog #12', 'Cave script', 'Design bible']);
+    it('offers Settings and New document as the header\'s two actions', () => {
+        const actions = [...el().querySelectorAll('app-page-header .page-actions app-button')].map(b => b.textContent?.trim());
+        expect(actions).toEqual([t.settings, t.newDocument]);
     });
 
     // ADR-169. Continue is a door to a document, so it carries the address a middle click can take
-    // to a new tab — and the assertion is the href rather than a spy on the router, because a
-    // handler calling navigate() passes a spy while offering the browser nothing.
-    it('opens the newest document from Continue, as a link', () => {
-        const resume = el().querySelector('.resume-t')?.textContent?.trim();
-        expect(resume).toBe('Devlog #12');
-
+    // to a new tab — and the assertion is the href rather than a spy on the router.
+    it('opens the newest document from Continue writing, as a link', () => {
+        expect(el().querySelector('.resume-t')?.textContent?.trim()).toBe('Devlog #12');
         const open = el().querySelector('.resume app-button a') as HTMLAnchorElement;
         expect(open.getAttribute('href')).toBe('/editor?draft=d-new');
         expect(el().querySelector('.resume app-button button')).toBeNull();
     });
 
-    // Same rule one panel down: the editor addresses a document by query, so each row's href
-    // carries the id it opens rather than the newest draft the editor would fall back to.
-    it('hangs every document row on its own address', () => {
-        const rows = [...panel(t.hub.documentsPanel).querySelectorAll('.doc-row')] as HTMLElement[];
-        expect(rows.map(r => r.tagName)).toEqual(['A', 'A', 'A']);
-        expect(rows.map(r => r.getAttribute('href')))
-            .toEqual(['/editor?draft=d-new', '/editor?draft=d-mid', '/editor?draft=d-old']);
+    it('lists every document, newest first, each on its own address', () => {
+        expect(docTitles()).toEqual(['Devlog #12', 'Cave script', 'Design bible', 'Old plan']);
+        expect(docRows().map(r => r.getAttribute('href')))
+            .toEqual(['/editor?draft=d-new', '/editor?draft=d-mid', '/editor?draft=d-old', '/editor?draft=d-gone']);
     });
 
-    it('hands a task tag its own urgency rather than reddening the row', () => {
-        const tag = el().querySelector('app-task-tag')!;
-        expect(tag.querySelector('.tt-prio')?.textContent?.trim()).toBe('P1');
-        expect(tag.querySelector('.tt-due')?.classList.contains('tt-overdue')).toBe(true);
-        expect(tag.classList.contains('overdue')).toBe(false);
+    // The strip switches what the card shows: live is published and not archived, drafts is
+    // neither, archived is archived whatever else it is.
+    it('filters the documents by the strip and the search', () => {
+        fixture.componentInstance.docFilter.set('live');
+        fixture.detectChanges();
+        expect(docTitles()).toEqual(['Cave script']);
+
+        fixture.componentInstance.docFilter.set('drafts');
+        fixture.detectChanges();
+        expect(docTitles()).toEqual(['Devlog #12', 'Design bible']);
+
+        fixture.componentInstance.docFilter.set('archived');
+        fixture.detectChanges();
+        expect(docTitles()).toEqual(['Old plan']);
+
+        fixture.componentInstance.docFilter.set('all');
+        fixture.componentInstance.docSearch.set('cave');
+        fixture.detectChanges();
+        expect(docTitles()).toEqual(['Cave script']);
     });
 
-    // ADR-160 rule 6 — the kit's channel group has no link table behind it; the showcase does.
-    it('says the public page is not published rather than drawing channels it cannot know', () => {
-        const today = panel(t.hub.today);
-        expect(today.textContent).toContain(t.hub.notPublished);
-        expect(today.querySelector('.spec-value.link')).toBeNull();
+    it('names the next action when the filter finds nothing, and when there is no document at all', () => {
+        fixture.componentInstance.docSearch.set('zzz');
+        fixture.detectChanges();
+        expect(el().querySelector('.doc-list app-empty-state')?.textContent).toContain(t.hub.noDocumentsMatch);
+
+        fixture.componentInstance.project.set({ ...DETAIL, documents: [] });
+        fixture.detectChanges();
+        const empty = el().querySelector('.doc-list app-empty-state')!;
+        expect(empty.textContent).toContain(t.hub.noDocuments);
+        expect(empty.querySelector('app-button')?.textContent?.trim()).toBe(t.newDocument);
     });
 
-    it('publishes the rule while it is open and clears it on the way out', () => {
-        const ruler = TestBed.inject(RulerService);
-        expect(ruler.label()).toBe('Cedar Quest');
-        expect(ruler.left().map(r => r.text)).toEqual([
-            t.hub.rulerSprint(4, 11, 19),
-            t.hub.rulerAssets(2481),
-        ]);
-        expect(ruler.right().map(r => r.text)).toEqual([t.hub.rulerDocs(3), t.hub.rulerTasks(8)]);
+    it('draws the sprint covering today with its progress, and one task up next', () => {
+        const [sprint, next] = sideCards();
+        expect(sprint.textContent).toContain(t.hub.sprintLabel(4));
+        expect(sprint.textContent).toContain('Autumn build');
+        expect(sprint.querySelector('.bar')).toBeTruthy();
+        expect(sprint.textContent).toContain(t.hub.sprintUntil(11, 19, formatInZone(DETAIL.currentSprint!.endsAt, 'd MMM')));
 
-        fixture.destroy();
-        expect(ruler.label()).toBe('');
-        expect(ruler.left()).toEqual([]);
+        const task = next.querySelector('a.next-task') as HTMLAnchorElement;
+        expect(task.getAttribute('href')).toBe('/projects/p1/tasks?task=t1');
+        expect(task.querySelector('.tag')?.textContent?.trim()).toBe('P1');
+        expect(next.querySelectorAll('a.next-task').length).toBe(1);
     });
 
-    it('says no sprint covers today instead of drawing an empty one', async () => {
+    it('says no sprint covers today instead of drawing an empty one', () => {
         fixture.componentInstance.project.set({ ...DETAIL, currentSprint: null });
         fixture.detectChanges();
-        expect(tileCount(t.railPendingTitle)).toBe('—');
-        expect(panel(t.hub.today).textContent).toContain(t.planner.noCurrentSprint);
-        expect(panel(t.hub.today).querySelector('.bar')).toBeNull();
+        const sprint = sideCards()[0];
+        expect(sprint.textContent).toContain(t.planner.noCurrentSprint);
+        expect(sprint.querySelector('.bar')).toBeNull();
     });
 
-    it('keeps the project type on this screen — it is the only one that shows it', () => {
-        expect(el().querySelector('.hero-sub')?.textContent).toContain(t.projectTypes.fullgame.name);
+    // ADR-239 clause 12 — a project has no channel table, so the Telegram row lists the account's
+    // channels; the showcase is the one address a project owns (ADR-134).
+    it('lists where the work goes from what the page already holds', () => {
+        expect(kvValue(t.hub.telegram)?.textContent).toContain('@devdairy');
+        expect(kvValue(t.hub.publicPage)?.textContent).toContain(t.hub.notPublished);
+        expect(kvValue(t.assets.title)?.textContent?.trim()).toBe(t.hub.filesCount(2481));
+        expect(kvValue(t.builds.title)?.textContent?.trim()).toBe(t.hub.versionsCount(2));
+    });
+
+    // ADR-160 rule 4. 0 would say "no versions yet", which is a different sentence.
+    it('shows a dash, never a zero, when the build list or the project list cannot be asked', () => {
+        fixture.componentInstance.builds.set(null);
+        fixture.componentInstance.projects.set([]);
+        fixture.detectChanges();
+        expect(kvValue(t.builds.title)?.textContent?.trim()).toBe('—');
+        expect(kvValue(t.assets.title)?.textContent?.trim()).toBe('—');
+        // …and the header goes quiet about the last edit rather than inventing a date.
+        expect(meta()).toEqual([t.stateActive, t.projectTypes.fullgame.name, t.documentCount(4)]);
+    });
+
+    it('says no channel is connected when the account has none', () => {
+        fixture.componentInstance.channels.set([]);
+        fixture.detectChanges();
+        expect(kvValue(t.hub.telegram)?.textContent?.trim()).toBe(t.hub.noChannel);
     });
 
     // T-353 — the logo comes out of the one asset window now, so the picked asset IS the answer
-    // and there is no deferred upload left on save. The picker uploads too, which is what makes
-    // dropping the private file input lossless.
+    // and there is no deferred upload left on save.
     it('saves the project logo picked in the asset window', async () => {
         const component = fixture.componentInstance;
         component.startEdit();

@@ -8,41 +8,27 @@
    component, so this file styles the page around them and never a second time over them. */
 
 .sg {
-    max-width: 980px;
-    margin: var(--space-5) auto;
-    padding: var(--space-6) var(--space-5) 120px;
-    color: var(--text);
     font-size: var(--fs-body);
-    /* T-339 — the page used to lie straight on the wall, and at night the wall is dark while
-       every ink here is paper's: the headings measured near-invisible. A sheet under the whole
-       guide is what its own tokens assume. */
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper);
 }
 
-.sg-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--border);
+/* Every ink on the guide is paper's, and the wall is dark at night: the whole guide lies on one
+   card, which is what its own tokens assume. */
+.sg-sheet {
+    flex: none;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto var(--space-6);
+    padding: var(--space-5) var(--space-5) var(--space-8);
 }
 
 .sg-controls {
     display: flex;
     gap: var(--space-2);
     flex-wrap: wrap;
-}
-
-h1 {
-    font-size: var(--fs-27);
-    margin: 0 0 var(--space-1);
-    font-weight: 600;
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border);
 }
 
 h2 {
@@ -257,9 +243,7 @@ code {
 
 /* A bay is a piece of material with the demo standing on it. Its own labels live on that material
    too, so they take the material's type size — chrome 13px, paper 14px — which is the density
-   contract doing its job on this page rather than being described by it. Every caption that would
-   have to sit on wood the checker cannot score (the shelf frame, the ruler) is outside the bay
-   instead. */
+   contract doing its job on this page rather than being described by it. */
 .sg-bay {
     padding: var(--space-4);
     border: 1px solid var(--border);
@@ -280,19 +264,91 @@ code {
     color: var(--t2);
 }
 
+/* Chrome is paper's deepest stock after ADR-239 — the trough the index tabs sit in. */
 .sg-bay[data-surface="chrome"] {
-    background-color: var(--rail-lo);
-    background-image: var(--tex-wood), var(--surface-rail);
-    border-color: var(--rail-edge);
-    box-shadow: var(--shadow-rail);
-    color: var(--rail-ink);
+    background-color: var(--surface);
+    color: var(--text);
 }
 
-/* Cream at full strength, not --rail-ink-soft: composited over the rail the soft ink measures
-   4.37:1, and a label is read. */
 .sg-bay[data-surface="chrome"] .sg-state {
     font-size: var(--text-chrome);
-    color: var(--rail-ink);
+    color: var(--t2);
+}
+
+/* ── Page vocabulary ────────────────────────────────────────────────────── */
+
+/* A header writes with the wall's ink, so its sample stands on a patch of wall. */
+.sg-wall {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--canvas);
+    color: var(--wood-ink);
+}
+
+.sg-wall app-page-header .page-header {
+    padding-top: var(--space-2);
+}
+
+.sg-doc-card {
+    display: flex;
+    flex-direction: column;
+    max-height: 260px;
+}
+
+.sg-card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    min-height: var(--hit-touch);
+    padding: 0 var(--space-3) 0 var(--space-4);
+}
+
+.sg-card-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
+}
+
+.sg-spacer {
+    flex: 1;
+}
+
+.sg-row {
+    grid-template-columns: var(--icon-sm) minmax(0, 1fr) 120px 110px auto;
+}
+
+.sg-row app-icon {
+    color: var(--t3);
+}
+
+.sg-row .t,
+.sg-row .m {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sg-empty-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 220px;
+    padding: var(--space-4);
+}
+
+.sg-kv-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: 360px;
+    padding: var(--space-4);
+}
+
+.sg-pair {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
 }
 
 .sg-state {
@@ -393,19 +449,7 @@ code {
 }
 
 .sg-strip[data-surface="chrome"] {
-    background-color: var(--rail-lo);
-    background-image: var(--tex-wood), var(--surface-rail);
-    border-color: var(--rail-edge);
-}
-
-.sg-strip.is-wood[data-surface="chrome"] {
-    background-image: var(--tex-wood), var(--shelf-frame);
-    border-color: var(--wood-edge);
-}
-
-.sg-strip.is-ruler[data-surface="chrome"] {
-    background-image: var(--grad-brass);
-    border-color: var(--brass-lo);
+    background-color: var(--surface);
 }
 
 /* ── Table ──────────────────────────────────────────────────────────────── */

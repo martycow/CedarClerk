@@ -1,11 +1,9 @@
 <!--Compact (ADR-071, restated by ADR-164 clause 6): a user list, an audit log and an invite table.
-Note that comments.component and stats.component need no attribute of their own — they are tab
-bodies inside the Posts Manager and inherit its density through the cascade, which is the point of
-expressing density as custom properties rather than as a class each component has to remember.
+comments.component and stats.component need no attribute of their own — they are tab bodies inside
+the Posts Manager and inherit its density through the cascade.-->
+<div class="page admin-page" data-density="compact">
+    <app-page-header [title]="t().admin.crumb" [meta]="headerMeta()" />
 
-The four sections are the index strip, each one is the panel's body, and the summary cards that
-used to run across the top are the shelf beside it (ADR-164).-->
-<div class="admin-page" data-density="compact">
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
     @if (loading()) {
@@ -16,42 +14,42 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     (selected)="setTab($any($event))" />
 
     <div class="admin-grid">
-        <app-shelf-panel class="section" [title]="sectionTitle()">
+        <section class="card section" [attr.aria-label]="sectionTitle()">
+            <div class="card-head">
+                <span class="label">{{ sectionTitle() }}</span>
+            </div>
+            <div class="card-body">
 
             @if (tab() === 'users') {
-            <!--Priority Fixes 01 (Claude Design): the fixed-grid table shell swaps for the
-            sheet-card list the rest of the app already uses. T-257 took the form out of the row —
-            two selects, a date, three inputs and six buttons neither fit a 340px shelf (ADR-164
-            clause 5) nor belong in a row that pushes the rest of the list off screen, so the card
-            is now a door to a modal. With nothing nested inside it any more, the card is a real
-            button: keyboard-reachable, and no click has to be stopped from propagating.-->
-            <div class="user-cards">
+            <!--T-257 took the form out of the row — two selects, a date, three inputs and six
+            buttons belong in a modal, not a row that pushes the rest of the list off screen. With
+            nothing nested inside it, the row is a real button: keyboard-reachable, and no click has
+            to be stopped from propagating.-->
+            <div class="row-list user-cards">
                 @for (u of users(); track u.id) {
-                <button type="button" class="user-card" [class.on]="expandedId() === u.id"
+                <button type="button" class="row user-card" [class.on]="expandedId() === u.id"
                         [attr.aria-label]="t().admin.userModal.open(u.email ?? t().admin.userModal.untitled)"
                         (click)="openUser(u)">
-                    <div class="user-card-main">
-                        <span class="user-avatar" [style.background]="avatarColor(u.email)">{{ avatarInitial(u.email) }}</span>
-                        <div class="user-card-body">
-                            <div class="user-card-top">
-                                <span class="user-email">{{ u.email }}</span>
-                                @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
-                                @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
-                                <span class="chip plan" [class.accent]="u.effectiveTier !== 'Free'">{{ u.effectiveTier }}</span>
-                                <!--A lapsed plan is the one case where the stored tier and the real
-                                one disagree, so it's called out rather than silently shown as Free.-->
-                                @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
-                            </div>
-                            <div class="user-card-meta muted">
-                                {{ u.telegramUsername ? '@' + u.telegramUsername : t().admin.columns.telegram + ': —' }}
-                                · {{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}
-                                · {{ u.createdAt | zonedDate:'MM/dd/yyyy' }}
-                                @if (u.planExpiresAt) {
-                                · {{ u.planExpiresAt | zonedDate:'MM/dd/yyyy' }}
-                                } @else if (u.effectiveTier !== 'Free') {
-                                · {{ t().admin.neverExpires }}
-                                }
-                            </div>
+                    <span class="user-avatar" [style.background]="avatarColor(u.email)">{{ avatarInitial(u.email) }}</span>
+                    <div class="user-card-body">
+                        <div class="user-card-top">
+                            <span class="user-email">{{ u.email }}</span>
+                            @if (u.isAdmin) { <span class="chip admin">{{ t().admin.adminChip }}</span> }
+                            @if (u.isLocked) { <span class="chip danger">{{ t().admin.lockedChip }}</span> }
+                            <span class="chip plan" [class.accent]="u.effectiveTier !== 'Free'">{{ u.effectiveTier }}</span>
+                            <!--A lapsed plan is the one case where the stored tier and the real
+                            one disagree, so it's called out rather than silently shown as Free.-->
+                            @if (isLapsed(u)) { <span class="chip warn">{{ t().admin.lapsedChip(u.planTier) }}</span> }
+                        </div>
+                        <div class="user-card-meta muted">
+                            {{ u.telegramUsername ? '@' + u.telegramUsername : t().admin.columns.telegram + ': —' }}
+                            · {{ t().admin.contentSummary(u.published, u.drafts, u.channels) }}
+                            · {{ u.createdAt | zonedDate:'MM/dd/yyyy' }}
+                            @if (u.planExpiresAt) {
+                            · {{ u.planExpiresAt | zonedDate:'MM/dd/yyyy' }}
+                            } @else if (u.effectiveTier !== 'Free') {
+                            · {{ t().admin.neverExpires }}
+                            }
                         </div>
                     </div>
                 </button>
@@ -71,8 +69,8 @@ used to run across the top are the shelf beside it (ADR-164).-->
             </div>
             <p class="field-hint-inline invite-hint">{{ t().admin.invites.blanksHint }}</p>
 
-            <div class="user-table invite-table">
-                <div class="invite-row head">
+            <div class="row-list table">
+                <div class="row invite-row head">
                     <span>{{ t().admin.invites.code }}</span>
                     <span>{{ t().admin.invites.label }}</span>
                     <span>{{ t().admin.invites.usage }}</span>
@@ -80,7 +78,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     <span></span>
                 </div>
                 @for (c of invites(); track c.id) {
-                <div class="invite-row">
+                <div class="row invite-row">
                     <span class="user-email">
                         {{ c.code }}
                         @if (!c.isUsable) { <span class="chip warn">{{ t().admin.invites.notUsable }}</span> }
@@ -97,14 +95,14 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     </span>
                 </div>
                 } @empty {
-                <p class="hint invite-empty">{{ t().admin.invites.none }}</p>
+                <app-empty-state [title]="t().admin.empty.invites" [text]="t().admin.empty.invitesHint" />
                 }
             </div>
             }
 
             @if (tab() === 'posts') {
-            <div class="user-table">
-                <div class="post-row head">
+            <div class="row-list table">
+                <div class="row post-row head">
                     <span>{{ t().admin.posts.title2 }}</span>
                     <span>{{ t().admin.posts.owner }}</span>
                     <span>{{ t().admin.posts.state }}</span>
@@ -112,7 +110,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     <span>{{ t().admin.posts.links }}</span>
                 </div>
                 @for (p of posts(); track p.id) {
-                <div class="post-row">
+                <div class="row post-row">
                     <span class="user-email">{{ p.title || t().drafts.untitled }}</span>
                     <span class="muted">{{ p.ownerEmail }}</span>
                     <span>
@@ -127,7 +125,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     </span>
                 </div>
                 } @empty {
-                <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
+                <app-empty-state [icon]="null" [title]="t().admin.empty.posts" [text]="t().admin.empty.postsHint" />
                 }
             </div>
             <p class="field-hint-inline invite-hint">{{ t().admin.posts.readOnlyNote }}</p>
@@ -139,7 +137,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
             and a field for one here would be a second place for a number to be wrong in.-->
             @if (tab() === 'landing') {
             @if (landingBusy() && !landing()) {
-            <p class="hint">{{ t().common.loading }}</p>
+            <p class="hint in-card">{{ t().common.loading }}</p>
             } @else if (landing(); as L) {
             <div class="landing-bar">
                 <!--A real link to the real page, in a new tab: a preview drawn inside the panel
@@ -153,7 +151,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
             </div>
             <p class="field-hint-inline">{{ t().admin.landing.intro }}</p>
 
-            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.sections }}</h2>
+            <h2 class="label landing-section-title">{{ t().admin.landing.sections }}</h2>
             <div class="landing-toggles">
                 <label><input type="checkbox" [(ngModel)]="lf.showShots"> {{ t().admin.landing.secShots }}</label>
                 <label><input type="checkbox" [(ngModel)]="lf.showFeatures"> {{ t().admin.landing.secFeatures }}</label>
@@ -164,7 +162,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
             </div>
             <p class="field-hint-inline">{{ t().admin.landing.sectionsHint }}</p>
 
-            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.copy }}</h2>
+            <h2 class="label landing-section-title">{{ t().admin.landing.copy }}</h2>
             <p class="field-hint-inline">{{ t().admin.landing.copyHint }}</p>
             <div class="landing-fields">
                 <div class="lf">
@@ -223,7 +221,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                 </div>
             </div>
 
-            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.shots }}</h2>
+            <h2 class="label landing-section-title">{{ t().admin.landing.shots }}</h2>
             <p class="field-hint-inline">{{ t().admin.landing.shotsHint }}</p>
             <label class="landing-upload">
                 <input type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadShot($event)" [disabled]="landingBusy()">
@@ -254,7 +252,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     </div>
                 </div>
                 } @empty {
-                <p class="hint invite-empty">{{ t().admin.landing.noShots }}</p>
+                <app-empty-state icon="image" [title]="t().admin.empty.shots" [text]="t().admin.empty.shotsHint" />
                 }
             </div>
             @if (orphanFiles().length) {
@@ -271,7 +269,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
             </div>
             }
 
-            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.roadmap }}</h2>
+            <h2 class="label landing-section-title">{{ t().admin.landing.roadmap }}</h2>
             <p class="field-hint-inline">{{ t().admin.landing.roadmapHint }}</p>
             <div class="landing-list">
                 @for (c of roadmapCols; track $index; let i = $index) {
@@ -300,7 +298,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
             </div>
             <app-button variant="paper" size="sm" (clicked)="addRoadmapColumn()">{{ t().admin.landing.addColumn }}</app-button>
 
-            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.story }}</h2>
+            <h2 class="label landing-section-title">{{ t().admin.landing.story }}</h2>
             <p class="field-hint-inline">{{ t().admin.landing.storyHint }}</p>
             <div class="landing-list">
                 @for (v of storySteps; track $index; let i = $index) {
@@ -332,16 +330,16 @@ used to run across the top are the shelf beside it (ADR-164).-->
             </div>
             <app-button variant="paper" size="sm" (clicked)="addStoryStep()">{{ t().admin.landing.addStep }}</app-button>
 
-            <h2 class="admin-section-title landing-section-title">{{ t().admin.landing.waitlist }}</h2>
-            <div class="user-table">
+            <h2 class="label landing-section-title">{{ t().admin.landing.waitlist }}</h2>
+            <div class="row-list table">
                 @for (w of waitlistEntries(); track w.id) {
-                <div class="waitlist-row">
+                <div class="row waitlist-row">
                     <span class="user-email">{{ w.email }}</span>
                     <span class="muted">{{ w.language }}</span>
                     <span class="muted">{{ w.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
                 </div>
                 } @empty {
-                <p class="hint invite-empty">{{ t().admin.landing.waitlistEmpty }}</p>
+                <app-empty-state [icon]="null" [title]="t().admin.landing.waitlistEmpty" [text]="t().admin.empty.waitlistHint" />
                 }
             </div>
             }
@@ -349,20 +347,20 @@ used to run across the top are the shelf beside it (ADR-164).-->
 
             @if (tab() === 'reports') {
             @if (billing(); as b) {
-            <h2 class="admin-section-title">{{ t().admin.reports.revenue }}</h2>
+            <h2 class="label">{{ t().admin.reports.revenue }}</h2>
             @if (b.totalByCurrency.length) {
             <div class="revenue-row">
                 @for (tot of b.totalByCurrency; track tot.currency) {
-                <app-paper-card [rotate]="0">
+                <div class="card is-tinted revenue-card">
                     <span class="summary-value">{{ formatAmount(tot.total, tot.currency) }}</span>
                     <span class="summary-label">{{ t().admin.reports.completedOnly }}</span>
-                </app-paper-card>
+                </div>
                 }
             </div>
             }
 
-            <div class="user-table">
-                <div class="payment-row head">
+            <div class="row-list table">
+                <div class="row payment-row head">
                     <span>{{ t().admin.reports.when }}</span>
                     <span>{{ t().admin.reports.who }}</span>
                     <span>{{ t().admin.reports.what }}</span>
@@ -370,7 +368,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     <span>{{ t().admin.reports.status }}</span>
                 </div>
                 @for (p of b.payments; track p.id) {
-                <div class="payment-row">
+                <div class="row payment-row">
                     <span class="muted">{{ p.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
                     <span class="muted">{{ p.ownerEmail }}</span>
                     <span>{{ p.plan }} · {{ p.provider }}</span>
@@ -378,32 +376,32 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     <span class="muted">{{ p.status }}</span>
                 </div>
                 } @empty {
-                <p class="hint invite-empty">{{ t().admin.reports.noPayments }}</p>
+                <app-empty-state [icon]="null" [title]="t().admin.reports.noPayments" [text]="t().admin.empty.paymentsHint" />
                 }
             </div>
             }
 
-            <h2 class="admin-section-title audit-title">{{ t().admin.reports.usage }}</h2>
-            <div class="user-table">
-                <div class="usage-row head">
+            <h2 class="label audit-title">{{ t().admin.reports.usage }}</h2>
+            <div class="row-list table">
+                <div class="row usage-row head">
                     <span>{{ t().admin.reports.who }}</span>
                     <span>{{ t().admin.reports.storage }}</span>
                     <span>{{ t().admin.reports.files }}</span>
                     <span>{{ t().admin.reports.aiToday }}</span>
                 </div>
                 @for (u of usage(); track u.ownerEmail) {
-                <div class="usage-row">
+                <div class="row usage-row">
                     <span class="muted">{{ u.ownerEmail }}</span>
                     <span>{{ formatBytes(u.bytes) }}</span>
                     <span class="muted">{{ u.files }}</span>
                     <span class="muted">{{ u.aiToday }}</span>
                 </div>
                 } @empty {
-                <p class="hint invite-empty">{{ t().common.nothingHere }}</p>
+                <app-empty-state [icon]="null" [title]="t().admin.empty.usage" [text]="t().admin.empty.usageHint" />
                 }
             </div>
 
-            <h2 class="admin-section-title audit-title">{{ t().admin.auditTitle }}</h2>
+            <h2 class="label audit-title">{{ t().admin.auditTitle }}</h2>
             <div class="audit-list">
                 @for (a of audit(); track a.id) {
                 <app-log-line [time]="a.createdAt | zonedDate:'MM/dd, HH:mm'" [word]="a.action"
@@ -411,7 +409,7 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     {{ a.targetEmail || '—' }} · {{ a.details }}
                 </app-log-line>
                 } @empty {
-                <p class="hint">{{ t().admin.noAudit }}</p>
+                <app-empty-state [icon]="null" [title]="t().admin.noAudit" [text]="t().admin.empty.auditHint" />
                 }
                 <!--The log is append-only and never trimmed, so a fixed cap would hide history rather
                 than bound it. One page at a time instead.-->
@@ -431,13 +429,11 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     {{ t().feedbackForm.onlyOpen }}
                 </label>
             </div>
-            <div class="fb-list">
+            <div class="row-list fb-list">
                 @for (f of feedback(); track f.id) {
                 <div class="fb-entry" [class.handled]="!!f.handledAt">
                     <div class="fb-entry-head">
-                        <app-stamp-badge [tone]="f.kind === 'bug' ? 'ink' : 'brass'" [rotate]="-1">
-                            {{ feedbackKindLabel(f.kind) }}
-                        </app-stamp-badge>
+                        <span class="tag" [class.muted]="f.kind !== 'bug'" [class.warn]="f.kind === 'bug'">{{ feedbackKindLabel(f.kind) }}</span>
                         <span class="fb-from">{{ f.email }}</span>
                         <span class="fb-when muted">{{ f.createdAt | zonedDate:'MM/dd, HH:mm' }}</span>
                         <span class="spacer"></span>
@@ -451,28 +447,33 @@ used to run across the top are the shelf beside it (ADR-164).-->
                     @if (f.path) { <span class="fb-path muted">{{ f.path }}</span> }
                 </div>
                 } @empty {
-                <p class="hint">{{ t().feedbackForm.emptyInbox }}</p>
+                <app-empty-state icon="chat-teardrop" [title]="t().feedbackForm.emptyInbox"
+                                 [text]="feedbackOnlyOpen() ? t().admin.empty.feedbackOpenHint : t().admin.empty.feedbackHint" />
                 }
             </div>
             }
-        </app-shelf-panel>
+            </div>
+        </section>
 
-        <app-shelf-panel class="summary" [title]="t().admin.summary.title">
-            @if (summary(); as s) {
-            <app-spec-row [label]="t().admin.summary.users" [value]="'' + s.users" />
-            <app-spec-row [label]="t().admin.summary.paidUsers" [value]="'' + s.paidUsers" />
-            <app-spec-row [label]="t().admin.summary.published" [value]="s.published + ' / ' + s.drafts" />
-            <app-spec-row [label]="t().admin.summary.comments" [value]="'' + s.comments" />
-            <app-spec-row [label]="t().admin.summary.reactions" [value]="'' + s.reactions" />
-            <app-spec-row [label]="t().admin.summary.channels" [value]="'' + s.channels" />
-            <app-spec-row [label]="t().admin.summary.storage" [value]="formatBytes(s.storageBytes)" />
-            }
-        </app-shelf-panel>
+        <aside class="card summary" [attr.aria-label]="t().admin.summary.title">
+            <div class="card-head"><span class="label">{{ t().admin.summary.title }}</span></div>
+            <div class="card-body">
+                @if (summary(); as s) {
+                <app-spec-row [label]="t().admin.summary.users" [value]="'' + s.users" />
+                <app-spec-row [label]="t().admin.summary.paidUsers" [value]="'' + s.paidUsers" />
+                <app-spec-row [label]="t().admin.summary.published" [value]="s.published + ' / ' + s.drafts" />
+                <app-spec-row [label]="t().admin.summary.comments" [value]="'' + s.comments" />
+                <app-spec-row [label]="t().admin.summary.reactions" [value]="'' + s.reactions" />
+                <app-spec-row [label]="t().admin.summary.channels" [value]="'' + s.channels" />
+                <app-spec-row [label]="t().admin.summary.storage" [value]="formatBytes(s.storageBytes)" />
+                }
+            </div>
+        </aside>
     </div>
     }
 </div>
 
-<!--T-257 — the per-user controls, opened by clicking the account's card. Same handlers and same
+<!--T-257 — the per-user controls, opened by clicking the account's row. Same handlers and same
 endpoints as the inline row they replace; only where they are drawn changed. The user is re-read
 from users() on every render, so a `run()` reload refreshes the open modal instead of stranding it
 on the values it opened with.-->

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -7,16 +7,15 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { Build, BuildsService } from '../core/builds.service';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { GameTask, TasksService, isOverdue } from '../core/tasks.service';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
 import { TaskTagComponent } from '../bench/display/task-tag.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 
 const STATUS_TONES: Record<GameTask['status'], StampTone> = {
     done: 'pine',
@@ -25,7 +24,9 @@ const STATUS_TONES: Record<GameTask['status'], StampTone> = {
     backlog: 'ink',
 };
 
-// T-126 (ADR-112) — build and version records, ported onto the bench by T-226 (ADR-168).
+// T-126 (ADR-112) — build and version records, ported onto the bench by T-226 (ADR-168) and onto
+// the paper-first shell by ADR-239: a page header carrying what the chalked edge used to say, the
+// versions in a scrolling column, the summary as a plain card beside them.
 //
 // No design exists for this screen: the handoff covers the planner, the board and the assets, and
 // stops there. It deliberately borrows the planner's language — a paper card per version, a head
@@ -38,19 +39,18 @@ const STATUS_TONES: Record<GameTask['status'], StampTone> = {
     selector: 'app-project-builds',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
-        WorktopComponent, ShelfPanelComponent, SpecRowComponent, PaperCardComponent,
+        PageHeaderComponent, EmptyStateComponent, SpecRowComponent, PaperCardComponent,
         StampBadgeComponent, TaskTagComponent, ButtonComponent,
     ],
     templateUrl: 'project-builds.component.html',
     styleUrls: ['project-builds.component.css'],
 })
-export class ProjectBuildsComponent implements OnDestroy {
+export class ProjectBuildsComponent {
     private api = inject(BuildsService);
     private tasksApi = inject(TasksService);
     private projects = inject(ProjectsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
-    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     readonly overdue = isOverdue;
@@ -90,6 +90,12 @@ export class ProjectBuildsComponent implements OnDestroy {
     assignedCount = computed(() => this.tasks().filter(t => t.buildId).length);
     documentCount = computed(() => this.builds().reduce((n, b) => n + b.documents.length, 0));
 
+    /** The former rule readout: how many versions, how many not out yet. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        if (!this.project()) return [];
+        return [{ text: this.t().projects.builds.sub(this.builds().length, this.unreleasedCount()) }];
+    });
+
     constructor() {
         this.route.paramMap.subscribe(params => {
             const id = params.get('id');
@@ -97,20 +103,6 @@ export class ProjectBuildsComponent implements OnDestroy {
             this.projectId.set(id);
             void this.load();
         });
-
-        effect(() => {
-            const project = this.project();
-            if (!project) return;
-            const t = this.t().projects;
-            this.ruler.publish({
-                label: project.name,
-                left: [{ text: t.builds.sub(this.builds().length, this.unreleasedCount()) }],
-            });
-        });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
     }
 
     async load() {

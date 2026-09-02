@@ -54,7 +54,7 @@ describe('drafts page', () => {
         tiles(label).map(x => [x.querySelector('.it-label')?.textContent?.trim(),
                                x.querySelector('.it-badge')?.textContent?.trim() ?? null]);
     const panel = (title: string) =>
-        [...el().querySelectorAll('app-shelf-panel')]
+        [...el().querySelectorAll('section.card')]
             .find(p => p.getAttribute('aria-label') === title) as HTMLElement | undefined;
     const rowTitles = () =>
         [...el().querySelectorAll('.drafts-table .drafts-row:not(.drafts-row-head) .drafts-title')]
@@ -120,6 +120,27 @@ describe('drafts page', () => {
         expect(el().querySelector('.drafts-tree')).not.toBeNull();
         expect(strip(t.stateStrip)).toBeUndefined();
         expect(panel(t.folders.title)).toBeUndefined();
+    });
+
+    it('the header carries the library counts and the one primary action', () => {
+        const header = el().querySelector('app-page-header')!;
+        expect(header.querySelector('.page-title')!.textContent!.trim()).toBe(t.title);
+        expect(header.querySelector('.page-meta')!.textContent).toContain(t.postsCount(3));
+        expect(header.querySelector('[primary] .btn')!.textContent!.trim()).toBe(t.newDraft);
+        expect(el().querySelector('app-shelf-panel')).toBeNull();
+    });
+
+    it('a filter that matches nothing offers the way back to everything', () => {
+        tiles(t.stateStrip)[2].click(); // Scheduled — nothing is
+        fixture.detectChanges();
+
+        const empty = el().querySelector('app-empty-state')!;
+        expect(empty.querySelector('.es-title')!.textContent!.trim()).toBe(t.empty.noMatchTitle);
+        (empty.querySelector('button') as HTMLButtonElement).click();
+        fixture.detectChanges();
+
+        expect(el().querySelector('app-empty-state')).toBeNull();
+        expect(rowTitles()).toEqual(['alpha', 'beta']);
     });
 
     // ---- T-256, the draft shelf ---------------------------------------------------------------

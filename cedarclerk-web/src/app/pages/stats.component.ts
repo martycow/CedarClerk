@@ -9,8 +9,8 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { LeafState, LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
+import { ButtonComponent } from '../bench/forms/button.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { IconComponent } from '../shared/icon.component';
 import { GrowthChartComponent, GrowthSeries, SeriesSlot, seriesColor } from '../bench/worktop/growth-chart.component';
 
@@ -134,8 +134,8 @@ function normalize(snapshots: readonly unknown[], tracked: readonly MetricKey[])
 @Component({
     selector: 'app-stats',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [FormsModule, LeafTagComponent, IndexTabsComponent, ShelfPanelComponent, GrowthChartComponent,
-              StampBadgeComponent, IconComponent],
+    imports: [FormsModule, LeafTagComponent, IndexTabsComponent, GrowthChartComponent,
+              EmptyStateComponent, ButtonComponent, IconComponent],
     // The tab body is the reading surface the shell hands over (ADR-154); the two shelves declare
     // their own chrome from inside.
     host: { 'data-surface': 'paper' },

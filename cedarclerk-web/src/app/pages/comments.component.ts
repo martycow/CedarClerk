@@ -5,6 +5,7 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { LocaleService } from '../core/i18n/locale.service';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 
 // Feedback for published posts. It owns no page chrome — no header, no theme toggle, no back
 // link — because it has never been a page of its own since N7.
@@ -16,7 +17,7 @@ import { ButtonComponent } from '../bench/forms/button.component';
 // around it.
 @Component({
     selector: 'app-comments',
-    imports: [IconComponent, ZonedDatePipe, ButtonComponent],
+    imports: [IconComponent, ZonedDatePipe, ButtonComponent, EmptyStateComponent],
     templateUrl: 'comments.component.html',
     styleUrls: ['comments.component.css']
 })

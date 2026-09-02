@@ -66,20 +66,31 @@ describe('styleguide page', () => {
     });
 
     it('renders the whole kit, not a subset of it', () => {
-        for (const tag of ['app-input', 'app-stamp-badge', 'app-resin-drop', 'app-leaf-tag',
-            'app-paper-card', 'app-task-tag', 'app-spec-row', 'app-brass-pin', 'app-brass-hook', 'app-brass-nail',
-            'app-worktop', 'app-module-tile', 'app-shelf-panel', 'app-index-tabs', 'app-log-line']) {
+        for (const tag of ['app-input', 'app-stamp-badge', 'app-leaf-tag',
+            'app-paper-card', 'app-task-tag', 'app-spec-row', 'app-brass-pin', 'app-brass-hook',
+            'app-worktop', 'app-module-tile', 'app-shelf-panel', 'app-index-tabs', 'app-log-line',
+            'app-page-header', 'app-empty-state']) {
             expect(el().querySelector(tag), tag).toBeTruthy();
         }
     });
 
-    // ADR-140: a strip per surface the ring has to clear, and the two accepted exceptions carry a
-    // surface of their own rather than being left off the page.
-    it('proves the ring on both surfaces and names the two exceptions', () => {
+    // ADR-239 §B: every page class is on the page, in live markup, so a token change is judged
+    // here rather than by walking the app.
+    it('shows the page vocabulary', () => {
+        for (const sel of ['.card', '.seg > button.is-on', '.row-list .row .t', '.tag.ok', '.tag.muted',
+            '.tag.warn', '.tag.danger', '.tag.is-plain', '.empty-state', '.margin-note', '.kv',
+            'a.btn.primary', 'a.btn.ghost', 'a.btn.sm', '.label']) {
+            expect(el().querySelector(sel), sel).toBeTruthy();
+        }
+        expect(el().querySelector('app-page-header h1')?.textContent).toContain('Design System');
+        expect(el().querySelector('.sg-wall app-page-header h2')?.textContent).toContain('Documents');
+    });
+
+    // ADR-140: a strip per surface the ring has to clear.
+    it('proves the ring on both surfaces', () => {
         const strips = [...el().querySelectorAll('.sg-strip')];
         expect(strips.filter(s => s.getAttribute('data-surface') === 'paper').length).toBe(1);
-        expect(strips.filter(s => s.getAttribute('data-surface') === 'chrome').length).toBe(3);
-        expect(el().querySelectorAll('.sg-strip.is-wood, .sg-strip.is-ruler').length).toBe(2);
+        expect(strips.filter(s => s.getAttribute('data-surface') === 'chrome').length).toBe(1);
         for (const strip of strips) expect(strip.querySelector('app-button button')).toBeTruthy();
     });
 
@@ -92,9 +103,10 @@ describe('styleguide page', () => {
             '.sg-badge', '.sg-count', 'focus-visible', 'cb-']) {
             expect(css, dead).not.toContain(dead);
         }
-        // Every native control on the page belongs to a bench component; the page owns none.
+        // Every native control on the page belongs to a bench component or to the global `.seg`
+        // (a §B class whose tiles are native buttons by contract); the page owns none.
         const bench = 'app-button, app-input, app-leaf-tag, app-spec-row, app-task-tag,'
-            + ' app-module-tile, app-index-tabs';
+            + ' app-module-tile, app-index-tabs, .seg';
         const loose = [...el().querySelectorAll('button, input, select, textarea')]
             .filter(node => !node.closest(bench))
             .map(node => node.outerHTML.slice(0, 80));

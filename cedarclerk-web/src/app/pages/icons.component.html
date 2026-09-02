@@ -1,38 +1,39 @@
-<div class="ic">
+<div class="page ic">
 
-    <header class="ic-top">
-        <div>
-            <h1>Icons — inventory</h1>
-            <p class="ic-sub">
-                T-080 · Phosphor (ADR-072) through one <code>app-icon</code>. Generated from the real
-                call sites by <code>tools/generate-icon-usage.mjs</code> — re-run it after moving icons.
-            </p>
-        </div>
-        <div class="ic-controls">
-            <app-input class="ic-filter" label="Filter" type="search"
-                       placeholder="Filter by name or meaning…"
-                       [value]="query()" (valueChange)="query.set($any($event) ?? '')" />
+    <app-page-header title="Icons" kicker="Inventory · T-080 · ADR-072"
+                     [meta]="[
+                         { text: totals().set + ' in the set' },
+                         { text: totals().used + ' drawn somewhere' },
+                         { text: totals().sites + ' call sites' },
+                         { text: unused().length + ' unused', tone: unused().length ? 'warn' : 'muted', tag: true },
+                         { text: totals().dynamic + ' bound at runtime' }
+                     ]">
+        <app-input secondary class="ic-filter" label="Filter" type="search"
+                   placeholder="Filter by name or meaning…"
+                   [value]="query()" (valueChange)="query.set($any($event) ?? '')" />
+    </app-page-header>
+
+    <div class="ic-tools">
+        <div class="seg" role="group" aria-label="Weight">
             @for (w of weights; track w) {
-                <app-leaf-tag interactive [state]="weight() === w ? 'active' : 'idle'"
-                              (activated)="weight.set(w)">{{ w }}</app-leaf-tag>
-            }
-            @for (s of sizes; track s) {
-                <app-leaf-tag interactive [state]="size() === s ? 'active' : 'idle'"
-                              (activated)="size.set(s)">{{ s }}</app-leaf-tag>
+                <button type="button" [class.is-on]="weight() === w" [attr.aria-pressed]="weight() === w"
+                        (click)="weight.set(w)">{{ w }}</button>
             }
         </div>
-    </header>
-
-    <div class="ic-totals">
-        <div><strong>{{ totals().set }}</strong><span>in the set</span></div>
-        <div><strong>{{ totals().used }}</strong><span>drawn somewhere</span></div>
-        <div><strong>{{ totals().sites }}</strong><span>call sites</span></div>
-        <div><strong>{{ unused().length }}</strong><span>unused</span></div>
-        <div><strong>{{ totals().dynamic }}</strong><span>bound at runtime</span></div>
+        <div class="seg" role="group" aria-label="Size">
+            @for (s of sizes; track s) {
+                <button type="button" [class.is-on]="size() === s" [attr.aria-pressed]="size() === s"
+                        (click)="size.set(s)">{{ s }}</button>
+            }
+        </div>
+        <p class="ic-sub">
+            Phosphor through one <code>app-icon</code>, generated from the real call sites by
+            <code>tools/generate-icon-usage.mjs</code> — re-run it after moving icons.
+        </p>
     </div>
 
     <!-- ── One meaning, two icons ──────────────────────────────────────────── -->
-    <section>
+    <section class="card ic-card">
         <h2>One meaning drawn two ways</h2>
         <p class="ic-note">
             The same accessible name rendered with different icons. Each row is a decision to make:
@@ -56,7 +57,7 @@
     </section>
 
     <!-- ── One icon, many meanings ─────────────────────────────────────────── -->
-    <section>
+    <section class="card ic-card">
         <h2>One icon carrying several meanings</h2>
         <p class="ic-note">
             Three or more distinct labels on the same glyph. Universal actions (close, delete,
@@ -75,7 +76,7 @@
 
     <!-- ── Unused ──────────────────────────────────────────────────────────── -->
     @if (unused().length) {
-        <section>
+        <section class="card ic-card">
             <h2>In the set, drawn nowhere</h2>
             <p class="ic-note">
                 Every name here still ships in <code>icon-data.generated.ts</code>. Either a screen
@@ -93,23 +94,25 @@
     }
 
     <!-- ── The full inventory ──────────────────────────────────────────────── -->
-    <section>
+    <section class="card ic-card ic-inventory">
         <h2>Every icon, with what it means here</h2>
-        <table class="ic-table">
-            <thead>
-                <tr><th>Icon</th><th>Name</th><th>Uses</th><th>Meanings</th><th>Screens</th></tr>
-            </thead>
-            <tbody>
-                @for (r of filtered(); track r.name) {
-                    <tr [class.dim]="r.count === 0">
-                        <td><app-icon [name]="r.name" [weight]="weight()" [size]="size()" [label]="r.name"></app-icon></td>
-                        <td><code>{{ r.name }}</code></td>
-                        <td class="num">{{ r.count || '—' }}</td>
-                        <td>{{ r.labels.join(' · ') || '—' }}</td>
-                        <td class="ic-files">{{ r.files.join(', ') || '—' }}</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="ic-scroll">
+            <table class="ic-table">
+                <thead>
+                    <tr><th>Icon</th><th>Name</th><th>Uses</th><th>Meanings</th><th>Screens</th></tr>
+                </thead>
+                <tbody>
+                    @for (r of filtered(); track r.name) {
+                        <tr [class.dim]="r.count === 0">
+                            <td><app-icon [name]="r.name" [weight]="weight()" [size]="size()" [label]="r.name"></app-icon></td>
+                            <td><code>{{ r.name }}</code></td>
+                            <td class="num">{{ r.count || '—' }}</td>
+                            <td>{{ r.labels.join(' · ') || '—' }}</td>
+                            <td class="ic-files">{{ r.files.join(', ') || '—' }}</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </section>
 </div>

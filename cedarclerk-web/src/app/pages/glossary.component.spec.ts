@@ -3,8 +3,6 @@ import { GlossaryComponent } from './glossary.component';
 import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
-import { RailActionsService } from '../core/rail-actions.service';
-import { RulerService } from '../core/ruler.service';
 import { en } from '../core/i18n/en';
 
 const term = (over: Partial<GlossaryTerm>): GlossaryTerm => ({
@@ -41,8 +39,6 @@ class FakeProjects {
 
 describe('glossary screen', () => {
     let fixture: ComponentFixture<GlossaryComponent>;
-    let ruler: RulerService;
-    let rail: RailActionsService;
     const t = en.glossary;
 
     const page = () => fixture.componentInstance;
@@ -50,7 +46,7 @@ describe('glossary screen', () => {
     const tabs = () => [...el().querySelectorAll('app-index-tabs .it-tile')] as HTMLElement[];
     const cards = () => [...el().querySelectorAll('.term-card')] as HTMLElement[];
     const names = () => cards().map(c => c.querySelector('.term-name')?.textContent?.trim());
-    const shelf = () => el().querySelector('app-shelf-panel.inspector') as HTMLElement;
+    const shelf = () => el().querySelector('.inspector') as HTMLElement;
     const rows = () => [...shelf().querySelectorAll('app-spec-row')] as HTMLElement[];
     const row = (label: string) =>
         rows().find(r => r.querySelector('.label')?.textContent?.trim() === label);
@@ -70,8 +66,6 @@ describe('glossary screen', () => {
             ],
         });
         TestBed.inject(AuthService).indieDev.set(true);
-        ruler = TestBed.inject(RulerService);
-        rail = TestBed.inject(RailActionsService);
         fixture = TestBed.createComponent(GlossaryComponent);
         await settle();
     });
@@ -93,7 +87,7 @@ describe('glossary screen', () => {
     // T-125 — a project's view deliberately includes the global terms, because that is the set its
     // documents render with.
     it('narrows the sheet by scope, and a project keeps the global terms with it', async () => {
-        const leaves = () => [...el().querySelectorAll('.scope-strip app-leaf-tag .lt-pick')] as HTMLElement[];
+        const leaves = () => [...el().querySelectorAll('.scope-strip button')] as HTMLElement[];
         expect(leaves().length).toBe(3);
 
         leaves()[1].click();          // Global only
@@ -131,7 +125,7 @@ describe('glossary screen', () => {
         cards()[0].click();           // Рендерер — the RU root of a two-language group
         await settle();
 
-        const groupLeaves = () => [...shelf().querySelectorAll('.preview-langs app-leaf-tag .lt-pick')] as HTMLElement[];
+        const groupLeaves = () => [...shelf().querySelectorAll('.preview-langs button')] as HTMLElement[];
         expect(groupLeaves().map(l => l.textContent?.trim())).toEqual(['RU', 'EN']);
         expect(shelf().querySelector('.glossary-preview-desc')?.textContent?.trim()).toBe('Превращает документ в вывод.');
 
@@ -143,7 +137,7 @@ describe('glossary screen', () => {
 
         cards()[1].click();           // Верстак — alone in its group
         await settle();
-        expect(shelf().querySelectorAll('.preview-langs app-leaf-tag').length).toBe(0);
+        expect(shelf().querySelectorAll('.preview-langs button').length).toBe(0);
     });
 
     // T-260. Only GET /api/glossary carries the count, so a term that has come back from a save
@@ -203,21 +197,18 @@ describe('glossary screen', () => {
         expect(el().querySelector('.glossary-pager')?.textContent).toContain(t.page(3, 3));
     });
 
-    // T-336 — the create action is a button on the screen it acts on, not a rail primary; the
-    // ruler still carries what it measures and is cleared when the screen goes away.
-    it('keeps New term on the sheet, publishes its counts, and clears them on the way out', () => {
-        expect(rail.primary()).toBeNull();
-        const newTerm = [...el().querySelectorAll('.gl-index app-button')]
+    // ADR-239 clause 6 — the create action is the page header's primary and the counts are its meta line.
+    it('keeps New term in the page header and draws its counts on the meta line', () => {
+        const newTerm = [...el().querySelectorAll('app-page-header app-button')]
             .find(b => b.textContent?.includes(t.newTerm)) as HTMLElement;
         expect(newTerm).toBeTruthy();
-        expect(ruler.label()).toBe(t.crumb);
-        expect(ruler.right().map(r => r.text)).toEqual([t.rulerTerms(2), t.rulerScopes(1)]);
+        const meta = el().querySelector('.page-meta')?.textContent ?? '';
+        expect(meta).toContain('RU');
+        expect(meta).toContain(t.rulerTerms(2));
+        expect(meta).toContain(t.rulerScopes(1));
 
         (newTerm.querySelector('button') as HTMLButtonElement).click();
         fixture.detectChanges();
         expect(page().editing()).toBe(true);
-
-        fixture.destroy();
-        expect(ruler.right()).toEqual([]);
     });
 });

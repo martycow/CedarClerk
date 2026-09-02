@@ -1,31 +1,28 @@
-import { Component, OnDestroy, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { DialogueScriptSummary, DialoguesService } from '../core/dialogues.service';
 import { ProjectsService } from '../core/projects.service';
-import { RailActionsService } from '../core/rail-actions.service';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 
-// The Yarn dialogue tool's list — the same sheet-per-thing shape as the board list, minus the
-// people dock: dialogues are owner-only, so there is nobody to list beside them.
+// The Yarn dialogue tool's list — the same card-per-thing shape as the board list, minus the
+// people column: dialogues are owner-only, so there is nobody to list beside them.
 @Component({
     selector: 'app-project-dialogues',
-    imports: [RouterLink, IconComponent, ModalComponent, WorktopComponent, ButtonComponent, InputComponent],
+    imports: [RouterLink, IconComponent, ModalComponent, PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent],
     templateUrl: 'project-dialogues.component.html',
     styleUrls: ['project-dialogues.component.css'],
 })
-export class ProjectDialoguesComponent implements OnDestroy {
+export class ProjectDialoguesComponent {
     private api = inject(DialoguesService);
     private projects = inject(ProjectsService);
     private route = inject(ActivatedRoute);
-    private ruler = inject(RulerService);
-    private rail = inject(RailActionsService);
     t = inject(LocaleService).t;
 
     projectId = signal('');
@@ -41,6 +38,9 @@ export class ProjectDialoguesComponent implements OnDestroy {
     formName = signal('');
     confirmDelete = signal<DialogueScriptSummary | null>(null);
 
+    /** The former rule readout: how many dialogues. */
+    headerMeta = computed<HeaderMeta[]>(() => [{ text: this.t().projects.dialogues.sub(this.scripts().length) }]);
+
     constructor() {
         this.route.paramMap.subscribe(params => {
             const id = params.get('id');
@@ -48,22 +48,6 @@ export class ProjectDialoguesComponent implements OnDestroy {
             this.projectId.set(id);
             void this.load();
         });
-
-        effect(() => {
-            const t = this.t().projects.dialogues;
-            this.ruler.publish({
-                label: this.projectName(),
-                left: [{ text: t.sub(this.scripts().length) }],
-            });
-            this.rail.publish({
-                primary: { label: t.newScript, icon: 'plus', run: () => this.openCreate() },
-            });
-        });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
-        this.rail.clear();
     }
 
     async load() {

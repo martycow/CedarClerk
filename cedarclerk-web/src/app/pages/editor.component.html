@@ -1332,14 +1332,82 @@
     </div>
     }
 
-    <!--The lit top of the bench holds one object — the sheet — and the shelf beside it describes
-    either what is selected on that sheet or the document itself, never both (ADR-159).-->
-    <div class="main">
-        <app-shelf-panel class="outline" [title]="t().editor.outline.title" [count]="blockCount()">
-            <app-document-outline [entries]="outline()" [active]="outlineActive()"
-                                  (documentPick)="selectDocument()" (pick)="goToBlock($event)" />
-        </app-shelf-panel>
+    <!--One document, three tabs (ADR-239 clause 9). The frame draws the top bar, the title, the
+    tabs and the footer; this page fills its slots. Write stays mounted behind the other tabs —
+    TipTap owns the sheet's DOM node, and unmounting it would orphan the editor.-->
+    <app-document-frame [title]="frameTitle()" [kicker]="frameKicker()" [statusTag]="statusTag()"
+                        [tab]="tab()" [tabs]="frameTabs()" [tabsLabel]="t().editor.tabsLabel"
+                        [saveWord]="syncWord()" [saveState]="frameSaveState()" [dateLabel]="dateLabel()"
+                        [footerText]="footerText()" [canUndo]="canUndo()" [canRedo]="canRedo()"
+                        [project]="frameProject()" [projects]="frameProjects()"
+                        (tabChange)="setTab($event)" (undo)="cmd(c => c.undo())" (redo)="cmd(c => c.redo())">
+        <span primary class="publish-split">
+            <app-button variant="pine" (clicked)="openExportModal()">
+                <app-icon name="paper-plane-tilt" size="sm"></app-icon>{{ t().editor.exportModal.publish }}
+            </app-button>
+            <app-popover align="right">
+                <button trigger type="button" class="btn publish-caret"
+                        [title]="t().editor.frame.publishMenu" [attr.aria-label]="t().editor.frame.publishMenu">
+                    <app-icon name="caret-down" size="xs"></app-icon>
+                </button>
+                <div panel class="block-menu">
+                    <button type="button" (click)="setTab('preview')"><app-icon name="eye" size="xs"></app-icon> {{ t().editor.frame.previewFirst }}</button>
+                    <button type="button" (click)="openExportModal()"><app-icon name="clock" size="xs"></app-icon> {{ t().editor.frame.schedule }}</button>
+                </div>
+            </app-popover>
+        </span>
 
+        <app-popover title-actions align="right">
+            <button trigger type="button" class="btn frame-more"
+                    [title]="t().editor.frame.moreActions" [attr.aria-label]="t().editor.frame.moreActions">
+                <app-icon name="dots-three" size="sm"></app-icon>
+            </button>
+            <div panel class="block-menu">
+                <button type="button" (click)="openRevisions()"><app-icon name="clock" size="xs"></app-icon> {{ t().editor.inspector.history }}</button>
+                <a class="block-menu-link" routerLink="/posts"><app-icon name="paper-plane-tilt" size="xs"></app-icon> {{ t().editor.frame.postsManager }}</a>
+            </div>
+        </app-popover>
+        <!--Details folds the inspector away (CONTRACT §D3). A toggle, so it says which way it is.-->
+        <button title-actions type="button" class="btn" [attr.aria-pressed]="inspectorOpen()"
+                (click)="inspectorOpen.update(v => !v)">
+            {{ inspectorOpen() ? t().editor.frame.hideDetails : t().editor.frame.details }}
+        </button>
+
+        <button footer-start type="button" class="btn" (click)="sharePreview()" [disabled]="previewLinkBusy()"
+                [title]="t().editor.preview.shareTitle">
+            <app-icon name="link" size="sm"></app-icon>{{ t().editor.preview.share }}
+        </button>
+        <span footer-end class="frame-next">
+            @if (tab() === 'write') {
+                <button type="button" class="btn primary" (click)="setTab('preview')">
+                    {{ t().editor.frame.continueToPreview }}<app-icon name="caret-right" size="xs"></app-icon>
+                </button>
+            } @else {
+                <!--A test send goes to the test channel only, and only when it is connected
+                (.claude/rules/telegram-bot.md); with no such channel there is no button.-->
+                @if (testChannel(); as channel) {
+                    <button type="button" class="btn" (click)="sendTest()" [disabled]="testSendBusy()">
+                        @if (testSendBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        @else { <app-brand-icon name="telegram" [size]="14"></app-brand-icon> }
+                        {{ t().editor.frame.sendTest(channel.username!) }}
+                    </button>
+                }
+                <button type="button" class="btn primary" (click)="openExportModal()">
+                    {{ t().editor.frame.continueToPublish }}<app-icon name="caret-right" size="xs"></app-icon>
+                </button>
+            }
+        </span>
+
+        <div body class="preview-slot" [class.is-hidden]="tab() !== 'preview'">
+            @if (tab() === 'preview' && previewFacts(); as facts) {
+                <app-editor-preview [facts]="facts" [channels]="channels()" [initialLang]="lang()"
+                                    [savedVersion]="savedVersion()" (details)="openExportModal()" />
+            }
+        </div>
+
+    <!--The sheet and the shelf beside it: the shelf describes either what is selected on the sheet
+    or the document itself, never both (ADR-159).-->
+    <div body class="main" [class.is-hidden]="tab() !== 'write'">
         <div class="mid">
             <!--The tool strip fits itself (ADR-150). Rows and captions are read off measured widths in
             measureToolbar(); nothing here is stored and nothing is a width breakpoint (ADR-147). The
@@ -1466,7 +1534,8 @@
             </app-worktop>
         </div>
 
-        <app-shelf-panel class="inspector" [title]="t().editor.inspector.title" [count]="inspectorScopeWord()">
+        <app-shelf-panel class="inspector" [class.is-hidden]="!inspectorOpen()"
+                         [title]="t().editor.inspector.title" [count]="inspectorScopeWord()">
             <!--The sheet's surface is restated on an element of this template: the shelf's own paper
             sheet carries another component's scope attribute, which the inspector's rules cannot see.-->
             <div class="insp-sheet" data-surface="paper">
@@ -1686,6 +1755,12 @@
                             [title]="t().editor.versions.historyTitle(lang().toUpperCase())">◷ {{ t().editor.inspector.history }}</button>
                 </div>
 
+                <!--The structure of the document (ADR-162), in the inspector now that the left
+                shelf is gone (ADR-239 clause 9, Editor.png). Same component, same keyboard model.-->
+                <p class="insp-group">{{ t().editor.outline.title }} <span class="insp-count">{{ blockCount() }}</span></p>
+                <app-document-outline [entries]="outline()" [active]="outlineActive()"
+                                      (documentPick)="selectDocument()" (pick)="goToBlock($event)" />
+
                 @if (currentId()) {
                 <!--Draft state (B25): private/public, live-or-not, and where it is live.-->
                 <p class="insp-group">{{ t().editor.inspector.destination }}</p>
@@ -1770,6 +1845,7 @@
             </div>
         </app-shelf-panel>
     </div>
+    </app-document-frame>
 
     @if (revisionsOpen()) {
     <app-modal [width]="620" (closed)="revisionsOpen.set(false)">

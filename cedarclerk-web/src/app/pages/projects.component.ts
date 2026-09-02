@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -14,16 +14,13 @@ import {
 import { Preset, PresetsService, parseProjectConfig } from '../core/presets.service';
 import { MembersService, SharedProject } from '../core/members.service';
 import { httpErrorMessage } from '../core/http-error.util';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { SpecRowComponent } from '../bench/worktop/spec-row.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 
 // T-302 — 'shared' is a fourth tile on the same strip rather than a screen of its own: a project
 // somebody shared is still a project, and the place a reader looks for "my projects" is this one.
@@ -31,38 +28,34 @@ import { WorktopComponent } from '../bench/worktop/worktop.component';
 // project.
 type Filter = 'all' | 'active' | 'archived' | 'shared';
 
-// T-226 (ADR-168) — the project index: where a project is found, made and compared. The hub's left
-// dock absorbed the *switch* between projects, not this list, so nothing here moved onto it and
-// nothing from it moved here: the dock takes no search and no create, and this screen draws no
-// current-project mark.
-//
-// A table you scan, so it keeps data-density="compact" (ADR-164 rule 6) — the hub, a screen you
-// read, carries none.
+// T-226 (ADR-168) — the project index: where a project is found, made and compared. Hub.png
+// (ADR-239): a header with the two counts, one strip and a search, then a card grid that fills the
+// width, with the invitation to start a project as its last cell. The "This week / Needs attention"
+// strip the artboard draws needs an aggregate the API does not have (T-366).
 @Component({
     selector: 'app-projects',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
-        WorktopComponent, ShelfPanelComponent, IndexTabsComponent, SpecRowComponent,
-        ButtonComponent, InputComponent, StampBadgeComponent,
+        PageHeaderComponent, EmptyStateComponent, IndexTabsComponent,
+        ButtonComponent, InputComponent,
     ],
     templateUrl: 'projects.component.html',
     styleUrls: ['projects.component.css'],
 })
-export class ProjectsComponent implements OnDestroy {
+export class ProjectsComponent {
     private api = inject(ProjectsService);
     private presetsApi = inject(PresetsService);
     private membersApi = inject(MembersService);
     private router = inject(Router);
     private locale = inject(LocaleService);
-    private ruler = inject(RulerService);
     t = this.locale.t;
 
     readonly projectTypes = PROJECT_TYPES;
     readonly typeIcons = PROJECT_TYPE_ICONS;
     readonly initials = projectInitials;
 
-    // Archived projects are always fetched: the filter tiles carry counts, and a count you cannot
-    // show until the user clicks the tile is not a count.
+    // Archived projects are always fetched: the header counts them, and a count you cannot show
+    // until the user clicks the tile is not a count.
     projects = signal<ProjectSummary[]>([]);
     loading = signal(true);
     loadError = signal<string | null>(null);
@@ -84,23 +77,22 @@ export class ProjectsComponent implements OnDestroy {
     activeCount = computed(() => this.projects().filter(p => !p.archivedAt).length);
     archivedCount = computed(() => this.projects().filter(p => p.archivedAt).length);
 
-    /** Sums over the rows already fetched — nothing here is asked for separately (ADR-168 rule 5). */
-    totals = computed(() => {
-        const list = this.projects();
-        return {
-            documents: list.reduce((n, p) => n + p.documentCount, 0),
-            tasks: list.reduce((n, p) => n + p.openTaskCount, 0),
-            assets: list.reduce((n, p) => n + p.assetCount, 0),
-        };
+    /** The header's meta line: the two state counts, from the rows already fetched. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        const t = this.t().projects;
+        return [
+            { text: t.activeCount(this.activeCount()) },
+            { text: t.archivedCount(this.archivedCount()) },
+        ];
     });
 
     filterTabs = computed<IndexTabItem[]>(() => {
         const t = this.t().projects;
         return [
-            { id: 'all', label: t.filterAll, badge: this.projects().length },
-            { id: 'active', label: t.filterActive, badge: this.activeCount() },
-            { id: 'archived', label: t.filterArchived, badge: this.archivedCount() },
-            { id: 'shared', label: t.filterShared, badge: this.shared().length },
+            { id: 'all', label: t.filterAll },
+            { id: 'active', label: t.filterActive },
+            { id: 'archived', label: t.filterArchived },
+            { id: 'shared', label: t.filterShared },
         ];
     });
 
@@ -124,18 +116,6 @@ export class ProjectsComponent implements OnDestroy {
     constructor() {
         void this.load();
         void this.loadShared();
-
-        effect(() => {
-            const t = this.t().projects;
-            this.ruler.publish({
-                label: t.title,
-                left: [{ text: t.sub(this.projects().length, this.activeCount()) }],
-            });
-        });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
     }
 
     /** What the badge on a shared card says — the same three words the canvas already uses. */
@@ -232,5 +212,4 @@ export class ProjectsComponent implements OnDestroy {
             this.saving.set(false);
         }
     }
-
 }

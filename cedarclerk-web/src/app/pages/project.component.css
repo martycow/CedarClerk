@@ -1,5 +1,4 @@
-/* The shell owns the viewport: the hub fills what the body hands it, and the sheets scroll rather
-   than the page. */
+/* Main.png (ADR-239): the shell owns the viewport; the document card scrolls, the page does not. */
 :host {
     display: flex;
     flex: 1;
@@ -7,335 +6,217 @@
     min-height: 0;
 }
 
-.hub {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-    box-sizing: border-box;
-    padding: var(--space-3);
-}
+.spacer { flex: 1; }
 
 .hint {
+    margin: 0;
     color: var(--t2);
     font-size: var(--fs-ui);
 }
 
-/* Text left straight on the plaster takes the wall's one ink (ADR-141 clause 4). */
-.hub > .hint,
-.hub > .load-error {
-    color: var(--wood-ink);
-}
-
-.spacer {
-    flex: 1;
-}
-
-.dot {
-    color: var(--t2);
-}
+/* Text left straight on the wall takes the wall's ink (ADR-141). */
+.page > .hint { color: var(--wood-ink-soft); }
 
 .load-error {
+    margin: 0 0 var(--space-3);
     color: var(--danger);
     font-size: var(--fs-ui);
 }
 
-/* ---------- The three columns ---------- */
-/* The hub's own columns, narrower than the generic docks (ADR-162 rule 8's precedent), and no
-   width breakpoint of its own (ADR-147): a narrow layout for this screen is commissioned from
-   Claude Design, not guessed at here. */
+.named-elsewhere {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ---------- The two columns ---------- */
 .hub-grid {
     display: grid;
     flex: 1;
-    grid-template-columns: var(--bench-dock-w-hub) minmax(0, 1fr) var(--bench-dock-w-hub-wide);
-    gap: var(--space-3);
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-5);
     align-items: stretch;
     min-height: 0;
 }
 
-.hub-mid {
+.hub-main {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-5);
     min-width: 0;
     min-height: 0;
 }
 
-.hub-mid .docs {
-    flex: 1;
+.hub-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-width: 0;
     min-height: 0;
+    overflow: auto;
 }
 
-/* ---------- Left shelf: the projects switcher ---------- */
-.proj-sheet {
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-}
-
-.proj-list {
-    display: flex;
-    flex-direction: column;
-    gap: calc(var(--space-1) / 2);
-}
-
-.margin-note {
-    margin: auto 0 calc(var(--space-3) / 2) var(--space-1);
-}
-
-.proj {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-    min-height: var(--hit-target);
-    box-sizing: border-box;
-    padding: var(--space-2);
-    border-radius: var(--radius-paper);
-    color: var(--text);
-    text-decoration: none;
-}
-
-.proj:hover {
-    background: var(--hover);
-}
-
-/* The open project is marked by a pine edge rather than by a fill, so the row it marks keeps the
-   sheet it is printed on. The edge stands down while the row is focused: ADR-140 spends the app's
-   one box-shadow on the focus halo, and a second on the same element replaces it. */
-.proj.on { background: var(--asoft); }
-.proj.on:not(:focus-visible) { box-shadow: inset 2px 0 0 var(--accent); }
-
-.thumb {
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    width: var(--space-6);
-    height: var(--space-6);
-    border: 1px solid var(--wood-edge);
-    border-radius: var(--radius-paper);
-    background: linear-gradient(160deg, var(--wood-hi), var(--wood-lo));
-    color: var(--rail-ink);
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    text-shadow: 0 1px 1px var(--wood-edge);
-}
-
-.proj-text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.proj-n {
-    font-size: var(--fs-body);
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.proj-m {
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    color: var(--t2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ---------- The lit top ---------- */
-/* A tall lit cover with the name at its foot: the body fills the top and sinks its stack. */
-.hero {
-    flex: none;
-    height: var(--bench-cover-h);
-}
-
-.hero-body {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    padding: var(--space-4);
-}
-
-.hero-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: var(--fs-34);
-    font-weight: 700;
-    letter-spacing: -.01em;
-}
-
-.hero-sub {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: 0;
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    color: var(--t2);
-}
-
-.hero-desc {
-    margin: 0;
-    max-width: 60ch;
-    font-size: var(--fs-body);
-    color: var(--t2);
-}
-
-.hero-stamps,
-.hero-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-}
-
-.hero-actions {
-    margin-top: var(--space-2);
-}
-
-/* ---------- Continue ---------- */
-/* A flat pine-edged strip, not a paper card: no tilt, no drop shadow. */
+/* ---------- Continue writing ---------- */
 .resume {
     display: flex;
     flex: none;
     align-items: center;
-    gap: var(--space-3);
+    gap: 18px;
     min-width: 0;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--abord);
-    border-radius: var(--radius-paper);
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    box-shadow: var(--shadow-paper-sm);
+    padding: var(--space-4) 18px;
 }
 
-.resume-icon {
-    color: var(--accent);
+.resume-thumb {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 64px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--pine), var(--pine-deep));
+    color: var(--text-on-pine);
 }
 
 .resume-text {
     display: flex;
+    flex: 1;
     flex-direction: column;
+    gap: var(--space-1);
     min-width: 0;
-}
-
-.resume-l {
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--t2);
 }
 
 .resume-t {
     font-family: var(--font-display);
-    font-size: var(--fs-18);
+    font-size: var(--fs-20);
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* ---------- The wall of plates ---------- */
-/* auto-fit rather than the kit's fixed three columns: four plates ship, and a 3x2 grid would hold
-   a hole open for two doors the app has nothing behind (ADR-160). */
-.tiles {
-    display: grid;
-    flex: none;
-    /* No token owns a plate's minimum, and a px default would be one. A ch keeps the track
-       proportional to the name and the number printed on it. */
-    grid-template-columns: repeat(auto-fit, minmax(16ch, 1fr));
-    gap: var(--space-3);
+.resume-m {
+    font-size: var(--fs-13);
+    color: var(--t3);
+}
+
+.sep {
+    margin: 0 var(--space-1);
+    color: var(--border);
 }
 
 /* ---------- Documents ---------- */
-.doc-list {
+.docs {
     display: flex;
+    flex: 1;
     flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
+
+.docs-head {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+}
+
+.docs-title {
+    flex: 1;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-18);
+    font-weight: 700;
+}
+
+.docs-count {
+    margin-left: var(--space-1);
+    font-size: var(--fs-15);
+    font-weight: 600;
+    color: var(--t3);
+}
+
+.docs-search { width: 220px; }
 
 .doc-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    width: 100%;
-    box-sizing: border-box;
-    padding: var(--space-1) var(--space-2);
-    border: none;
-    border-bottom: 1px solid var(--rule-ink-soft);
-    background: none;
-    color: var(--text);
-    font-family: inherit;
-    text-align: left;
+    grid-template-columns: auto minmax(0, 1fr) 140px 200px;
+    color: inherit;
     text-decoration: none;
-    cursor: pointer;
 }
 
-.doc-row:hover {
-    background: var(--hover);
-}
-
-/* A row that opens a document is an anchor (ADR-163), and the global coarse-pointer rule reaches
-   buttons and roles rather than bare links — so the floor the row used to be given it now states,
-   still spending whatever its nearest surface declares. */
-@media (pointer: coarse) {
-    [data-surface] .doc-row {
-        min-height: var(--hit-surface);
-    }
-}
-
-.doc-icon {
-    flex: none;
-    color: var(--t2);
-}
+.doc-icon { color: var(--t3); }
 
 .doc-title {
-    flex: 1;
     min-width: 0;
-    font-size: var(--fs-ui);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.doc-type {
-    flex: none;
-    font-size: var(--fs-ui);
-    color: var(--t2);
+.doc-end {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
 }
 
-.doc-meta {
+/* ---------- The right column ---------- */
+.side-card {
+    display: flex;
     flex: none;
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    color: var(--t2);
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) 18px;
 }
 
-/* ---------- Right shelf: today ---------- */
-.grp {
-    margin: var(--space-3) 0 var(--space-1);
+.side-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.side-note {
+    font-size: var(--fs-12);
+    color: var(--t3);
+}
+
+.side-title {
     font-family: var(--font-display);
-    font-size: var(--fs-ui);
+    font-size: var(--fs-17);
     font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
+    line-height: 1.2;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.side-title:hover { text-decoration: underline; }
+
+.side-line {
+    font-size: var(--fs-13);
     color: var(--t2);
 }
 
-.grp:first-child {
-    margin-top: 0;
+.side-line.is-warn { color: var(--warn); }
+
+.side-link {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
 }
+
+.side-link:hover { text-decoration: underline; }
 
 .bar {
     display: block;
-    height: calc(var(--space-3) / 2);
-    margin: calc(var(--space-1) / 2) 0 var(--space-2);
-    border: 1px solid var(--paper-edge);
+    height: 6px;
     border-radius: var(--radius-stamp);
     background: var(--surface);
     overflow: hidden;
@@ -344,31 +225,61 @@
 .bar i {
     display: block;
     height: 100%;
-    background: var(--grad-pine);
+    background: var(--pine);
     transition: width var(--motion-base) var(--ease);
 }
 
-.up-next {
-    margin-bottom: var(--space-3);
+.next-task {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--hit-target);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
 }
 
-/* A spec row is chrome standing on the sheet, so what is projected into one takes chrome's type
-   rather than the paper the sheet would otherwise hand it. */
-[data-surface="chrome"] .spec-value {
-    font-family: var(--font-mono);
-    font-size: var(--text-chrome-sm);
+.next-task:hover { border-color: var(--abord); }
+
+.next-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--warn);
+}
+
+.next-task.is-overdue .next-dot { background: var(--danger); }
+
+.next-title {
+    flex: 1;
     min-width: 0;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-[data-surface="chrome"] .spec-value.link {
-    color: var(--accent);
+.kv-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: var(--text);
+    text-decoration: none;
 }
 
-[data-surface="chrome"] .spec-value.none {
-    color: var(--t2);
+.kv-link:hover { color: var(--accent); }
+
+.kv-none { color: var(--t3); }
+
+.kv-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
 }
 
 /* ---------- Dialogs ---------- */
@@ -533,17 +444,6 @@
     margin-top: var(--space-3);
 }
 
-.field-label.checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    text-transform: none;
-    letter-spacing: normal;
-    font-size: var(--fs-body);
-    color: var(--text);
-    cursor: pointer;
-}
-
 .text-input {
     width: 100%;
 }
@@ -586,16 +486,9 @@
     gap: var(--space-1);
 }
 
-.cover-file {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--fs-ui);
-    color: var(--text);
-}
-
 .cover-actions { flex-wrap: wrap; }
+
+.team-field { margin-top: var(--space-3); }
 
 .danger-row {
     display: flex;
@@ -606,10 +499,4 @@
 
 .danger-hint {
     margin-top: var(--space-2);
-}
-
-@media (max-width: 700px) {
-    .doc-type-grid {
-        grid-template-columns: 1fr;
-    }
 }

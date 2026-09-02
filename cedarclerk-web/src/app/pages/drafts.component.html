@@ -1,45 +1,23 @@
 <!--data-density="compact" (ADR-071 principle 3, restated by ADR-164 clause 6): this is a table
 screen, so it opts into the tighter token set. The attribute belongs here, on the page root, and
-never on a component — several of the components below also appear on comfortable screens.
-
-The state chips are the index strip; the list is one panel; the folder filter, which was buried in
-a popover, is the shelf beside it.-->
-<div class="drafts-page" data-density="compact">
-    @if (loading()) {
-    <p class="hint">{{ t().common.loading }}</p>
-    } @else {
-    <!--Commands that change the data rather than what the panel shows, so they stay on the page
-    (ADR-164). Both imports live here (B22) — the editor topbar keeps only Export/theme/profile.-->
-    <div class="drafts-toolbar">
-        <span class="spacer"></span>
-        <!--Idea #3: the tag set itself is managed here - renaming or deleting a tag rewrites
-        every draft that carries it, and the blog follows automatically. It stands with the other
-        commands rather than alone at the far edge, which is what read as a stray control.-->
-        <app-tag-picker [tags]="[]" [manage]="true"></app-tag-picker>
-        <app-button variant="paper" size="sm" [disabled]="importingCedar()" [title]="t().drafts.importCedar"
-                    (clicked)="cedarInput.click()">
-            <app-icon name="download-simple" size="sm" [class.spin]="importingCedar()"></app-icon>
-            {{ t().drafts.importCedar }}
-        </app-button>
-        <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
-        <app-button variant="paper" size="sm" [disabled]="importingMarkdown()" [title]="t().drafts.importZipTitle"
-                    (clicked)="markdownInput.click()">
-            <app-icon name="archive" size="sm" [class.spin]="importingMarkdown()"></app-icon>
-            {{ t().drafts.importZip }}
-        </app-button>
-        <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
+never on a component — several of the components below also appear on comfortable screens.-->
+<div class="page drafts-page" data-density="compact">
+    <app-page-header [title]="t().drafts.title" [meta]="headerMeta()">
         <!--Wave 2 item 18 — a secondary door beside New document: start from a starter template
         or one of your own IsTemplate documents.-->
-        <app-button variant="paper" size="sm" (clicked)="openTemplatePicker()">
+        <app-button secondary variant="paper" (clicked)="openTemplatePicker()">
             <app-icon name="layout" size="sm"></app-icon>
             {{ t().drafts.templates.newFromTemplate }}
         </app-button>
-        <app-button variant="pine" size="sm" (clicked)="openNewDraftDialog()">
+        <app-button primary variant="pine" (clicked)="openNewDraftDialog()">
             <app-icon name="plus" weight="bold" size="sm"></app-icon>
             {{ t().drafts.newDraft }}
         </app-button>
-    </div>
+    </app-page-header>
 
+    @if (loading()) {
+    <p class="hint">{{ t().common.loading }}</p>
+    } @else {
     @if (importCedarError()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ importCedarError() }}</p> }
     @if (importMarkdownError()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ importMarkdownError() }}</p> }
     @if (importMarkdownWarning()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ importMarkdownWarning() }}</p> }
@@ -66,31 +44,68 @@ a popover, is the shelf beside it.-->
     </app-modal>
     }
 
-    <!--ADR-128: the tree shows structure — a status/folder filter that hides a parent would
-    take its visible subtree with it, so both filters step aside in tree view.-->
+    <!--The view toggle switches what the card shows; the commands beside it change the data —
+    the tag set (renaming or deleting a tag rewrites every draft carrying it) and both imports
+    (B22, the editor topbar keeps only Export/theme/profile).-->
     <div class="drafts-view-row">
-        @if (view() !== 'tree') {
-        <app-index-tabs [items]="stateTabs()" [value]="filter()" [label]="t().drafts.stateStrip"
-                        (selected)="filter.set($any($event))" />
-        }
-        <span class="view-spacer"></span>
         <app-index-tabs class="view-tabs" [items]="viewTabs()" [value]="view()"
                         [label]="t().drafts.viewStrip" (selected)="view.set($any($event))" />
+        <span class="view-spacer"></span>
+        <app-tag-picker [tags]="[]" [manage]="true"></app-tag-picker>
+        <app-button variant="paper" size="sm" [disabled]="importingCedar()" [title]="t().drafts.importCedar"
+                    (clicked)="cedarInput.click()">
+            <app-icon name="download-simple" size="sm" [class.spin]="importingCedar()"></app-icon>
+            {{ t().drafts.importCedar }}
+        </app-button>
+        <input #cedarInput type="file" accept=".cedar" hidden (change)="onImportCedarChosen($event)">
+        <app-button variant="paper" size="sm" [disabled]="importingMarkdown()" [title]="t().drafts.importZipTitle"
+                    (clicked)="markdownInput.click()">
+            <app-icon name="archive" size="sm" [class.spin]="importingMarkdown()"></app-icon>
+            {{ t().drafts.importZip }}
+        </app-button>
+        <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
     </div>
 
     <div class="drafts-grid" [class.no-shelf]="view() === 'tree'">
-        <app-shelf-panel class="list" [title]="t().drafts.title"
-                         [count]="t().drafts.postsCount(filteredDrafts().length)" flush>
-            <app-input actions class="search" [dense]="true" type="search" [value]="search"
-                       [placeholder]="t().drafts.search" (valueChange)="search = $any($event) ?? ''" />
+        <section class="card doc-list" role="region" [attr.aria-label]="t().drafts.title">
+            <!--ADR-128: the tree shows structure — a status/folder filter that hides a parent would
+            take its visible subtree with it, so both filters step aside in tree view.-->
+            <div class="doc-head">
+                <span class="doc-name">
+                    <span class="label">{{ t().drafts.title }}</span>
+                    <span class="doc-count">{{ filteredDrafts().length }}</span>
+                </span>
+                @if (view() !== 'tree') {
+                <app-index-tabs [items]="stateTabs()" [value]="filter()" [label]="t().drafts.stateStrip"
+                                (selected)="filter.set($any($event))" />
+                }
+                <span class="view-spacer"></span>
+                <app-input class="search" [dense]="true" type="search" [value]="search"
+                           [placeholder]="t().drafts.search" (valueChange)="search = $any($event) ?? ''" />
+            </div>
+
+            <!--One empty state for the three views: a library with nothing in it asks for the first
+            document, a filter that matched nothing offers the way back to everything.-->
+            <ng-template #emptyList>
+                @if (drafts().length === 0) {
+                <app-empty-state icon="file-text" [title]="t().drafts.empty.firstTitle" [text]="t().drafts.empty.firstText">
+                    <app-button variant="pine" (clicked)="openNewDraftDialog()">{{ t().drafts.newDraft }}</app-button>
+                </app-empty-state>
+                } @else {
+                <app-empty-state icon="magnifying-glass" [title]="t().drafts.empty.noMatchTitle" [text]="t().drafts.empty.noMatchText">
+                    <app-button variant="paper" (clicked)="showAll()">{{ t().drafts.empty.showAll }}</app-button>
+                </app-empty-state>
+                }
+            </ng-template>
+
             @if (view() === 'table') {
-            <div class="drafts-table">
+            <div class="row-list drafts-table">
                 <!--N1: headers sort, and the 5px handle on each fixed column resizes it. Title takes
                 whatever is left, so a resize redistributes rather than widening the table.-->
                 <!--The resize handles only render at full width: in compact mode the column indices no
                 longer line up with colWidths, and a 5px pointer target is not something a finger hits
                 anyway.-->
-                <div class="drafts-row drafts-row-head" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
+                <div class="row drafts-row drafts-row-head label" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
                     <button class="col-head" (click)="sortBy('title')">{{ t().drafts.columns.title }} @if (sortMark('title'); as mark) {<app-icon [name]="mark" size="xs" />}</button>
                     <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} @if (sortMark('state'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span>}</button>
                     @if (!phone()) {
@@ -109,18 +124,18 @@ a popover, is the shelf beside it.-->
                     <button class="col-head col-reset" (click)="resetColWidths()" [title]="t().drafts.resetColumns" [attr.aria-label]="t().drafts.resetColumns"><app-icon name="arrows-out-simple" size="xs"></app-icon></button>
                 </div>
                 @for (d of filteredDrafts(); track d.id) {
-                <div class="drafts-row" [class.busy]="busyId() === d.id" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()" (click)="openDraft(d.id)">
+                <div class="row drafts-row" [class.busy]="busyId() === d.id" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()" (click)="openDraft(d.id)">
                     <div class="drafts-title-cell">
-                        <div class="drafts-title">
+                        <div class="t drafts-title">
                             @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
                             {{ d.title || t().drafts.untitled }}
                         </div>
                     </div>
-                    <div>
-                        <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
+                    <div class="state-cell">
+                        <span class="tag" [class.danger]="status(d).tone === 'danger'" [class.ok]="status(d).tone === 'ok'" [class.muted]="status(d).tone === 'default'">
                             {{ status(d).label }}
                         </span>
-                        @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
+                        @if (status(d).detail) { <span class="m status-detail" [title]="status(d).detail">{{ status(d).detail }}</span> }
                     </div>
                     @if (!phone()) {
                     <div class="lang-badges">
@@ -135,11 +150,11 @@ a popover, is the shelf beside it.-->
                     </div>
                     }
                     @if (!compact()) {
-                    <div class="tags-cell">
+                    <div class="tags-cell m">
                         <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
                         @for (tag of d.tags.split(',').slice(0, 3); track tag) { @if (tag) { <span class="tag-chip-ro">#{{ tag }}</span> } }
                     </div>
-                    <div class="activity-cell">
+                    <div class="activity-cell m">
                         @if (hasActivity(d)) {
                         <span class="activity-metric" [title]="t().drafts.activity.views">
                             <app-icon name="eye" size="xs"></app-icon>{{ d.viewCount }}
@@ -155,7 +170,7 @@ a popover, is the shelf beside it.-->
                     </div>
                     }
                     @if (!tight()) {
-                    <div class="right">{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</div>
+                    <div class="right m">{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</div>
                     }
                     <div class="row-actions">
                         <!--T-256 — the shelf's selector. It is a control in this cluster and never
@@ -186,13 +201,13 @@ a popover, is the shelf beside it.-->
                     </div>
                 </div>
                 } @empty {
-                <p class="hint pad">{{ t().common.nothingHere }}</p>
+                <ng-container *ngTemplateOutlet="emptyList"></ng-container>
                 }
             </div>
             } @else if (view() === 'tree') {
             <!--ADR-128 — the document tree. Structure, not a filtered list: the status tabs and the
             folder filter deliberately do not apply (search does, and keeps the ancestor path).-->
-            <div class="drafts-tree">
+            <div class="row-list drafts-tree">
                 @for (row of treeRows(); track row.d.id) {
                 <div class="tree-row" [class.busy]="busyId() === row.d.id"
                      [style.padding-left.px]="8 + row.depth * 22" (click)="openDraft(row.d.id)">
@@ -203,8 +218,8 @@ a popover, is the shelf beside it.-->
                     </button>
                     } @else { <span class="tree-caret-spacer"></span> }
                     @if (row.d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
-                    <span class="tree-title">{{ row.d.title || t().drafts.untitled }}</span>
-                    <span class="status-badge" [class.tone-danger]="status(row.d).tone === 'danger'" [class.tone-ok]="status(row.d).tone === 'ok'">
+                    <span class="t tree-title">{{ row.d.title || t().drafts.untitled }}</span>
+                    <span class="tag" [class.danger]="status(row.d).tone === 'danger'" [class.ok]="status(row.d).tone === 'ok'" [class.muted]="status(row.d).tone === 'default'">
                         {{ status(row.d).label }}
                     </span>
                     <span class="spacer"></span>
@@ -233,23 +248,22 @@ a popover, is the shelf beside it.-->
                     </span>
                 </div>
                 } @empty {
-                <p class="hint pad">{{ t().common.nothingHere }}</p>
+                <ng-container *ngTemplateOutlet="emptyList"></ng-container>
                 }
             </div>
             } @else {
-            <div class="drafts-grid-cards">
-                @for (d of filteredDrafts(); track d.id; let i = $index) {
-                <app-paper-card class="draft-card" deckled interactive [seed]="i + 1" [rotate]="i % 2 ? 0.6 : -0.6"
-                                [class.busy]="busyId() === d.id" (activated)="openDraft(d.id)">
+            <div class="row-list drafts-grid-cards" [class.is-empty]="!filteredDrafts().length">
+                @for (d of filteredDrafts(); track d.id) {
+                <app-paper-card class="draft-card" interactive [class.busy]="busyId() === d.id" (activated)="openDraft(d.id)">
                     <div class="draft-card-body">
-                    <div class="drafts-title">
+                    <div class="t drafts-title">
                         @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
                         {{ d.title || t().drafts.untitled }}
                     </div>
-                    <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
+                    <span class="tag" [class.danger]="status(d).tone === 'danger'" [class.ok]="status(d).tone === 'ok'" [class.muted]="status(d).tone === 'default'">
                         {{ status(d).label }}
                     </span>
-                    @if (status(d).detail) { <div class="status-detail">{{ status(d).detail }}</div> }
+                    @if (status(d).detail) { <div class="m status-detail">{{ status(d).detail }}</div> }
                     @if (d.folderId) {
                     <div class="folder-cell" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                         <app-folder-picker [folderId]="d.folderId" [compact]="true"
@@ -257,7 +271,7 @@ a popover, is the shelf beside it.-->
                     </div>
                     }
                     @if (hasActivity(d)) {
-                    <div class="activity-cell">
+                    <div class="activity-cell m">
                         <span class="activity-metric" [title]="t().drafts.activity.views">
                             <app-icon name="eye" size="xs"></app-icon>{{ d.viewCount }}
                             @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
@@ -294,30 +308,34 @@ a popover, is the shelf beside it.-->
                     </div>
                 </app-paper-card>
                 } @empty {
-                <p class="hint pad">{{ t().common.nothingHere }}</p>
+                <ng-container *ngTemplateOutlet="emptyList"></ng-container>
                 }
             </div>
             }
-        </app-shelf-panel>
+        </section>
 
         <!--T-256 — the third column is exclusive (ADR-167, ADR-238 clause 7): the picked
         document's facts, or the folder filter, never both. Tree view keeps neither: it shows
         structure, and both filters already stand aside there.-->
         @if (view() !== 'tree') {
         @if (selectedDraft(); as d) {
-        <app-shelf-panel class="inspector" [title]="t().drafts.inspector.title"
-                         [count]="t().drafts.inspector.scope">
-            <app-button actions variant="rail" size="sm" [title]="t().common.close" (clicked)="selectedId.set(null)">
-                <app-icon name="x" size="xs"></app-icon>
-            </app-button>
-
+        <section class="card aside inspector" role="region" [attr.aria-label]="t().drafts.inspector.title">
+            <div class="aside-head">
+                <span class="label">{{ t().drafts.inspector.title }}</span>
+                <span class="aside-count">{{ t().drafts.inspector.scope }}</span>
+                <span class="view-spacer"></span>
+                <app-button variant="rail" size="sm" [title]="t().common.close" (clicked)="selectedId.set(null)">
+                    <app-icon name="x" size="xs"></app-icon>
+                </app-button>
+            </div>
+            <div class="aside-body">
             <p class="insp-name">
                 @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
                 {{ d.title || t().drafts.untitled }}
             </p>
 
             <app-spec-row scope="selection" [label]="t().drafts.inspector.state">
-                <span class="status-badge" [class.tone-danger]="status(d).tone === 'danger'" [class.tone-ok]="status(d).tone === 'ok'">
+                <span class="tag" [class.danger]="status(d).tone === 'danger'" [class.ok]="status(d).tone === 'ok'" [class.muted]="status(d).tone === 'default'">
                     {{ status(d).label }}
                 </span>
                 @if (status(d).detail) {
@@ -374,13 +392,18 @@ a popover, is the shelf beside it.-->
                           [value]="d.updatedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
             <app-spec-row scope="selection" [label]="t().drafts.inspector.created"
                           [value]="d.createdAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
-        </app-shelf-panel>
+            </div>
+        </section>
         } @else {
         <!--FI3.3: filtering only. Creating, renaming and deleting a folder live in the shared
         picker on every row, so it is no longer something only this page can do — and the same
         markup isn't maintained in two places.-->
-        <app-shelf-panel class="folders" [title]="t().drafts.folders.title" [count]="folders().length">
-            <nav class="folder-list" [attr.aria-label]="t().drafts.folders.filter">
+        <section class="card aside folders" role="region" [attr.aria-label]="t().drafts.folders.title">
+            <div class="aside-head">
+                <span class="label">{{ t().drafts.folders.title }}</span>
+                <span class="aside-count">{{ folders().length }}</span>
+            </div>
+            <nav class="aside-body folder-list" [attr.aria-label]="t().drafts.folders.filter">
                 <button type="button" class="folder-row" [class.is-on]="selectedFolder() === 'all'"
                         (click)="selectedFolder.set('all')">
                     <span class="folder-name">{{ t().drafts.folders.all }}</span>
@@ -399,7 +422,7 @@ a popover, is the shelf beside it.-->
                 </button>
                 }
             </nav>
-        </app-shelf-panel>
+        </section>
         }
         }
     </div>

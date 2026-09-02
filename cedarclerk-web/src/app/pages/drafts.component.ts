@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription, TimeoutError } from 'rxjs';
@@ -28,8 +29,9 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
 export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
@@ -49,12 +51,12 @@ const COL_STORAGE_KEY = 'cedar-drafts-cols';
 // gaps and the padding already need 1156px, and the row's stated min-width said 1020px. The result
 // was a table with no titles in it and two column headers drawn on top of each other.
 const TITLE_MIN_WIDTH = 200;
-// These two mirror the compact density tokens the row is laid out with (--dens-gap = --space-2 = 8,
-// --dens-control-x = 10 on each side). They are duplicated here because rowMinWidth() has to add
-// them up in TypeScript, and the 0.9.19 bug was exactly this pair being written down once and then
-// left to drift — so if the density tokens move, these move with them.
-const ROW_GAP = 8;
-const ROW_PADDING = 20;
+// These two mirror the global .row (gap 14px, padding 0 --space-4 = 16 on each side). They are
+// duplicated here because rowMinWidth() has to add them up in TypeScript, and the 0.9.19 bug was
+// exactly this pair being written down once and then left to drift — so if .row moves, these move
+// with it.
+const ROW_GAP = 14;
+const ROW_PADDING = 32;
 // Five controls at the paper box plus the gaps between them (describe, evergreen, template,
 // archive, delete). It was 80 — narrower than the buttons it holds — so the group overflowed left
 // and printed over the UPDATED column beside it.
@@ -136,9 +138,10 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
 @Component({
     selector: 'app-drafts',
     imports: [
-        IconComponent, ZonedDatePipe, FormsModule, ModalComponent, PopoverComponent,
-        FolderPickerComponent, TagPickerComponent, SeriesPickerComponent, IndexTabsComponent, ShelfPanelComponent,
+        IconComponent, ZonedDatePipe, FormsModule, NgTemplateOutlet, ModalComponent, PopoverComponent,
+        FolderPickerComponent, TagPickerComponent, SeriesPickerComponent, IndexTabsComponent,
         SpecRowComponent, InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
+        PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -246,6 +249,25 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
             { id: 'grid', label: labels.viewGrid },
             { id: 'tree', label: labels.tree.view },
         ];
+    }
+
+    /** The header's meta line: what the library holds, in the states a writer scans it for. */
+    headerMeta(): HeaderMeta[] {
+        const t = this.t().drafts;
+        const attention = this.filterCount('attention');
+        return [
+            { text: t.postsCount(this.drafts().length) },
+            { text: t.meta.published(this.filterCount('published')) },
+            ...(this.filterCount('scheduled') ? [{ text: t.meta.scheduled(this.filterCount('scheduled')) }] : []),
+            ...(attention ? [{ text: t.meta.attention(attention), tag: true, tone: 'warn' as const }] : []),
+        ];
+    }
+
+    /** The empty state's way back: every filter off, so the list shows the whole library again. */
+    showAll() {
+        this.filter.set('all');
+        this.selectedFolder.set('all');
+        this.search = '';
     }
 
     /** The shelf's "No folder" tally. The server counts folders, not the absence of one. */

@@ -18,8 +18,9 @@ import { BrandIconComponent } from '../shared/brand-icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LanguageMenuComponent, LanguageMenuItem } from '../shared/language-menu.component';
@@ -34,8 +35,8 @@ export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
     imports: [
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent,
-        ShelfPanelComponent, SpecRowComponent, StampBadgeComponent, PlanLockComponent, LocationInputComponent, HintDotComponent,
-        LanguageMenuComponent,
+        SpecRowComponent, StampBadgeComponent, PlanLockComponent, LocationInputComponent, HintDotComponent,
+        LanguageMenuComponent, PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
@@ -109,6 +110,28 @@ export class SettingsComponent implements OnInit {
         { id: 'integrations', label: this.t().settings.tabs.integrations },
         { id: 'billing', label: this.t().settings.tabs.billing },
     ]);
+
+    // The header's meta line: only what the page has already fetched, never a 0 standing in for
+    // "not loaded yet" (ADR-239 clause 6).
+    headerMeta = computed<HeaderMeta[]>(() => {
+        const t = this.t().settings;
+        const meta: HeaderMeta[] = [];
+        const tier = this.auth.planTier();
+        if (tier) {
+            const word = tier === 'ProPlus' || tier === 'Forever' ? t.subscription.planProPlus
+                : tier === 'Pro' ? t.subscription.planPro : tier;
+            meta.push({ text: `${word} ${t.subscription.planSuffix}`, tag: true, tone: tier === 'Free' ? 'muted' : 'ok' });
+        }
+        const handle = this.auth.telegramUsername();
+        if (this.auth.telegramLinked() && handle) meta.push({ text: `@${handle}`, title: t.integrations.telegramAccount });
+        if (this.channels().length) meta.push({ text: t.meta.channels(this.channels().length) });
+        const networks = [this.blueskyAccount(), this.xAccount(), this.discordAccount()].filter(Boolean).length;
+        if (networks) meta.push({ text: t.meta.networks(networks) });
+        const credits = this.credits();
+        if (credits) meta.push({ text: t.meta.credits(credits.balance), title: t.credits.balanceLabel });
+        if (this.profileSaved()) meta.push({ text: t.saved, tag: true, tone: 'ok' });
+        return meta;
+    });
 
     billing = signal<BillingStatus | null>(null);
     billingBusy = signal(false);

@@ -1,22 +1,21 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
-import { RulerService } from '../core/ruler.service';
 import { Sprint, SprintsService, sprintProgress } from '../core/sprints.service';
 import { GameTask, TasksService, isOverdue } from '../core/tasks.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
 import { TaskTagComponent } from '../bench/display/task-tag.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 
 /** A sprint plus the tasks planned into it — what one card on this screen draws. */
 interface SprintGroup {
@@ -38,12 +37,14 @@ const STATUS_TONES: Record<GameTask['status'], StampTone> = {
     backlog: 'ink',
 };
 
-// T-124 (ADR-106/111) — the development planner, ported onto the bench by T-226 (ADR-168).
+// T-124 (ADR-106/111) — the development planner, ported onto the bench by T-226 (ADR-168) and
+// onto the paper-first shell by ADR-239: a page header, the stretches in a scrolling column, the
+// summary as a plain card beside them.
 //
 // Stacked cards rather than a timeline: the question this screen answers is "what is in this
 // stretch and what is left of it", which is a list per sprint, not a position on an axis. Each
-// stretch is a paper card lying on the worktop, and a task on it is the same luggage tag the hub
-// and the board hang — one object, one drawing of it.
+// stretch is a paper card, and a task on it is the same luggage tag the hub and the board hang —
+// one object, one drawing of it.
 //
 // Order is current → planned → No sprint → finished, and finished sprints collapse. Nothing is
 // hidden by collapsing: an unfinished task in a sprint whose days ran out still appears, because
@@ -52,19 +53,18 @@ const STATUS_TONES: Record<GameTask['status'], StampTone> = {
     selector: 'app-project-planner',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
-        WorktopComponent, ShelfPanelComponent, SpecRowComponent, PaperCardComponent,
+        PageHeaderComponent, EmptyStateComponent, SpecRowComponent, PaperCardComponent,
         StampBadgeComponent, TaskTagComponent, ButtonComponent,
     ],
     templateUrl: 'project-planner.component.html',
     styleUrls: ['project-planner.component.css'],
 })
-export class ProjectPlannerComponent implements OnDestroy {
+export class ProjectPlannerComponent {
     private api = inject(SprintsService);
     private tasksApi = inject(TasksService);
     private projects = inject(ProjectsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
-    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     readonly overdue = isOverdue;
@@ -101,6 +101,12 @@ export class ProjectPlannerComponent implements OnDestroy {
     finishedCount = computed(() => this.sprints().filter(s => s.state === 'finished').length);
     unplannedCount = computed(() => this.tasks().filter(t => !t.sprintId && t.status !== 'done').length);
 
+    /** The former rule readout: sprints and open tasks. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        if (!this.project()) return [];
+        return [{ text: this.t().projects.planner.sub(this.sprints().length, this.openCount()) }];
+    });
+
     /**
      * The screen, in order. "No sprint" sits between what is planned and what has finished: it is
      * the pile work comes out of, so it belongs next to the future, not after the past.
@@ -136,20 +142,6 @@ export class ProjectPlannerComponent implements OnDestroy {
             this.projectId.set(id);
             void this.load();
         });
-
-        effect(() => {
-            const project = this.project();
-            if (!project) return;
-            const t = this.t().projects;
-            this.ruler.publish({
-                label: project.name,
-                left: [{ text: t.planner.sub(this.sprints().length, this.openCount()) }],
-            });
-        });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
     }
 
     async load() {

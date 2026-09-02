@@ -2,41 +2,42 @@
    spacing and radius comes from a token. Literals appear only where a value is structural. */
 
 .ic {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: var(--space-6) var(--space-5) 120px;
-    color: var(--text);
+    gap: var(--space-4);
     font-size: var(--fs-body);
 }
 
-.ic-top {
+.ic-filter { min-width: 260px; }
+
+.ic-tools {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--space-4);
+    align-items: center;
+    gap: var(--space-3);
     flex-wrap: wrap;
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--border);
+    flex: none;
 }
 
-.ic-controls {
-    display: flex;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-    align-items: flex-end;
+/* Every ink below the header is paper's, so each section is a card. */
+.ic-card {
+    flex: none;
+    padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
-.ic-filter { min-width: 220px; }
+.ic-inventory {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 320px;
+}
 
-h1 {
-    font-size: var(--fs-27);
-    margin: 0 0 var(--space-1);
-    font-weight: 600;
+.ic-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
 }
 
 h2 {
     font-size: var(--fs-title);
-    margin: var(--space-6) 0 var(--space-2);
+    margin: 0 0 var(--space-2);
     font-weight: 600;
 }
 
@@ -47,6 +48,11 @@ h2 {
     margin: 0 0 var(--space-3);
     max-width: 70ch;
     line-height: 1.5;
+}
+
+.ic-tools .ic-sub {
+    margin: 0;
+    color: var(--wood-ink-soft);
 }
 
 .ic-empty {
@@ -60,32 +66,8 @@ code {
     color: var(--t2);
 }
 
-.ic-totals {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    margin: var(--space-4) 0;
-}
-
-.ic-totals div {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--surface);
-    min-width: 110px;
-}
-
-.ic-totals strong {
-    font-size: var(--fs-22);
-    font-weight: 600;
-}
-
-.ic-totals span {
-    color: var(--t2);
-    font-size: var(--fs-caption);
+.ic-tools code {
+    color: inherit;
 }
 
 .ic-list {
@@ -167,7 +149,7 @@ code {
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    background: var(--surface);
+    background: var(--sheet);
 }
 
 .ic-table td {
@@ -189,22 +171,4 @@ code {
 .ic-files {
     color: var(--t2);
     font-size: var(--fs-caption);
-}
-
-@media (max-width: 720px) {
-    .ic {
-        padding: var(--space-4) var(--space-3) 80px;
-    }
-
-    /* A wide inventory table on a phone scrolls in place rather than reflowing — the columns are
-       the point of the table (same call as /admin's log tables in T-081). */
-    .ic-table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-
-    .ic-files {
-        display: none;
-    }
 }

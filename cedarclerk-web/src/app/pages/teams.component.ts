@@ -1,18 +1,18 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { INVITABLE_ROLES, InvitableRole } from '../core/members.service';
 import { JoinedTeam, TEAM_MEMBER_STATUSES, Team, TeamMember, TeamMemberStatus, TeamsService } from '../core/teams.service';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
-import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
+
+type StateTone = 'ok' | 'muted' | 'warn' | 'danger';
 
 // T-358 — teams. The list of teams on a shelf, the selected team's people on the sheet, and an
 // inspector shelf that says what the selection amounts to: the same three-part shape the Posts
@@ -25,15 +25,14 @@ import { HintDotComponent } from '../shared/hint-dot.component';
 @Component({
     selector: 'app-teams',
     imports: [
-        FormsModule, IconComponent, ButtonComponent, InputComponent, WorktopComponent,
-        ShelfPanelComponent, SpecRowComponent, StampBadgeComponent, HintDotComponent,
+        FormsModule, IconComponent, ButtonComponent, InputComponent, SpecRowComponent, HintDotComponent,
+        PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'teams.component.html',
     styleUrls: ['teams.component.css'],
 })
-export class TeamsComponent implements OnDestroy {
+export class TeamsComponent {
     private api = inject(TeamsService);
-    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     readonly roles = INVITABLE_ROLES;
@@ -62,15 +61,11 @@ export class TeamsComponent implements OnDestroy {
 
     selected = computed(() => this.teams().find(t => t.id === this.selectedId()) ?? null);
 
+    headerMeta = computed<HeaderMeta[]>(() => [{ text: this.t().teams.count(this.teams().length) }]);
+
     constructor() {
         void this.load();
-        effect(() => this.ruler.publish({
-            label: this.t().teams.crumb,
-            right: [{ text: this.t().teams.count(this.teams().length) }],
-        }));
     }
-
-    ngOnDestroy() { this.ruler.clear(); }
 
     async load() {
         this.loading.set(true);
@@ -264,9 +259,9 @@ export class TeamsComponent implements OnDestroy {
         return member.pending ? this.t().teams.pending : this.statusWord(member.status);
     }
 
-    stateTone(member: TeamMember): StampTone {
-        if (member.pending) return 'ink';
-        return member.status === 'active' ? 'pine' : member.status === 'restricted' ? 'brass' : 'rust';
+    stateTone(member: TeamMember): StateTone {
+        if (member.pending) return 'muted';
+        return member.status === 'active' ? 'ok' : member.status === 'restricted' ? 'warn' : 'danger';
     }
 
     async copyInvite() {

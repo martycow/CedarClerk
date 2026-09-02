@@ -6,14 +6,13 @@ import {
 } from '../core/admin.service';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { ModalComponent } from '../shared/modal.component';
 import { IconComponent } from '../shared/icon.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { LogLineComponent } from '../bench/worktop/log-line.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -33,9 +32,8 @@ export interface ShotVm { file: string; capEn: string; capRu: string; }
 @Component({
     selector: 'app-admin',
     imports: [
-        ZonedDatePipe, FormsModule, IndexTabsComponent, ShelfPanelComponent, SpecRowComponent,
-        LogLineComponent, PaperCardComponent, ButtonComponent, ModalComponent, IconComponent,
-        StampBadgeComponent,
+        ZonedDatePipe, FormsModule, IndexTabsComponent, SpecRowComponent, LogLineComponent, ButtonComponent,
+        ModalComponent, IconComponent, PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
@@ -182,6 +180,17 @@ export class AdminComponent implements OnInit {
 
     sectionTitle(): string {
         return this.sectionTabs().find(item => item.id === this.tab())?.label ?? '';
+    }
+
+    headerMeta(): HeaderMeta[] {
+        const s = this.summary();
+        if (!s) return [];
+        const t = this.t().admin;
+        return [
+            { text: t.headerUsers(s.users) },
+            { text: t.headerPaid(s.paidUsers) },
+            { text: t.headerStorage(this.formatBytes(s.storageBytes)) },
+        ];
     }
 
     // Payments are stored in minor units (cents/stars), like everywhere else in billing.

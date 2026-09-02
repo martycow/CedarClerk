@@ -1,7 +1,7 @@
-import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
@@ -34,14 +34,12 @@ import { InputComponent } from '../bench/forms/input.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LanguageMenuComponent } from '../shared/language-menu.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
-import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { IndexTabItem, indexTabBadgeLabel } from '../bench/chrome/index-tabs.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 import { GrowthChartComponent, GrowthSeries, SeriesSlot } from '../bench/worktop/growth-chart.component';
-import { RulerService } from '../core/ruler.service';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
 // lives) because links to it exist in the wild — the account menu, and Marty's own bookmarks.
@@ -57,15 +55,15 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
     selector: 'app-posts-manager',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, CommentsComponent, StatsComponent,
-        TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent, IndexTabsComponent,
-        RouterLink, PlanLockComponent, HintDotComponent,
-        LeafTagComponent, ShelfPanelComponent, StampBadgeComponent, SpecRowComponent, WorktopComponent,
+        TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent,
+        PlanLockComponent, HintDotComponent,
+        LeafTagComponent, SpecRowComponent, PageHeaderComponent, EmptyStateComponent,
         GrowthChartComponent, LanguageMenuComponent, InputComponent,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
 })
-export class PostsManagerComponent implements OnInit, OnDestroy {
+export class PostsManagerComponent implements OnInit {
     auth = inject(AuthService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
@@ -77,7 +75,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     private tagUsageApi = inject(TagUsageService);
     private foldersApi = inject(FoldersService);
     private projectsApi = inject(ProjectsService);
-    private ruler = inject(RulerService);
     private locale = inject(LocaleService);
     readonly docIcons = DOCUMENT_TYPE_ICONS;
     t = this.locale.t;
@@ -1072,10 +1069,9 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         });
     }
 
-    // ─── The bench's own chrome (ADR-167 clauses 1 to 4) ──────────────────────────────────────
-    // The strip switches what the panel below it shows and never navigates, which is IndexTabs'
-    // whole jurisdiction. The feedback tally rides the Posts tile as its badge, so the hide-at-zero
-    // and 99+ rules come from the one function that owns them.
+    // The strip switches what the body shows and never navigates. The feedback tally rides the
+    // Posts tab as its badge, so the hide-at-zero and 99+ rules come from the one function that
+    // owns them.
     tabs(): IndexTabItem[] {
         const t = this.t().manager;
         return [
@@ -1091,6 +1087,26 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
 
     pickTab(id: string) {
         if (MANAGER_TABS.includes(id as ManagerTab)) this.setTab(id as ManagerTab);
+    }
+
+    badgeOf(item: IndexTabItem): string {
+        return indexTabBadgeLabel(item.badge);
+    }
+
+    /** One tone per publish state: live is good news, a pending send is a warning, the rest rests. */
+    stateTone(d: DraftMeta): 'ok' | 'warn' | 'muted' {
+        if (this.publishState(d) === 'live') return 'ok';
+        return this.hasPendingSchedule(d.id) ? 'warn' : 'muted';
+    }
+
+    // Screen-level counts, so the header says the same thing on every tab.
+    headerMeta(): HeaderMeta[] {
+        const t = this.t().manager;
+        return [
+            { text: t.rulerPosts(this.drafts().length) },
+            { text: t.rulerPublished(this.publishedCount()) },
+            ...(this.pendingScheduleCount() ? [{ text: t.rulerScheduled(this.pendingScheduleCount()) }] : []),
+        ];
     }
 
     /** Exclusive: the shelf describes the selected post, or the library, and never both. */
@@ -1149,21 +1165,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         return this.scheduled().filter(p => p.status === 'Pending').length;
     }
 
-    // Screen-level counts, so the rule says the same thing on every tab — a readout that changed
-    // with the tab would make the rule a tab-dependent surface, which ADR-148 clause 4 refuses of
-    // the rail for the same reason.
-    private readonly rulerFeed = effect(() => {
-        const t = this.t().manager;
-        this.ruler.publish({
-            label: t.crumb,
-            right: [
-                { text: t.rulerPosts(this.drafts().length) },
-                { text: t.rulerPublished(this.publishedCount()) },
-                ...(this.pendingScheduleCount() ? [{ text: t.rulerScheduled(this.pendingScheduleCount()) }] : []),
-            ],
-        });
-    });
-
     private async loadProjects() {
         if (!this.auth.indieDev()) return;
         try {
@@ -1194,10 +1195,6 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
         } finally {
             this.busy.set(false);
         }
-    }
-
-    ngOnDestroy() {
-        this.ruler.clear();
     }
 }
 

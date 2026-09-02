@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -9,7 +9,6 @@ import {
     DOCUMENT_TYPES,
     DOCUMENT_TYPE_ICONS,
     DocumentType,
-    PROJECT_TYPE_ICONS,
     ProjectDetail,
     ProjectDocument,
     ProjectSummary,
@@ -20,86 +19,69 @@ import {
 } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
 import { Preset, PresetsService, parseDocumentConfig } from '../core/presets.service';
-import { isOverdue } from '../core/tasks.service';
+import { TaskPriority, isOverdue } from '../core/tasks.service';
 import { sprintProgress } from '../core/sprints.service';
-import { RulerReadout } from '../bench/chrome/ruler-bar.component';
-import { RulerService } from '../core/ruler.service';
 import { AuthService } from '../core/auth.service';
-import { IconName } from '../shared/icon-data.generated';
+import { Channel, ChannelsService } from '../core/channels.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
-import { TaskTagComponent } from '../bench/display/task-tag.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { ModuleTileComponent } from '../bench/worktop/module-tile.component';
-import { SpecRowComponent } from '../bench/worktop/spec-row.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
+import { InputComponent } from '../bench/forms/input.component';
 import { AssetsService, LibraryAsset } from '../core/assets.service';
 import { Team, TeamsService } from '../core/teams.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
 
-/** One plate on the wall. `link` is the screen it opens — ADR-160 rule 1: no door, no plate. */
-interface ModulePlate {
-    id: string;
-    icon: IconName;
-    name: string;
-    count: string | number;
-    sub: string;
-    link: readonly unknown[];
-    rotate: number;
-}
-
-// Held to ±0.6° by ModuleTile itself; fixed per position so the wall does not reshuffle on a
-// re-render.
-const TILT = [-0.35, 0.25, -0.2, 0.3];
+type DocFilter = 'all' | 'live' | 'drafts' | 'archived';
 
 const MS_PER_DAY = 86_400_000;
 
-// T-223 (ADR-160) — the hub: the workshop bench for one project. Three columns — the projects
-// shelf on the left, the lit top and the wall of module plates in the middle, today's sprint and
-// tasks on the right — inside the bench shell, which owns the rail, the drawer and the rule.
-//
-// Comfortable density: this is a screen you read, not a table you scan. It carries no
-// data-density attribute; the material split (ADR-138) is what governs the chrome inside it.
+// T-223 (ADR-160) — the hub: one project's dashboard. Main.png (ADR-239): a header with the
+// state, kind, count and last edit; the most recent document as a "continue writing" card over a
+// scrolling document list; a right column with today's sprint, the next task and where the
+// project's work goes. Everything drawn is on ProjectDetail, the summary row, the build list and
+// the account's channels — no new endpoint (ADR-168 rule 5).
 @Component({
     selector: 'app-project',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
-        WorktopComponent, ShelfPanelComponent, ModuleTileComponent, SpecRowComponent,
-        StampBadgeComponent, TaskTagComponent, ButtonComponent, MediaPickerComponent,
+        PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent, MediaPickerComponent,
     ],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
 })
-export class ProjectComponent implements OnDestroy {
+export class ProjectComponent {
     private api = inject(ProjectsService);
     private presetsApi = inject(PresetsService);
     private teamsApi = inject(TeamsService);
     private assets = inject(AssetsService);
     private buildsApi = inject(BuildsService);
+    private channelsApi = inject(ChannelsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
-    private ruler = inject(RulerService);
     private auth = inject(AuthService);
     t = inject(LocaleService).t;
 
     readonly docTypes = DOCUMENT_TYPES;
     readonly docIcons = DOCUMENT_TYPE_ICONS;
     readonly isPublishableType = isPublishableType;
-    readonly projectIcons = PROJECT_TYPE_ICONS;
     readonly initials = projectInitials;
     readonly overdue = isOverdue;
-    readonly today = new Date();
     readonly sprintPercent = sprintProgress;
 
     project = signal<ProjectDetail | null>(null);
-    /** The left shelf, and the only place an asset count for this project can be read from. */
+    /** The project list, and the only place an asset count and a last-edit date can be read from. */
     projects = signal<readonly ProjectSummary[]>([]);
     /** null until the build list answers — and if it never does (ADR-160 rule 4). */
     builds = signal<readonly Build[] | null>(null);
+    /** The account's Telegram channels: a project has no channel table of its own (ADR-239 cl. 12). */
+    channels = signal<readonly Channel[]>([]);
     loading = signal(true);
     loadError = signal<string | null>(null);
+
+    docFilter = signal<DocFilter>('all');
+    docSearch = signal('');
 
     addingDocument = signal(false);
     // T-331 — the user's document presets, offered alongside the built-in types in the New-document
@@ -122,8 +104,7 @@ export class ProjectComponent implements OnDestroy {
     // first: the explanation of what survives is what matters here, and it fits under the button.
     confirmDelete = false;
 
-    /** This project's row in the list — `documentCount`, `assetCount` and `lastActivityAt` live
-        on the summary and nowhere else. */
+    /** This project's row in the list — `assetCount` and `lastActivityAt` live on the summary. */
     summary = computed(() => {
         const id = this.project()?.id;
         return (id && this.projects().find(p => p.id === id)) || null;
@@ -132,17 +113,22 @@ export class ProjectComponent implements OnDestroy {
     documents = computed(() =>
         [...(this.project()?.documents ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
 
-    /** What "Continue" opens: the document touched last. */
+    filteredDocuments = computed(() => {
+        const needle = this.docSearch().trim().toLowerCase();
+        const filter = this.docFilter();
+        return this.documents().filter(d => {
+            if (filter === 'live' && !(d.isBlogPublished && !d.isArchived)) return false;
+            if (filter === 'drafts' && (d.isBlogPublished || d.isArchived)) return false;
+            if (filter === 'archived' && !d.isArchived) return false;
+            return !needle || d.title.toLowerCase().includes(needle);
+        });
+    });
+
+    /** What "Continue writing" opens: the document touched last. */
     resumeDoc = computed<ProjectDocument | null>(() => this.documents()[0] ?? null);
 
-    published = computed(() => this.documents().filter(d => d.isBlogPublished).length);
-
-    /** The newest version that is actually out — an unreleased record is a plan, not a version. */
-    releasedBuild = computed<Build | null>(() => {
-        const out = (this.builds() ?? []).filter(b => b.released && b.releasedAt);
-        if (out.length === 0) return null;
-        return out.reduce((a, b) => (a.releasedAt! >= b.releasedAt! ? a : b));
-    });
+    /** The one task the side column shows — the server already sorted them by urgency. */
+    upNext = computed(() => this.project()?.upNext[0] ?? null);
 
     /** Days from today to the end of the sprint covering it, floored at zero. */
     sprintDaysLeft = computed(() => {
@@ -155,53 +141,18 @@ export class ProjectComponent implements OnDestroy {
         return Math.max(0, Math.round((endDay - today) / MS_PER_DAY));
     });
 
-    tiles = computed<ModulePlate[]>(() => {
+    headerMeta = computed<HeaderMeta[]>(() => {
         const p = this.project();
         if (!p) return [];
         const t = this.t().projects;
-        const sprint = p.currentSprint;
-        const build = this.releasedBuild();
-        const builds = this.builds();
-        const assets = this.summary();
-
-        const plates: ModulePlate[] = [
-            {
-                id: 'tasks', icon: 'check-square', name: t.tasks.title,
-                count: p.openTaskCount,
-                sub: t.hub.tasksSub(p.taskCounts.in_progress ?? 0),
-                link: ['/projects', p.id, 'tasks'], rotate: 0,
-            },
-            {
-                id: 'sprint', icon: 'flag', name: t.railPendingTitle,
-                count: sprint ? `S${sprint.number}` : '—',
-                sub: sprint ? t.planner.progress(sprint.doneCount, sprint.taskCount) : t.planner.noCurrentSprint,
-                link: ['/projects', p.id, 'planner'], rotate: 0,
-            },
-            {
-                id: 'assets', icon: 'images', name: t.assets.title,
-                count: assets ? assets.assetCount : '—',
-                sub: assets && assets.assetCount === 0 ? t.hub.assetsNone : '',
-                link: ['/projects', p.id, 'assets'], rotate: 0,
-            },
-            {
-                id: 'builds', icon: 'cube', name: t.builds.title,
-                count: builds ? builds.length : '—',
-                sub: build ? t.hub.buildsSub(build.version) : builds ? t.hub.buildsNone : '',
-                link: ['/projects', p.id, 'builds'], rotate: 0,
-            },
+        const meta: HeaderMeta[] = [
+            { text: p.archivedAt ? t.stateArchived : t.stateActive, tag: true, tone: p.archivedAt ? 'muted' : 'ok' },
+            { text: t.projectTypes[p.projectType].name },
+            { text: t.documentCount(p.documents.length) },
         ];
-        return plates.map((plate, i) => ({ ...plate, rotate: TILT[i % TILT.length] }));
-    });
-
-    /** The right-hand chalk chip on the bench top: when this project was last written to. */
-    heroMeta = computed(() => {
         const at = this.summary()?.lastActivityAt;
-        return at ? `${this.t().projects.hub.lastEdit} ${formatInZone(at, 'MM/dd')}` : '';
-    });
-
-    sprintLeft = computed(() => {
-        const sprint = this.project()?.currentSprint;
-        return sprint ? this.t().projects.hub.sprintLeftValue(this.sprintDaysLeft(), formatInZone(sprint.endsAt, 'MM/dd')) : '';
+        if (at) meta.push({ text: `${t.hub.lastEdit} ${formatInZone(at, 'd MMM')}` });
+        return meta;
     });
 
     constructor() {
@@ -211,29 +162,7 @@ export class ProjectComponent implements OnDestroy {
         });
 
         void this.loadProjects();
-
-        effect(() => {
-            const p = this.project();
-            if (!p) return;
-            const t = this.t().projects.hub;
-            const sprint = p.currentSprint;
-            const assets = this.summary();
-            const left: RulerReadout[] = [];
-            if (sprint) left.push({ text: t.rulerSprint(sprint.number, sprint.doneCount, sprint.taskCount), title: sprint.name });
-            if (assets) left.push({ text: t.rulerAssets(assets.assetCount) });
-            this.ruler.publish({
-                label: p.name,
-                left,
-                right: [
-                    { text: t.rulerDocs(p.documents.length) },
-                    { text: t.rulerTasks(p.openTaskCount) },
-                ],
-            });
-        });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
+        void this.loadChannels();
     }
 
     async load(id: string) {
@@ -248,8 +177,8 @@ export class ProjectComponent implements OnDestroy {
         } finally {
             this.loading.set(false);
         }
-        // Beside the detail rather than before it: the build count is one plate's number, and a
-        // slow or failing list must not hold the whole bench (ADR-160 rule 4).
+        // Beside the detail rather than before it: the build count is one row's number, and a
+        // slow or failing list must not hold the whole page (ADR-160 rule 4).
         try {
             this.builds.set(await this.buildsApi.list(id));
         } catch {
@@ -269,7 +198,7 @@ export class ProjectComponent implements OnDestroy {
         }
     }
 
-    /** The shelf survives a failure in silence: it is a switcher, and the page it stands on loaded. */
+    /** The list survives a failure in silence: it feeds two readouts, and the page it stands on loaded. */
     private async loadProjects() {
         try {
             this.projects.set(await this.api.list(true));
@@ -278,15 +207,39 @@ export class ProjectComponent implements OnDestroy {
         }
     }
 
-    /** Brass is the build number's; a draft is pressed as a faint outline (StampBadge.prompt.md). */
-    documentTone(doc: ProjectDocument): StampTone {
-        return doc.isBlogPublished && !doc.isArchived ? 'pine' : 'ink';
+    /** No channel is a real answer the column prints; a failed call reads the same way. */
+    private async loadChannels() {
+        try {
+            this.channels.set(await this.channelsApi.list());
+        } catch {
+            this.channels.set([]);
+        }
+    }
+
+    channelLabel(channel: Channel): string {
+        return channel.username ? `@${channel.username}` : channel.title;
+    }
+
+    channelUrl(channel: Channel): string | null {
+        return channel.username ? `https://t.me/${channel.username}` : null;
+    }
+
+    blogUrl(): string | null {
+        return this.auth.blogUrl();
+    }
+
+    docTone(doc: ProjectDocument): 'ok' | 'muted' {
+        return doc.isBlogPublished && !doc.isArchived ? 'ok' : 'muted';
     }
 
     documentState(doc: ProjectDocument): string {
         const t = this.t().drafts.status;
         if (doc.isArchived) return t.archived;
         return doc.isBlogPublished ? t.published : t.draft;
+    }
+
+    prioTone(priority: TaskPriority): 'danger' | 'warn' | 'muted' {
+        return priority === 1 ? 'danger' : priority === 2 ? 'warn' : 'muted';
     }
 
     openAddDocument() {
@@ -345,7 +298,7 @@ export class ProjectComponent implements OnDestroy {
         this.editing.set(true);
     }
 
-    /** The live public URL for the Links group; the page itself is edited on /projects/:id/showcase. */
+    /** The live public URL; the page itself is edited on /projects/:id/showcase. */
     showcaseUrl(): string | null {
         const slug = this.project()?.showcaseSlug;
         const base = this.auth.blogUrl();

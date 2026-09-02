@@ -1,12 +1,12 @@
-<!--The Posts Manager's Stats tab (ADR-148): the kit's rail, crumb and top-level export are the
-manager's business or nobody's, so this file starts at the filter strip.-->
+<!--The Posts Manager's Stats tab (ADR-148): the page header is the manager's, so this file starts
+at the filter strip.-->
 @if (loading()) {
 <p class="stats-hint">{{ t().common.loading }}</p>
 } @else {
 <div class="stats-tab">
     <div class="stats-main">
         <!--The legend IS the filter (ADR-149): one leaf per source, its swatch the ink of its line.-->
-        <div class="filter-strip" role="group" [attr.aria-label]="t().stats.sources.legend">
+        <div class="card filter-strip" role="group" [attr.aria-label]="t().stats.sources.legend">
             @for (leaf of leaves(); track leaf.id) {
             <app-leaf-tag [state]="leaf.state" [interactive]="leaf.state !== 'dried'"
                           [swatch]="leaf.swatch" (activated)="toggle(leaf.id)">
@@ -38,19 +38,20 @@ manager's business or nobody's, so this file starts at the filter strip.-->
         publish anywhere. Hidden until the endpoint answers.-->
         @if (publishing(); as pub) {
         <div class="streak-card">
-            <app-stamp-badge [tone]="pub.currentStreakWeeks > 0 ? 'brass' : 'ink'">
+            <span class="tag" [class.ok]="pub.currentStreakWeeks > 0" [class.muted]="pub.currentStreakWeeks === 0">
                 {{ t().stats.streak.stamp(pub.currentStreakWeeks) }}
-            </app-stamp-badge>
+            </span>
             <span class="streak-note">{{ t().stats.streak.longest(pub.longestStreakWeeks) }}</span>
         </div>
         }
 
         <!--Per source, never their sum: a draft published to several channels counts its full view
         total against each of them, so a cross-source readout would double-count (ADR-025/ADR-149).-->
+        @if (readouts().length) {
         <div class="readouts">
             @for (r of readouts(); track r.id) {
-            <div class="ro">
-                <span class="ro-label">
+            <div class="card ro">
+                <span class="label ro-label">
                     <span class="ro-swatch" [style.background]="r.color"></span>{{ r.name }}
                 </span>
                 <span class="ro-line">
@@ -73,27 +74,31 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             </div>
             }
         </div>
+        }
 
-        <!--The two strips are cut into the chart board's own top edge, not laid inside its header:
-        a header carries the board's name and its commands, and a tab is neither (ADR-200).-->
-        <div class="chart-stack">
-        <div class="chart-index">
-            <app-index-tabs [items]="metricTabs()" [value]="metric()"
-                            [label]="t().stats.metricStrip" (selected)="setMetric($event)" />
-            <span class="index-gap"></span>
-            <app-index-tabs [items]="viewTabs()" [value]="view()"
-                            [label]="t().stats.viewStrip" (selected)="setView($event)" />
-        </div>
-
-        <app-shelf-panel class="chart-panel" [title]="t().stats.bySource" [count]="windowLabel()" flush>
-            @if (!drawable().length) {
-            <!--T-338 — a real zero-state, not a bare dash: a leaf on graph paper says the board is
-            ready and waiting for the first numbers, with the one line that explains why it is empty.-->
-            <div class="stats-empty">
-                <app-icon name="tree-evergreen" size="lg" />
-                <p class="stats-empty-title">{{ anySelected() ? t().stats.sources.nothingToDrawTitle : t().stats.sources.noneSelectedTitle }}</p>
-                <p class="stats-empty-note">{{ anySelected() ? t().stats.sources.nothingToDraw : t().stats.sources.noneSelected }}</p>
+        <!--One card, one dataset, two views: the metric strip picks what is plotted, the view strip
+        how, and both sit on the card's caption line.-->
+        <section class="card chart-panel" [attr.aria-label]="t().stats.bySource">
+            <div class="card-head">
+                <span class="label">{{ t().stats.bySource }}</span>
+                <span class="card-count">{{ windowLabel() }}</span>
+                <span class="strip-gap"></span>
+                <app-index-tabs [items]="metricTabs()" [value]="metric()"
+                                [label]="t().stats.metricStrip" (selected)="setMetric($event)" />
+                <app-index-tabs [items]="viewTabs()" [value]="view()"
+                                [label]="t().stats.viewStrip" (selected)="setView($event)" />
             </div>
+            <div class="card-body chart-body">
+            @if (!drawable().length) {
+            <!--T-338 — a real zero-state, not a bare dash: the one line that explains why it is
+            empty, and the way out when the reader's own doing is not the reason.-->
+            <app-empty-state class="stats-empty" icon="chart-bar"
+                             [title]="anySelected() ? t().stats.sources.nothingToDrawTitle : t().stats.sources.noneSelectedTitle"
+                             [text]="anySelected() ? t().stats.sources.nothingToDraw : t().stats.sources.noneSelected">
+                @if (anySelected()) {
+                <app-button variant="pine" size="sm" link="/drafts">{{ t().stats.sources.nothingToDrawAction }}</app-button>
+                }
+            </app-empty-state>
             } @else if (view() === 'chart') {
             <!--A running total is complete the moment it is read, so no bucket is left unfinished
             here; a per-day delta series would answer openTail differently (ADR-161).-->
@@ -126,16 +131,21 @@ manager's business or nobody's, so this file starts at the filter strip.-->
                 </tbody>
             </table>
             }
-        </app-shelf-panel>
-        </div>
+            </div>
+        </section>
     </div>
 
     <div class="stats-side">
-    <!--Audience split (Marty, 08.08.2026). Blog only: Telegram reports no per-country numbers, so
-    the shelf says whose readers these are rather than leaving it to be assumed (ADR-097/ADR-149).-->
-    <app-shelf-panel class="audience-shelf" [title]="t().stats.audience.title" [count]="t().stats.blog">
+    <!--Audience split. Blog only: Telegram reports no per-country numbers, so the card says whose
+    readers these are rather than leaving it to be assumed (ADR-097/ADR-149).-->
+    <section class="card audience-shelf" [attr.aria-label]="t().stats.audience.title">
+        <div class="card-head">
+            <span class="label">{{ t().stats.audience.title }}</span>
+            <span class="card-count">{{ t().stats.blog }}</span>
+        </div>
+        <div class="card-body">
         @if (hasAudience()) {
-        <h3 class="group-head">{{ t().stats.audience.countries }}</h3>
+        <h3 class="label group-head">{{ t().stats.audience.countries }}</h3>
         <ul class="audience-list">
             @for (row of countryRows(); track row.code) {
             <li class="audience-row" [class.is-other]="row.code === otherCode">
@@ -146,7 +156,7 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             }
         </ul>
 
-        <h3 class="group-head">{{ t().stats.audience.languages }}</h3>
+        <h3 class="label group-head">{{ t().stats.audience.languages }}</h3>
         <ul class="audience-list">
             @for (row of languageRows(); track row.code) {
             <li class="audience-row" [class.is-other]="row.code === otherCode">
@@ -162,15 +172,21 @@ manager's business or nobody's, so this file starts at the filter strip.-->
         <p class="audience-note">{{ t().stats.audience.unreported(share) }}</p>
         }
         } @else {
-        <p class="stats-hint">{{ t().stats.audience.empty }}</p>
+        <app-empty-state icon="globe" [title]="t().stats.audience.emptyTitle" [text]="t().stats.audience.empty" />
         }
-    </app-shelf-panel>
+        </div>
+    </section>
 
     <!--Wave 2 item 15 — named invite links with their daily-aggregate totals (cut #6 taken:
     the totals table, no per-day bars). chat_member only reaches the bot where it is admin,
     which is true of posting channels — the hint says so.-->
     @if (showInviteLinks()) {
-    <app-shelf-panel class="invite-shelf" [title]="t().stats.inviteLinks.title" [count]="inviteLinks().length">
+    <section class="card invite-shelf" [attr.aria-label]="t().stats.inviteLinks.title">
+        <div class="card-head">
+            <span class="label">{{ t().stats.inviteLinks.title }}</span>
+            <span class="card-count">{{ inviteLinks().length }}</span>
+        </div>
+        <div class="card-body invite-body">
         @if (channels().length > 1) {
         <label class="invite-pick">
             <span>{{ t().stats.inviteLinks.channel }}</span>
@@ -230,7 +246,7 @@ manager's business or nobody's, so this file starts at the filter strip.-->
             </tbody>
         </table>
         } @else {
-        <p class="stats-hint">{{ t().stats.inviteLinks.empty }}</p>
+        <app-empty-state icon="link" [title]="t().stats.inviteLinks.emptyTitle" [text]="t().stats.inviteLinks.empty" />
         }
         <div class="invite-create">
             <input [(ngModel)]="newLinkName" [placeholder]="t().stats.inviteLinks.namePlaceholder"
@@ -242,7 +258,8 @@ manager's business or nobody's, so this file starts at the filter strip.-->
         </div>
         <p class="invite-note">{{ t().stats.inviteLinks.adminNote }}</p>
         @if (inviteError()) { <p class="invite-error">{{ inviteError() }}</p> }
-    </app-shelf-panel>
+        </div>
+    </section>
     }
     </div>
 </div>

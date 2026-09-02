@@ -10,15 +10,12 @@ import {
     CanvasLinkPayload, CanvasNotePayload, NewCanvasItem,
 } from '../core/boards.service';
 import { CanvasHubService } from '../core/canvas-hub.service';
-import { RailActionsService } from '../core/rail-actions.service';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { MediaPickerComponent } from '../shared/media-picker.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 
 export interface View { x: number; y: number; z: number; }
 
@@ -67,8 +64,8 @@ const NUDGE_MS = 200;
 @Component({
     selector: 'app-project-canvas',
     imports: [
-        FormsModule, IconComponent, ModalComponent, MediaPickerComponent, WorktopComponent,
-        StampBadgeComponent, ButtonComponent, InputComponent,
+        FormsModule, IconComponent, ModalComponent, MediaPickerComponent, PageHeaderComponent,
+        ButtonComponent, InputComponent,
     ],
     providers: [CanvasHubService],
     templateUrl: 'project-canvas.component.html',
@@ -79,8 +76,6 @@ export class ProjectCanvasComponent implements OnDestroy {
     private router = inject(Router);
     private zone = inject(NgZone);
     private assets = inject(AssetsService);
-    private ruler = inject(RulerService);
-    private rail = inject(RailActionsService);
     hub = inject(CanvasHubService);
     t = inject(LocaleService).t;
 
@@ -137,6 +132,17 @@ export class ProjectCanvasComponent implements OnDestroy {
     zoomPercent = computed(() => Math.round(this.view().z * 100));
     background = computed(() => this.hub.board()?.background ?? 'grid');
 
+    /** The former rule readouts: the zoom, the item count, the connection word as a tag. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        const t = this.t().projects.canvas;
+        const status = this.hub.status();
+        return [
+            { text: t.zoomLevel(this.zoomPercent()) },
+            { text: t.itemCount(this.hub.items().length) },
+            { text: this.statusWord(), tag: true, tone: status === 'live' ? 'ok' : status === 'connecting' || status === 'idle' ? 'muted' : 'warn' },
+        ];
+    });
+
     readonly corners: readonly string[] = ['nw', 'ne', 'sw', 'se'];
 
     constructor() {
@@ -178,25 +184,6 @@ export class ProjectCanvasComponent implements OnDestroy {
         effect(() => this.paintCursors(this.hub.cursors()));
         effect(() => this.paintGhosts(this.hub.ghosts()));
 
-        effect(() => {
-            const t = this.t().projects.canvas;
-            const board = this.hub.board();
-            this.ruler.publish({
-                label: board?.name ?? '',
-                left: [
-                    { text: t.zoomLevel(this.zoomPercent()) },
-                    { text: t.itemCount(this.hub.items().length) },
-                ],
-                right: [{ text: this.statusWord() }],
-            });
-            this.rail.publish({
-                save: this.hub.status() === 'live' ? { state: this.hub.saving() ? 'forming' : 'set' } : null,
-                primary: this.hub.canWrite()
-                    ? { label: t.addNote, icon: 'note', run: () => this.addNote() }
-                    : null,
-            });
-        });
-
         // The board was deleted, or the membership that reached it was withdrawn.
         effect(() => {
             if (this.hub.gone()) void this.router.navigate(['/projects', this.projectId(), 'canvas']);
@@ -207,8 +194,6 @@ export class ProjectCanvasComponent implements OnDestroy {
         if (this.zoomTimer) clearTimeout(this.zoomTimer);
         // Before the socket goes: an uncommitted nudge is a move the reader has already seen.
         this.commitNudge();
-        this.ruler.clear();
-        this.rail.clear();
         void this.hub.leave();
     }
 
@@ -235,13 +220,6 @@ export class ProjectCanvasComponent implements OnDestroy {
         if (status === 'reconnecting') return t.reconnecting;
         if (status === 'connecting' || status === 'idle') return t.connecting;
         return status === 'live' ? t.live : t.offline;
-    }
-
-    /** Rust is the app's failure ink, and a first open is not a failure. */
-    statusTone(): StampTone {
-        const status = this.hub.status();
-        if (status === 'live') return 'pine';
-        return status === 'connecting' || status === 'idle' ? 'ink' : 'rust';
     }
 
     // ——— items ———————————————————————————————————————————————————————————————

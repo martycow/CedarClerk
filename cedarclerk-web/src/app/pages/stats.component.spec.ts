@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { StatsComponent } from './stats.component';
 import { ChannelsService } from '../core/channels.service';
@@ -103,7 +104,7 @@ describe('stats screen (Posts Manager tab)', () => {
 
     beforeEach(async () => {
         api = new ApiStub();
-        TestBed.configureTestingModule({ providers: [{ provide: ChannelsService, useValue: api }] });
+        TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: ChannelsService, useValue: api }] });
         fixture = TestBed.createComponent(StatsComponent);
         await settle();
         // Every test below that is about the axis, the ink or the wash needs a metric both kinds of
@@ -281,11 +282,10 @@ describe('stats screen (Posts Manager tab)', () => {
         expect(page().updatedAt()).toMatch(/^\d{2}:\d{2} \S+$/);
     });
 
-    it('names the source the audience shelf is answering about', () => {
-        const shelves = [...el().querySelectorAll('app-shelf-panel')];
-        const audience = shelves.find(s => s.classList.contains('audience-shelf'))!;
-        expect(audience.querySelector('.sp-title')!.textContent!.trim()).toBe('Audience');
-        expect(audience.querySelector('.sp-count')!.textContent!.trim()).toBe('Blog');
+    it('names the source the audience card is answering about', () => {
+        const audience = el().querySelector('.audience-shelf')!;
+        expect(audience.querySelector('.card-head .label')!.textContent!.trim()).toBe('Audience');
+        expect(audience.querySelector('.card-head .card-count')!.textContent!.trim()).toBe('Blog');
     });
 
     it('holds every size on the sheet to paper\'s floor, and writes no colour as a literal', () => {

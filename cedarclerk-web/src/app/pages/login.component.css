@@ -1,9 +1,10 @@
-/* The workshop door (ADR-166): the bench wall, one sheet of paper on it, and no chrome — the rail,
-   the hooks and the rule all belong to a session this page does not have yet. */
+/* The door (ADR-166, ADR-239): the canvas, one paper card on it, and no chrome — a session this
+   page does not have yet owns the shell. */
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--surface-page);
+    background: var(--canvas);
+    color: var(--wood-ink);
     font-family: var(--font-sans);
 }
 
@@ -28,7 +29,7 @@
 .auth-card[data-surface="paper"] {
     width: 340px;
     box-sizing: border-box;
-    --paper-card-pad: var(--space-7) var(--space-6) var(--space-6);
+    padding: var(--space-7) var(--space-6) var(--space-6);
 
     .auth-header {
         display: flex;
@@ -56,10 +57,15 @@
 
     .primary-btn { display: flex; }
 
-    .error {
-        margin: var(--space-2) 0 0;
+    .error-box {
+        margin: var(--space-2) 0 var(--space-3);
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--danger);
+        border-radius: var(--radius-sm);
+        background: var(--danger-soft);
         color: var(--danger);
         font-size: var(--fs-ui);
+        line-height: 1.4;
     }
 
     .session-notice {

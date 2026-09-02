@@ -1,73 +1,74 @@
-<div class="presets">
+<div class="page presets">
+    <app-page-header [title]="t().presets.crumb" [meta]="headerMeta()">
+        <app-button primary variant="pine" (clicked)="startNew()">
+            <app-icon name="plus" weight="bold" size="sm" /> {{ t().presets.newPreset }}
+        </app-button>
+    </app-page-header>
+
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
-    <!--Index tiles on the top edge of the sheet: the three kinds are three lists of the same
-    object, so they switch a panel rather than a screen (ADR-167 clause 7).-->
+    <!--The three kinds are three lists of the same object, so they switch a panel rather than a
+    screen (ADR-167 clause 7).-->
     <div class="pr-index">
         <app-index-tabs [items]="kindTabs()" [value]="kind()"
                         [label]="t().presets.kindStrip" (selected)="selectKind($event)" />
         <app-hint-dot [text]="kindIntro(kind())" />
-        <span class="spacer"></span>
-        <app-button variant="pine" size="sm" (clicked)="startNew()">
-            <app-icon name="plus" weight="bold" size="sm" /> {{ t().presets.newPreset }}
-        </app-button>
     </div>
 
-    <app-worktop class="sheet" scroll [label]="kindLabel(kind())" [meta]="t().presets.count(presets().length)">
-        <div class="sheet-column">
-            @if (loading()) {
-            <p class="hint">{{ t().common.loading }}</p>
-            } @else {
-
+    <section class="card pr-card-list" [attr.aria-label]="kindLabel(kind())">
+        <div class="card-head">
+            <span class="label">{{ kindLabel(kind()) }}</span>
+            <span class="card-count">{{ presets().length }}</span>
+        </div>
+        @if (loading()) {
+        <p class="hint in-card">{{ t().common.loading }}</p>
+        } @else {
+        <div class="row-list pr-list">
             @if (editingId() === 'new') {
             <div class="pr-form"><ng-container [ngTemplateOutlet]="editFields"></ng-container></div>
             }
 
-            <div class="pr-list">
-                @for (p of presets(); track p.id) {
-                @if (editingId() === p.id) {
-                <div class="pr-form"><ng-container [ngTemplateOutlet]="editFields"></ng-container></div>
-                } @else {
-                <div class="pr-card">
-                    <app-icon [name]="iconOf(p)" size="md" />
-                    <div class="pr-body">
-                        <div class="pr-head">
-                            <span class="pr-name">{{ p.name }}</span>
-                            <span class="pr-type">{{ labelOf(p) }}</span>
-                            <span class="spacer"></span>
-                            <button class="mini" (click)="startEdit(p)" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
-                                <app-icon name="pencil-simple" size="sm" />
-                            </button>
-                            <button class="mini-remove" (click)="remove(p)" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
-                                <app-icon name="trash" size="sm" />
-                            </button>
-                        </div>
-                        @if (summaryOf(p); as summary) {
-                        <p class="pr-skeleton">{{ summary }}</p>
-                        } @else {
-                        <p class="pr-skeleton muted">{{ t().presets.kinds[kind()].emptyConfig }}</p>
-                        }
-                    </div>
+            @for (p of presets(); track p.id) {
+            @if (editingId() === p.id) {
+            <div class="pr-form"><ng-container [ngTemplateOutlet]="editFields"></ng-container></div>
+            } @else {
+            <div class="row pr-row">
+                <app-icon [name]="iconOf(p)" size="md" />
+                <div class="pr-body">
+                    <span class="t">{{ p.name }}</span>
+                    @if (summaryOf(p); as summary) {
+                    <span class="m">{{ summary }}</span>
+                    } @else {
+                    <span class="m pr-skeleton-muted">{{ t().presets.kinds[kind()].emptyConfig }}</span>
+                    }
                 </div>
-                }
-                } @empty {
-                @if (editingId() !== 'new') {
-                <div class="pr-empty">
-                    <app-icon name="squares-four" size="lg" />
-                    <p class="pr-empty-title">{{ t().presets.empty }}</p>
-                    <p class="hint">{{ t().presets.kinds[kind()].emptyHint }}</p>
-                </div>
-                }
-                }
+                <span class="tag muted is-plain">{{ labelOf(p) }}</span>
+                <span class="pr-actions">
+                    <button class="mini" (click)="startEdit(p)" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
+                        <app-icon name="pencil-simple" size="sm" />
+                    </button>
+                    <button class="mini-remove" (click)="remove(p)" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
+                        <app-icon name="trash" size="sm" />
+                    </button>
+                </span>
             </div>
             }
+            } @empty {
+            @if (editingId() !== 'new') {
+            <app-empty-state icon="squares-four" [title]="t().presets.empty"
+                             [text]="t().presets.kinds[kind()].emptyHint" [note]="kindIntro(kind())">
+                <app-button variant="pine" (clicked)="startNew()">{{ t().presets.newPreset }}</app-button>
+            </app-empty-state>
+            }
+            }
         </div>
-    </app-worktop>
+        }
+    </section>
 </div>
 
 <ng-template #editFields>
     <label class="pr-field">
-        <span class="pr-label">{{ t().presets.nameLabel }}</span>
+        <span class="label">{{ t().presets.nameLabel }}</span>
         <input class="pr-input" [ngModel]="form().name"
                (ngModelChange)="form.set({ ...form(), name: $event })" maxlength="60"
                [placeholder]="t().presets.kinds[kind()].namePlaceholder">
@@ -76,7 +77,7 @@
     @switch (kind()) {
 
     @case ('document') {
-    <span class="pr-label">{{ t().presets.baseTypeLabel }}</span>
+    <span class="label">{{ t().presets.baseTypeLabel }}</span>
     <div class="pr-types">
         @for (type of baseTypes; track type) {
         <button type="button" class="pr-type-btn" [class.on]="form().baseType === type"
@@ -87,7 +88,7 @@
     </div>
 
     <label class="pr-field">
-        <span class="pr-label">{{ t().presets.headingsLabel }}</span>
+        <span class="label">{{ t().presets.headingsLabel }}</span>
         <textarea class="pr-input" rows="4" [ngModel]="form().headings"
                   (ngModelChange)="form.set({ ...form(), headings: $event })"
                   [placeholder]="t().presets.headingsPlaceholder"></textarea>
@@ -95,7 +96,7 @@
     }
 
     @case ('project') {
-    <span class="pr-label">{{ t().presets.project.typeLabel }}</span>
+    <span class="label">{{ t().presets.project.typeLabel }}</span>
     <div class="pr-types">
         @for (type of projectTypes; track type) {
         <button type="button" class="pr-type-btn" [class.on]="form().projectType === type"
@@ -107,7 +108,7 @@
 
     <!--Null is the honest default and is offered as a choice: the project type already implies a
     starter document, and overriding it is the exception, not the blank a form leaves behind.-->
-    <span class="pr-label">{{ t().presets.project.documentTypeLabel }}</span>
+    <span class="label">{{ t().presets.project.documentTypeLabel }}</span>
     <div class="pr-types">
         <button type="button" class="pr-type-btn" [class.on]="form().projectDocumentType === null"
                 (click)="pickProjectDocumentType(null)">
@@ -122,14 +123,14 @@
     </div>
 
     <label class="pr-field">
-        <span class="pr-label">{{ t().presets.project.documentTitleLabel }}</span>
+        <span class="label">{{ t().presets.project.documentTitleLabel }}</span>
         <input class="pr-input" [ngModel]="form().documentTitle"
                (ngModelChange)="form.set({ ...form(), documentTitle: $event })" maxlength="80"
                [placeholder]="t().presets.project.documentTitlePlaceholder">
     </label>
 
     <label class="pr-field">
-        <span class="pr-label">{{ t().presets.project.descriptionLabel }}</span>
+        <span class="label">{{ t().presets.project.descriptionLabel }}</span>
         <textarea class="pr-input" rows="3" [ngModel]="form().description"
                   (ngModelChange)="form.set({ ...form(), description: $event })" maxlength="2000"
                   [placeholder]="t().presets.project.descriptionPlaceholder"></textarea>
@@ -137,7 +138,7 @@
     }
 
     @case ('export') {
-    <span class="pr-label">{{ t().presets.export.destinationsLabel }}</span>
+    <span class="label">{{ t().presets.export.destinationsLabel }}</span>
     <div class="pr-types">
         @for (d of destinations; track d) {
         <button type="button" class="pr-type-btn" [class.on]="form().destinations.includes(d)"
@@ -154,7 +155,7 @@
 
     <!--Empty means "whatever the post already has" rather than "nothing": a preset that pinned a
     language would silently drop a translation the author wrote after saving it.-->
-    <span class="pr-label">{{ t().presets.export.languagesLabel }}</span>
+    <span class="label">{{ t().presets.export.languagesLabel }}</span>
     <div class="pr-types">
         @for (l of contentLanguages; track l) {
         <button type="button" class="pr-type-btn" [class.on]="form().languages.includes(l)"
@@ -163,7 +164,7 @@
         </button>
         }
     </div>
-    <p class="hint">{{ t().presets.export.languagesHint }}</p>
+    <p class="hint in-card">{{ t().presets.export.languagesHint }}</p>
     }
 
     }

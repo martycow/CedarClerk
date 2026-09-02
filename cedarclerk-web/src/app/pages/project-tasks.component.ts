@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CdkDropList, CdkDrag, CdkDropListGroup, CdkDragDrop } from '@angular/cdk/drag-drop';
@@ -22,42 +22,40 @@ import { Sprint, SprintsService } from '../core/sprints.service';
 import { Build, BuildsService } from '../core/builds.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
-import { RulerService } from '../core/ruler.service';
-import { RulerReadout } from '../bench/chrome/ruler-bar.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { LeafTagComponent } from '../bench/display/leaf-tag.component';
-import { StampBadgeComponent, StampTone } from '../bench/display/stamp-badge.component';
-import { TaskTagComponent } from '../bench/display/task-tag.component';
 import { AssetsService } from '../core/assets.service';
 
 const VIEW_KEY = 'cedar.taskView';
+const MS_PER_DAY = 86_400_000;
 
 type Filter = 'all' | 'open' | 'overdue';
 type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
+type Tone = 'ok' | 'warn' | 'muted' | 'danger';
 
-// T-123 (ADR-106) — the task board, from docs/design_handoff_indiedev_core_loop §3-4.
+// T-123 (ADR-106) — the task board. Board.png (ADR-239): a header carrying the tally, the sprint
+// covering today and its days left; the view, state and sprint strips with the search; four
+// full-height columns, each naming what lands in it when it holds nothing.
 //
 // Both views are required by the design and neither is a fallback: the board answers "what is
 // happening", the list answers "what is due and in what order". They share one sorted source so
 // they cannot disagree.
 //
 // The open task is a query parameter rather than component state, which is what makes a task
-// linkable — the dashboard's "Up next" rail opens a card by navigating here.
+// linkable — the dashboard's "Up next" card opens a card by navigating here.
 @Component({
     selector: 'app-project-tasks',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, RouterLink,
-        ButtonComponent, InputComponent, IndexTabsComponent, ShelfPanelComponent,
-        LeafTagComponent, StampBadgeComponent, TaskTagComponent,
+        PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent,
         CdkDropListGroup, CdkDropList, CdkDrag,
     ],
     templateUrl: 'project-tasks.component.html',
     styleUrls: ['project-tasks.component.css'],
 })
-export class ProjectTasksComponent implements OnDestroy {
+export class ProjectTasksComponent {
     private api = inject(TasksService);
     private assets = inject(AssetsService);
     private projects = inject(ProjectsService);
@@ -65,7 +63,6 @@ export class ProjectTasksComponent implements OnDestroy {
     private buildsApi = inject(BuildsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
-    private ruler = inject(RulerService);
     t = inject(LocaleService).t;
 
     readonly statuses = TASK_STATUSES;
@@ -115,6 +112,34 @@ export class ProjectTasksComponent implements OnDestroy {
 
     overdueCount = computed(() => this.tasks().filter(t => isOverdue(t)).length);
 
+    /** The sprint covering today — the header's second readout, and the "Planned" column's hint. */
+    currentSprint = computed<Sprint | null>(() => this.project()?.currentSprint ?? null);
+
+    /** Days from today to the current sprint's end, floored at zero. */
+    sprintDaysLeft = computed(() => {
+        const sprint = this.currentSprint();
+        if (!sprint) return 0;
+        const end = new Date(sprint.endsAt);
+        const endDay = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+        const now = new Date();
+        const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+        return Math.max(0, Math.round((endDay - today) / MS_PER_DAY));
+    });
+
+    /** The former rule readouts, in the same order (CONTRACT §D1): the tally, the sprint, the late count. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        const t = this.t().projects;
+        const meta: HeaderMeta[] = [{ text: t.tasks.openCount(this.openCount()) }];
+        const sprint = this.currentSprint();
+        if (sprint) {
+            meta.push({ text: t.tasks.sprintMeta(sprint.number, sprint.name) });
+            meta.push({ text: t.hub.daysLeft(this.sprintDaysLeft()) });
+        }
+        const late = this.overdueCount();
+        if (late) meta.push({ text: t.tasks.overdueCount(late), tag: true, tone: 'warn' });
+        return meta;
+    });
+
     /** Documents of this project that the open task is not already linked to. */
     linkableDocuments = computed(() => {
         const task = this.openTask();
@@ -146,8 +171,6 @@ export class ProjectTasksComponent implements OnDestroy {
         return [...this.matching()].sort((a, b) => dir * this.compare(a, b, key));
     });
 
-    empty = computed(() => !this.loading() && this.tasks().length === 0);
-
     constructor() {
         this.route.paramMap.subscribe(params => {
             const id = params.get('id');
@@ -158,20 +181,6 @@ export class ProjectTasksComponent implements OnDestroy {
         // A task id in the URL opens its card, including on a cold load or a shared link.
         this.route.queryParamMap.subscribe(q => this.openTaskId.set(q.get('task')));
 
-        // The rail carries the project and the crumb, so what this screen has left to say is a
-        // tally, and the rule is where a tally goes (ADR-159 clause 3).
-        effect(() => {
-            const tasks = this.tasks();
-            const right: RulerReadout[] = [];
-            const late = this.overdueCount();
-            if (late) right.push({ text: `${late} ${this.t().projects.tasks.overdue}` });
-            this.ruler.publish({
-                label: this.project()?.name ?? '',
-                left: [{ text: this.t().projects.tasks.sub(this.openCount(), tasks.length) }],
-                right,
-            });
-        });
-
         // The modal's fields follow which task is open — and only that. Reading `tasks` untracked
         // is the point: every save replaces the array, and a reload must not throw away what is
         // being typed in a card that never closed.
@@ -181,10 +190,6 @@ export class ProjectTasksComponent implements OnDestroy {
             const task = untracked(() => this.tasks().find(t => t.id === id));
             if (task) this.beginEdit(task);
         });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
     }
 
     async load() {
@@ -230,29 +235,43 @@ export class ProjectTasksComponent implements OnDestroy {
         return this.tasks().filter(t => t.status === status).length;
     }
 
-    /** The strip switches what this screen shows; it never leaves the screen (IndexTabs' rule). */
-    viewTabs = computed<IndexTabItem[]>(() => [
-        { id: 'board', label: this.t().projects.tasks.viewBoard },
-        { id: 'list', label: this.t().projects.tasks.viewList },
-    ]);
+    /** What an empty column says (ADR-239 clause 8): where a task lands here, not "nothing here". */
+    columnEmpty(status: TaskStatus): string {
+        const t = this.t().projects.tasks;
+        switch (status) {
+            case 'backlog': return t.emptyBacklog;
+            case 'planned': {
+                const picked = this.sprintFilter();
+                const sprint = picked
+                    ? this.sprints().find(s => s.id === picked) ?? null
+                    : this.currentSprint();
+                return sprint ? t.emptyPlanned(`S${sprint.number}`) : t.emptyPlannedNoSprint;
+            }
+            case 'in_progress': return t.emptyInProgress;
+            default: return t.emptyDone;
+        }
+    }
 
     /** Where a card and a row point: this screen, with the task in the query (ADR-163). */
     boardLink = computed(() => ['/projects', this.projectId(), 'tasks']);
 
-    /** Alternating so a column of tags reads as a stack of paper rather than as a leaning tower. */
-    tilt(index: number): number {
-        return index % 2 === 0 ? -0.8 : 0.8;
-    }
-
-    /** The tag draws the date rust when it is late; the word is what says so without colour. */
+    /** The date a row prints; the word is what says late without colour. */
     dueLabel(task: GameTask): string {
         if (!task.dueAt) return '';
-        const date = formatInZone(task.dueAt, 'MM/dd');
+        const date = formatInZone(task.dueAt, 'd MMM');
         return isOverdue(task) ? `${date} · ${this.t().projects.tasks.overdue}` : date;
     }
 
-    statusTone(status: TaskStatus): StampTone {
-        return status === 'done' ? 'pine' : status === 'in_progress' ? 'brass' : 'ink';
+    statusTone(status: TaskStatus): Tone {
+        return status === 'done' ? 'ok' : status === 'in_progress' ? 'warn' : 'muted';
+    }
+
+    prioTone(priority: TaskPriority): Tone {
+        return priority === 1 ? 'danger' : priority === 2 ? 'warn' : 'muted';
+    }
+
+    docLinkCount(task: GameTask): number {
+        return task.links.filter(l => l.type === 'document').length;
     }
 
     setView(view: 'board' | 'list') {

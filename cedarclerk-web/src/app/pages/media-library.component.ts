@@ -11,8 +11,9 @@ import { IconName } from '../shared/icon-data.generated';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 
 const PAGE_SIZE = 60;
 
@@ -23,8 +24,8 @@ const PAGE_SIZE = 60;
 @Component({
     selector: 'app-media-library',
     imports: [
-        IconComponent, ZonedDatePipe, IndexTabsComponent, ShelfPanelComponent,
-        SpecRowComponent, InputComponent, ButtonComponent,
+        IconComponent, ZonedDatePipe, IndexTabsComponent,
+        SpecRowComponent, InputComponent, ButtonComponent, PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'media-library.component.html',
     styleUrls: ['media-library.component.css'],
@@ -70,6 +71,18 @@ export class MediaLibraryComponent implements OnDestroy {
     busy = signal(false);
     deleteError = signal<string | null>(null);
     usedBy = signal<{ draftId: string; title: string }[]>([]);
+    uploading = signal(false);
+    uploadError = signal<string | null>(null);
+
+    readonly headerMeta = computed<HeaderMeta[]>(() => {
+        const p = this.page();
+        if (!p) return [];
+        const total = p.counts.image + p.counts.video + p.counts.audio;
+        const meta: HeaderMeta[] = [];
+        if (total > 0) meta.push({ text: this.t().media.fileCount(total) });
+        if (p.limitBytes) meta.push({ text: this.t().media.usage(formatBytes(p.usedBytes), formatBytes(p.limitBytes)) });
+        return meta;
+    });
 
     private thumbFailed = signal<ReadonlySet<string>>(new Set());
     private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -161,6 +174,32 @@ export class MediaLibraryComponent implements OnDestroy {
         this.skip.set(0);
         if (this.searchTimer) clearTimeout(this.searchTimer);
         this.searchTimer = setTimeout(() => void this.reload(), 250);
+    }
+
+    clearFilters() {
+        this.search.set('');
+        this.type.set(null);
+        this.bucket.set(null);
+        this.skip.set(0);
+        void this.reload();
+    }
+
+    async onUploadPicked(event: Event) {
+        const input = event.target as HTMLInputElement;
+        const files = Array.from(input.files ?? []);
+        input.value = '';
+        if (!files.length || this.uploading()) return;
+        this.uploading.set(true);
+        this.uploadError.set(null);
+        try {
+            for (const file of files) await this.api.upload(file);
+            this.skip.set(0);
+            await this.reload();
+        } catch (e) {
+            this.uploadError.set(httpErrorMessage(e, this.t().media.uploadFailed));
+        } finally {
+            this.uploading.set(false);
+        }
     }
 
     setView(view: 'grid' | 'list') {

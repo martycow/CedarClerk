@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MediaLibraryComponent } from './media-library.component';
 import { AssetsService, LibraryAsset, LibraryKind, LibraryPage } from '../core/assets.service';
 import { en } from '../core/i18n/en';
+import { formatBytes } from '../core/asset-index.service';
 
 function asset(id: string, contentType: string): LibraryAsset {
     return {
@@ -47,11 +48,13 @@ describe('media library', () => {
         tiles(label).map(x => [x.querySelector('.it-label')?.textContent?.trim(),
                               x.querySelector('.it-badge')?.textContent?.trim() ?? null]);
     const panel = (title: string) =>
-        [...el().querySelectorAll('app-shelf-panel')]
+        [...el().querySelectorAll('section.card')]
             .find(p => p.getAttribute('aria-label') === title) as HTMLElement | undefined;
 
-    async function create() {
+    async function create(page: LibraryPage = PAGE) {
+        TestBed.resetTestingModule();
         api = new FakeAssets();
+        api.page = page;
         TestBed.configureTestingModule({
             providers: [{ provide: AssetsService, useValue: api }],
         });
@@ -61,7 +64,7 @@ describe('media library', () => {
         fixture.detectChanges();
     }
 
-    beforeEach(create);
+    beforeEach(() => create());
 
     it('draws the type filter as index tabs, hiding a kind with nothing in it and capping at 99+', () => {
         expect(tileText(t.typeStrip)).toEqual([
@@ -92,9 +95,22 @@ describe('media library', () => {
         expect(el().querySelector('.tile.is-on')?.textContent).toContain('a1.bin');
     });
 
-    it('the storage shelf stands on its own when nothing is selected', () => {
+    it('the storage card stands on its own when nothing is selected', () => {
         const storage = panel(t.storage)!;
         expect(storage).toBeDefined();
         expect(storage.querySelector('.usage-bar')?.getAttribute('aria-valuenow')).toBe('50');
+    });
+
+    it('the header carries the file count and the quota, and an empty library names the next action', async () => {
+        const meta = el().querySelector('app-page-header .page-meta')?.textContent ?? '';
+        expect(meta).toContain(t.fileCount(105));
+        expect(meta).toContain(t.usage(formatBytes(500), formatBytes(1000)));
+        expect(el().querySelector('app-empty-state')).toBeNull();
+
+        await create({ ...PAGE, items: [], total: 0, counts: { image: 0, video: 0, audio: 0 }, buckets: [] });
+        const empty = el().querySelector('app-empty-state')!;
+        expect(empty).not.toBeNull();
+        expect(empty.textContent).toContain(t.empty);
+        expect(empty.querySelector('button')).not.toBeNull();
     });
 });

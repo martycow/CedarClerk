@@ -1,15 +1,43 @@
-<!--The manager on the bench (ADR-167): an index shelf, one sheet on the worktop, and the picked
-post's facts on the shelf beside it. The tab strip keeps its class so it stays addressable by the
-name the smoke suite binds.-->
-<div class="manager">
-    <div class="mg-index" data-surface="chrome">
-        <app-index-tabs class="manager-tabs" [items]="tabs()" [value]="tab()"
-                        [label]="t().manager.tabStrip" (selected)="pickTab($event)" />
+<!--The manager: a page header, a segmented strip, and one body per tab. The strip keeps its class
+so it stays addressable by the name the smoke suite binds.-->
+<div class="page manager">
+    <app-page-header [title]="t().manager.crumb" [meta]="headerMeta()">
+        <ng-container ngProjectAs="[primary]">
+            @if (tab() === 'forms') {
+            <app-button variant="pine" (clicked)="newPreset()">
+                <app-icon name="plus" weight="bold" size="sm" /> {{ t().manager.forms.newPreset }}
+            </app-button>
+            } @else if (tab() === 'posts') {
+                @if (selected(); as d) {
+                <!--ADR-163/ADR-169 — the one action here that opens something carries its address.-->
+                <app-button class="open-in-editor" variant="pine" link="/editor" [queryParams]="{ draft: d.id }">
+                    <app-icon name="pen" size="sm" /> {{ t().manager.openInEditor }}
+                </app-button>
+                }
+            }
+        </ng-container>
+    </app-page-header>
+
+    <div class="mg-top">
+        <div class="seg manager-tabs" role="tablist" [attr.aria-label]="t().manager.tabStrip">
+            @for (item of tabs(); track item.id) {
+            <button type="button" role="tab" [class.is-on]="item.id === tab()"
+                    [attr.aria-selected]="item.id === tab()" (click)="pickTab(item.id)">
+                {{ item.label }}
+                @if (badgeOf(item); as count) {
+                <!--An aria-label REPLACES the text it is on, so the title alone would take the count
+                out of the tab's name.-->
+                <span class="seg-badge" [attr.title]="item.badgeTitle || null"
+                      [attr.aria-label]="item.badgeTitle ? count + ' ' + item.badgeTitle : null">{{ count }}</span>
+                }
+            </button>
+            }
+        </div>
+        @if (tab() === 'forms') {
+        <p class="page-intro">{{ t().manager.forms.presetsIntro }}</p>
+        }
     </div>
 
-    <!--One board under the strip, whichever tab is lit: the tiles are cut into its top edge, so
-    the two are one object and nothing floats above bare wall (ADR-200).-->
-    <div class="mg-body">
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
     @if (tab() === 'posts') {
@@ -17,65 +45,71 @@ name the smoke suite binds.-->
         <p class="hint">{{ t().common.loading }}</p>
         } @else {
         <div class="mg-grid">
-            <app-shelf-panel class="shelf-list" [title]="t().manager.tabs.posts"
-                             [count]="visiblePosts().length" flush>
-                <div class="post-list">
+            <section class="card shelf-list" [attr.aria-label]="t().manager.tabs.posts">
+                <div class="card-head">
+                    <span class="label">{{ t().manager.tabs.posts }}</span>
+                    <span class="card-count">{{ visiblePosts().length }}</span>
+                </div>
                 <!--FI3.10: the list is publish-date ordered, so finding a specific post meant
                 scrolling. Search covers title and tags.-->
-                <!--T-337 — the bench's own search field, dense because it sits inside a shelf
-                panel's chrome rather than on paper (ADR-138).-->
-                <app-input class="post-search" type="search" dense [(ngModel)]="search"
+                <app-input class="post-search" type="search" [(ngModel)]="search"
                            [placeholder]="t().manager.searchPlaceholder" />
+                <div class="row-list post-list">
                 @for (d of visiblePosts(); track d.id) {
-                <!--A card, not a row (Marty, 01.08.2026): one line for what the post IS —
-                indicators and title on the left, where it stands on the right — and one line
-                below for the languages it exists in. The old single wrapping line put a
-                language chip and a publish state beside each other as equals, which they are
-                not: one answers "is this out?", the other "in which language?".-->
-                <button class="post-card" [class.on]="selectedId() === d.id" (click)="select(d)">
-                    <span class="post-card-top">
-                        <!--T-337 — the document's first picture where it has one, its type as an
-                        icon where it does not: the plate is the same size either way, so a list of
-                        mixed posts keeps one left edge.-->
-                        @if (d.coverImagePath; as cover) {
-                        <span class="post-card-type has-thumb">
-                            <img [src]="'/media/' + cover" alt="" loading="lazy">
-                        </span>
-                        } @else {
-                        <span class="post-card-type" [title]="t().projects.docTypes[d.documentType].name">
-                            <app-icon [name]="docIcons[d.documentType]" size="sm"></app-icon>
-                        </span>
-                        }
-                        <!--The title text needs its own element: text-overflow does not apply
-                        to a flex container, and .post-card-title has to be one to sit the lock
-                        icon beside the text.-->
+                <!--One row: the type plate, the title over its languages, the feedback tally, and
+                exactly one publish state — archived wins over live, live over unpublished. The
+                title column is the only one that shrinks, so a long title gives way to the tag
+                and never the reverse (T-271).-->
+                <button class="row post-card" [class.on]="selectedId() === d.id" (click)="select(d)">
+                    @if (d.coverImagePath; as cover) {
+                    <span class="post-card-type has-thumb">
+                        <img [src]="'/media/' + cover" alt="" loading="lazy">
+                    </span>
+                    } @else {
+                    <span class="post-card-type" [title]="t().projects.docTypes[d.documentType].name">
+                        <app-icon [name]="docIcons[d.documentType]" size="sm"></app-icon>
+                    </span>
+                    }
+                    <span class="post-card-main">
                         <span class="post-card-title">
                             @if (d.isPrivate) { <app-icon name="lock" size="xs"></app-icon> }
                             @if (hasPendingSchedule(d.id)) { <app-icon name="clock" size="xs"></app-icon> }
-                            <span class="post-card-title-text">{{ d.title || t().drafts.untitled }}</span>
+                            <span class="t post-card-title-text">{{ d.title || t().drafts.untitled }}</span>
                         </span>
-                        <!--Exactly one publish state per post, never two: archived wins over
-                        live, live over unpublished.-->
-                        <app-stamp-badge [tone]="publishState(d) === 'live' ? 'pine' : 'ink'" [rotate]="-1">{{ publishStateLabel(d) }}</app-stamp-badge>
+                        <span class="m post-card-langs">
+                            @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                            @if (extraLanguageCount(d); as extra) {
+                            <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
+                            }
+                            @if (d.isPrivate) { <span class="tag muted">{{ t().manager.privateChip }}</span> }
+                        </span>
                     </span>
-                    <span class="post-card-langs">
-                        @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                        @if (extraLanguageCount(d); as extra) {
-                        <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
-                        }
-                        @if (d.isPrivate) { <app-stamp-badge tone="rust" [rotate]="1">{{ t().manager.privateChip }}</app-stamp-badge> }
-                        <span class="spacer"></span>
-                        @if (newFeedbackFor(d.id); as n) { <app-stamp-badge tone="brass" [rotate]="0">+{{ n }}</app-stamp-badge> }
-                    </span>
+                    @if (newFeedbackFor(d.id); as n) {
+                    <span class="tag ok is-plain" [title]="t().manager.newSinceLastLook">+{{ n }}</span>
+                    } @else { <span></span> }
+                    <span class="tag post-card-state" [class.ok]="stateTone(d) === 'ok'"
+                          [class.warn]="stateTone(d) === 'warn'" [class.muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
                 </button>
                 } @empty {
-                <p class="hint">{{ t().manager.noPosts }}</p>
+                    @if (search.trim()) {
+                    <app-empty-state icon="magnifying-glass" [title]="t().manager.noMatches(search.trim())">
+                        <app-button variant="paper" size="sm" (clicked)="search = ''">{{ t().manager.clearSearch }}</app-button>
+                    </app-empty-state>
+                    } @else {
+                    <app-empty-state icon="paper-plane-tilt" [title]="t().manager.noPosts" [text]="t().manager.noPostsHint">
+                        <app-button variant="pine" link="/drafts">{{ t().manager.writeFirst }}</app-button>
+                    </app-empty-state>
+                    }
                 }
                 </div>
-            </app-shelf-panel>
+            </section>
 
-            <app-worktop class="sheet" scroll [label]="sheetLabel()" [meta]="sheetMeta()">
-                <div class="sheet-column">
+            <section class="card sheet" [attr.aria-label]="sheetLabel()">
+                <div class="card-head">
+                    <span class="card-title">{{ sheetLabel() }}</span>
+                    @if (sheetMeta()) { <span class="card-meta">{{ sheetMeta() }}</span> }
+                </div>
+                <div class="sheet-body">
                 @if (selected(); as d) {
                 <!--8.4 — the detail pane used to render every setting a post has at once, which
                 is a wall of controls for a page whose usual job is "check where this went".
@@ -152,10 +186,6 @@ name the smoke suite binds.-->
                         @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> {{ t().manager.unarchive }} }
                         @else { <app-icon name="archive" size="sm"></app-icon> {{ t().manager.archive }} }
                     </button>
-                    <a class="btn-ghost" routerLink="/editor" [queryParams]="{ draft: d.id }">
-                        <app-icon name="pen" size="sm"></app-icon>
-                        {{ t().manager.openInEditor }}
-                    </a>
                     <button class="btn-ghost danger" (click)="deleteConfirmId.set(d.id)" [disabled]="busy()">
                         <app-icon name="trash" size="sm"></app-icon>
                         {{ t().common.delete }}
@@ -166,7 +196,7 @@ name the smoke suite binds.-->
 
                 <!--What this group is left with after ADR-167 clause 3: the two things in it
                 that were commands rather than facts. Every link it used to carry is a property
-                of the post, and is read on the shelf instead.-->
+                of the post, and is read on the inspector instead.-->
                 @if (d.isBlogPublished || d.blogSlug) {
                 <details class="detail-group" [open]="isOpen('destinations')" (toggle)="rememberOpen('destinations', $event)">
                     <summary>{{ t().manager.groups.destinations }}</summary>
@@ -199,7 +229,7 @@ name the smoke suite binds.-->
                 <!--FI2.8: scheduled posts are managed here, not in the Export window. Kept
                 per-post rather than as one global list: every scheduled post belongs to a
                 draft that is in the list on the left, so nothing becomes unreachable, and
-                the row carries a clock chip so a post with a pending send is findable.-->
+                the row carries a clock icon so a post with a pending send is findable.-->
                 @if (scheduledFor(d.id); as scheduled) {
                 @if (scheduled.length || sentScheduleCount(d.id)) {
                 <details class="detail-group" [open]="isOpen('scheduled')" (toggle)="rememberOpen('scheduled', $event)">
@@ -291,9 +321,7 @@ name the smoke suite binds.-->
 
                 <div class="detail-field">
                     <label>{{ t().manager.forms.postForm }}</label>
-                    <!--Design review (Claude Design, 28.07.2026) — "the form lives in three
-                    places at once" (Forms defines it, here assigns it, Export re-picks it).
-                    app-form-ref is the one shared shape for the assign/re-pick half, always
+                    <!--app-form-ref is the one shared shape for the assign/re-pick half, always
                     pointing back to Forms. Behavior (DB1's "form attached but library empty"
                     distinction, FI3.7's explicit-clear dropdown, FI4.1's language list) lives
                     in the component; wording stays this page's own t() strings.-->
@@ -387,25 +415,28 @@ name the smoke suite binds.-->
                     </button>
                 </div>
                 } @empty {
-                <p class="hint">{{ t().manager.forms.noSubmissions }}</p>
+                <app-empty-state icon="user" [title]="t().manager.forms.noSubmissions" [text]="t().manager.forms.noSubmissionsHint" />
                 }
                 </details>
                 }
                 } @else {
-                <p class="hint">{{ t().manager.pickPost }}</p>
+                <app-empty-state icon="file-text" [title]="t().manager.pickPost" [text]="t().manager.pickPostHint" />
                 }
                 </div>
-            </app-worktop>
+            </section>
 
-            <!--The shelf states what the post IS; the sheet holds what is done to it
-            (ADR-167 clauses 3 and 4). With nothing picked it describes the library, never
-            both at once.-->
-            <app-shelf-panel class="inspector" [title]="inspectorTitle()" [count]="inspectorScopeWord()">
+            <!--The inspector states what the post IS; the sheet holds what is done to it (ADR-167
+            clauses 3 and 4). With nothing picked it describes the library, never both at once.-->
+            <aside class="card inspector" [attr.aria-label]="inspectorTitle()">
+                <div class="card-head">
+                    <span class="label">{{ inspectorTitle() }}</span>
+                    @if (inspectorScopeWord()) { <span class="card-count">{{ inspectorScopeWord() }}</span> }
+                </div>
+                <div class="card-body">
                 @if (selected(); as d) {
                     <app-spec-row scope="selection" [label]="t().manager.inspector.status">
-                        <app-stamp-badge [tone]="publishState(d) === 'live' ? 'pine' : 'ink'" [rotate]="-1">
-                            {{ publishStateLabel(d) }}
-                        </app-stamp-badge>
+                        <span class="tag" [class.ok]="stateTone(d) === 'ok'" [class.warn]="stateTone(d) === 'warn'"
+                              [class.muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
                     </app-spec-row>
                     <app-spec-row scope="selection" [label]="t().manager.inspector.languages">
                         @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
@@ -480,7 +511,8 @@ name the smoke suite binds.-->
                     <app-spec-row scope="document" [label]="t().manager.inspector.archivedCount" value="{{ archivedCount() }}"></app-spec-row>
                     <app-spec-row scope="document" [label]="t().manager.inspector.pending" value="{{ pendingScheduleCount() }}"></app-spec-row>
                 }
-            </app-shelf-panel>
+                </div>
+            </aside>
         </div>
         }
     }
@@ -492,35 +524,39 @@ name the smoke suite binds.-->
     edited that post's form, which made a form look like a property of a post. Forms are
     authored here as presets; a post picks one on the Posts tab.-->
     @if (tab() === 'forms') {
-        <p class="field-hint">{{ t().manager.forms.presetsIntro }}</p>
         <div class="mg-grid is-forms">
-            <app-shelf-panel class="shelf-list" [title]="t().manager.tabs.forms"
-                             [count]="presets().length" flush>
-                <app-button actions variant="rail" size="sm" (clicked)="newPreset()"
-                            [title]="t().manager.forms.newPreset">
-                    <app-icon name="plus" weight="bold" size="xs"></app-icon>
-                </app-button>
-                <div class="post-list">
+            <section class="card shelf-list" [attr.aria-label]="t().manager.tabs.forms">
+                <div class="card-head">
+                    <span class="label">{{ t().manager.tabs.forms }}</span>
+                    <span class="card-count">{{ presets().length }}</span>
+                </div>
+                <div class="row-list post-list">
                 @for (p of presets(); track p.id) {
-                <!--Same card as the posts list: two lists on one screen that behaved and looked
+                <!--Same row as the posts list: two lists on one screen that behaved and looked
                 differently was a difference with no meaning behind it.-->
-                <button class="post-card" [class.on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
-                    <span class="post-card-top">
-                        <span class="post-card-title"><span class="post-card-title-text">{{ p.name }}</span></span>
-                    </span>
-                    <!--ADR-060: every language the preset carries text for, first = primary.-->
-                    <span class="post-card-langs">
-                        @for (l of presetLanguagesOf(p); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                <button class="row post-card is-preset" [class.on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
+                    <span class="post-card-main">
+                        <span class="post-card-title"><span class="t post-card-title-text">{{ p.name }}</span></span>
+                        <!--ADR-060: every language the preset carries text for, first = primary.-->
+                        <span class="m post-card-langs">
+                            @for (l of presetLanguagesOf(p); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                        </span>
                     </span>
                 </button>
                 } @empty {
-                <p class="hint">{{ t().manager.forms.noPresets }}</p>
+                <app-empty-state icon="clipboard-text" [title]="t().manager.forms.noPresetsTitle" [text]="t().manager.forms.presetsIntro">
+                    <app-button variant="pine" size="sm" (clicked)="newPreset()">{{ t().manager.forms.newPreset }}</app-button>
+                </app-empty-state>
                 }
                 </div>
-            </app-shelf-panel>
+            </section>
 
-            <app-worktop class="sheet" scroll [label]="presetSheetLabel()" [meta]="presetSheetMeta()">
-                <div class="sheet-column">
+            <section class="card sheet" [attr.aria-label]="presetSheetLabel()">
+                <div class="card-head">
+                    <span class="card-title">{{ presetSheetLabel() }}</span>
+                    @if (presetSheetMeta()) { <span class="card-meta">{{ presetSheetMeta() }}</span> }
+                </div>
+                <div class="sheet-body">
                 @if (presetForm(); as form) {
                 <!--FI4.2: the editor used to be one flat stack of inputs, checkboxes and
                 outlined rows with nothing saying what belonged to what. It is three labelled
@@ -556,10 +592,8 @@ name the smoke suite binds.-->
                             </span>
                             }
                             @if (addableLanguages().length) {
-                            <!--T-341 replaced an absolute menu clipped by the shelf's own overflow
-                            with a popover that clamps itself; T-350 finished the job by making it
-                            the one shared language menu, so the search, the endonyms and the plan
-                            locks are the same here as everywhere else.-->
+                            <!--T-350 — the one shared language menu, so the search, the endonyms
+                            and the plan locks are the same here as everywhere else.-->
                             <app-language-menu class="lang-add" [active]="presetLangs()[0]"
                                                [only]="addableLanguages()"
                                                [triggerLabel]="'+ ' + t().manager.forms.addLanguage"
@@ -570,7 +604,6 @@ name the smoke suite binds.-->
                         <p class="reg-error-inline">{{ presetTranslateError() }}</p>
                         }
                     </div>
-                    <!--T-343 — the standing paragraph folded into the (i) beside "Form languages".-->
                     @for (l of presetLangs(); track l) {
                     <label class="form-field">
                         <span class="form-field-label">{{ t().manager.forms.introLabel }}
@@ -692,9 +725,13 @@ name the smoke suite binds.-->
                         </div>
                     </div>
                     } @empty {
-                    <p class="field-hint-inline">{{ t().manager.forms.noQuestions }}</p>
+                    <app-empty-state icon="list-checks" [title]="t().manager.forms.noQuestions">
+                        <app-button variant="paper" size="sm" (clicked)="addQuestion()">+ {{ t().manager.forms.addQuestion }}</app-button>
+                    </app-empty-state>
                     }
+                    @if (form.questions.length) {
                     <button class="btn-ghost" (click)="addQuestion()">+ {{ t().manager.forms.addQuestion }}</button>
+                    }
                 </div>
 
                 <div class="form-editor">
@@ -717,13 +754,14 @@ name the smoke suite binds.-->
                     </div>
                 </div>
                 } @else {
-                <p class="hint">{{ t().manager.forms.pickPreset }}</p>
+                <app-empty-state icon="clipboard-text" [title]="t().manager.forms.pickPreset">
+                    <app-button variant="pine" size="sm" (clicked)="newPreset()">{{ t().manager.forms.newPreset }}</app-button>
+                </app-empty-state>
                 }
                 </div>
-            </app-worktop>
+            </section>
         </div>
     }
-    </div>
 
     @if (deleteConfirmId()) {
     <app-modal (closed)="deleteConfirmId.set(null)">

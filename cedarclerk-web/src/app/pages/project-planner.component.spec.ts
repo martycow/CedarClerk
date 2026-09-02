@@ -5,7 +5,6 @@ import { ProjectPlannerComponent } from './project-planner.component';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { Sprint, SprintsService } from '../core/sprints.service';
 import { GameTask, TasksService } from '../core/tasks.service';
-import { RulerService } from '../core/ruler.service';
 import { en } from '../core/i18n/en';
 
 const PROJECT = { id: 'p1', name: 'Cedar Quest' } as ProjectDetail;
@@ -33,8 +32,8 @@ const SPRINTS: Sprint[] = [
     },
 ];
 
-// Two planned and one finished, so the shelf's state tallies are two different numbers: with one
-// apiece a row reading the other state's count would print the same digit as its own.
+// Two planned and one finished, so the summary's state tallies are two different numbers: with
+// one apiece a row reading the other state's count would print the same digit as its own.
 
 function task(over: Partial<GameTask>): GameTask {
     return {
@@ -74,11 +73,13 @@ describe('project planner', () => {
     const cards = () => [...el().querySelectorAll('app-paper-card.sprint')] as HTMLElement[];
     const cardNames = () => cards().map(c => c.querySelector('.sprint-name')?.textContent?.trim());
     const tags = () => [...el().querySelectorAll('app-task-tag')] as HTMLElement[];
-    const shelf = () => el().querySelector('app-shelf-panel.shelf-right') as HTMLElement;
+    const side = () => el().querySelector('aside.side') as HTMLElement;
     const specValue = (label: string) =>
-        [...shelf().querySelectorAll('app-spec-row')]
+        [...side().querySelectorAll('app-spec-row')]
             .find(r => r.querySelector('.label')?.textContent?.trim() === label)
             ?.querySelector('.text')?.textContent?.trim();
+    const meta = () => [...el().querySelectorAll('app-page-header .page-meta > span:not(.sep)')]
+        .map(x => x.textContent?.trim());
 
     async function create() {
         TestBed.configureTestingModule({
@@ -154,7 +155,7 @@ describe('project planner', () => {
         expect(nav).toHaveBeenCalledWith(['/editor'], { queryParams: { draft: 'doc-9' } });
     });
 
-    it('counts the shelf out of the sprints and tasks already loaded', () => {
+    it('counts the summary out of the sprints and tasks already loaded', () => {
         expect(specValue(t.planner.state.current)).toBe('S4 — Autumn build');
         expect(specValue(t.hub.sprintDone)).toBe(t.planner.progress(1, 2));
         expect(specValue(t.tasks.filterOverdue)).toBe(t.planner.overdueInside(1));
@@ -164,12 +165,19 @@ describe('project planner', () => {
         expect(specValue(t.planner.noSprint)).toBe('1');   // t-pile
     });
 
-    it('publishes the rule while it is open and clears it on the way out', () => {
-        const ruler = TestBed.inject(RulerService);
-        expect(ruler.label()).toBe('Cedar Quest');
-        expect(ruler.left().map(r => r.text)).toEqual([t.planner.sub(4, 2)]);
+    // ADR-239 clause 6 — what the rule used to say is the header's kicker and meta line.
+    it('names the project and the tally in the header', () => {
+        expect(el().querySelector('app-page-header .page-kicker')?.textContent?.trim()).toBe('Cedar Quest');
+        expect(meta()).toEqual([t.planner.sub(4, 2)]);
+    });
 
-        fixture.destroy();
-        expect(ruler.label()).toBe('');
+    it('names the next action when there is nothing planned at all', () => {
+        fixture.componentInstance.sprints.set([]);
+        fixture.componentInstance.tasks.set([]);
+        fixture.detectChanges();
+        const empty = el().querySelector('app-empty-state')!;
+        expect(empty.textContent).toContain(t.planner.empty);
+        expect(empty.querySelector('app-button')?.textContent?.trim()).toBe(t.planner.newSprint);
+        expect(el().querySelector('app-page-header app-button')).toBeNull();
     });
 });

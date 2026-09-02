@@ -5,6 +5,7 @@ import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
+import { formatInZone } from '../core/display-time';
 import {
     ASSET_KINDS,
     ASSET_KIND_ICONS,
@@ -21,10 +22,11 @@ import {
 import { AssetSyncService } from '../core/asset-sync.service';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { IconComponent } from '../shared/icon.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 
 const PAGE_SIZE = 60;
@@ -41,10 +43,13 @@ const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
 // cloud and opens anywhere, so most of the time this screen is looking at *fingerprints* — a preview
 // and some metadata standing in for a file that is somewhere else. `isLocal` decides which of the two
 // it is, and it decides it by comparing machines, never by assuming.
+//
+// ADR-239: the index's facts — folder, machine, last indexed, not-found count — are the header's
+// meta line; the list is a scrolling card; the opened file is a card beside it.
 @Component({
     selector: 'app-project-assets',
     imports: [
-        IconComponent, ZonedDatePipe, IndexTabsComponent, ShelfPanelComponent,
+        IconComponent, ZonedDatePipe, IndexTabsComponent, PageHeaderComponent, EmptyStateComponent,
         SpecRowComponent, InputComponent, ButtonComponent, MediaLibraryComponent,
     ],
     templateUrl: 'project-assets.component.html',
@@ -128,6 +133,23 @@ export class ProjectAssetsComponent implements OnDestroy {
     /** "MARTY-PC", or a plain "another machine" when the name was never recorded. */
     sourceMachineName = computed(() =>
         this.page()?.sourceMachine?.name ?? this.t().projects.assets.unknownMachine);
+
+    /** What the Index shelf used to print: the folder, whose machine, when, and what is missing. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        if (this.source() !== 'disk') return [];
+        const page = this.page();
+        if (!page?.rootPath) return [];
+        const t = this.t().projects.assets;
+        const meta: HeaderMeta[] = [
+            { text: t.sub(page.totalIndexed) },
+            { text: page.rootPath, title: t.folderLabel },
+            { text: this.sourceMachineName(), title: t.machineLabel },
+        ];
+        if (page.indexedAt) meta.push({ text: `${t.indexedAt} ${formatInZone(page.indexedAt, 'd MMM, HH:mm')}` });
+        else meta.push({ text: t.neverIndexed, tag: true, tone: 'warn' });
+        if (page.missingCount > 0) meta.push({ text: t.notFoundCount(page.missingCount), tag: true, tone: 'warn' });
+        return meta;
+    });
 
     constructor() {
         void this.loadMachine();

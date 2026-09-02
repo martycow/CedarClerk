@@ -1,33 +1,66 @@
-/* The shell owns the ground under the page (ADR-139), so nothing here paints one. */
-.admin-page {
+:host {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-3);
+    flex: 1;
+    min-height: 0;
 }
 
-/* The index tiles hang off the panel's top edge, overlapping its border by a hair. */
 .admin-page > app-index-tabs {
-    position: relative;
-    z-index: 1;
-    padding: 0 var(--space-1);
-    margin-bottom: calc(-1px - var(--space-3));
+    align-self: flex-start;
+    margin-bottom: var(--space-4);
 }
 
-/* The kit's proportions and no width breakpoint of its own (ADR-147). */
+/* The section beside the summary: the kit's proportions and no width breakpoint (ADR-147). */
 .admin-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
-    gap: var(--space-3);
-    align-items: start;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: var(--space-4);
 }
+
+.card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.section { flex: 1; }
+.summary { flex: none; width: var(--bench-dock-w); }
+
+.card-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex: none;
+    min-height: var(--hit-touch);
+    padding: var(--space-3) var(--space-4) 0;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.spacer { flex: 1; }
 
 .hint {
-    color: var(--t2);
+    color: var(--wood-ink-soft);
     font-size: var(--dens-fs);
 }
 
+.hint.in-card { margin: 0; color: var(--t2); }
+
 .channel-error {
+    margin: 0 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
     color: var(--danger);
     font-size: var(--dens-fs);
 }
@@ -38,6 +71,14 @@
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: var(--space-3);
     margin-bottom: var(--space-4);
+}
+
+.revenue-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+    box-shadow: none;
 }
 
 .summary-value {
@@ -51,63 +92,78 @@
     color: var(--t2);
 }
 
-/* ---------- Users ---------- */
-.admin-section-title {
-    font-family: var(--font-display);
-    font-size: var(--fs-ui);
-    font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--t2);
-    margin: 0 0 10px;
-}
-
-.user-table {
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
-    /* The row grid has a minimum width; below it the table scrolls rather than crushing the
-       columns — same lesson as B24 on the drafts table. */
+/* ---------- Tables ---------- */
+/* A table is a run of rows; below its minimum width it scrolls sideways rather than crushing the
+   columns — same lesson as B24 on the drafts table. */
+.table {
+    flex: none;
     overflow-x: auto;
+    margin: 0 calc(var(--space-4) * -1);
 }
 
-.user-cards {
+.table .row {
+    font-size: var(--dens-fs);
+}
+
+.table .row.head {
+    min-height: var(--hit-chrome);
+    font-size: var(--fs-11);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--t3);
+    background: var(--alt);
+}
+
+.table .row.head:hover { background: var(--alt); }
+
+.invite-row {
+    grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.4fr) 120px 140px 130px;
+    min-width: 780px;
+}
+
+.post-row { grid-template-columns: minmax(220px, 2fr) minmax(180px, 1.2fr) 160px 170px 130px; min-width: 900px; }
+.payment-row { grid-template-columns: 170px minmax(180px, 1.2fr) minmax(150px, 1fr) 130px 110px; min-width: 800px; }
+.usage-row { grid-template-columns: minmax(220px, 2fr) 120px 100px 140px; min-width: 640px; }
+.waitlist-row { grid-template-columns: minmax(220px, 2fr) 80px 140px; min-width: 460px; }
+
+.post-links {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
-/* A real button since T-257 took the form out of it: nothing is nested inside the card any more,
-   so it can be the door it always behaved like — reachable from the keyboard, and with no click
-   left to stop from propagating. */
+.post-links a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: var(--fs-ui);
+}
+
+.post-links a:hover { text-decoration: underline; }
+
+/* ---------- Users ---------- */
+.user-cards {
+    flex: 1;
+    margin: 0 calc(var(--space-4) * -1);
+}
+
+/* A real button since T-257 took the form out of it: nothing is nested inside the row any more,
+   so it can be the door it always behaved like — reachable from the keyboard. */
 .user-card {
-    display: block;
+    grid-template-columns: auto minmax(0, 1fr);
     width: 100%;
-    box-sizing: border-box;
-    text-align: left;
-    font: inherit;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    background: none;
     color: inherit;
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
-    padding: 12px 16px;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
 }
 
-.user-card:hover,
-.user-card.on {
-    border-color: var(--abord);
-}
-
-.user-card-main {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+.user-card.on { background: var(--asoft); }
 
 .user-avatar {
     flex: none;
@@ -175,8 +231,6 @@
     color: var(--accent);
 }
 
-/* Now the same shape as .chip.danger below, instead of a hand-mixed hue plus a theme override
-   sitting eighty lines away from the rule it corrects. */
 .chip.warn {
     background: var(--warn-soft);
     color: var(--warn);
@@ -185,19 +239,6 @@
 .chip.danger {
     background: var(--danger-soft);
     color: var(--danger);
-}
-
-.admin-next {
-    margin-top: 18px;
-}
-
-/* T-034 — this screen had no breakpoint at all. Both wide tables (audit, invites) already scroll
-   inside their own container, which is the right behaviour for a log nobody reads on a phone; what
-   needed fixing is the frame and the user cards, which are the part an admin actually taps. */
-@media (max-width: 700px) {
-    .user-card {
-        padding: var(--space-3);
-    }
 }
 
 /* ---------- Step 2: per-user actions (T-257 — inside the account modal) ----------
@@ -245,7 +286,10 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-1);
+    margin-top: var(--space-2);
 }
+
+.audit-list app-empty-state { align-self: stretch; }
 
 /* ---------- T-191: the feedback inbox ---------- */
 .fb-toolbar {
@@ -286,7 +330,6 @@
 
 .fb-from { font-size: var(--fs-ui); font-weight: 600; }
 .fb-when { font-size: var(--fs-meta); }
-.fb-entry-head .spacer { flex: 1; }
 
 .fb-body {
     margin: 0;
@@ -319,86 +362,8 @@
     margin: 0 0 12px;
 }
 
-.invite-table {
-    margin-bottom: 8px;
-}
-
-.invite-row {
-    display: grid;
-    grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.4fr) 120px 140px 130px;
-    gap: 12px;
-    align-items: center;
-    padding: 9px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: var(--dens-fs);
-    min-width: 780px;
-}
-
-.invite-row:last-child {
-    border-bottom: none;
-}
-
-.invite-row.head {
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    font-weight: 600;
-    color: var(--t2);
-    background: var(--alt);
-}
-
-.invite-empty {
-    padding: 14px 16px;
-    margin: 0;
-}
-
-.post-row,
-.payment-row,
-.usage-row {
-    display: grid;
-    gap: 12px;
-    align-items: center;
-    padding: 9px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: var(--dens-fs);
-}
-
-.post-row { grid-template-columns: minmax(220px, 2fr) minmax(180px, 1.2fr) 160px 170px 130px; min-width: 900px; }
-.payment-row { grid-template-columns: 170px minmax(180px, 1.2fr) minmax(150px, 1fr) 130px 110px; min-width: 800px; }
-.usage-row { grid-template-columns: minmax(220px, 2fr) 120px 100px 140px; min-width: 640px; }
-
-.post-row:last-child,
-.payment-row:last-child,
-.usage-row:last-child { border-bottom: none; }
-
-.post-row.head,
-.payment-row.head,
-.usage-row.head {
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    font-weight: 600;
-    color: var(--t2);
-    background: var(--alt);
-}
-
-.post-links {
-    display: flex;
-    gap: 10px;
-}
-
-.post-links a {
-    color: var(--accent);
-    text-decoration: none;
-    font-size: var(--fs-ui);
-}
-
-.post-links a:hover { text-decoration: underline; }
-
-/* Credit adjustment (11.08.2026). The balance reads first because the number being changed matters
-   more than the control that changes it. */
+/* Credit adjustment. The balance reads first because the number being changed matters more than
+   the control that changes it. */
 .credit-balance {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
@@ -416,8 +381,8 @@
 
 /* ---------- Landing (ADR-215) ---------- */
 /* The tab is one scroll of six sections rather than six panels, so the headings are the only thing
-   separating them — and .admin-section-title carries no top margin, which left every one of them
-   sitting on the paragraph above it. */
+   separating them. */
+h2.label { margin: 0 0 10px; }
 .landing-section-title { margin-top: var(--space-5); }
 
 .landing-card-head select { width: auto; max-width: 180px; }
@@ -472,11 +437,6 @@
     gap: 6px 8px;
 }
 
-/* One language per row once the two boxes stop being wide enough to write a sentence in. */
-@media (max-width: 900px) {
-    .lf-pair { grid-template-columns: auto minmax(0, 1fr); }
-}
-
 .lf-pair.one { grid-template-columns: minmax(0, 1fr); }
 
 .lf-lang {
@@ -513,11 +473,9 @@
     gap: 12px;
     align-items: start;
     padding: 10px;
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
 }
 
 .shot-row img {
@@ -572,11 +530,9 @@
     flex-direction: column;
     gap: 8px;
     padding: 12px;
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
 }
 
 .landing-card-head {
@@ -588,16 +544,3 @@
 .landing-card > label {
     font-size: var(--fs-meta);
 }
-
-.waitlist-row {
-    display: grid;
-    grid-template-columns: minmax(220px, 2fr) 80px 140px;
-    gap: 12px;
-    align-items: center;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: var(--dens-fs);
-    min-width: 460px;
-}
-
-.waitlist-row:last-child { border-bottom: none; }

@@ -1,8 +1,9 @@
-/* The third workshop door (ADR-166's family) — same wall and sheet as login and register. */
+/* The third door (ADR-166's family) — same canvas and card as login and register. */
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--surface-page);
+    background: var(--canvas);
+    color: var(--wood-ink);
     font-family: var(--font-sans);
 }
 
@@ -25,7 +26,7 @@
 .auth-card[data-surface="paper"] {
     width: 340px;
     box-sizing: border-box;
-    --paper-card-pad: var(--space-6);
+    padding: var(--space-6);
 
     .auth-header {
         display: flex;

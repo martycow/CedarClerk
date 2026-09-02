@@ -1,5 +1,4 @@
-/* The bench page contract (UI-INVENTORY bench-shell row): the page fills the shell body and the
-   list panel's sheet scrolls internally instead of growing the page. */
+/* Hub.png (ADR-239): the page is the shell body's flex column; the grid scrolls with it. */
 :host {
     display: flex;
     flex-direction: column;
@@ -7,139 +6,77 @@
     min-height: 0;
 }
 
-.hint {
-    color: var(--t2);
-    font-size: var(--dens-fs);
-}
+.spacer { flex: 1; }
 
-.hint.pad,
-.load-error.pad {
-    padding: var(--space-4);
+/* Text left straight on the wall takes the wall's ink (ADR-141). */
+.hint {
+    margin: 0;
+    color: var(--wood-ink-soft);
+    font-size: var(--fs-ui);
 }
 
 .load-error {
-    color: var(--danger);
-    font-size: var(--dens-fs);
-}
-
-.right {
-    text-align: right;
-}
-
-.index {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    padding: var(--space-3);
-}
-
-/* ---------- The two columns ---------- */
-/* The kit's proportions, and no width breakpoint of its own (ADR-147). Stretched, not started:
-   the columns are bounded by the page now, so the list sheet scrolls inside its panel. */
-.index-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
-    gap: var(--space-3);
-    align-items: stretch;
-    flex: 1;
-    min-height: 0;
-}
-
-.index-mid {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    min-width: 0;
-    min-height: 0;
-}
-
-/* ---------- The lit top ---------- */
-.hero { flex: none; }
-
-.hero-body {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-    padding: var(--space-4) var(--space-5);
-}
-
-.hero-title {
     margin: 0;
-    font-family: var(--font-display);
-    font-size: var(--fs-34);
-    font-weight: 700;
-    letter-spacing: -.01em;
+    color: var(--danger);
+    font-size: var(--fs-ui);
 }
 
-.hero-actions {
+/* A field whose name is given by a label it does not draw: out of the flow, in the tree. */
+.named-elsewhere {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.toolbar {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    margin-left: auto;
+    gap: var(--space-3);
+    flex: none;
+    margin-bottom: var(--space-5);
 }
 
-/* ---------- The list ---------- */
-.list-stack {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    flex: 1;
-    min-height: 0;
-}
+.search { width: 240px; }
 
-.list-panel {
-    flex: 1;
-    min-height: 0;
-}
-
-.search {
-    width: 200px;
-}
-
-/* ---------- The card grid (T-332) ---------- */
+/* ---------- The card grid ---------- */
 .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: var(--space-3);
-    padding: var(--space-3);
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-5);
     align-content: start;
 }
 
-.card {
+.project-card {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-paper);
-    background: var(--sheet);
-    color: var(--text);
-    text-decoration: none;
     overflow: hidden;
-    box-shadow: var(--shadow-paper-sm);
+    text-decoration: none;
     transition: box-shadow var(--dur-control, 190ms) var(--ease-settle),
                 transform var(--dur-control, 190ms) var(--ease-settle);
 }
 
-.card:hover {
+.project-card:hover {
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
 }
 
-.card.dim { opacity: .72; }
+.project-card.dim { opacity: .72; }
 
-/* The cover leads: an image when the project has one, the wood-and-initials plate otherwise —
-   the same plate the hub's switcher uses. No screen can set a cover yet (T-353 remainder). */
+/* The cover leads: an image when the project has one, the wood-and-initials plate otherwise. */
 .cover {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 2 / 1;
     overflow: hidden;
     background: linear-gradient(160deg, var(--wood-hi), var(--wood-lo));
-    border-bottom: 1px solid var(--wood-edge);
 }
 
 .cover img {
@@ -149,48 +86,49 @@
 }
 
 .cover-initials {
-    font-family: var(--font-mono);
-    font-size: var(--fs-27);
+    font-family: var(--font-display);
+    font-size: var(--fs-34);
     font-weight: 700;
-    color: var(--rail-ink);
-    text-shadow: 0 1px 1px var(--wood-edge);
+    color: var(--text-on-pine);
+    opacity: .9;
 }
 
 .card-state {
     position: absolute;
-    top: var(--space-2);
-    right: var(--space-2);
+    top: var(--space-3);
+    right: var(--space-3);
+    background: var(--sheet);
 }
 
 .card-body {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
-    padding: var(--space-3);
+    gap: var(--space-2);
+    padding: var(--space-4) 18px 18px;
     min-width: 0;
 }
 
 .card-name {
-    font-size: var(--fs-ui);
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: var(--fs-20);
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .card-type {
-    font-size: var(--fs-meta);
+    font-size: var(--fs-13);
     color: var(--t2);
 }
 
 .card-stats {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
     margin-top: var(--space-1);
-    font-family: var(--font-mono);
-    font-size: var(--fs-meta);
-    color: var(--t2);
+    font-size: var(--fs-13);
+    color: var(--t3);
 }
 
 .card-stat {
@@ -199,30 +137,13 @@
     gap: var(--space-1);
 }
 
-.card-when {
-    margin-left: auto;
-    white-space: nowrap;
+/* The last cell: the same box the cards stand in, so the grid stays one grid. */
+.new-card {
+    min-height: 262px;
 }
 
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-7) var(--space-4);
-    color: var(--t2);
-    text-align: center;
-}
-
-.empty-state app-icon {
-    color: var(--t2);
-}
-
-.empty-title {
-    margin: 0;
-    font-size: var(--fs-body);
-    font-weight: 600;
-    color: var(--text);
+.new-card.is-note {
+    min-height: 0;
 }
 
 /* ---------- Create dialog ---------- */

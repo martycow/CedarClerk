@@ -1,21 +1,22 @@
 /* The tab body is paper (ADR-154); every rule below is scoped to that so tools/check-density.mjs
    holds this screen to paper's floors instead of finding an unmeasured page root. */
-/* The tab fills the box the manager gives it, so both boards run down to the drawer lip and the
-   plot takes whatever is left under the readouts. */
+/* The tab fills the box the manager gives it, so both columns run to the bottom and the plot takes
+   whatever is left under the readouts (ADR-239 clause 7). */
 :host([data-surface="paper"]) {
     display: flex;
     flex-direction: column;
     min-height: 0;
 
-    /* No token owns a shelf column's width — the kit states 320px and the design system stops
+    /* No token owns a side column's width — the kit states 320px and the design system stops
        there — so it is named here rather than dropped into a rule. */
-    --stats-shelf-w: 320px;
+    --stats-side-w: 320px;
 }
 
+/* The side column shrinks before it wraps, so the screen never needs a width rule (ADR-147). */
 :host([data-surface="paper"]) .stats-tab {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--stats-shelf-w);
-    gap: var(--space-3);
+    grid-template-columns: minmax(0, 1fr) minmax(240px, var(--stats-side-w));
+    gap: var(--space-4);
     flex: 1;
     min-height: 0;
     align-items: stretch;
@@ -24,13 +25,9 @@
 :host([data-surface="paper"]) .stats-main {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-4);
     min-width: 0;
     min-height: 0;
-}
-
-@media (max-width: 720px) {
-    :host([data-surface="paper"]) .stats-tab { grid-template-columns: minmax(0, 1fr); }
 }
 
 :host([data-surface="paper"]) .stats-hint {
@@ -39,33 +36,37 @@
     font-size: var(--fs-ui);
 }
 
-:host([data-surface="paper"]) .stats-hint-pad { padding: var(--space-5) var(--space-4); }
-
-/* T-338 — the chart board's zero-state: a leaf centred on the graph paper, a title and one line. */
 :host([data-surface="paper"]) .stats-empty {
+    flex: 1;
+}
+
+/* ---------- Card caption line ---------- */
+:host([data-surface="paper"]) .card-head {
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-7) var(--space-4);
-    text-align: center;
+    flex: none;
+    box-sizing: border-box;
+    min-height: var(--hit-touch);
+    padding: 0 var(--space-4);
+    border-bottom: 1px solid var(--paper-edge);
 }
 
-:host([data-surface="paper"]) .stats-empty app-icon { color: var(--abord); }
-
-:host([data-surface="paper"]) .stats-empty-title {
-    margin: 0;
-    font-size: var(--fs-body);
-    font-weight: 600;
-    color: var(--text);
-}
-
-:host([data-surface="paper"]) .stats-empty-note {
-    margin: 0;
-    max-width: 42ch;
+:host([data-surface="paper"]) .card-count {
     font-size: var(--fs-ui);
-    color: var(--t2);
-    line-height: 1.45;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+:host([data-surface="paper"]) .card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-4);
 }
 
 /* ---------- Filter strip: the legend and the filter are one control (ADR-149) ---------- */
@@ -74,18 +75,14 @@
     align-items: center;
     flex-wrap: wrap;
     gap: var(--space-2);
+    flex: none;
     box-sizing: border-box;
     padding: var(--space-2) var(--space-3);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    box-shadow: var(--shadow-paper-sm);
 }
 
 :host([data-surface="paper"]) .strip-gap { flex: 1; }
 
-/* Bare text beside the slider's bare value: the strip's own gap reads as one line. */
+/* Bare text beside the picker's bare value: the strip's own gap reads as one line. */
 :host([data-surface="paper"]) .strip-meta {
     margin-right: var(--space-4);
     font-family: var(--font-mono);
@@ -132,34 +129,24 @@
 /* ---------- Readouts: one card per drawn source, never a total ---------- */
 :host([data-surface="paper"]) .readouts {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-4);
+    flex: none;
 }
 
-/* A flat tile in the filter strip's own material, a quarter of the row however many are drawn. */
 :host([data-surface="paper"]) .ro {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
     box-sizing: border-box;
-    padding: var(--space-2) var(--space-3);
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
+    padding: var(--space-3) var(--space-4);
 }
 
+/* The caption face is the global .label's; only the swatch's seat is the tile's own. */
 :host([data-surface="paper"]) .ro-label {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-family: var(--font-display);
-    font-size: var(--fs-ui);
-    font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--t2);
 }
 
 /* The swatch is the same slot ink the line is drawn in, bound as a token reference (ADR-146). */
@@ -178,8 +165,10 @@
 }
 
 :host([data-surface="paper"]) .ro-value {
-    font-family: var(--font-mono);
+    font-family: var(--font-display);
     font-size: var(--text-readout);
+    font-weight: 700;
+    line-height: 1.1;
     color: var(--text);
     font-variant-numeric: tabular-nums;
 }
@@ -195,42 +184,33 @@
 :host([data-surface="paper"]) .ro-delta.up { color: var(--ok); }
 :host([data-surface="paper"]) .ro-delta.down { color: var(--danger); }
 
-/* ---------- Chart panel: one dataset, two views ---------- */
-/* The panel takes the column's remaining height: the chart measures its host and follows, and
-   the table scrolls inside the panel's sheet rather than growing it to six months of rows. */
+/* ---------- Chart card: one dataset, two views ---------- */
+/* The card takes the column's remaining height: the chart measures its host and follows, and the
+   table scrolls inside the card rather than growing it to six months of rows. */
 :host([data-surface="paper"]) .chart-panel {
-    flex: 1;
-    min-height: 0;
-}
-
-:host([data-surface="paper"]) .chart {
-    display: block;
-    height: 100%;
-    min-height: 0;
-}
-
-/* The strips and the board they switch are one object, so the column's gap never gets between
-   them. */
-:host([data-surface="paper"]) .chart-stack {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    min-width: 0;
+    overflow: hidden;
 }
 
-/* Two strips, two controls: the metric strip picks what is plotted and sits at the reading edge,
-   the view strip picks how and sits at the far one, so a view tile cannot read as a fourth
-   metric. */
-:host([data-surface="paper"]) .chart-index {
-    display: flex;
-    align-items: flex-end;
-    flex: none;
-    min-width: 0;
-    overflow-x: auto;
+:host([data-surface="paper"]) .chart-panel .card-head {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
 }
 
-:host([data-surface="paper"]) .index-gap { flex: 1 0 var(--space-3); }
+:host([data-surface="paper"]) .chart-body {
+    padding: 0;
+}
+
+:host([data-surface="paper"]) .chart {
+    display: block;
+    flex: 1;
+    min-height: 0;
+}
 
 :host([data-surface="paper"]) .series-table {
     width: 100%;
@@ -241,7 +221,7 @@
 :host([data-surface="paper"]) .series-table th,
 :host([data-surface="paper"]) .series-table td {
     padding: var(--space-2) var(--space-3);
-    border-bottom: 1px solid var(--rule-ink-soft);
+    border-bottom: 1px solid var(--paper-edge);
     text-align: right;
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
@@ -275,15 +255,9 @@
     clip-path: inset(50%);
 }
 
-/* ---------- Audience shelf ---------- */
+/* ---------- Audience card ---------- */
 :host([data-surface="paper"]) .group-head {
     margin: var(--space-4) 0 var(--space-2);
-    font-family: var(--font-display);
-    font-size: var(--fs-ui);
-    font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--t2);
 }
 
 :host([data-surface="paper"]) .group-head:first-child { margin-top: 0; }
@@ -335,12 +309,11 @@
 :host([data-surface="paper"]) .audience-bar-fill {
     display: block;
     height: 100%;
-    background: var(--grad-pine);
+    background: var(--pine);
 }
 
-/* The folded remainder is the kit's pine at .45, mixed into the track rather than laid over it as
-   opacity: an opaque fill is one paint per theme that the census can read, a translucent one is
-   composited against whatever lies beneath and measured by nothing (ADR-145). */
+/* The folded remainder is pine at .45, mixed into the track rather than laid over it as opacity:
+   an opaque fill is one paint per theme that the census can read (ADR-145). */
 :host([data-surface="paper"]) .audience-row.is-other .audience-bar-fill {
     background: color-mix(in srgb, var(--pine) 45%, var(--surface));
 }
@@ -354,34 +327,48 @@
     color: var(--t2);
 }
 
-/* Wave 2 item 13 — the streak card: a brass stamp and one sentence beside it. */
+/* Wave 2 item 13 — the streak: a tag and one sentence beside it. */
 :host([data-surface="paper"]) .streak-card {
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    flex: none;
+    color: var(--wood-ink);
 }
 
 :host([data-surface="paper"]) .streak-note {
-    color: var(--t2);
+    color: var(--wood-ink-soft);
     font-size: var(--fs-ui);
 }
 
-/* Wave 2 item 15 — the invite-links shelf shares the audience shelf's column. */
+/* Wave 2 item 15 — the invite-links card shares the audience card's column. */
 :host([data-surface="paper"]) .stats-side {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-4);
     min-width: 0;
     min-height: 0;
 }
 
-:host([data-surface="paper"]) .invite-shelf { padding: 0; }
+:host([data-surface="paper"]) .audience-shelf,
+:host([data-surface="paper"]) .invite-shelf {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+:host([data-surface="paper"]) .audience-shelf { flex: 1; }
+
+:host([data-surface="paper"]) .invite-shelf { flex: none; max-height: 50%; }
+
+:host([data-surface="paper"]) .invite-body { padding: var(--space-2); }
 
 :host([data-surface="paper"]) .invite-pick {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-2) var(--space-2) 0;
+    padding: 0 var(--space-2);
     font-size: var(--fs-ui);
     color: var(--t2);
 }

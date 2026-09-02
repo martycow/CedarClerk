@@ -1,7 +1,6 @@
 /* ADR-127 — the media library. Compact density (ADR-164 clause 6): a screen for scanning tiles,
-   not for reading. The shell owns the ground under it, so nothing here paints a page background.
-   The host takes the bench page contract (UI-INVENTORY bench-shell row) so the panel's sheet
-   scrolls internally instead of growing the page. */
+   not for reading. The shell owns the ground and the scroll container (ADR-239 clause 7); the
+   list card scrolls what it holds. */
 :host {
     display: flex;
     flex-direction: column;
@@ -9,31 +8,19 @@
     min-height: 0;
 }
 
-.media-page {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
+.page {
     gap: var(--space-3);
-    padding: var(--space-3);
 }
 
 /* Inside another screen the host page owns the padding around this component. */
-.media-page.embedded { padding: 0; }
+.page.embedded { padding: 0; }
 
-/* Both strips share one row (the drafts view-row pattern): the bucket says whose files these are,
-   the type says what they are; a clear gap keeps them from reading as one run of tiles. The row
-   is cut into the board's top edge (ADR-200). */
 .strip-row {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     gap: var(--space-4);
     flex-wrap: wrap;
     flex: none;
-    position: relative;
-    z-index: 1;
-    padding: 0 var(--space-1);
-    margin-bottom: calc(-1px - var(--space-3));
 }
 
 .hint {
@@ -41,13 +28,24 @@
     font-size: var(--fs-meta);
 }
 
+.hint.pad { padding: var(--space-4); }
+
 .load-error {
+    flex: none;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
     color: var(--danger);
-    font-size: var(--dens-fs);
+    font-size: var(--fs-ui);
 }
 
-/* The kit's proportions and no width breakpoint of its own (ADR-147). Stretched, not started:
-   the board is bounded by the page now, so the sheet scrolls inside it. */
+.spacer { flex: 1; }
+
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 .media-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--bench-dock-w-wide);
@@ -61,8 +59,56 @@
 .media-grid.solo { grid-template-columns: minmax(0, 1fr); }
 .media-grid.solo .shelves { display: none; }
 
+.card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    box-sizing: border-box;
+    min-height: var(--hit-touch);
+    padding: 0 var(--space-3) 0 var(--space-4);
+}
+
+.card-name {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.card-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
+}
+
+.card-body {
+    padding: 0 var(--space-4) var(--space-4);
+}
+
+.library .row-list {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--paper-edge);
+}
+
+.library app-empty-state {
+    flex: 1;
+    padding: var(--space-4);
+}
+
 /* The dock scrolls as its own column: a tall inspector on a short window must not be clipped by
-   the now-bounded board. */
+   the bounded board. */
 .shelves {
     display: flex;
     flex-direction: column;
@@ -72,10 +118,8 @@
     overflow-y: auto;
 }
 
-/* Content height, not squeezed: the dock's own scroller is what absorbs the excess. */
-.shelves > app-shelf-panel { flex: none; }
+.shelves > .card { flex: none; }
 
-/* Projected into the panel header, which is a single non-wrapping row. */
 .search {
     width: 200px;
 }
@@ -106,14 +150,7 @@
     margin-top: var(--space-3);
 }
 
-.media-empty {
-    padding: var(--space-6);
-    text-align: center;
-}
-
 /* ---------- Grid ---------- */
-/* The sheet is flush so the list rows can rule to the panel's edge; the tiles pay for their own
-   margin instead. */
 .asset-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -124,11 +161,9 @@
 .tile {
     display: flex;
     flex-direction: column;
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     padding: 0;
     overflow: hidden;
     cursor: pointer;
@@ -139,7 +174,7 @@
 
 .tile:hover { border-color: var(--abord); }
 
-/* The inspector no longer covers the list, so the list has to say which row it is reading. The
+/* The inspector does not cover the list, so the list has to say which row it is reading. The
    mark stands down while focused: ADR-140 spends the app's one box-shadow on the focus halo. */
 .tile.is-on,
 .list-row.is-on {
@@ -147,10 +182,7 @@
     background: var(--asoft);
 }
 
-.tile.is-on:not(:focus-visible) {
-    box-shadow: inset 2px 0 0 var(--accent), var(--shadow-paper-sm);
-}
-
+.tile.is-on:not(:focus-visible),
 .list-row.is-on:not(:focus-visible) {
     box-shadow: inset 2px 0 0 var(--accent);
 }
@@ -214,37 +246,30 @@
 }
 
 .list-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+    grid-template-columns: auto minmax(0, 1fr) 10ch auto auto;
     width: 100%;
     box-sizing: border-box;
-    border: none;
-    border-bottom: 1px solid var(--rule-ink-soft);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
     background: none;
-    padding: var(--space-1) var(--space-3);
     cursor: pointer;
     font-family: inherit;
-    font-size: var(--fs-meta);
-    color: var(--text);
     text-align: left;
     min-width: 0;
 }
 
-.list-row:hover { background: var(--hover); }
+.list-row:first-child { border-top: none; }
 
-.list-row .tile-name { flex: 1; }
+.list-row .tile-name { min-width: 0; }
 
 .list-type,
 .list-size,
 .list-date {
-    color: var(--t2);
-    font-size: var(--fs-caption);
     white-space: nowrap;
-    flex: none;
 }
 
-.list-type { width: 10ch; overflow: hidden; text-overflow: ellipsis; }
+.list-type { overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- Pager ---------- */
 .pager {

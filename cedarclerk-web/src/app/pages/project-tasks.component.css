@@ -1,17 +1,16 @@
-/* T-123 / ADR-165 — the task board on the bench's materials. Compact density (set on the root in
-   the template): this is a screen for scanning what is in flight, not for reading.
-
-   Every control here is a bench component, so what is left in this file is arrangement: the four
-   columns, the table's grid, the modal's field grid. That split is the whole point — when the
-   fourth reference screen lands (T-229) it changes this file and not the components. */
-.tasks-page {
-    color: var(--text);
-    font-size: var(--dens-fs);
+/* Board.png (ADR-239): four full-height columns in the shell body's flex column. What is left in
+   this file is arrangement — the strips, the columns, the table's grid, the modal's field grid. */
+:host {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .hint {
-    color: var(--t2);
-    font-size: var(--fs-meta);
+    margin: 0;
+    color: var(--wood-ink-soft);
+    font-size: var(--fs-ui);
 }
 
 .spacer { flex: 1; }
@@ -19,8 +18,7 @@
 .dot { opacity: .6; margin: 0 var(--space-1); }
 
 /* A field whose name is given by a label it does not draw: taken out of the flow, left in the
-   accessibility tree. app-input names itself from a visible label or not at all, and a toolbar
-   search has never had a caption here. */
+   accessibility tree. */
 .named-elsewhere {
     position: absolute;
     width: 1px;
@@ -33,215 +31,151 @@
 }
 
 .error-line {
-    margin: 0;
+    margin: 0 0 var(--space-3);
     color: var(--danger);
-    font-size: var(--dens-fs);
+    font-size: var(--fs-ui);
 }
 
-.tasks-body {
-    max-width: var(--page-max);
-    margin: 0 auto;
-    padding: var(--space-3);
+.toolbar {
     display: flex;
-    flex-direction: column;
+    flex: none;
+    align-items: center;
     gap: var(--space-3);
-}
-
-.tasks-toolbar {
-    display: flex;
-    align-items: center;
-    gap: var(--dens-gap);
     flex-wrap: wrap;
+    margin-bottom: var(--space-4);
 }
 
-.search-input {
+.search-input { width: 240px; }
+
+/* ---------- Board ---------- */
+.board {
+    display: grid;
     flex: 1;
-    min-width: 200px;
-    max-width: 320px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-4);
+    min-height: 0;
 }
 
-/* ---------- Filter leaves: the state filters and the sprint filters ---------- */
-.filter-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-}
-
-.chip-count {
-    font-family: var(--font-mono);
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
-}
-
-/* Separates the state filters from the sprint filters: they answer different questions and
-   combine, so they must not read as one row of mutually exclusive options. */
-.chip-divider {
-    width: 1px;
-    align-self: stretch;
-    margin: 0 var(--space-1);
-    background: var(--border);
-}
-
-/* ---------- Empty ---------- */
-.empty-state {
+.column {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-6);
-    text-align: center;
-}
-
-.empty-state app-icon { color: var(--accent); }
-
-.empty-title {
-    margin: 0;
-    font-size: var(--fs-body);
-    font-weight: 600;
-}
-
-.empty-state .hint { max-width: 46ch; }
-
-/* The strip and the board it switches are one object. */
-.view-stack {
-    display: flex;
-    flex-direction: column;
+    min-height: 0;
     min-width: 0;
 }
 
-/* Full width: a board that holds nothing is still the same board, and a narrow plate centred under
-   a full-width toolbar reads as a different screen. */
-.empty-panel {
-    width: 100%;
+.column-head {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-2) var(--space-2) 14px;
 }
 
-.empty-filtered {
-    padding: var(--space-5);
-    text-align: center;
+.column-name { font-weight: 700; }
+
+.column-count {
+    font-size: var(--fs-12);
+    font-weight: 600;
+    color: var(--t3);
 }
 
-/* ---------- Board: one cork lane per column, one paper tag per card ---------- */
-/* The wider gap is what lets four framed lanes read as four boards on a wall rather than one
-   surface ruled into quarters. */
-.board {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--space-3);
-    align-items: start;
-}
-
-/* A lane holding nothing is still a lane: the cork keeps enough height to be pinned to. */
 .column-cards {
     display: flex;
+    flex: 1;
     flex-direction: column;
-    gap: var(--space-3);
-    min-height: var(--space-8);
+    gap: var(--space-2);
+    min-height: 0;
+    padding: 0 10px 10px;
+    overflow: auto;
 }
 
 /* T-354 — the drag feedback. The card lifts with a shadow; the column it can drop into shows a
    dashed inset so the target reads before the release. */
-.column-cards.cdk-drop-list-dragging app-task-tag:not(.cdk-drag-placeholder) {
-    transition: transform var(--dur-control, 190ms) var(--ease-settle);
-}
+.task-card.cdk-drag-preview { box-shadow: var(--shadow-lg); }
 
-app-task-tag.cdk-drag-preview { box-shadow: var(--shadow-lg); }
-
-app-task-tag.cdk-drag-placeholder { opacity: .4; }
+.task-card.cdk-drag-placeholder { opacity: .4; }
 
 .column-cards.cdk-drop-list-receiving,
 .column-cards.cdk-drop-list-dragging {
     outline: 1px dashed var(--abord);
-    outline-offset: 3px;
-    border-radius: var(--radius-sm);
+    outline-offset: -3px;
+    border-radius: var(--radius-md);
 }
 
-/* On cork, so it takes the ink the kit measured against cork rather than paper's --t2. */
-.column-empty {
-    margin: 0;
-    padding: var(--space-3) var(--space-2);
-    font-size: var(--fs-meta);
-    color: var(--wood-ink);
-    text-align: center;
+.task-card {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 10px;
+    padding: var(--space-3) 14px;
+    color: var(--text);
+    text-decoration: none;
+    cursor: grab;
 }
 
-/* Projected into the tag's body, which sets the type; these only shape what sits under it. */
-.card-title {
-    display: block;
+.task-card:hover { box-shadow: var(--shadow-md); }
+
+.task-card.is-done .task-title {
+    color: var(--t2);
+    text-decoration: line-through;
+}
+
+.task-title {
+    font-size: var(--fs-15);
+    font-weight: 600;
     overflow-wrap: anywhere;
 }
 
-.assignee {
-    display: block;
-    margin-top: var(--space-1);
-    font-size: var(--fs-meta);
-    font-weight: 400;
-    color: var(--t2);
-}
-
-.link-chips {
+.task-foot {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-    margin-top: var(--space-2);
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-12);
+    color: var(--t3);
 }
 
-.link-chip {
+.task-foot .tag { height: 20px; }
+
+.task-due.is-late { color: var(--danger); }
+
+.task-links {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    max-width: 100%;
-    padding: 0 var(--space-2);
-    border: var(--border-paper);
-    border-radius: var(--radius-stamp);
-    background: var(--alt);
-    color: var(--t2);
-    font-size: var(--fs-meta);
-    font-weight: 400;
 }
-
-.link-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* A link whose target is gone says so instead of rendering as an empty chip. */
-.link-label.gone { font-style: italic; color: var(--t3); }
 
 /* ---------- List view ---------- */
-.tasks-table {
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
-    overflow: hidden;
+.list-card {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
 }
 
 .tasks-row {
     display: grid;
-    grid-template-columns: minmax(260px, 1fr) 130px 60px 130px 170px;
+    grid-template-columns: minmax(260px, 1fr) 130px 60px 150px 170px;
     align-items: center;
-    gap: var(--dens-gap);
-    padding: var(--dens-row-y) var(--space-4);
-    border-top: 1px solid var(--border);
+    gap: var(--space-3);
+    min-height: var(--hit-touch);
+    padding: 0 var(--space-4);
+    border-top: 1px solid var(--paper-edge);
     color: inherit;
+    font-size: var(--fs-15);
     text-decoration: none;
     min-width: 0;
 }
 
 .tasks-row:first-child { border-top: none; }
 
-a.tasks-row:hover { background: var(--hover); }
+a.tasks-row:hover { background: var(--alt); }
 
 .head-row {
-    background: var(--alt);
+    background: var(--surface);
     font-size: var(--fs-11);
     text-transform: uppercase;
     letter-spacing: .07em;
-    color: var(--t2);
-    font-weight: 600;
+    color: var(--t3);
+    font-weight: 700;
 }
 
 .sort-head {
@@ -269,23 +203,24 @@ a.tasks-row:hover { background: var(--hover); }
 
 .links-cell,
 .tasks-row .due {
-    font-size: var(--fs-meta);
-    color: var(--t2);
+    font-size: var(--fs-13);
+    color: var(--t3);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .tasks-row .due.overdue { color: var(--danger); }
-.tasks-row .due .none { color: var(--t3); }
 
 .prio {
-    font-family: var(--font-mono);
-    font-size: var(--fs-meta);
+    font-size: var(--fs-13);
+    font-weight: 600;
     color: var(--t2);
 }
 
 .prio.p1 { color: var(--danger); font-weight: 700; }
+
+.list-empty { padding: var(--space-4); }
 
 /* ---------- The task card (modal) ---------- */
 .modal-head-row {
@@ -298,6 +233,11 @@ a.tasks-row:hover { background: var(--hover); }
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+}
+
+.task-modal .hint {
+    color: var(--t2);
+    font-size: var(--fs-13);
 }
 
 .field-grid {
@@ -357,6 +297,15 @@ a.tasks-row:hover { background: var(--hover); }
 .link-row app-icon { color: var(--accent); flex: none; }
 .link-row .link-label { flex: 1; font-size: var(--fs-ui); }
 
+.link-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A link whose target is gone says so instead of rendering as an empty chip. */
+.link-label.gone { font-style: italic; color: var(--t3); }
+
 .link-picker {
     display: flex;
     flex-direction: column;
@@ -415,22 +364,4 @@ a.tasks-row:hover { background: var(--hover); }
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-/* The board scrolls sideways rather than squeezing four columns into a phone: a 60px-wide kanban
-   column is not a column. iPad landscape (1024px) still fits all four. */
-@media (max-width: 900px) {
-    .board {
-        grid-template-columns: repeat(4, minmax(220px, 1fr));
-        overflow-x: auto;
-    }
-
-    .field-grid { grid-template-columns: 1fr; }
-
-    .tasks-row {
-        grid-template-columns: minmax(160px, 1fr) 110px 50px;
-    }
-
-    .tasks-row > :nth-child(4),
-    .tasks-row > :nth-child(5) { display: none; }
 }

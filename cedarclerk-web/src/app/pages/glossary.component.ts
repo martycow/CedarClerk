@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -13,13 +13,11 @@ import { GlossaryTermFormComponent } from '../shared/glossary-term-form.componen
 import { ButtonComponent } from '../bench/forms/button.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { LanguageMenuComponent, LanguageMenuItem } from '../shared/language-menu.component';
-import { LeafTagComponent } from '../bench/display/leaf-tag.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
-import { RulerService } from '../core/ruler.service';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
@@ -27,19 +25,17 @@ import { HintDotComponent } from '../shared/hint-dot.component';
     selector: 'app-glossary',
     imports: [
         IconComponent, FormsModule, ModalComponent, NgTemplateOutlet, GlossaryTermFormComponent,
-        ButtonComponent, IndexTabsComponent, LeafTagComponent, ShelfPanelComponent, SpecRowComponent, PlanLockComponent, HintDotComponent,
-        WorktopComponent,
-        LanguageMenuComponent,
+        ButtonComponent, IndexTabsComponent, SpecRowComponent, PlanLockComponent, HintDotComponent,
+        LanguageMenuComponent, PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })
-export class GlossaryComponent implements OnInit, OnDestroy {
+export class GlossaryComponent implements OnInit {
     t = inject(LocaleService).t;
     private api = inject(GlossaryService);
     private projectsApi = inject(ProjectsService);
     auth = inject(AuthService);
-    private ruler = inject(RulerService);
 
     readonly contentLanguages = CONTENT_LANGUAGES;
     readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
@@ -425,15 +421,21 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         }));
     }
 
-    worktopLabel(): string {
-        return this.t().glossary.crumb;
-    }
-
-    worktopMeta(): string {
+    /** The card's caption: which language, which scope, how many. */
+    sheetMeta(): string {
         const t = this.t().glossary;
         const scope = this.scopeFilter();
         const where = scope === null ? t.scopeAll : scope === '' ? t.scopeGlobal : this.projectName(scope);
         return `${this.languageFilter().toUpperCase()} · ${where} · ${this.visibleTerms().length}`;
+    }
+
+    headerMeta(): HeaderMeta[] {
+        const t = this.t().glossary;
+        return [
+            { text: this.languageFilter().toUpperCase(), title: endonymOf(this.languageFilter()) },
+            { text: t.rulerTerms(this.visibleTerms().length) },
+            ...(this.projects().length ? [{ text: t.rulerScopes(this.projectsWithTerms()) }] : []),
+        ];
     }
 
     /** Exclusive, so the shelf can never describe a term and the glossary at the same time. */
@@ -507,21 +509,5 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     projectsWithTerms(): number {
         const ids = new Set(this.terms().map(t => t.projectId).filter((id): id is string => !!id));
         return ids.size;
-    }
-
-    private readonly rulerFeed = effect(() => {
-        const t = this.t().glossary;
-        this.ruler.publish({
-            label: t.crumb,
-            left: [{ text: this.languageFilter().toUpperCase(), title: endonymOf(this.languageFilter()) }],
-            right: [
-                { text: t.rulerTerms(this.visibleTerms().length) },
-                ...(this.projects().length ? [{ text: t.rulerScopes(this.projectsWithTerms()) }] : []),
-            ],
-        });
-    });
-
-    ngOnDestroy() {
-        this.ruler.clear();
     }
 }

@@ -1,10 +1,9 @@
-<div class="sg" [attr.data-density]="compact() ? 'compact' : null">
+<div class="page sg" [attr.data-density]="compact() ? 'compact' : null">
 
-    <header class="sg-top">
-        <div>
-            <h1>Cedar Bench — Design System 2.0</h1>
-            <p class="sg-sub">ADR-071 · ADR-136 · every token and every bench primitive on one screen. Not a product page.</p>
-        </div>
+    <app-page-header title="Design System" kicker="Cedar Bench · paper first"
+                     [meta]="[{ text: 'ADR-071' }, { text: 'ADR-136' }, { text: 'ADR-239' }, { text: 'every token, every primitive, every page class on one screen' }]" />
+
+    <div class="card sg-sheet">
         <div class="sg-controls">
             <app-button variant="paper" size="sm" (clicked)="toggleTheme()">Theme: {{ theme() }}</app-button>
             <app-button variant="paper" size="sm" (clicked)="compact.set(!compact())">
@@ -17,7 +16,6 @@
                 Pseudo-locale: {{ pseudo() ? 'on' : 'off' }}
             </app-button>
         </div>
-    </header>
 
     <p class="sg-note">
         Three switches, three different mechanisms. <code>Theme</code> sets <code>data-theme</code> on
@@ -209,18 +207,134 @@
         </div>
     </section>
 
+    <!-- ── Page vocabulary ─────────────────────────────────────────────────── -->
+    <section>
+        <h2>Page vocabulary</h2>
+        <p class="sg-note">
+            The classes a screen is built from (ADR-239, <code>CONTRACT.md</code> §B), declared once
+            in <code>styles.scss</code> and never restated in a component: a header instead of a sign
+            board, a card instead of a shelf, a segmented control for what a panel shows, a tag for a
+            state, an empty state that names the next action. Two components stand on them —
+            <code>app-page-header</code> and <code>app-empty-state</code>. A header and its meta
+            line write with the wall's ink, so their samples lie on the wall; everything else is on a
+            card and writes with paper's.
+        </p>
+
+        <h3>Page header</h3>
+        <div class="sg-wall">
+            <app-page-header title="Documents" kicker="Dev Dairy Diary" [meta]="headerMeta" [headingLevel]="2">
+                <app-button secondary variant="paper"><app-icon name="gear" size="sm" /> Settings</app-button>
+                <app-button primary variant="pine"><app-icon name="plus" weight="bold" size="sm" /> New document</app-button>
+            </app-page-header>
+        </div>
+
+        <h3>Card · label · seg · row-list · tag</h3>
+        <div class="sg-wall">
+            <div class="card sg-doc-card">
+                <div class="sg-card-head">
+                    <span class="label">Documents</span>
+                    <span class="sg-card-count">{{ sampleRows.length }}</span>
+                    <span class="sg-spacer"></span>
+                    <div class="seg" role="tablist" aria-label="State">
+                        @for (s of segStates; track s; let first = $first) {
+                            <button type="button" role="tab" [class.is-on]="first" [attr.aria-selected]="first">{{ s }}</button>
+                        }
+                    </div>
+                </div>
+                <div class="row-list">
+                    @for (r of sampleRows; track r.title) {
+                        <div class="row sg-row">
+                            <app-icon name="file-text" size="sm" />
+                            <span class="t">{{ r.title }}</span>
+                            <span class="m">{{ r.kind }}</span>
+                            <span class="m">{{ r.when }}</span>
+                            <span class="tag" [class.ok]="r.state === 'live'" [class.muted]="r.state !== 'live'">{{ r.state }}</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <h3>Tag tones</h3>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-shelf">
+                @for (tone of tagTones; track tone) {
+                    <div class="sg-cell sg-stack">
+                        <span class="sg-state">{{ tone }}</span>
+                        <span [class]="'tag ' + tone">{{ tone === 'ok' ? 'live' : tone === 'warn' ? 'scheduled' : tone === 'danger' ? 'failed' : 'draft' }}</span>
+                    </div>
+                }
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">is-plain · a hashtag</span>
+                    <span class="tag muted is-plain">#gamedev</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Empty state · margin note</h3>
+        <div class="sg-wall">
+            <div class="card sg-empty-card">
+                <app-empty-state icon="file-text" title="Nothing written yet"
+                                 text="Write your first document — it can be published to the blog and to Telegram from one place."
+                                 note="a note in the hand face, where the page wants a hint">
+                    <app-button variant="pine" size="sm"><app-icon name="plus" weight="bold" size="sm" /> New document</app-button>
+                </app-empty-state>
+            </div>
+        </div>
+
+        <h3>Key–value list</h3>
+        <div class="sg-wall">
+            <div class="card sg-kv-card">
+                <span class="label">Where it goes</span>
+                <div class="kv">
+                    <b>Blog</b><span>blog.example.dev</span>
+                    <b>Telegram</b><span>&#64;example_channel</span>
+                    <b>Public page</b><span>not published</span>
+                    <b>Assets</b><span>77 files · 937 MB</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>.btn on an anchor beside app-button</h3>
+        <p class="sg-cap">
+            The two are one object: an anchor wearing <code>.btn</code> and <code>app-button</code>
+            paint the same values, so a control that navigates can be an anchor (ADR-163) without
+            looking like a different kind of thing.
+        </p>
+        <div class="sg-bay" [attr.data-surface]="surface()">
+            <div class="sg-shelf">
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">.btn.primary · pine</span>
+                    <span class="sg-pair"><a class="btn primary" routerLink="/dev/styleguide">Publish</a><app-button variant="pine">Publish</app-button></span>
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">.btn · paper</span>
+                    <span class="sg-pair"><a class="btn" routerLink="/dev/styleguide">Reindex</a><app-button variant="paper">Reindex</app-button></span>
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">.btn.ghost · rail</span>
+                    <span class="sg-pair"><a class="btn ghost" routerLink="/dev/styleguide">Glossary</a><app-button variant="rail" surface="paper">Glossary</app-button></span>
+                </div>
+                <div class="sg-cell sg-stack">
+                    <span class="sg-state">.btn.sm · size sm</span>
+                    <span class="sg-pair"><a class="btn sm" routerLink="/dev/styleguide">Open</a><app-button variant="paper" size="sm">Open</app-button></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- ── The bench kit ───────────────────────────────────────────────────── -->
     <section>
         <h2>Buttons</h2>
         <p class="sg-note">
             <code>app-button</code> — four variants, two sizes. The surface is read off the
-            <em>variant</em>, not off the size: <code>rail</code> is the only one painted on wood,
-            so it is the only one that takes chrome's 30px box and 13/11px type. On paper both sizes
-            hold <code>--hit-target</code> (38px), which is why <code>sm</code> there tightens the
-            padding and nothing else. <code>danger</code> is a destructive <em>action</em>, not an
-            error state — it is a dashed-underlined word, never a filled red button, so that
-            deleting something never looks like the primary thing to do.
-            Flip <em>Surface</em> above to move the whole bay onto the rail.
+            <em>variant</em>, not off the size: <code>rail</code> is the ghost — no face until
+            approached — and the only one measured as chrome, so it takes chrome's 30px box and
+            13/11px type. On paper both sizes hold <code>--hit-target</code> (38px), which is why
+            <code>sm</code> there tightens the padding and nothing else. <code>danger</code> is a
+            destructive <em>action</em>, not an error state — it is a dashed-underlined word, never
+            a filled red button, so that deleting something never looks like the primary thing to do.
+            Flip <em>Surface</em> above to move the whole bay onto chrome.
         </p>
         <p class="sg-cap">
             Hover and focus are live cells: tab into the row, or put the pointer on it. Nothing in a
@@ -287,14 +401,13 @@
             </div>
         </div>
 
-        <h2>Stamps, drops and leaves</h2>
+        <h2>Stamps and leaves</h2>
         <p class="sg-note">
             <code>app-stamp-badge</code> says what state a thing is <em>in</em> and never acts — it
             takes no click and carries no role, so it cannot quietly become a button. Each tone's
             wash is mixed from its own ink on ADR-145's formula, so ink and wash are a pair the
-            contrast checker can score. <code>app-resin-drop</code> is the only save indicator in the
-            system: no spinner, no "saving…" toast, and never on a button. It is
-            <code>role="status"</code>, which is what removes the need for the toast.
+            contrast checker can score. The save state is a word in the document frame's top bar and
+            footer, never a spinner and never on a button.
             <code>app-leaf-tag</code> labels and filters; <code>dried</code> means no data or
             switched off and never an error — an error is a rust stamp, and nothing in the leaf
             reaches for <code>--danger</code>.
@@ -307,14 +420,6 @@
                         <app-stamp-badge [tone]="t">{{ t === 'rust' ? 'failed' : 'live' }}</app-stamp-badge>
                     </div>
                 }
-                <div class="sg-cell sg-stack">
-                    <span class="sg-state">forming</span>
-                    <app-resin-drop state="forming" label="Unsaved" title="Unsaved changes" />
-                </div>
-                <div class="sg-cell sg-stack">
-                    <span class="sg-state">set</span>
-                    <app-resin-drop state="set" label="Saved" title="All changes saved" />
-                </div>
             </div>
             <div class="sg-shelf">
                 @for (st of leafStates; track st) {
@@ -430,17 +535,18 @@
         <h2>The bench itself</h2>
         <p class="sg-note">
             The pieces the screens are built out of rather than dressed with.
-            <code>app-worktop</code> is the lit top: a chrome frame with a chalked edge and a paper
-            body, so a sheet lying on it is not governed by chrome's numbers.
+            <code>app-worktop</code> is the content column: a card whose caption line is chrome and
+            whose body is paper, so a sheet lying in it is not governed by chrome's numbers.
             <code>app-module-tile</code> is a door — it is an anchor whenever it is handed a route
             and a button otherwise (ADR-163), and it carries exactly one number.
-            <code>app-shelf-panel</code> is every dock and inspector; its own commands go in its
-            header and nowhere else, which is why it takes no command input.
+            <code>app-shelf-panel</code> is a plain card with a <code>.label</code> caption; its own
+            commands go in that line and nowhere else, which is why it takes no command input.
             <code>app-index-tabs</code> switches what a panel shows and never navigates.
             <code>app-log-line</code> stamps a journal line instead of tinting the row.
-            The rest of the chrome is around this page as you read it: the rail above, the hooks
-            down the left, the drawer and the rule along the bottom. <code>app-growth-chart</code>
-            is a screen-level instrument and is shown on the metrics screen, where it has data.
+            Chrome after ADR-239 is exactly these: the index tabs, the worktop's caption line, the
+            spec rows, the editor's tool strip and the log lines inside the console. The sidebar and
+            the page header are paper. <code>app-growth-chart</code> is a screen-level instrument
+            and is shown on the metrics screen, where it has data.
         </p>
         <div class="sg-bay" [attr.data-surface]="surface()">
             <app-worktop label="Bench" meta="one top per screen">
@@ -465,12 +571,11 @@
             Brass is hardware, not a palette: no piece takes a colour and none takes a size,
             because a pin stops reading as a pin much past 16px. <code>app-brass-pin</code> holds
             down anything that <em>lies</em> on a surface — a card, a leaf. <code>app-brass-hook</code>
-            carries anything that <em>hangs</em> — a task tag. <code>app-brass-nail</code> is driven
-            through anything <em>fixed</em> to the wall — a tool on the rail. Picking the wrong
-            one breaks the physical logic of the workshop, which is why they are deliberately not
-            interchangeable: different sizes, different APIs. The pin is silent by default and takes
-            a role and a name only when it is the sole thing saying a card is pinned; the hook and
-            the nail are never named, because whatever they carry holds the name.
+            carries anything that <em>hangs</em> — a task tag. Picking the wrong one breaks the
+            physical logic of the workshop, which is why they are deliberately not interchangeable:
+            different sizes, different APIs. The pin is silent by default and takes a role and a
+            name only when it is the sole thing saying a card is pinned; the hook is never named,
+            because whatever it carries holds the name.
         </p>
         <div class="sg-bay" [attr.data-surface]="surface()">
             <div class="sg-shelf">
@@ -486,10 +591,6 @@
                     <span class="sg-state">hook · always silent</span>
                     <app-brass-hook />
                 </div>
-                <div class="sg-cell sg-stack">
-                    <span class="sg-state">nail · always silent</span>
-                    <app-brass-nail />
-                </div>
             </div>
         </div>
 
@@ -497,10 +598,9 @@
         <p class="sg-note">
             Four primitives carry one, and each says something different: a destructive
             <em>action</em>, a failed <em>state</em>, a date that has passed, a value that is missing.
-            The other five have none, and two of them have none on purpose —
-            <code>app-leaf-tag</code>'s <code>dried</code> means "no data", and
-            <code>app-resin-drop</code> has no busy or failed state because its whole union is two
-            values. <code>app-input</code> has no error state at all: the design system's field has
+            The other five have none, and one of them has none on purpose —
+            <code>app-leaf-tag</code>'s <code>dried</code> means "no data".
+            <code>app-input</code> has no error state at all: the design system's field has
             no error prop either, so a form validating today has nowhere to put the message. That is
             a gap in the kit, not a gap on this page.
         </p>
@@ -518,7 +618,7 @@
                     <span class="sg-state">task tag · overdue</span>
                     <app-task-tag class="sg-tag" [prio]="1" due="03 Aug" overdue>
                         <app-brass-hook hook />
-                        Ship the ruler
+                        Ship the build
                     </app-task-tag>
                 </div>
                 <div class="sg-cell sg-stack">
@@ -535,11 +635,10 @@
         <p class="sg-note">
             One global rule, two layers: a <code>--brass-edge</code> outline at 2px offset inside a
             cream <code>--focus-halo</code> (ADR-140). Two layers because no single colour clears
-            3:1 on both families — flat brass measures 1.86:1 on the ruler it is drawn from, and
-            flat accent measures 1.00:1 on a pine button. The dark outline against the cream halo is
-            a constant 4.20–6.91:1 boundary <em>inside</em> the band whatever lies underneath, so
-            one rule covers every surface. Its stated cost: a focused control gives up its own
-            box-shadow, which is why every shadow in the kit is written
+            3:1 on every ground — flat accent measures 1.00:1 on a pine button. The dark outline
+            against the cream halo is a constant 4.20–6.91:1 boundary <em>inside</em> the band
+            whatever lies underneath, so one rule covers every surface. Its stated cost: a focused
+            control gives up its own box-shadow, which is why every shadow in the kit is written
             <code>:not(:focus-visible)</code>.
         </p>
         <p class="sg-cap">Click the first control of a strip, then tab along it.</p>
@@ -551,34 +650,10 @@
             <div class="sg-field"><app-input placeholder="Focus me" /></div>
         </div>
 
-        <p class="sg-strip-cap">Rail — the surface is dark, so the cream halo carries it, 4.00–7.38 day.</p>
+        <p class="sg-strip-cap">Chrome — the trough the index tabs sit in, <code>--surface</code>; the ghost button has no face until approached, so the ring is all there is.</p>
         <div class="sg-strip" data-surface="chrome">
             <app-button variant="rail" size="sm">Glossary</app-button>
             <app-button variant="rail" size="sm">Admin</app-button>
-        </div>
-
-        <p class="sg-strip-cap">
-            <app-stamp-badge tone="brass">exception</app-stamp-badge>
-            Shelf frame (<code>--shelf-frame</code>) — the drawer pull is a transparent button
-            filling the lip, so the ring is drawn on this ramp. Walked end to end, neither layer clears
-            the floor where the frame is light: halo 1.98, outline 2.47 at the <code>--wood-hi</code>
-            stop. What carries the ring here is the 4.33:1 boundary inside the band. At night the
-            surface itself carries it, 4.96.
-        </p>
-        <div class="sg-strip is-wood" data-surface="chrome">
-            <app-button variant="rail" size="sm">On the frame</app-button>
-        </div>
-
-        <p class="sg-strip-cap">
-            <app-stamp-badge tone="brass">exception</app-stamp-badge>
-            Ruler (<code>--grad-brass</code>) — the halo disappears into the brass, 1.00 at the light
-            stop, and the dark outline is the whole indicator: by day 5.45 there, 2.94 at the dark stop.
-            A third accepted case, cork, has no strip here at all: it is a hex inside a design-system
-            component rather than a token, so nothing on this page can paint it honestly and no pair
-            in the checker can name it.
-        </p>
-        <div class="sg-strip is-ruler" data-surface="chrome">
-            <app-button variant="rail" size="sm">On the ruler</app-button>
         </div>
     </section>
 
@@ -606,4 +681,5 @@
         </div>
     </section>
 
+    </div>
 </div>

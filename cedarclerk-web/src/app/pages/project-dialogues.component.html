@@ -1,54 +1,55 @@
-<div class="dialogues">
-    <app-worktop class="top" scroll [label]="projectName()"
-                 [meta]="t().projects.dialogues.sub(scripts().length)">
-        <div class="top-body">
-            <header class="head">
-                <h1 class="head-title">{{ t().projects.dialogues.title }}</h1>
-            </header>
+<div class="page">
+    <app-page-header [title]="t().projects.dialogues.title" [kicker]="projectName()" [meta]="headerMeta()">
+        <!--The empty state offers the same action, and one screen offers one action once.-->
+        @if (scripts().length) {
+            <app-button primary variant="pine" [disabled]="busy()" (clicked)="openCreate()">
+                <app-icon name="plus" size="sm" weight="bold" />
+                {{ t().projects.dialogues.newScript }}
+            </app-button>
+        }
+    </app-page-header>
 
-            @if (loading()) {
-                <p class="hint">{{ t().projects.loading }}</p>
-            } @else if (loadError(); as e) {
-                <p class="error-line">{{ e }}</p>
-                <app-button variant="paper" size="sm" (clicked)="load()">{{ t().projects.canvas.retry }}</app-button>
-            } @else if (!scripts().length) {
-                <div class="empty">
-                    <h2 class="empty-title">{{ t().projects.dialogues.empty }}</h2>
-                    <p class="hint">{{ t().projects.dialogues.emptyHint }}</p>
-                    <app-button variant="pine" (clicked)="openCreate()">
-                        <app-icon name="plus" size="sm" />
-                        {{ t().projects.dialogues.newScript }}
-                    </app-button>
-                </div>
-            } @else {
-                <!--A sheet per dialogue, the board-list shape: the whole card is the link, the
-                write actions sit over its corner so the two targets never overlap.-->
-                <ul class="script-list">
-                    @for (script of scripts(); track script.id) {
-                        <li class="script-card">
-                            <a class="script" [routerLink]="['/projects', projectId(), 'dialogues', script.id]">
-                                <app-icon name="tree-structure" size="lg" />
-                                <span class="script-name">{{ script.name }}</span>
-                                <span class="script-meta">{{ t().projects.dialogues.nodeCount(script.nodeCount) }}</span>
-                            </a>
-                            <span class="script-actions">
-                                <app-button variant="paper" size="sm" [title]="t().projects.dialogues.renameScript"
-                                            (clicked)="openRename(script)">
-                                    <app-icon name="pencil-simple" size="xs" />
-                                </app-button>
-                                <app-button variant="paper" size="sm" [title]="t().projects.dialogues.deleteScript"
-                                            (clicked)="openDelete(script)">
-                                    <app-icon name="trash" size="xs" />
-                                </app-button>
-                            </span>
-                        </li>
-                    }
-                </ul>
-            }
+    <div class="main">
+        @if (loading()) {
+            <p class="hint">{{ t().projects.loading }}</p>
+        } @else if (loadError(); as e) {
+            <p class="error-line">{{ e }}</p>
+            <app-button variant="paper" size="sm" (clicked)="load()">{{ t().projects.canvas.retry }}</app-button>
+        } @else if (!scripts().length) {
+            <app-empty-state icon="tree-structure" [title]="t().projects.dialogues.empty" [text]="t().projects.dialogues.emptyHint">
+                <app-button variant="pine" (clicked)="openCreate()">
+                    <app-icon name="plus" size="sm" />
+                    {{ t().projects.dialogues.newScript }}
+                </app-button>
+            </app-empty-state>
+        } @else {
+            <!--A card per dialogue, the board-list shape: the whole card is the link, the write
+            actions sit over its corner so the two targets never overlap.-->
+            <ul class="script-list">
+                @for (script of scripts(); track script.id) {
+                    <li class="script-card">
+                        <a class="card script" [routerLink]="['/projects', projectId(), 'dialogues', script.id]">
+                            <app-icon name="tree-structure" size="lg" />
+                            <span class="script-name">{{ script.name }}</span>
+                            <span class="script-meta">{{ t().projects.dialogues.nodeCount(script.nodeCount) }}</span>
+                        </a>
+                        <span class="script-actions">
+                            <app-button variant="paper" size="sm" [title]="t().projects.dialogues.renameScript"
+                                        (clicked)="openRename(script)">
+                                <app-icon name="pencil-simple" size="xs" [label]="t().projects.dialogues.renameScript" />
+                            </app-button>
+                            <app-button variant="paper" size="sm" [title]="t().projects.dialogues.deleteScript"
+                                        (clicked)="openDelete(script)">
+                                <app-icon name="trash" size="xs" [label]="t().projects.dialogues.deleteScript" />
+                            </app-button>
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
 
-            @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
-        </div>
-    </app-worktop>
+        @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+    </div>
 </div>
 
 @if (creating()) {

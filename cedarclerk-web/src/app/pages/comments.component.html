@@ -5,7 +5,7 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
     <div class="comments-body">
         <!--Running total across everything — context only when several posts are on screen.-->
         @if (!onlyDraftId()) {
-        <div class="reactions-card" [class.has-new]="reactions().newLikes || reactions().newDislikes"
+        <div class="card reactions-card" [class.has-new]="reactions().newLikes || reactions().newDislikes"
              (pointerenter)="markReactionsSeen()">
             <span class="reactions-summary">
                 👍 {{ reactions().likes }}
@@ -49,20 +49,22 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
                     <span class="feedback-group-count">{{ t().feedback.commentCount(g.comments.length) }}</span>
                 </header>
 
+                <div class="comment-list">
                 @for (c of visibleComments(g); track c.id) {
-                <div class="comment-card" [class.is-new]="c.isNew" (pointerenter)="markSeen(c)">
+                <div class="row comment-card" [class.is-new]="c.isNew" (pointerenter)="markSeen(c)">
                     <div class="comment-row-top">
                         <span class="comment-tag">{{ c.annotationId ? t().feedback.inText : t().feedback.wholeArticle }}</span>
-                        @if (c.isNew) { <span class="new-chip">{{ t().feedback.newChip }}</span> }
+                        @if (c.isNew) { <span class="tag ok">{{ t().feedback.newChip }}</span> }
                         <span class="spacer"></span>
                         <button class="mini-remove" (click)="deleteComment(c.id)" [title]="t().feedback.deleteComment" [attr.aria-label]="t().feedback.deleteComment">
                             <app-icon name="trash" size="sm"></app-icon>
                         </button>
                     </div>
-                    <div class="comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | zonedDate:'MM/dd, HH:mm' }}</div>
+                    <div class="m comment-row-meta">{{ c.authorName || t().feedback.anonymous }} · {{ c.createdAt | zonedDate:'MM/dd, HH:mm' }}</div>
                     <div class="comment-row-text">{{ c.text }}</div>
                 </div>
                 }
+                </div>
 
                 @if (hiddenCount(g); as hidden) {
                 <app-button variant="paper" size="sm" (clicked)="toggleExpanded(g.draftId)">{{ t().feedback.showAll(hidden) }}</app-button>
@@ -75,7 +77,7 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
                 }
             </section>
             } @empty {
-            <p class="hint">{{ t().feedback.noComments }}</p>
+            <app-empty-state icon="chat-teardrop" [title]="t().feedback.noComments" [text]="t().feedback.noCommentsHint" />
             }
         }
     </div>

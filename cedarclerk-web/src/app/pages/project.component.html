@@ -1,191 +1,208 @@
-<div class="hub">
+<div class="page">
     @if (loadError(); as err) {
         <p class="load-error">{{ err }}</p>
     } @else if (loading()) {
         <p class="hint">{{ t().projects.loading }}</p>
     } @else if (project(); as p) {
+        <app-page-header [title]="p.name" [meta]="headerMeta()">
+            <app-button secondary variant="paper" (clicked)="startEdit()">
+                <app-icon name="gear" size="sm" />
+                {{ t().projects.settings }}
+            </app-button>
+            <app-button primary variant="pine" (clicked)="openAddDocument()">
+                <app-icon name="plus" weight="bold" size="sm" />
+                {{ t().projects.newDocument }}
+            </app-button>
+        </app-page-header>
+
         @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
 
         <div class="hub-grid">
-            <!--The projects list absorbed as a switcher (ADR-160 rule 5). Search, the filter chips
-            and creating a project stay on /projects, which the header action links to — a second
-            create modal here is the second home .claude/rules/ui-changes.md rule 1 forbids.-->
-            <app-shelf-panel class="shelf-left" [title]="t().projects.shelfTitle" [count]="projects().length">
-                <app-button actions variant="rail" size="sm" link="/projects" [title]="t().projects.hub.allProjects">
-                    <app-icon name="list" size="xs" />
-                </app-button>
-                <div class="proj-sheet">
-                    <nav class="proj-list" [attr.aria-label]="t().projects.shelfTitle">
-                        @for (item of projects(); track item.id) {
-                            <a class="proj" [class.on]="item.id === p.id" [routerLink]="['/projects', item.id]"
-                               [attr.aria-current]="item.id === p.id ? 'page' : null">
-                                <span class="thumb" aria-hidden="true">{{ initials(item.name) }}</span>
-                                <span class="proj-text">
-                                    <span class="proj-n">{{ item.name }}</span>
-                                    <span class="proj-m">
-                                        {{ t().projects.projectTypes[item.projectType].name }}
-                                        @if (item.archivedAt) { · {{ t().projects.stateArchived }} }
-                                    </span>
-                                </span>
-                            </a>
-                        } @empty {
-                            <p class="hint">{{ t().projects.hub.noProjects }}</p>
-                        }
-                    </nav>
-                    @if (projects().length) {
-                        <p class="margin-note">{{ t().projects.hub.benchNote(projects().length) }}</p>
-                    }
-                </div>
-            </app-shelf-panel>
-
-            <div class="hub-mid">
-                <!--The lit top of the bench. The chalk chips carry the last edit; the kit's
-                engine and target-platform tag has nothing behind it in this API (ADR-160 rule 7).-->
-                <app-worktop class="hero" edge="chips" [label]="t().projects.hub.activeProject" [meta]="heroMeta()">
-                    <div class="hero-body">
-                        <h1 class="hero-title">{{ p.name }}</h1>
-                        <p class="hero-sub">
-                            <app-icon [name]="projectIcons[p.projectType]" size="sm" />
-                            <span>{{ t().projects.projectTypes[p.projectType].name }}</span>
-                            <span class="dot">·</span>
-                            <span>{{ t().projects.documentCount(p.documents.length) }}</span>
-                        </p>
-                        @if (p.description) { <p class="hero-desc">{{ p.description }}</p> }
-
-                        <div class="hero-stamps">
-                            @if (releasedBuild(); as build) {
-                                <app-stamp-badge tone="brass" [rotate]="-1.5">{{ build.version }}</app-stamp-badge>
-                            }
-                            <app-stamp-badge [tone]="p.archivedAt ? 'ink' : 'pine'" [rotate]="1">
-                                {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}
-                            </app-stamp-badge>
-                        </div>
-
-                        <div class="hero-actions">
-                            <app-button variant="pine" (clicked)="openAddDocument()">
-                                <app-icon name="plus" weight="bold" size="sm" />
-                                {{ t().projects.newDocument }}
-                            </app-button>
-                            <app-button variant="paper" (clicked)="startEdit()">
-                                <app-icon name="gear" size="sm" />
-                                {{ t().projects.settings }}
-                            </app-button>
-                        </div>
-                    </div>
-                </app-worktop>
-
+            <section class="hub-main">
+                <!--ADR-160 — the hub's job is to get you back to work in one click; the list below
+                is the fallback, not the path. Open is a link (ADR-169): /editor?draft=… in the bar.-->
                 @if (resumeDoc(); as doc) {
-                    <div class="resume" data-surface="paper">
-                        <app-icon name="pencil-simple" size="md" class="resume-icon" />
-                        <span class="resume-text">
-                            <span class="resume-l">{{ t().projects.hub.resume }}</span>
-                            <span class="resume-t">{{ doc.title }}</span>
+                    <div class="card resume">
+                        <span class="resume-thumb" aria-hidden="true">
+                            <app-icon [name]="docIcons[doc.documentType]" size="lg" />
                         </span>
-                        <span class="spacer"></span>
-                        <app-stamp-badge [tone]="documentTone(doc)" [rotate]="-1.5">
-                            {{ documentState(doc) }}
-                        </app-stamp-badge>
-                        <app-button variant="pine" [link]="['/editor']"
-                                    [queryParams]="{ draft: doc.id }">
+                        <span class="resume-text">
+                            <span class="label">{{ t().projects.hub.continueWriting }}</span>
+                            <span class="resume-t">{{ doc.title }}</span>
+                            <span class="resume-m">
+                                {{ t().projects.docTypes[doc.documentType].name }}
+                                <span class="sep">·</span>{{ documentState(doc) }}
+                                <span class="sep">·</span>{{ t().projects.edited }} {{ doc.updatedAt | zonedDate:'d MMM, HH:mm' }}
+                            </span>
+                        </span>
+                        <app-button variant="pine" [link]="['/editor']" [queryParams]="{ draft: doc.id }">
+                            <app-icon name="pencil-simple" size="sm" />
                             {{ t().projects.hub.open }}
                         </app-button>
                     </div>
                 }
 
-                <!--Four plates, not the kit's six: Documents is the panel below rather than a door
-                to the screen it stands on, and per-project metrics do not exist (ADR-160).-->
-                <div class="tiles" role="group" [attr.aria-label]="t().projects.hub.modules">
-                    @for (tile of tiles(); track tile.id) {
-                        <app-module-tile [icon]="tile.icon" [name]="tile.name" [count]="tile.count"
-                                         [sub]="tile.sub" [rotate]="tile.rotate"
-                                         [link]="tile.link" />
+                <!--The document list is a scrolling card (ADR-239 clause 7): the page keeps its
+                height and the rows scroll under the pinned head.-->
+                <div class="card docs">
+                    <div class="docs-head">
+                        <h2 class="docs-title">
+                            {{ t().projects.hub.documentsPanel }}
+                            <span class="docs-count">{{ p.documents.length }}</span>
+                        </h2>
+                        <div class="seg" role="group" [attr.aria-label]="t().projects.colState">
+                            <button type="button" [class.is-on]="docFilter() === 'all'" [attr.aria-pressed]="docFilter() === 'all'"
+                                    (click)="docFilter.set('all')">{{ t().projects.filterAll }}</button>
+                            <button type="button" [class.is-on]="docFilter() === 'live'" [attr.aria-pressed]="docFilter() === 'live'"
+                                    (click)="docFilter.set('live')">{{ t().projects.hub.filterLive }}</button>
+                            <button type="button" [class.is-on]="docFilter() === 'drafts'" [attr.aria-pressed]="docFilter() === 'drafts'"
+                                    (click)="docFilter.set('drafts')">{{ t().projects.hub.filterDrafts }}</button>
+                            <button type="button" [class.is-on]="docFilter() === 'archived'" [attr.aria-pressed]="docFilter() === 'archived'"
+                                    (click)="docFilter.set('archived')">{{ t().projects.filterArchived }}</button>
+                        </div>
+                        <label class="named-elsewhere" for="hub-doc-search">{{ t().projects.hub.searchDocs }}</label>
+                        <app-input class="docs-search" inputId="hub-doc-search" type="search"
+                                   [placeholder]="t().projects.hub.searchDocs"
+                                   [ngModel]="docSearch()" (ngModelChange)="docSearch.set($event)" />
+                    </div>
+
+                    <div class="row-list doc-list">
+                        @for (doc of filteredDocuments(); track doc.id) {
+                            <!--Each row is an anchor carrying its own draft query (ADR-163/169).-->
+                            <a class="row doc-row" routerLink="/editor" [queryParams]="{ draft: doc.id }"
+                               [title]="t().projects.openDocument">
+                                <app-icon [name]="docIcons[doc.documentType]" size="sm" class="doc-icon" />
+                                <span class="t doc-title">{{ doc.title }}</span>
+                                <span class="m">{{ t().projects.docTypes[doc.documentType].name }}</span>
+                                <span class="doc-end">
+                                    <span class="m">{{ doc.updatedAt | zonedDate:'d MMM, HH:mm' }}</span>
+                                    <span class="tag" [class.ok]="docTone(doc) === 'ok'" [class.muted]="docTone(doc) === 'muted'">
+                                        {{ documentState(doc) }}
+                                    </span>
+                                </span>
+                            </a>
+                        } @empty {
+                            @if (p.documents.length === 0) {
+                                <app-empty-state icon="file-text" [title]="t().projects.hub.noDocuments"
+                                                 [text]="t().projects.hub.noDocumentsHint">
+                                    <app-button variant="paper" size="sm" (clicked)="openAddDocument()">
+                                        {{ t().projects.newDocument }}
+                                    </app-button>
+                                </app-empty-state>
+                            } @else {
+                                <app-empty-state [icon]="null" [text]="t().projects.hub.noDocumentsMatch" />
+                            }
+                        }
+                    </div>
+                </div>
+            </section>
+
+            <aside class="hub-side">
+                <!--T-124 — the sprint covering today, or the honest statement that none does.-->
+                <div class="card side-card">
+                    @if (p.currentSprint; as s) {
+                        <div class="side-head">
+                            <span class="label">{{ t().projects.hub.sprintLabel(s.number) }}</span>
+                            <span class="side-note">{{ t().projects.hub.daysLeft(sprintDaysLeft()) }}</span>
+                        </div>
+                        <a class="side-title" [routerLink]="['/projects', p.id, 'planner']">{{ s.name }}</a>
+                        @if (s.taskCount) {
+                            <span class="bar" aria-hidden="true"><i [style.width.%]="sprintPercent(s)"></i></span>
+                        }
+                        <span class="side-line">{{ t().projects.hub.sprintUntil(s.doneCount, s.taskCount, (s.endsAt | zonedDate:'d MMM')) }}</span>
+                        @if (s.overdueCount) {
+                            <span class="side-line is-warn">{{ t().projects.planner.overdueInside(s.overdueCount) }}</span>
+                        }
+                    } @else {
+                        <span class="label">{{ t().projects.railPendingTitle }}</span>
+                        <span class="side-line">{{ t().projects.planner.noCurrentSprint }} {{ t().projects.hub.noSprintHint }}</span>
+                        <a class="side-link" [routerLink]="['/projects', p.id, 'planner']">{{ t().projects.planner.planSprint }} →</a>
                     }
                 </div>
 
-                <app-shelf-panel class="docs" [title]="t().projects.hub.documentsPanel"
-                                 [count]="p.documents.length">
-                    <div class="doc-list">
-                        @for (doc of documents(); track doc.id) {
-                            <a class="doc-row" routerLink="/editor" [queryParams]="{ draft: doc.id }"
-                               [title]="t().projects.openDocument">
-                                <app-icon [name]="docIcons[doc.documentType]" size="sm" class="doc-icon" />
-                                <span class="doc-title">{{ doc.title }}</span>
-                                <span class="doc-type">{{ t().projects.docTypes[doc.documentType].name }}</span>
-                                <span class="doc-meta">{{ doc.updatedAt | zonedDate:'MM/dd, HH:mm' }}</span>
+                <!--T-123 — server-sorted by urgency; one task here, the board has the rest.-->
+                <div class="card side-card">
+                    <span class="label">{{ t().projects.tasks.upNext }}</span>
+                    @if (upNext(); as task) {
+                        <a class="next-task" [routerLink]="['/projects', task.projectId, 'tasks']"
+                           [queryParams]="{ task: task.id }" [class.is-overdue]="overdue(task)">
+                            <span class="next-dot" aria-hidden="true"></span>
+                            <span class="next-title">{{ task.title }}</span>
+                            <span class="tag" [class.danger]="prioTone(task.priority) === 'danger'"
+                                  [class.warn]="prioTone(task.priority) === 'warn'"
+                                  [class.muted]="prioTone(task.priority) === 'muted'">{{ t().projects.tasks.priority(task.priority) }}</span>
+                        </a>
+                    } @else {
+                        <span class="side-line">
+                            {{ p.openTaskCount ? t().projects.tasks.upNextEmpty : t().projects.tasks.noTasksYet }}
+                        </span>
+                    }
+                    <a class="side-link" [routerLink]="['/projects', p.id, 'tasks']">{{ t().projects.hub.openBoard }}</a>
+                </div>
+
+                <!--The kit's channel group needs a project-to-channel table the schema does not
+                have, so the Telegram row lists the account's channels (ADR-239 clause 12).-->
+                <div class="card side-card">
+                    <span class="label">{{ t().projects.hub.whereItGoes }}</span>
+                    <div class="kv">
+                        <b>{{ t().projects.hub.blog }}</b>
+                        @if (blogUrl(); as url) {
+                            <a class="kv-link" [href]="url" target="_blank" rel="noopener">
+                                {{ url }} <app-icon name="arrow-square-out" size="xs" />
                             </a>
-                        } @empty {
-                            <p class="hint">{{ t().projects.hub.noDocuments }}</p>
+                        } @else {
+                            <span class="kv-none">{{ t().projects.hub.noBlog }}</span>
+                        }
+
+                        <b>{{ t().projects.hub.telegram }}</b>
+                        @if (channels().length) {
+                            <span class="kv-list">
+                                @for (channel of channels(); track channel.id) {
+                                    @if (channelUrl(channel); as url) {
+                                        <a class="kv-link" [href]="url" target="_blank" rel="noopener">
+                                            {{ channelLabel(channel) }} <app-icon name="arrow-square-out" size="xs" />
+                                        </a>
+                                    } @else {
+                                        <span>{{ channelLabel(channel) }}</span>
+                                    }
+                                }
+                            </span>
+                        } @else {
+                            <span class="kv-none">{{ t().projects.hub.noChannel }}</span>
+                        }
+
+                        <b>{{ t().projects.hub.publicPage }}</b>
+                        @if (showcaseUrl(); as url) {
+                            <a class="kv-link" [href]="url" target="_blank" rel="noopener">
+                                {{ p.showcaseSlug }} <app-icon name="arrow-square-out" size="xs" />
+                            </a>
+                        } @else {
+                            <span class="kv-none">{{ t().projects.hub.notPublished }}</span>
+                        }
+                        <!--T-296/T-297 — shown only once there is a page to have numbers.-->
+                        @if (p.showcaseSlug && showcaseStats(); as stats) {
+                            <b>{{ t().projects.hub.publicViews }}</b>
+                            <span>{{ stats.viewTotal }}</span>
+                            <b>{{ t().projects.hub.followers }}</b>
+                            <span>{{ stats.followerCount }}</span>
+                        }
+
+                        <b>{{ t().projects.assets.title }}</b>
+                        @if (summary(); as row) {
+                            <a class="kv-link" [routerLink]="['/projects', p.id, 'assets']">{{ t().projects.hub.filesCount(row.assetCount) }}</a>
+                        } @else {
+                            <span class="kv-none">—</span>
+                        }
+
+                        <b>{{ t().projects.builds.title }}</b>
+                        @if (builds(); as list) {
+                            <a class="kv-link" [routerLink]="['/projects', p.id, 'builds']">{{ t().projects.hub.versionsCount(list.length) }}</a>
+                        } @else {
+                            <span class="kv-none">—</span>
                         }
                     </div>
-                </app-shelf-panel>
-            </div>
-
-            <app-shelf-panel class="shelf-right" [title]="t().projects.hub.today"
-                             [count]="today | zonedDate:'MM/dd'">
-                <!--T-124 — the sprint covering today, or the honest statement that none does.
-                "No sprint covers today" is a fact about the calendar, not a missing feature.-->
-                @if (p.currentSprint; as s) {
-                    <div class="grp">S{{ s.number }} — {{ s.name }}</div>
-                    @if (s.taskCount) {
-                        <span class="bar" aria-hidden="true">
-                            <i [style.width.%]="sprintPercent(s)"></i>
-                        </span>
-                        <app-spec-row [label]="t().projects.hub.sprintDone"
-                                      [value]="t().projects.planner.progress(s.doneCount, s.taskCount)" />
-                    }
-                    <app-spec-row [label]="t().projects.hub.sprintLeft" [value]="sprintLeft()" />
-                    @if (s.overdueCount) {
-                        <app-spec-row warn [label]="t().projects.tasks.filterOverdue"
-                                      [value]="t().projects.planner.overdueInside(s.overdueCount)" />
-                    }
-                } @else {
-                    <div class="grp">{{ t().projects.railPendingTitle }}</div>
-                    <p class="hint">{{ t().projects.planner.noCurrentSprint }}</p>
-                }
-
-                <!--T-123 — server-sorted by urgency. Overdue reddens the date only, never the row.
-                No board link on the heading: the tags beneath and the Tasks plate are the doors.-->
-                <div class="grp">{{ t().projects.tasks.upNext }}</div>
-                @for (task of p.upNext; track task.id) {
-                    <app-task-tag class="up-next" [prio]="task.priority"
-                                  [due]="task.dueAt ? (task.dueAt | zonedDate:'MM/dd') : t().projects.tasks.noDueDate"
-                                  [overdue]="overdue(task)" [rotate]="$even ? -0.8 : 0.6"
-                                  [hint]="task.title" [link]="['/projects', task.projectId, 'tasks']"
-                                  [queryParams]="{ task: task.id }">
-                        {{ task.title }}
-                    </app-task-tag>
-                } @empty {
-                    <p class="hint">
-                        {{ p.openTaskCount ? t().projects.tasks.upNextEmpty : t().projects.tasks.noTasksYet }}
-                    </p>
-                }
-
-                <!--The kit's «Каналы» group needs a project-to-channel link table the schema does
-                not have. The showcase is the one outbound address a project owns (ADR-134).-->
-                <div class="grp">{{ t().projects.hub.links }}</div>
-                <app-spec-row [label]="t().projects.hub.publicPage">
-                    @if (showcaseUrl(); as url) {
-                        <a class="spec-value link" [href]="url" target="_blank" rel="noopener">{{ p.showcaseSlug }}</a>
-                    } @else {
-                        <span class="spec-value none">{{ t().projects.hub.notPublished }}</span>
-                    }
-                </app-spec-row>
-                <!--T-296/T-297 — a page whose numbers nobody can see is a page nobody can say
-                anything about. Shown only once there is a page to have numbers.-->
-                @if (p.showcaseSlug && showcaseStats(); as stats) {
-                    <app-spec-row [label]="t().projects.hub.publicViews">
-                        <span class="spec-value">{{ stats.viewTotal }}</span>
-                    </app-spec-row>
-                    @for (click of stats.clicks; track click.label) {
-                        <app-spec-row [label]="click.label">
-                            <span class="spec-value">{{ click.count }}</span>
-                        </app-spec-row>
-                    }
-                    <app-spec-row [label]="t().projects.hub.followers">
-                        <span class="spec-value">{{ stats.followerCount }}</span>
-                    </app-spec-row>
-                }
-            </app-shelf-panel>
+                </div>
+            </aside>
         </div>
     }
 </div>

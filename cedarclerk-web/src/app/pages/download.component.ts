@@ -3,7 +3,6 @@ import { RouterLink } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { ThemeService } from '../core/theme.service';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { IconComponent } from '../shared/icon.component';
 
@@ -13,7 +12,7 @@ import { IconComponent } from '../shared/icon.component';
 // server's GET /downloads/latest redirect, not an SPA route.
 @Component({
     selector: 'app-download',
-    imports: [RouterLink, ButtonComponent, PaperCardComponent, CedarLogoComponent, IconComponent],
+    imports: [RouterLink, ButtonComponent, CedarLogoComponent, IconComponent],
     templateUrl: 'download.component.html',
     styleUrl: 'download.component.css',
 })

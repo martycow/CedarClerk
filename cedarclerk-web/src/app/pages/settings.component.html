@@ -1,35 +1,39 @@
-<!--ADR-185: a board with papers laid on it. The tabs stand on the board's own wood, and the
-section index is a column down the left of the sheet rather than a row across the top of it —
-a sticky row in a vertical flow travels over the very cards it indexes.-->
-<div class="settings-page">
-    <div class="settings-board">
-        <!--I12: split in two. "Profile" is everything about the author and what gets published
-        under their name — it's reached from the account menu, which is where a profile belongs.
-        "Account" is the machinery: language, plan, connected services. Appearance is neither: it
-        is a panel of the shell, opened from the hook rail's tray (ADR-183).-->
+<div class="page settings-page">
+    <app-page-header [title]="t().settings.crumb" [meta]="headerMeta()">
+        @if (tab() === 'profile') {
+        <app-button primary variant="pine" (clicked)="saveProfile()" [disabled]="profileBusy()">
+            {{ profileBusy() ? '…' : t().settings.saveProfile }}
+        </app-button>
+        }
+    </app-page-header>
+
+    <!--I12: "Profile" is everything about the author and what gets published under their name;
+    "Account" is the machinery. Appearance is neither: it is a panel of the shell (ADR-183). The
+    section index stands in flow beside the tabs — a stuck one floated over the field under it.-->
+    <div class="settings-strip">
         <app-index-tabs class="settings-tabs" [items]="tabItems()" [value]="tab()"
                         [label]="t().settings.crumb" (selected)="setTab($any($event))" />
-
-        <div class="settings-sheet" data-surface="paper">
-
-        <nav class="anchor-rail">
+        @if (tab() === 'profile' || tab() === 'billing') {
+        <nav class="seg section-index" [attr.aria-label]="t().settings.sections">
             @if (tab() === 'profile') {
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-profile')">{{ t().settings.profile.nav }}</app-button>
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</app-button>
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</app-button>
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-social-links')">{{ t().settings.social.nav }}</app-button>
-            } @else if (tab() === 'billing') {
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</app-button>
-            <app-button variant="paper" size="sm" (clicked)="jump('sec-credits')">{{ t().settings.credits.nav }}</app-button>
+            <button type="button" (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
+            <button type="button" (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
+            <button type="button" (click)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</button>
+            <button type="button" (click)="jump('sec-social-links')">{{ t().settings.social.nav }}</button>
+            } @else {
+            <button type="button" (click)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</button>
+            <button type="button" (click)="jump('sec-credits')">{{ t().settings.credits.nav }}</button>
             }
         </nav>
+        }
+    </div>
 
-        <div class="settings-stack">
+    <div class="settings-stack">
             <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one
             would lock out every account that predates this. It disappears the moment the address
             is confirmed.-->
             @if (!auth.emailConfirmed()) {
-            <section class="settings-card confirm-card">
+            <section class="card settings-card confirm-card wide">
                 <h2>{{ t().settings.confirmEmail.title }}</h2>
                 <p class="field-hint">{{ t().settings.confirmEmail.hint(auth.userEmail() ?? '') }}</p>
                 <div class="field-actions">
@@ -45,7 +49,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ PROFILE ============ -->
             @if (tab() === 'profile') {
-            <section id="sec-profile" class="settings-card">
+            <section id="sec-profile" class="card settings-card">
                 <h2>{{ t().settings.profile.title }}</h2>
                 <div class="profile-row">
                     <!--IF1: uploaded picture when set, the initial letter otherwise.-->
@@ -60,7 +64,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                         <div class="profile-meta">{{ t().settings.profile.memberSince }} {{ since | zonedDate:'MM/yyyy' }}</div>
                         }
                         <div class="avatar-actions">
-                            <label class="avatar-pick">
+                            <label class="btn primary avatar-pick">
                                 {{ avatarBusy() ? '…' : t().settings.profile.changeAvatar }}
                                 <input type="file" accept="image/*" (change)="onAvatarPicked($event)" [disabled]="avatarBusy()" hidden>
                             </label>
@@ -158,7 +162,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ LANGUAGE ============ -->
             @if (tab() === 'account') {
-            <section id="sec-language" class="settings-card">
+            <section id="sec-language" class="card settings-card">
                 <h2>{{ t().settings.language.title }}</h2>
                 <p class="field-hint">{{ t().settings.language.hint }}</p>
                 <!--DB3.1: was a flag emoji beside the endonym; Windows ships no regional-indicator
@@ -180,7 +184,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ HEADER SLOTS ============ -->
             @if (tab() === 'profile') {
-            <section id="sec-header-slots" class="settings-card">
+            <section id="sec-header-slots" class="card settings-card">
                 <!--T-343 — the section explainers fold behind the (i); the heading keeps the name.-->
                 <h2>{{ t().settings.headerSlots.title }} <app-hint-dot [text]="t().settings.headerSlots.hint" /></h2>
 
@@ -233,7 +237,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ CROSS-LINKS (I15) ============ -->
             @if (tab() === 'profile') {
-            <section id="sec-cross-links" class="settings-card">
+            <section id="sec-cross-links" class="card settings-card">
                 <h2>{{ t().settings.crossLinks.title }} <app-hint-dot [text]="t().settings.crossLinks.hint" /></h2>
 
                 <!--Per language: this line is read by whoever reads that language's version of the
@@ -259,7 +263,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ SOCIAL LINKS ============ -->
             @if (tab() === 'profile') {
-            <section id="sec-social-links" class="settings-card">
+            <section id="sec-social-links" class="card settings-card">
                 <h2>{{ t().settings.social.title }}</h2>
                 <p class="field-hint">{{ t().settings.social.hint }}</p>
 
@@ -313,10 +317,11 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
             </section>
             }
 
-            <!--One Save for the whole tab, in flow at its end: a bar stuck to the scrollport floats
-            over the signature buttons above it.-->
+            <!--The header's Save again at the form's end, in flow: the header scrolls away with
+            the page, and the hand that finished the last social link should not have to go back
+            up for it.-->
             @if (tab() === 'profile') {
-            <div class="profile-save-bar">
+            <div class="profile-save-bar wide">
                 <app-button variant="pine" (clicked)="saveProfile()" [disabled]="profileBusy()">
                     {{ profileBusy() ? '…' : t().settings.saveProfile }}
                 </app-button>
@@ -329,7 +334,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ SUBSCRIPTION ============ -->
             @if (tab() === 'billing') {
-            <section id="sec-subscription" class="settings-card">
+            <section id="sec-subscription" class="card settings-card">
                 <h2>{{ t().settings.subscription.title }}</h2>
 
                 @if (billing(); as b) {
@@ -434,7 +439,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ CREDITS (ADR-092) ============ -->
             @if (tab() === 'billing') {
-            <section id="sec-credits" class="settings-card">
+            <section id="sec-credits" class="card settings-card">
                 <h2>{{ t().settings.credits.title }} <app-hint-dot [text]="t().settings.credits.hint" /></h2>
 
                 @if (credits(); as c) {
@@ -540,7 +545,7 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                 </nav>
                 }
                 } @else {
-                <p class="field-hint">{{ t().settings.credits.ledgerEmpty }}</p>
+                <app-empty-state icon="sparkle" [title]="t().settings.credits.ledgerEmpty" [text]="t().settings.ledgerEmptyHint" />
                 }
                 }
             </section>
@@ -548,16 +553,16 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
 
             <!-- ============ INTEGRATIONS ============ -->
             @if (tab() === 'integrations') {
-            <section id="sec-integrations" class="settings-card">
-                <h2>{{ t().settings.integrations.title }} <app-hint-dot [text]="t().settings.integrations.hint" /></h2>
+            <section id="sec-integrations" class="settings-group wide">
+                <h2 class="group-title">{{ t().settings.integrations.title }} <app-hint-dot [text]="t().settings.integrations.hint" /></h2>
 
-                <!--ADR-190 — every network is an app-shelf-panel, the same object every dock and
-                inspector on the bench is. The state stamp opens the sheet rather than riding the
-                sign tile: every stamp tone is an ink measured against paper, and there is no
-                wood-safe one. The shapes being identical is what turns the stamps into a column.-->
+                <!--ADR-190 — one shape for every network: a card with a caption line, the state
+                stamp on the first line of its body, disconnect in the head, connect in the body.
+                The shapes being identical is what turns the stamps into a column.-->
                 <div class="integration-rack">
 
-                    <app-shelf-panel class="wide" [title]="t().settings.integrations.telegramAccount">
+                    <div class="card net-card wide" role="region" [attr.aria-label]="t().settings.integrations.telegramAccount">
+                        <div class="net-cap"><span class="label">{{ t().settings.integrations.telegramAccount }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon telegram">
@@ -600,17 +605,21 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             }
                             @if (telegramError()) { <p class="field-error">{{ telegramError() }}</p> }
                         </div>
-                    </app-shelf-panel>
+                    </div>
 
                     <!--ADR-095: channels are managed here now, not behind a disclosure in the export
                     window. The list is the section — a count with "manage elsewhere" was a signpost to a
                     place that no longer exists.-->
-                    <app-shelf-panel class="wide" [title]="t().settings.integrations.channels"
-                                     [count]="channels().length">
-                        <app-button actions variant="rail" size="sm" (clicked)="refreshKnownChats()"
-                                    [disabled]="knownChatsRefreshing()" [title]="t().settings.integrations.refresh">
-                            <app-icon name="arrow-clockwise" size="xs" [class.spin]="knownChatsRefreshing()"></app-icon>
-                        </app-button>
+                    <div class="card net-card wide" role="region" [attr.aria-label]="t().settings.integrations.channels">
+                        <div class="net-cap">
+                            <span class="label">{{ t().settings.integrations.channels }}</span>
+                            @if (channels().length) { <span class="net-count">{{ channels().length }}</span> }
+                            <span class="spacer"></span>
+                            <app-button variant="rail" size="sm" (clicked)="refreshKnownChats()"
+                                        [disabled]="knownChatsRefreshing()" [title]="t().settings.integrations.refresh">
+                                <app-icon name="arrow-clockwise" size="xs" [class.spin]="knownChatsRefreshing()"></app-icon>
+                            </app-button>
+                        </div>
 
                         <div class="net-sheet">
                             @if (channels().length) {
@@ -671,9 +680,20 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                                 }
                             </ul>
                             } @else if (!channels().length) {
-                            <p class="field-hint">
-                                {{ auth.telegramLinked() ? t().settings.integrations.noChannelsYet : t().settings.integrations.linkTelegramFirst }}
-                            </p>
+                            <app-empty-state class="wide" icon="chat-teardrop"
+                                             [title]="auth.telegramLinked() ? t().settings.integrations.channelsEmptyTitle : t().settings.integrations.channelsLinkFirstTitle"
+                                             [text]="auth.telegramLinked() ? t().settings.integrations.noChannelsYet : t().settings.integrations.linkTelegramFirst">
+                                @if (auth.telegramLinked()) {
+                                <app-button variant="pine" size="sm" (clicked)="refreshKnownChats()" [disabled]="knownChatsRefreshing()">
+                                    <app-icon name="arrow-clockwise" size="xs" [class.spin]="knownChatsRefreshing()"></app-icon>
+                                    {{ t().settings.integrations.refresh }}
+                                </app-button>
+                                } @else {
+                                <app-button variant="pine" size="sm" (clicked)="linkTelegram()" [disabled]="telegramBusy()">
+                                    {{ telegramBusy() ? t().settings.integrations.waitingForTelegram : t().settings.integrations.linkTelegram }}
+                                </app-button>
+                                }
+                            </app-empty-state>
                             } @else {
                             <p class="field-hint">{{ t().settings.integrations.nothingNew }}</p>
                             }
@@ -692,11 +712,12 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             }
                             @if (channelError()) { <p class="field-error">{{ channelError() }}</p> }
                         </div>
-                    </app-shelf-panel>
+                    </div>
 
                     <!--Bluesky: an app password, never the account password — it is revocable from Bluesky
                     itself, which is the whole reason storing one is defensible (ADR-079).-->
-                    <app-shelf-panel [title]="t().settings.integrations.bluesky">
+                    <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.bluesky">
+                        <div class="net-cap"><span class="label">{{ t().settings.integrations.bluesky }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon bluesky"><app-brand-icon name="bluesky" [size]="16"></app-brand-icon></span>
@@ -727,11 +748,12 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             }
                             @if (blueskyError()) { <p class="field-error">{{ blueskyError() }}</p> }
                         </div>
-                    </app-shelf-panel>
+                    </div>
 
                     <!--X: one button out to x.com and back (ADR-093). The callback returns to this section
                     with ?x=, which is the only sign the round trip finished at all.-->
-                    <app-shelf-panel [title]="t().settings.integrations.x">
+                    <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.x">
+                        <div class="net-cap"><span class="label">{{ t().settings.integrations.x }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon x"><app-brand-icon name="twitter" [size]="14"></app-brand-icon></span>
@@ -770,11 +792,12 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             }
                             @if (xError()) { <p class="field-error">{{ xError() }}</p> }
                         </div>
-                    </app-shelf-panel>
+                    </div>
 
                     <!--Discord: a channel webhook pasted whole (ADR-131) — the URL is the credential, so it
                     is verified against Discord before being stored encrypted, and never shown back.-->
-                    <app-shelf-panel [title]="t().settings.integrations.discord">
+                    <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.discord">
+                        <div class="net-cap"><span class="label">{{ t().settings.integrations.discord }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon discord"><app-brand-icon name="discord" [size]="15"></app-brand-icon></span>
@@ -804,13 +827,19 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                             }
                             @if (discordError()) { <p class="field-error">{{ discordError() }}</p> }
                         </div>
-                    </app-shelf-panel>
+                    </div>
 
-                    <!--ADR-190 — the bot is a reading, not an account: nothing on this shelf connects,
+                    <!--ADR-190 — the bot is a reading, not an account: nothing on this card connects,
                     because nothing about it can be. app-spec-row is what a printed reading looks like.-->
-                    <app-shelf-panel class="wide" title="&#64;CedarClerkBot"
-                                     [count]="botStatus() ? (botStatus()!.reachable ? t().settings.integrations.botReachable : t().settings.integrations.botUnreachable) : null">
-                        <a actions class="paper-anchor" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
+                    <div class="card net-card wide" role="region" aria-label="&#64;CedarClerkBot">
+                        <div class="net-cap">
+                            <span class="label">&#64;CedarClerkBot</span>
+                            @if (botStatus(); as bs) {
+                            <span class="net-count">{{ bs.reachable ? t().settings.integrations.botReachable : t().settings.integrations.botUnreachable }}</span>
+                            }
+                            <span class="spacer"></span>
+                            <a class="btn sm" href="https://t.me/CedarClerkBot" target="_blank" rel="noopener">{{ t().settings.integrations.openBot }}</a>
+                        </div>
                         @if (botStatus(); as bs) {
                         <app-spec-row [label]="t().settings.integrations.botStatusLabel">
                             <span class="status-dot" [class.down]="!bs.reachable"></span>
@@ -818,22 +847,20 @@ a sticky row in a vertical flow travels over the very cards it indexes.-->
                         </app-spec-row>
                         <app-spec-row [label]="t().settings.integrations.botRoleLabel" [value]="t().settings.integrations.botRole"></app-spec-row>
                         }
-                    </app-shelf-panel>
-
-                </div>
-
-                <div class="planned-strip">
-                    <span class="panel-label">{{ t().settings.integrations.planned }}</span>
-                    <div class="planned-row">
-                        @for (name of plannedNetworks; track name) {
-                        <app-leaf-tag state="dried">{{ name }}</app-leaf-tag>
-                        }
                     </div>
-                    <p class="field-hint">{{ t().settings.integrations.plannedHint }}</p>
+
+                    <div class="card net-card wide planned-strip" role="region" [attr.aria-label]="t().settings.integrations.planned">
+                        <div class="net-cap"><span class="label">{{ t().settings.integrations.planned }}</span></div>
+                        <div class="planned-row">
+                            @for (name of plannedNetworks; track name) {
+                            <app-leaf-tag state="dried">{{ name }}</app-leaf-tag>
+                            }
+                        </div>
+                        <p class="field-hint">{{ t().settings.integrations.plannedHint }}</p>
+                    </div>
+
                 </div>
             </section>
             }
-            </div>
-        </div>
     </div>
 </div>

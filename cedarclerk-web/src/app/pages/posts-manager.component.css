@@ -1,23 +1,22 @@
 /* The shell's body is the scroll container; the page fills it and never sizes itself from the
-   viewport (ADR-153 clause 6). */
+   viewport (ADR-239 clause 7). */
 :host {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    color: var(--text);
     font-family: var(--font-sans);
 }
 
 .manager {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    padding: var(--space-3);
-    box-sizing: border-box;
-
     --growth-plot-h: 260px;
+}
+
+/* On the wall, so the wall's ink (ADR-141); everything under a card goes back to paper's. */
+.manager > .hint {
+    margin: 0;
+    color: var(--wood-ink-soft);
+    font-size: var(--fs-ui);
 }
 
 .hint {
@@ -46,39 +45,50 @@
 .spacer { flex: 1; }
 
 /* ---------- Layout ---------- */
-/* The index tiles hang off the top edge of the boards below them, which is where IndexTabs is
-   drawn to sit. The strip is the shelf rail those boards stand on, so it is welded to them: square
-   at the bottom, no gap under it, and the boards' own gap starts below the rail (ADR-200). */
-.mg-index {
+.mg-top {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
     flex: none;
-    padding: var(--space-2) var(--space-2) 0;
-    border: 1px solid var(--wood-edge);
-    border-bottom: none;
-    border-radius: var(--radius-plaque) var(--radius-plaque) 0 0;
-    background: var(--shelf-frame);
-    box-shadow: var(--shadow-paper-sm);
+    padding-bottom: var(--space-4);
 }
 
-.mg-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    box-sizing: border-box;
-    padding: var(--space-2);
-    border: 1px solid var(--wood-edge);
-    border-top: none;
-    border-radius: 0 0 var(--radius-plaque) var(--radius-plaque);
-    background: var(--shelf-frame);
+.page-intro {
+    margin: 0;
+    font-size: var(--fs-14);
+    color: var(--wood-ink-soft);
+}
+
+/* The feedback tally on the Posts tab: the seg has no badge of its own, so the page draws one. */
+.manager-tabs .seg-badge {
+    display: inline-flex;
+    align-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-stamp);
+    background: var(--asoft);
+    color: var(--accent);
+    font-size: var(--fs-11);
+    font-variant-numeric: tabular-nums;
+    justify-content: center;
 }
 
 .mg-grid {
     display: flex;
     flex: 1;
     min-height: 0;
-    gap: var(--space-2);
+    gap: var(--space-4);
+}
+
+.shelf-list,
+.sheet,
+.inspector {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .shelf-list {
@@ -96,81 +106,98 @@
     width: var(--bench-dock-w-wide);
 }
 
-/* The writer's sheet under reading matter: a bright page laid on the worktop, open at the bottom. */
-.sheet-column {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 820px;
-    margin: var(--space-5) auto 0;
-    padding: var(--space-4) var(--space-4) var(--space-8);
-    background-color: var(--paper-bright);
-    background-image: var(--tex-paper);
-    border: 1px solid var(--paper-edge);
-    border-bottom: none;
-    border-radius: var(--radius-paper) var(--radius-paper) 0 0;
-    box-shadow: var(--shadow-paper);
-}
-
-/* The intro line stands above the boards, so it is the one thing on this screen not on a surface
-   of its own; it keeps the manager's own type size. */
-.manager > .field-hint {
+.card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     flex: none;
-    padding: 0 var(--space-1) var(--space-2);
+    box-sizing: border-box;
+    min-height: var(--hit-touch);
+    padding: 0 var(--space-4);
+    border-bottom: 1px solid var(--paper-edge);
 }
 
-/* The metrics tab brings its own two-column layout and no scroller — the page is a fixed height
-   now, so the tab body is given one here rather than inside a screen this file does not own. */
+.card-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+.card-title {
+    min-width: 0;
+    font-size: var(--fs-15);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-meta {
+    margin-left: auto;
+    font-size: var(--fs-13);
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+.card-body,
+.sheet-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-4);
+}
+
+/* The metrics tab brings its own layout and no scroller of its own, so the page gives it one. */
 .manager > app-stats {
     flex: 1;
     min-height: 0;
     overflow: auto;
-    /* The index tiles hang off a board's edge; this tab's first element is paper, so the tiles
-       are kept clear of it the way the forms tab's intro line keeps them clear of its boards. */
-    padding-top: var(--space-2);
 }
 
-/* Priority Fixes 02 (Claude Design, 28.07.2026): radius-md -> radius-lg, matching the same
-   --sheet+--border+--shadow "card" pattern used by Settings/Admin/Stats. */
-/* 8.2 — a card with two lines: what the post is, then which languages it exists in. */
-.post-card {
+/* FI3.10 — search reaches one post directly in a publish-date-ordered list. Above the scroller,
+   not inside it, so it never has to be pinned. */
+.post-search {
+    flex: none;
+    margin: var(--space-3) var(--space-4);
+}
+
+.post-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+}
+
+/* A row: plate · title over languages · tally · state. Only the title column shrinks, so a long
+   title gives way to the tag and the tag never to the title (T-271). */
+.post-card {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     width: 100%;
-    text-align: left;
-    /* Drawn, not implied: with a transparent edge and no fill, an unpicked post was a block of
-       text among blocks of text and the list read as one paragraph. */
-    border: 1px solid var(--rule-ink-soft);
-    background: var(--paper-bright);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-inline: 0;
+    border-bottom: 0;
+    background: none;
     color: var(--text);
     font-family: inherit;
-    font-size: var(--fs-ui);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-row-y) var(--dens-control-x);
+    text-align: left;
     cursor: pointer;
 }
 
-.post-card:hover {
-    background: var(--hover);
+.post-card.is-preset {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .post-card.on {
     background: var(--asoft);
-    border-color: var(--abord);
 }
 
-/* The same pine rule down the row's edge the other shelves use; :not(:focus-visible) so it cannot
+/* The same pine rule down the row's edge the other lists use; :not(:focus-visible) so it cannot
    out-specify the global focus halo (ADR-140). */
 .post-card.on:not(:focus-visible) {
     box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.post-card-top {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    width: 100%;
-    min-width: 0;
 }
 
 /* T-337 — the type plate: a small tinted square carrying the document-type icon, so a glance
@@ -188,17 +215,20 @@
     overflow: hidden;
 }
 
-/* The same plate, carrying the document's first picture instead of its type icon. */
-.post-card-type.has-thumb { background: var(--alt); }
 .post-card-type.has-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.post-card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
 
 .post-card-title {
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    flex: 1;
     min-width: 0;
-    font-weight: 600;
 }
 
 .post-card-title-text {
@@ -212,25 +242,18 @@
     align-items: center;
     flex-wrap: wrap;
     gap: var(--space-1);
-    width: 100%;
 }
 
-.post-card-langs .spacer {
-    flex: 1;
-}
-
-/* A language is a code in mono, not a pill (ADR-155): the workshop has no pills. */
+/* A language is a code in mono, not a pill (ADR-155). */
 .post-card-lang {
     font-family: var(--font-mono);
     font-size: var(--fs-caption);
     font-weight: 700;
     letter-spacing: .03em;
-    color: var(--t2);
 }
 
-/* 8.1 — the list scrolls in its own box instead of growing the page. With thirty posts the detail
-   pane's own content used to start below the fold, so picking a post meant scrolling back up to
-   see what you had picked. The search field stays pinned at the top of the scroller. */
+.post-card-state { flex: none; }
+
 /* The slug and the button that saves it are one control, and the button that takes the post down
    is not: without this the three stacked edge to edge and read as one column of parts. */
 .action-row {
@@ -242,27 +265,6 @@
 .action-row .chat-input { flex: 1; min-width: 0; }
 
 .action-row + .btn-ghost { margin-top: var(--space-3); }
-
-
-.post-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    padding: var(--space-2);
-}
-
-/* T-337 — the bench search field, pinned at the top of the shelf's scroller. The field's own face
-   (box, stock, mono type) is the component's under `dense`; what stays here is where it sits and
-   the rule that separates it from the list below. */
-.post-search {
-    position: sticky;
-    top: calc(var(--space-2) * -1);
-    z-index: 1;
-    margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) var(--space-1);
-    padding: var(--space-2) var(--space-3);
-    border-bottom: 1px solid var(--border);
-    background: var(--sheet);
-}
 
 .detail-field {
     margin-bottom: 12px;
@@ -914,9 +916,7 @@
 }
 
 /* ---------- Inspector ---------- */
-/* Reading matter, so it takes paper's floor rather than chrome's — the shelf's sheet is where it
-   stands (ADR-159 clause 8). */
-[data-surface="paper"] .insp-note {
+.insp-note {
     margin: 0 0 var(--space-3);
     font-size: var(--fs-ui);
     line-height: 1.45;

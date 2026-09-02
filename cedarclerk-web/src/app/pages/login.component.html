@@ -2,12 +2,12 @@
     <!--The rail's dots menu holds the theme toggle everywhere else; there is no rail out here
     (ADR-166 clause 2). Paper stock on a chrome box: the wall is light by day, and the rail's
     cream ink does not read on it.-->
-    <app-button class="theme-toggle" variant="paper" surface="chrome" size="sm" [title]="t().common.toggleTheme"
+    <app-button class="theme-toggle" variant="paper" size="sm" [title]="t().common.toggleTheme"
                 (clicked)="theme.toggle()">
         <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
     </app-button>
 
-    <app-paper-card class="auth-card" bright [rotate]="-0.4">
+    <section class="card auth-card" data-surface="paper">
         <div class="auth-header">
             <app-cedar-logo [size]="34"></app-cedar-logo>
             <div class="auth-title">Cedar Clerk</div>
@@ -38,7 +38,7 @@
         <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
         to this host.-->
         @if (linkPending) { <p class="session-notice">{{ t().externalAuth.linkPrompt }}</p> }
-        @if (externalOutcome === 'failed') { <p class="error">{{ t().externalAuth.failed }}</p> }
+        @if (externalOutcome === 'failed') { <p class="error-box" role="alert">{{ t().externalAuth.failed }}</p> }
 
         <app-input inputId="cc-login-pass" type="password" [label]="t().login.password"
                    placeholder="••••••••" autocomplete="current-password"
@@ -49,12 +49,12 @@
             {{ busy() ? '…' : t().login.submit }}
         </app-button>
 
-        @if (error()) { <p class="error">{{ error() }}</p> }
+        @if (error()) { <p class="error-box" role="alert">{{ error() }}</p> }
 
         <app-external-auth-buttons [returnUrl]="externalReturnUrl" (signedIn)="afterExternalSignIn()" />
 
         <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register" [queryParams]="registerParams">{{ t().login.register }}</a> <span class="muted">{{ t().login.inviteRequired }}</span></div>
 
         <app-lang-switch></app-lang-switch>
-    </app-paper-card>
+    </section>
 </div>

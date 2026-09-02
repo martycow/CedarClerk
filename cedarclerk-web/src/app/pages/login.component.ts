@@ -9,14 +9,13 @@ import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { ExternalAuthButtonsComponent } from '../shared/external-auth-buttons.component';
 
 @Component({
     selector: 'app-login',
     imports: [
         RouterLink, CedarLogoComponent, LangSwitchComponent,
-        ButtonComponent, InputComponent, PaperCardComponent, IconComponent,
+        ButtonComponent, InputComponent, IconComponent,
         ExternalAuthButtonsComponent,
     ],
     templateUrl: 'login.component.html',

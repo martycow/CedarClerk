@@ -1,15 +1,28 @@
-<!--ADR-164 — one index strip, one panel, and a right column that always carries something: the
-storage figures that used to hang off the page title, and the chosen file, which used to be a modal
-covering the list its 409 answer talks about.-->
-<div class="media-page" [class.embedded]="embedded()" data-density="compact">
-    @if (loadError(); as err) { <p class="load-error">{{ err }}</p> }
+<div class="page" [class.embedded]="embedded()" data-density="compact">
+    @if (!embedded()) {
+    <app-page-header [title]="t().media.open" [meta]="headerMeta()">
+        <app-button primary variant="pine" [disabled]="uploading()" [title]="t().media.uploadNew"
+                    (clicked)="fileInput.click()">
+            @if (uploading()) { <app-icon name="arrow-clockwise" size="sm" class="spin" /> }
+            @else { <app-icon name="upload-simple" size="sm" /> }
+            {{ uploading() ? t().media.uploading : t().media.uploadNew }}
+        </app-button>
+    </app-page-header>
+    }
+    <input #fileInput type="file" accept="image/*,video/*,audio/*" multiple hidden
+           (change)="onUploadPicked($event)" [disabled]="uploading()">
+
+    @if (loadError(); as err) { <p class="load-error" role="alert">{{ err }}</p> }
+    @if (uploadError(); as err) { <p class="load-error" role="alert">{{ err }}</p> }
 
     @if (loading()) {
-        <p class="hint">{{ t().common.loading }}</p>
+        <section class="card library">
+            <p class="hint pad">{{ t().common.loading }}</p>
+        </section>
     } @else if (page(); as p) {
-        <!--One row: the bucket strip (ADR-204 — whose files these are) beside the type strip.
-        The bucket half is absent when the component is pinned to one project (the project's own
-        Assets screen renders it that way) or when there is nothing to sort.-->
+        <!--The bucket strip (ADR-204 — whose files these are) beside the type strip. The bucket
+        half is absent when the component is pinned to one project or when there is nothing to
+        sort.-->
         <div class="strip-row">
             @if (!pinnedProject() && bucketTabs().length > 1) {
             <app-index-tabs class="bucket-strip" [items]="bucketTabs()" [value]="bucketTab()"
@@ -20,15 +33,33 @@ covering the list its 409 answer talks about.-->
         </div>
 
         <div class="media-grid" [class.solo]="embedded() && !selected()">
-            <app-shelf-panel class="library" [title]="t().media.open" [count]="rangeLabel()" flush>
-                <app-input actions class="search" [dense]="true" type="search" [value]="search()"
-                           [placeholder]="t().media.searchPlaceholder"
-                           (valueChange)="onSearch($any($event) ?? '')" />
-                <app-index-tabs actions [items]="viewTabs()" [value]="view()"
-                                [label]="t().media.viewStrip" (selected)="setView($any($event))" />
+            <section class="card library" role="region" [attr.aria-label]="t().media.open">
+                <header class="card-head">
+                    <span class="card-name">
+                        <span class="label">{{ t().media.open }}</span>
+                        @if (rangeLabel()) { <span class="card-count">{{ rangeLabel() }}</span> }
+                    </span>
+                    <span class="spacer"></span>
+                    <app-input class="search" [dense]="true" type="search" [value]="search()"
+                               [placeholder]="t().media.searchPlaceholder"
+                               (valueChange)="onSearch($any($event) ?? '')" />
+                    <app-index-tabs [items]="viewTabs()" [value]="view()"
+                                    [label]="t().media.viewStrip" (selected)="setView($any($event))" />
+                </header>
 
+                <div class="row-list">
                 @if (p.items.length === 0) {
-                    <p class="hint media-empty">{{ totalUnfiltered() === 0 ? t().media.empty : t().common.nothingHere }}</p>
+                    @if (totalUnfiltered() === 0) {
+                    <app-empty-state icon="images" [title]="t().media.empty" [text]="t().media.emptyText">
+                        <app-button variant="pine" [disabled]="uploading()" (clicked)="fileInput.click()">
+                            <app-icon name="upload-simple" size="sm" /> {{ t().media.uploadNew }}
+                        </app-button>
+                    </app-empty-state>
+                    } @else {
+                    <app-empty-state icon="magnifying-glass" [title]="t().media.noMatches" [text]="t().media.noMatchesText">
+                        <app-button variant="paper" (clicked)="clearFilters()">{{ t().media.clearFilters }}</app-button>
+                    </app-empty-state>
+                    }
                 } @else if (view() === 'grid') {
                     <div class="asset-grid">
                         @for (a of p.items; track a.id) {
@@ -53,13 +84,13 @@ covering the list its 409 answer talks about.-->
                 } @else {
                     <div class="asset-list">
                         @for (a of p.items; track a.id) {
-                            <button type="button" class="list-row" [class.is-on]="selected()?.id === a.id"
+                            <button type="button" class="row list-row" [class.is-on]="selected()?.id === a.id"
                                     (click)="open(a)">
                                 <app-icon [name]="kindIcons[kindOf(a)]" size="sm"></app-icon>
-                                <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
-                                <span class="list-type">{{ a.contentType }}</span>
-                                <span class="list-size">{{ bytes(a.sizeBytes) }}</span>
-                                <span class="list-date">{{ a.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
+                                <span class="t tile-name" [title]="a.fileName">{{ a.fileName }}</span>
+                                <span class="m list-type">{{ a.contentType }}</span>
+                                <span class="m list-size">{{ bytes(a.sizeBytes) }}</span>
+                                <span class="m list-date">{{ a.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
                             </button>
                         }
                     </div>
@@ -76,26 +107,43 @@ covering the list its 409 answer talks about.-->
                         </app-button>
                     </div>
                 }
-            </app-shelf-panel>
+                </div>
+            </section>
 
             <div class="shelves">
                 <!--Account-wide figures, so they stay on the account-wide page: embedded in a
                 project's Assets board they would read as that project's quota.-->
                 @if (!embedded()) {
-                <app-shelf-panel class="storage" [title]="t().media.storage" [count]="usagePercentLabel()">
-                    <div class="usage-bar" role="progressbar" [attr.aria-valuenow]="usagePercent()">
-                        <div class="usage-fill" [style.width.%]="usagePercent()"></div>
+                <section class="card storage" role="region" [attr.aria-label]="t().media.storage">
+                    <header class="card-head">
+                        <span class="card-name">
+                            <span class="label">{{ t().media.storage }}</span>
+                            @if (usagePercentLabel()) { <span class="card-count">{{ usagePercentLabel() }}</span> }
+                        </span>
+                    </header>
+                    <div class="card-body">
+                        <div class="usage-bar" role="progressbar" [attr.aria-valuenow]="usagePercent()">
+                            <div class="usage-fill" [style.width.%]="usagePercent()"></div>
+                        </div>
+                        <p class="hint">{{ t().media.usage(bytes(p.usedBytes), bytes(p.limitBytes)) }}</p>
                     </div>
-                    <p class="hint">{{ t().media.usage(bytes(p.usedBytes), bytes(p.limitBytes)) }}</p>
-                </app-shelf-panel>
+                </section>
                 }
 
                 @if (selected(); as a) {
-                    <app-shelf-panel class="inspector" [title]="t().media.fileDetails" [count]="bytes(a.sizeBytes)">
-                        <app-button actions variant="rail" size="sm" [title]="t().common.close" (clicked)="close()">
-                            <app-icon name="x" size="xs"></app-icon>
-                        </app-button>
+                    <section class="card inspector" role="region" [attr.aria-label]="t().media.fileDetails">
+                        <header class="card-head">
+                            <span class="card-name">
+                                <span class="label">{{ t().media.fileDetails }}</span>
+                                <span class="card-count">{{ bytes(a.sizeBytes) }}</span>
+                            </span>
+                            <span class="spacer"></span>
+                            <app-button variant="rail" size="sm" [title]="t().common.close" (clicked)="close()">
+                                <app-icon name="x" size="xs"></app-icon>
+                            </app-button>
+                        </header>
 
+                        <div class="card-body">
                         <div class="preview-pane">
                             @switch (kindOf(a)) {
                                 @case ('image') {
@@ -118,7 +166,7 @@ covering the list its 409 answer talks about.-->
                         <p class="hint">{{ t().media.deleteForever }}</p>
 
                         @if (deleteError(); as err) {
-                            <p class="load-error">{{ err }}</p>
+                            <p class="load-error" role="alert">{{ err }}</p>
                             @if (usedBy().length) {
                                 <p class="hint">{{ t().media.usedBy }}</p>
                                 <ul class="used-by">
@@ -130,7 +178,8 @@ covering the list its 409 answer talks about.-->
                         <app-button class="delete" variant="danger" [disabled]="busy()" (clicked)="confirmDelete()">
                             {{ t().common.delete }}
                         </app-button>
-                    </app-shelf-panel>
+                        </div>
+                    </section>
                 }
             </div>
         </div>

@@ -3,17 +3,7 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    color: var(--text);
     font-family: var(--font-sans);
-}
-
-.glossary {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    padding: var(--space-2);
-    box-sizing: border-box;
 }
 
 .spacer { flex: 1; }
@@ -22,90 +12,90 @@
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* ---------- Layout ---------- */
-/* The index tiles hang off the top edge of the sheet, which is where IndexTabs is drawn to sit:
-   the strip overlaps the worktop's border by a hair so a lit tile reads as raised out of it. */
 .gl-index {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
     gap: var(--space-2);
     flex: none;
-    margin-bottom: -1px;
-    padding: 0 var(--space-1);
+    margin-bottom: var(--space-4);
 }
 
 .gl-grid {
     display: flex;
     flex: 1;
     min-height: 0;
-    gap: var(--space-2);
+    gap: var(--space-4);
 }
 
-.sheet {
-    flex: 1;
+.card {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
 }
+
+.sheet { flex: 1; }
 
 .inspector {
     flex: none;
     width: var(--bench-dock-w-wide);
 }
 
-/* The writer's sheet: reading matter lies on paper, never on the worktop's grid. */
+.card-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex: none;
+    min-height: var(--hit-touch);
+    padding: var(--space-3) var(--space-4) 0;
+}
+
+.card-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+.card-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-4);
+}
+
+/* The sheet's body: the form at the top, the list, the pager — one scroll. */
 .sheet-column {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 780px;
-    margin: var(--space-5) auto 0;
-    padding: var(--space-4) var(--space-4) var(--space-8);
-    background-color: var(--paper-bright);
-    background-image: var(--tex-paper);
-    border: 1px solid var(--paper-edge);
-    border-bottom: none;
-    border-radius: var(--radius-paper) var(--radius-paper) 0 0;
-    box-shadow: var(--shadow-paper);
+    padding: var(--space-2) 0 var(--space-4);
 }
 
-/* ---------- Sheet ---------- */
-.hint-bubble {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-2);
-    margin: 0;
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--abord);
-    background: var(--asoft);
-    border-radius: var(--radius-md);
-    font-size: var(--fs-ui);
-    line-height: 1.45;
-    color: var(--t2);
+/* T-125 — where a new term will go, said in the card's caption line. */
+.scope-hint {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-13);
+    color: var(--t3);
 }
 
-.hint-bubble app-icon { flex: none; margin-top: 1px; color: var(--accent); }
-
-/* T-125 — which glossary is being looked at, and where a new term will go. */
-.scope-strip {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-1);
-}
-
-.leaf-note {
+.seg-note {
     margin-left: var(--space-1);
-    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    opacity: .75;
+    opacity: .7;
 }
-
-.scope-hint { margin: calc(var(--space-3) * -1) 0 0; }
 
 .term-form {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    margin: 0 var(--space-4);
     padding: var(--space-4);
     background: var(--asoft);
     border: 1px solid var(--abord);
@@ -118,24 +108,24 @@
     gap: var(--space-2);
 }
 
+/* ---------- The list ---------- */
 .term-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
 }
 
+/* A term is a row with a second line: the hairline pitch of `.row`, but the description under the
+   name is what makes it a glossary rather than an index. */
 .term-card {
     display: flex;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-3);
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-paper);
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--paper-edge);
     cursor: pointer;
 }
 
-.term-card:hover { border-color: var(--abord); }
-.term-card.on { border-color: var(--abord); background: var(--asoft); }
+.term-card:hover { background: var(--alt); }
+.term-card.on { background: var(--asoft); }
 
 .term-thumb {
     flex: none;
@@ -155,9 +145,9 @@
 }
 
 .term-name {
-    font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     font-size: var(--fs-body);
+    color: var(--text);
 }
 
 .term-languages {
@@ -179,7 +169,6 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-3);
-    font-family: var(--font-mono);
     font-size: var(--fs-meta);
     color: var(--t2);
 }
@@ -214,16 +203,9 @@
 
 /* Marks a term that belongs to one project, so the two kinds are told apart in the "all" view. */
 .scope-badge {
-    float: right;
-    padding: 2px var(--space-2);
-    border-radius: var(--radius-sm);
-    background: var(--alt);
-    color: var(--t2);
-    font-size: var(--fs-caption);
     max-width: 16ch;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 /* Paper keeps its 44px target on a mouse as well as a finger (ADR-138 item 2). */
@@ -254,15 +236,10 @@
 
 /* ---------- Inspector ---------- */
 .preview-langs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1);
     margin-bottom: var(--space-3);
 }
 
-/* Reading matter, so it takes paper's floor rather than chrome's — the shelf's sheet is where it
-   stands, and the note beside it says the same thing in the same size (ADR-159 clause 8). */
-[data-surface="paper"] .insp-note {
+.insp-note {
     margin: 0 0 var(--space-3);
     font-size: var(--fs-ui);
     line-height: 1.45;
@@ -275,12 +252,12 @@
 .glossary-preview-tip {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    background: var(--paper-bright);
+    background: var(--surface);
     padding: var(--space-3) var(--space-4);
     margin-bottom: var(--space-3);
 }
 
-[data-surface="paper"] .glossary-preview-term {
+.glossary-preview-term {
     display: block;
     font-family: var(--font-display);
     font-weight: 700;
@@ -288,7 +265,7 @@
     margin-bottom: var(--space-1);
 }
 
-[data-surface="paper"] .glossary-preview-desc {
+.glossary-preview-desc {
     margin: 0;
     color: var(--t2);
     font-size: var(--fs-ui);
@@ -319,6 +296,14 @@
     cursor: pointer;
 }
 
-.hint { color: var(--t2); font-size: var(--fs-ui); }
+.hint { color: var(--wood-ink-soft); font-size: var(--fs-ui); }
+.hint.in-card { margin: 0; padding: var(--space-3) var(--space-4); color: var(--t2); }
 
-.channel-error { color: var(--danger); font-size: var(--fs-ui); margin: 0 0 var(--space-2); }
+.channel-error {
+    margin: 0 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-size: var(--fs-ui);
+}

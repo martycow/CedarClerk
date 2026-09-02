@@ -1,17 +1,14 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { AuthService } from '../core/auth.service';
 import { ProjectDetail, ProjectsService, ShowcaseStats } from '../core/projects.service';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { SpecRowComponent } from '../bench/worktop/spec-row.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 import { LibraryAsset } from '../core/assets.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
 
@@ -20,21 +17,20 @@ import { MediaPickerComponent } from '../shared/media-picker.component';
 // reader looking for it never went: everything the page shows — store links, a trailer, a gallery,
 // a domain — arrived there one field at a time until the modal held a site behind a scroll bar.
 //
-// One home, not two: the modal no longer carries any of this, and the hub's Links group points
-// here. What stays on the hub is the address and the counters, which are readings, not settings.
+// One home, not two: the modal no longer carries any of this, and the hub's "Where it goes" card
+// points here. What stays on the hub is the address and the counters, which are readings, not
+// settings.
 @Component({
     selector: 'app-project-showcase',
     imports: [
-        FormsModule, IconComponent, WorktopComponent, ShelfPanelComponent, SpecRowComponent,
-        ButtonComponent, InputComponent, MediaPickerComponent,
+        FormsModule, IconComponent, PageHeaderComponent, ButtonComponent, InputComponent, MediaPickerComponent,
     ],
     templateUrl: 'project-showcase.component.html',
     styleUrls: ['project-showcase.component.css'],
 })
-export class ProjectShowcaseComponent implements OnDestroy {
+export class ProjectShowcaseComponent {
     private api = inject(ProjectsService);
     private route = inject(ActivatedRoute);
-    private ruler = inject(RulerService);
     private auth = inject(AuthService);
     t = inject(LocaleService).t;
 
@@ -88,6 +84,16 @@ export class ProjectShowcaseComponent implements OnDestroy {
 
     published = computed(() => !!this.project()?.showcaseSlug);
 
+    /** The former rule readout: whether the page is live, as a tag. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        if (!this.project()) return [];
+        const t = this.t().projects.showcase;
+        const live = this.published();
+        return [
+            { text: live ? t.live : t.off, tag: true, tone: live ? 'ok' : 'muted', title: live ? t.rulerLive : t.rulerOff },
+        ];
+    });
+
     constructor() {
         this.route.paramMap.subscribe(params => {
             const id = params.get('id');
@@ -95,20 +101,6 @@ export class ProjectShowcaseComponent implements OnDestroy {
             this.projectId.set(id);
             void this.load();
         });
-
-        effect(() => {
-            const project = this.project();
-            if (!project) return;
-            const t = this.t().projects.showcase;
-            this.ruler.publish({
-                label: project.name,
-                left: [{ text: this.published() ? t.rulerLive : t.rulerOff }],
-            });
-        });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
     }
 
     async load() {

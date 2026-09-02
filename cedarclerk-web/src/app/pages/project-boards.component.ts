@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -7,36 +7,31 @@ import { avatarFill, avatarInitial } from '../core/avatar-color.util';
 import { BoardsService, CANVAS_BACKGROUNDS, CanvasBackground, CanvasBoardSummary } from '../core/boards.service';
 import { INVITABLE_ROLES, InvitableRole, MembersService, ProjectMember } from '../core/members.service';
 import { ProjectsService } from '../core/projects.service';
-import { RailActionsService } from '../core/rail-actions.service';
-import { RulerService } from '../core/ruler.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
-import { WorktopComponent } from '../bench/worktop/worktop.component';
 
-// T-301 — the project's boards, and the people who share them. The People panel is here rather
+// T-301 — the project's boards, and the people who share them. The People card is here rather
 // than in the project-settings modal because this is the only screen membership actually widens:
 // a collaborator can reach the canvas and nothing else, so the list of collaborators belongs
 // beside the thing they are collaborating on.
 @Component({
     selector: 'app-project-boards',
     imports: [
-        FormsModule, RouterLink, IconComponent, ModalComponent, WorktopComponent, ShelfPanelComponent,
-        StampBadgeComponent, ButtonComponent, InputComponent,
+        FormsModule, RouterLink, IconComponent, ModalComponent, PageHeaderComponent, EmptyStateComponent,
+        ButtonComponent, InputComponent,
     ],
     templateUrl: 'project-boards.component.html',
     styleUrls: ['project-boards.component.css'],
 })
-export class ProjectBoardsComponent implements OnDestroy {
+export class ProjectBoardsComponent {
     private api = inject(BoardsService);
     private members = inject(MembersService);
     private projects = inject(ProjectsService);
     private route = inject(ActivatedRoute);
-    private ruler = inject(RulerService);
-    private rail = inject(RailActionsService);
     t = inject(LocaleService).t;
 
     readonly backgrounds = CANVAS_BACKGROUNDS;
@@ -84,6 +79,10 @@ export class ProjectBoardsComponent implements OnDestroy {
 
     itemTotal = computed(() => this.boards().reduce((sum, b) => sum + b.itemCount, 0));
 
+    /** The former rule readout: boards and items. */
+    headerMeta = computed<HeaderMeta[]>(() =>
+        [{ text: this.t().projects.canvas.sub(this.boards().length, this.itemTotal()) }]);
+
     constructor() {
         this.route.paramMap.subscribe(params => {
             const id = params.get('id');
@@ -92,24 +91,6 @@ export class ProjectBoardsComponent implements OnDestroy {
             void this.load();
             void this.loadPeople();
         });
-
-        effect(() => {
-            const t = this.t().projects.canvas;
-            this.ruler.publish({
-                label: this.projectName(),
-                left: [{ text: t.sub(this.boards().length, this.itemTotal()) }],
-            });
-            this.rail.publish({
-                primary: this.canWrite()
-                    ? { label: t.newBoard, icon: 'plus', run: () => this.openCreate() }
-                    : null,
-            });
-        });
-    }
-
-    ngOnDestroy(): void {
-        this.ruler.clear();
-        this.rail.clear();
     }
 
     async load() {
@@ -126,7 +107,7 @@ export class ProjectBoardsComponent implements OnDestroy {
         }
         // A member cannot read the project row at all — `GET /api/projects/{id}` is owner-only and
         // stays that way — so the shared list is where their copy of the name comes from. Without
-        // this fallback the ruler and the chalked edge are simply blank for everyone but the owner.
+        // this fallback the header's kicker is simply blank for everyone but the owner.
         try {
             this.projectName.set((await this.projects.get(id)).name);
         } catch {

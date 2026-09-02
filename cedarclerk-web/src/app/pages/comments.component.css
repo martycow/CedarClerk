@@ -1,6 +1,5 @@
-/* A fragment, never a screen (ADR-167 clause 9): the page chrome this file kept from the screen it
-   stopped being — a full-viewport host, a sticky header, a crumb and an avatar — is gone, and what
-   is left is the section under a post. */
+/* A fragment, never a screen (ADR-167 clause 9): the section under a post, with no chrome of its
+   own. */
 :host { display: block; }
 
 .comments-page.scoped .comments-body {
@@ -36,11 +35,6 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-2);
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
     padding: var(--space-3) var(--space-4);
     margin: 0 0 var(--space-2);
 }
@@ -64,34 +58,29 @@
     color: var(--t2);
 }
 
+/* One comment is one row: the tag line, the author line, the text. The list's first row has no
+   rule above it because the group head already draws one. */
+.comment-list {
+    display: flex;
+    flex-direction: column;
+}
+
 .comment-card {
-    background-color: var(--sheet);
-    background-image: var(--tex-paper);
-    border: var(--border-paper);
-    border-radius: var(--radius-paper);
-    box-shadow: var(--shadow-paper-sm);
-    padding: var(--space-3) var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-3);
     font-size: var(--fs-ui);
 }
 
-/* N8: unseen feedback. The transition is on the way out, so a card visibly de-highlights under
+.comment-list .comment-card:first-child { border-top: 0; }
+
+/* N8: unseen feedback. The transition is on the way out, so a row visibly de-highlights under
    the pointer instead of blinking — that's the feedback that the hover did something. */
 .comment-card.is-new,
 .reactions-card.has-new {
-    border-color: var(--abord);
     background-color: var(--asoft);
-    transition: background var(--motion-slow) var(--ease), border-color var(--motion-slow) var(--ease);
-}
-
-.new-chip {
-    font-size: var(--fs-10);
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--sheet);
+    transition: background var(--motion-slow) var(--ease);
 }
 
 .new-delta {
@@ -117,12 +106,6 @@
     letter-spacing: .05em;
     color: var(--t2);
     flex: none;
-}
-
-.comment-row-meta {
-    color: var(--t2);
-    font-size: var(--fs-caption);
-    margin: var(--space-1) 0;
 }
 
 .comment-row-text {
@@ -162,7 +145,7 @@
     align-items: baseline;
     gap: var(--space-3);
     padding: var(--space-1) var(--space-1) var(--space-2);
-    border-bottom: 1px solid var(--rule-ink-soft);
+    border-bottom: 1px solid var(--paper-edge);
     margin-bottom: var(--space-2);
 }
 

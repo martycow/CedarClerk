@@ -8,7 +8,6 @@ import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
 
 // T-328 — the mandatory first stop after registration: who the author is, where they live on the
 // web, and (T-329) the blog address they already own — shown, never assigned here. The guard in
@@ -17,7 +16,7 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
     selector: 'app-onboarding',
     imports: [
         CedarLogoComponent, LangSwitchComponent,
-        ButtonComponent, InputComponent, PaperCardComponent, IconComponent,
+        ButtonComponent, InputComponent, IconComponent,
     ],
     templateUrl: 'onboarding.component.html',
     styleUrls: ['onboarding.component.css'],

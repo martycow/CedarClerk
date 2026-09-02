@@ -52,9 +52,9 @@ test('a blog view with a country header shows up in the audience breakdown', asy
     await page.goto('/posts');
     await page.locator('.manager-tabs button', { hasText: 'Stats' }).click();
 
-    // The breakdown moved into the audience shelf (T-222): two lists under two headings, country
+    // The breakdown lives in the audience card (T-222): two lists under two headings, country
     // first, so the row a language would also match is still read out of the right one.
-    const shelf = page.locator('app-shelf-panel.audience-shelf');
+    const shelf = page.locator('.audience-shelf');
     await expect(shelf.locator('.group-head').first()).toHaveText(/country/i);
     await expect(shelf.locator('.audience-list').nth(0)
         .locator('.audience-row', { hasText: 'Germany' })).toBeVisible({ timeout: 10_000 });

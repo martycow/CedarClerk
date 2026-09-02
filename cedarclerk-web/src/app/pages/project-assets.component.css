@@ -1,7 +1,6 @@
 /* T-122 — the asset index screen. Compact density (ADR-164 clause 6): a screen for scanning
-   thousands of rows, not for reading. The shell owns the ground under it. The host takes the
-   bench page contract (UI-INVENTORY bench-shell row) so the panel's sheet scrolls internally
-   instead of growing the page. */
+   thousands of rows, not for reading. The paper-first shell (ADR-239): the list is a scrolling
+   card, the opened file a card beside it; the index's facts moved into the page header. */
 :host {
     display: flex;
     flex-direction: column;
@@ -9,31 +8,21 @@
     min-height: 0;
 }
 
-.assets-page {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    gap: var(--space-3);
-    padding: var(--space-3);
-}
+.page { gap: var(--space-3); }
+
+.spacer { flex: 1; }
 
 /* The source strip stands above everything, including the "pick a folder" state: which kind of
    asset is on screen is not a property of one of the states below it. */
 .source-strip {
     display: flex;
-    padding: 0 var(--space-1);
-}
-
-.uploaded-toolbar {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
+    flex: none;
 }
 
 .refile-note {
-    color: var(--t2);
+    flex: none;
+    margin: 0;
+    color: var(--wood-ink-soft);
     font-size: var(--fs-meta);
 }
 
@@ -44,43 +33,92 @@
     min-height: 0;
 }
 
-/* The tiles are cut into the board's own edge, so the column's gap is cancelled here rather than
-   left to lift them a step above it (ADR-200). */
-.assets-page > app-index-tabs:not(.source-strip) {
-    position: relative;
-    z-index: 1;
-    padding: 0 var(--space-1);
-    margin-bottom: calc(-1px - var(--space-3));
-}
+.kind-strip { flex: none; }
 
-/* The kit's proportions and no width breakpoint of its own (ADR-147). Stretched, not started:
-   the board is bounded by the page now, so the sheet scrolls inside it. */
+/* One column until a file is opened: a right column with nothing in it is a hole, not a column
+   (ADR-164 rule 4). */
 .assets-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w-wide);
-    gap: var(--space-3);
-    align-items: stretch;
     flex: 1;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: stretch;
     min-height: 0;
 }
 
-/* The dock scrolls as its own column: a tall inspector on a short window must not be clipped by
-   the now-bounded board. */
-.shelves {
+.assets-grid.with-inspector { grid-template-columns: minmax(0, 1fr) 360px; }
+
+.index {
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.index-head {
+    display: flex;
+    flex: none;
+    align-items: center;
     gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--paper-edge);
+}
+
+.index-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+.index-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+}
+
+.search {
+    width: 200px;
+}
+
+.named-elsewhere {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* The opened file scrolls as its own column: a tall inspector on a short window must not be
+   clipped by the bounded list. */
+.inspector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
     min-width: 0;
     min-height: 0;
+    padding: var(--space-3) var(--space-4) var(--space-4);
     overflow-y: auto;
 }
 
-/* Content height, not squeezed: the dock's own scroller is what absorbs the excess. */
-.shelves > app-shelf-panel { flex: none; }
+.inspector-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
 
-/* Projected into the panel header, which is a single non-wrapping row. */
-.search {
-    width: 200px;
+.asset-name {
+    margin: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .file-actions {
@@ -91,9 +129,13 @@
 }
 
 .hint {
+    margin: 0;
     color: var(--t2);
     font-size: var(--fs-meta);
 }
+
+/* Text left straight on the wall takes the wall's ink (ADR-141). */
+.page > .hint { color: var(--wood-ink-soft); }
 
 .right { text-align: right; }
 .dot { opacity: .6; margin: 0 var(--space-1); }
@@ -109,23 +151,13 @@
     white-space: nowrap;
 }
 
-.assets-toolbar {
-    display: flex;
-    align-items: flex-end;
-    gap: var(--dens-gap);
-    flex-wrap: wrap;
-}
-
 /* ---------- Scanning ---------- */
 .scan-banner {
     display: flex;
+    flex: none;
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow);
 }
 
 .scan-banner app-icon { color: var(--accent); flex: none; }
@@ -149,7 +181,7 @@
     height: 6px;
     flex: none;
     background: var(--alt);
-    border-radius: 3px;
+    border-radius: var(--radius-stamp);
     overflow: hidden;
 }
 
@@ -166,129 +198,19 @@
 }
 
 .notice {
-    margin: 0;
-    padding: var(--space-2) var(--space-3);
-    background: var(--asoft);
-    border: 1px solid var(--abord);
-    border-radius: var(--dens-radius);
-    font-size: var(--fs-meta);
-    color: var(--t2);
-}
-
-.load-error {
-    color: var(--danger);
-    font-size: var(--dens-fs);
-}
-
-/* ---------- Pick a folder ---------- */
-.pick-card {
-    max-width: 560px;
-    margin: var(--space-6) auto;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-5);
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-}
-
-.pick-card app-icon { color: var(--accent); }
-
-.pick-card h2 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: var(--fs-19);
-    font-weight: 700;
-}
-
-.pick-body {
-    margin: 0;
-    font-size: var(--fs-ui);
-    color: var(--t2);
-    line-height: 1.55;
-}
-
-/* Not full-width: a button stretched across the card reads as a banner, not as the action. */
-.pick-card .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    align-self: flex-start;
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    text-decoration: none;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-ghost:hover { color: var(--text); border-color: var(--border-strong); }
-
-/* ---------- Scanning ---------- */
-.scan-banner {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow);
-}
-
-.scan-banner app-icon { color: var(--accent); flex: none; }
-
-.scan-text { min-width: 0; flex: 1; }
-
-.scan-head {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    min-width: 0;
-}
-
-.scan-meta {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-}
-
-.scan-bar {
-    width: 180px;
-    height: 6px;
     flex: none;
-    background: var(--alt);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.scan-fill {
-    height: 100%;
-    background: var(--accent);
-    transition: width var(--motion-base) var(--ease);
-}
-
-.spin { animation: spin 1s linear infinite; }
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.notice {
     margin: 0;
     padding: var(--space-2) var(--space-3);
     background: var(--asoft);
     border: 1px solid var(--abord);
-    border-radius: var(--dens-radius);
+    border-radius: var(--radius-sm);
     font-size: var(--fs-meta);
     color: var(--t2);
 }
 
 .load-error {
+    flex: none;
+    margin: 0;
     color: var(--danger);
     font-size: var(--dens-fs);
 }
@@ -301,13 +223,9 @@
     flex-direction: column;
     gap: var(--space-3);
     padding: var(--space-5);
-    background: var(--sheet);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
 }
 
-.pick-card app-icon { color: var(--accent); }
+.pick-card > app-icon { color: var(--accent); }
 
 .pick-card h2 {
     margin: 0;
@@ -324,7 +242,8 @@
 }
 
 /* Not full-width: a button stretched across the card reads as a banner, not as the action. */
-.pick-card app-button {
+.pick-card app-button,
+.pick-card .btn {
     align-self: flex-start;
 }
 
@@ -343,18 +262,15 @@
     border: none;
     border-radius: var(--radius-sm);
     color: var(--t2);
-    cursor: pointer;
     font-family: inherit;
     text-align: left;
     min-width: 0;
 }
 
-.recent-row:hover { background: var(--hover); color: var(--text); }
-
 .web-only {
     padding: var(--space-3);
     background: var(--alt);
-    border-radius: var(--dens-radius);
+    border-radius: var(--radius-sm);
 }
 
 .field-label {
@@ -547,7 +463,7 @@
     gap: var(--dens-gap);
     align-items: center;
     padding: var(--dens-row-y) var(--dens-control-x);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--paper-edge);
     cursor: pointer;
     min-width: 700px;
     font-size: var(--fs-meta);
@@ -555,10 +471,10 @@
 }
 
 .asset-row:last-child { border-bottom: none; }
-.asset-row:hover:not(.head-row) { background: var(--hover); }
+.asset-row:hover:not(.head-row) { background: var(--alt); }
 
 .head-row {
-    background: var(--alt);
+    background: var(--surface);
     cursor: default;
     font-size: var(--fs-10);
     text-transform: uppercase;
@@ -578,17 +494,9 @@
 
 .pager {
     display: flex;
+    flex: none;
     align-items: center;
     justify-content: center;
     gap: var(--space-3);
     padding: var(--space-3);
-}
-
-.empty {
-    padding: var(--space-6);
-    text-align: center;
-}
-
-@media (max-width: 700px) {
-    .scan-bar { display: none; }
 }

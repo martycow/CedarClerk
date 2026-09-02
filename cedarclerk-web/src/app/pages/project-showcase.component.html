@@ -1,165 +1,162 @@
-<div class="showcase">
-    <div class="showcase-grid">
-        <app-worktop class="top" [label]="project()?.name ?? ''"
-                     [meta]="published() ? t().projects.showcase.rulerLive : t().projects.showcase.rulerOff">
-            <div class="top-body">
-                <header class="head">
-                    <h1 class="head-title">{{ t().projects.showcase.title }}</h1>
-                    <span class="spacer"></span>
-                    <!--An anchor, not app-button: the address is off this app entirely, and a
-                    bench button speaks routerLink.-->
-                    @if (publicUrl(); as url) {
-                        <a class="open-link" [href]="url" target="_blank" rel="noopener">
-                            <app-icon name="arrow-square-out" size="sm" />
-                            {{ t().projects.showcase.openPage }}
-                        </a>
-                    }
-                </header>
+<div class="page">
+    <app-page-header [title]="t().projects.showcase.title" [kicker]="project()?.name ?? ''" [meta]="headerMeta()">
+        <!--An anchor, not app-button: the address is off this app entirely (ADR-163).-->
+        @if (publicUrl(); as url) {
+            <a secondary class="btn" [href]="url" target="_blank" rel="noopener">
+                <app-icon name="arrow-square-out" size="sm" />
+                {{ t().projects.showcase.openPage }}
+            </a>
+        }
+        @if (!loading() && !loadError()) {
+            <span primary class="save-row">
+                @if (saved()) { <span class="saved-note">{{ t().projects.showcase.saved }}</span> }
+                <app-button variant="pine" [disabled]="busy()" (clicked)="save()">
+                    {{ busy() ? t().common.saving : t().common.save }}
+                </app-button>
+            </span>
+        }
+    </app-page-header>
 
-                <p class="hint">{{ t().projects.edit.showcaseHint }}</p>
+    <div class="grid">
+        <div class="card main">
+            <p class="hint">{{ t().projects.edit.showcaseHint }}</p>
 
-                @if (loading()) {
-                    <p class="hint">{{ t().projects.loading }}</p>
-                } @else if (loadError(); as e) {
-                    <p class="error-line">{{ e }}</p>
-                } @else {
-                    <label class="checkbox-row">
-                        <input type="checkbox" [ngModel]="enabled()" (ngModelChange)="enabled.set($event)">
-                        <span>{{ t().projects.edit.showcaseToggle }}</span>
-                    </label>
+            @if (loading()) {
+                <p class="hint">{{ t().projects.loading }}</p>
+            } @else if (loadError(); as e) {
+                <p class="error-line">{{ e }}</p>
+            } @else {
+                <label class="checkbox-row">
+                    <input type="checkbox" [ngModel]="enabled()" (ngModelChange)="enabled.set($event)">
+                    <span>{{ t().projects.edit.showcaseToggle }}</span>
+                </label>
 
-                    @if (enabled()) {
-                        <div class="fields">
-                            <app-input [label]="t().projects.edit.showcaseSlugLabel"
-                                       [placeholder]="t().projects.edit.showcaseSlugPlaceholder"
-                                       inputId="showcase-slug"
-                                       [value]="slug()" (valueChange)="slug.set($any($event) ?? '')" />
+                @if (enabled()) {
+                    <div class="fields">
+                        <app-input [label]="t().projects.edit.showcaseSlugLabel"
+                                   [placeholder]="t().projects.edit.showcaseSlugPlaceholder"
+                                   inputId="showcase-slug"
+                                   [value]="slug()" (valueChange)="slug.set($any($event) ?? '')" />
 
-                            <div class="field">
-                                <label class="field-label" for="showcase-links">{{ t().projects.edit.showcaseLinksLabel }}</label>
-                                <textarea id="showcase-links" rows="3" maxlength="2000"
-                                          [ngModel]="links()" (ngModelChange)="links.set($event)"
-                                          [placeholder]="t().projects.edit.showcaseLinksPlaceholder"></textarea>
-                            </div>
-
-                            <app-input type="url" [label]="t().projects.edit.showcaseTrailerLabel"
-                                       [placeholder]="t().projects.edit.showcaseTrailerPlaceholder"
-                                       inputId="showcase-trailer"
-                                       [value]="trailer()" (valueChange)="trailer.set($any($event) ?? '')" />
-
-                            <div class="field">
-                                <label class="field-label" for="showcase-gallery">{{ t().projects.edit.showcaseGalleryLabel }}</label>
-                                <textarea id="showcase-gallery" rows="3" maxlength="2000"
-                                          [ngModel]="gallery()" (ngModelChange)="gallery.set($event)"
-                                          [placeholder]="t().projects.edit.showcaseGalleryPlaceholder"></textarea>
-                                <div class="field-actions">
-                                    <!--T-353 — the one asset window, appending rather than replacing.-->
-                                    <app-button variant="paper" size="sm" [disabled]="busy()"
-                                                (clicked)="galleryPickerOpen.set(true)">
-                                        <app-icon name="image" size="sm"></app-icon>
-                                        {{ t().projects.edit.showcaseGalleryPick }}
-                                    </app-button>
-                                </div>
-                                <p class="hint">{{ t().projects.edit.showcaseGalleryHint }}</p>
-                            </div>
-
-                            <app-input [label]="t().projects.edit.showcaseDomainLabel"
-                                       [placeholder]="t().projects.edit.showcaseDomainPlaceholder"
-                                       [hint]="t().projects.edit.showcaseDomainHint"
-                                       inputId="showcase-domain"
-                                       [value]="domain()" (valueChange)="domain.set($any($event) ?? '')" />
-
-                            <!--Wave 1 item 6 — the /press page's facts. Every field optional: an
-                            empty one is a section the page omits, never a blank line on it.-->
-                            <p class="press-group-label">{{ t().projects.edit.pressGroup }}</p>
-                            <p class="hint">
-                                {{ t().projects.edit.pressHint }}
-                                @if (pressUrl(); as url) {
-                                    <a class="press-link" [href]="url" target="_blank" rel="noopener">{{ t().projects.showcase.pressPage }}</a>
-                                }
-                            </p>
-
-                            <app-input type="email" [label]="t().projects.edit.pressContactLabel"
-                                       [placeholder]="t().projects.edit.pressContactPlaceholder"
-                                       inputId="press-contact"
-                                       [value]="pressContact()" (valueChange)="pressContact.set($any($event) ?? '')" />
-
-                            <app-input [label]="t().projects.edit.pressPriceLabel"
-                                       [placeholder]="t().projects.edit.pressPricePlaceholder"
-                                       inputId="press-price"
-                                       [value]="pressPrice()" (valueChange)="pressPrice.set($any($event) ?? '')" />
-
-                            <app-input [label]="t().projects.edit.pressEngineLabel"
-                                       [placeholder]="t().projects.edit.pressEnginePlaceholder"
-                                       inputId="press-engine"
-                                       [value]="pressEngine()" (valueChange)="pressEngine.set($any($event) ?? '')" />
-
-                            <app-input [label]="t().projects.edit.pressGenreLabel"
-                                       [placeholder]="t().projects.edit.pressGenrePlaceholder"
-                                       inputId="press-genre"
-                                       [value]="pressGenre()" (valueChange)="pressGenre.set($any($event) ?? '')" />
-
-                            <div class="field">
-                                <label class="field-label" for="press-factsheet">{{ t().projects.edit.pressFactsheetLabel }}</label>
-                                <textarea id="press-factsheet" rows="4" maxlength="2000"
-                                          [ngModel]="pressFactsheet()" (ngModelChange)="pressFactsheet.set($event)"
-                                          [placeholder]="t().projects.edit.pressFactsheetPlaceholder"></textarea>
-                                <p class="hint">{{ t().projects.edit.pressFactsheetHint }}</p>
-                            </div>
+                        <div class="field">
+                            <label class="field-label" for="showcase-links">{{ t().projects.edit.showcaseLinksLabel }}</label>
+                            <textarea id="showcase-links" rows="3" maxlength="2000"
+                                      [ngModel]="links()" (ngModelChange)="links.set($event)"
+                                      [placeholder]="t().projects.edit.showcaseLinksPlaceholder"></textarea>
                         </div>
-                    }
 
-                    <div class="save-row">
-                        <app-button variant="pine" [disabled]="busy()" (clicked)="save()">
-                            {{ busy() ? t().common.saving : t().common.save }}
-                        </app-button>
-                        @if (saved()) { <span class="saved-note">{{ t().projects.showcase.saved }}</span> }
+                        <app-input type="url" [label]="t().projects.edit.showcaseTrailerLabel"
+                                   [placeholder]="t().projects.edit.showcaseTrailerPlaceholder"
+                                   inputId="showcase-trailer"
+                                   [value]="trailer()" (valueChange)="trailer.set($any($event) ?? '')" />
+
+                        <div class="field">
+                            <label class="field-label" for="showcase-gallery">{{ t().projects.edit.showcaseGalleryLabel }}</label>
+                            <textarea id="showcase-gallery" rows="3" maxlength="2000"
+                                      [ngModel]="gallery()" (ngModelChange)="gallery.set($event)"
+                                      [placeholder]="t().projects.edit.showcaseGalleryPlaceholder"></textarea>
+                            <div class="field-actions">
+                                <!--T-353 — the one asset window, appending rather than replacing.-->
+                                <app-button variant="paper" size="sm" [disabled]="busy()"
+                                            (clicked)="galleryPickerOpen.set(true)">
+                                    <app-icon name="image" size="sm"></app-icon>
+                                    {{ t().projects.edit.showcaseGalleryPick }}
+                                </app-button>
+                            </div>
+                            <p class="hint">{{ t().projects.edit.showcaseGalleryHint }}</p>
+                        </div>
+
+                        <app-input [label]="t().projects.edit.showcaseDomainLabel"
+                                   [placeholder]="t().projects.edit.showcaseDomainPlaceholder"
+                                   [hint]="t().projects.edit.showcaseDomainHint"
+                                   inputId="showcase-domain"
+                                   [value]="domain()" (valueChange)="domain.set($any($event) ?? '')" />
+
+                        <!--Wave 1 item 6 — the /press page's facts. Every field optional: an
+                        empty one is a section the page omits, never a blank line on it.-->
+                        <p class="press-group-label">{{ t().projects.edit.pressGroup }}</p>
+                        <p class="hint">
+                            {{ t().projects.edit.pressHint }}
+                            @if (pressUrl(); as url) {
+                                <a class="press-link" [href]="url" target="_blank" rel="noopener">{{ t().projects.showcase.pressPage }}</a>
+                            }
+                        </p>
+
+                        <app-input type="email" [label]="t().projects.edit.pressContactLabel"
+                                   [placeholder]="t().projects.edit.pressContactPlaceholder"
+                                   inputId="press-contact"
+                                   [value]="pressContact()" (valueChange)="pressContact.set($any($event) ?? '')" />
+
+                        <app-input [label]="t().projects.edit.pressPriceLabel"
+                                   [placeholder]="t().projects.edit.pressPricePlaceholder"
+                                   inputId="press-price"
+                                   [value]="pressPrice()" (valueChange)="pressPrice.set($any($event) ?? '')" />
+
+                        <app-input [label]="t().projects.edit.pressEngineLabel"
+                                   [placeholder]="t().projects.edit.pressEnginePlaceholder"
+                                   inputId="press-engine"
+                                   [value]="pressEngine()" (valueChange)="pressEngine.set($any($event) ?? '')" />
+
+                        <app-input [label]="t().projects.edit.pressGenreLabel"
+                                   [placeholder]="t().projects.edit.pressGenrePlaceholder"
+                                   inputId="press-genre"
+                                   [value]="pressGenre()" (valueChange)="pressGenre.set($any($event) ?? '')" />
+
+                        <div class="field">
+                            <label class="field-label" for="press-factsheet">{{ t().projects.edit.pressFactsheetLabel }}</label>
+                            <textarea id="press-factsheet" rows="4" maxlength="2000"
+                                      [ngModel]="pressFactsheet()" (ngModelChange)="pressFactsheet.set($event)"
+                                      [placeholder]="t().projects.edit.pressFactsheetPlaceholder"></textarea>
+                            <p class="hint">{{ t().projects.edit.pressFactsheetHint }}</p>
+                        </div>
                     </div>
-
-                    @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
                 }
-            </div>
-        </app-worktop>
 
-        <div class="dock">
-            <app-shelf-panel [title]="t().projects.hub.links">
-                <app-spec-row [label]="t().projects.hub.publicPage">
-                    @if (publicUrl(); as url) {
-                        <a class="spec-value link" [href]="url" target="_blank" rel="noopener">{{ project()?.showcaseSlug }}</a>
-                    } @else {
-                        <span class="spec-value none">{{ t().projects.hub.notPublished }}</span>
-                    }
-                </app-spec-row>
-                @if (project()?.customDomain; as host) {
-                    <app-spec-row [label]="t().projects.edit.showcaseDomainLabel">
-                        <span class="spec-value">{{ host }}</span>
-                    </app-spec-row>
-                }
-                @if (pressUrl(); as url) {
-                    <app-spec-row [label]="t().projects.showcase.pressPage">
-                        <a class="spec-value link" [href]="url" target="_blank" rel="noopener">/press</a>
-                    </app-spec-row>
-                }
-            </app-shelf-panel>
-
-            <!--Only where there are numbers to read: a counter panel over a page nobody has yet
-            published says zero about the game and something wrong about the app.-->
-            @if (stats(); as s) {
-                <app-shelf-panel [title]="t().projects.showcase.numbers">
-                    <app-spec-row [label]="t().projects.hub.publicViews">
-                        <span class="spec-value">{{ s.viewTotal }}</span>
-                    </app-spec-row>
-                    @for (click of s.clicks; track click.label) {
-                        <app-spec-row [label]="click.label">
-                            <span class="spec-value">{{ click.count }}</span>
-                        </app-spec-row>
-                    }
-                    <app-spec-row [label]="t().projects.hub.followers">
-                        <span class="spec-value">{{ s.followerCount }}</span>
-                    </app-spec-row>
-                </app-shelf-panel>
+                @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
             }
         </div>
+
+        <aside class="side">
+            <div class="card side-card" [attr.aria-label]="t().projects.hub.links">
+                <span class="label">{{ t().projects.hub.links }}</span>
+                <div class="kv">
+                    <b>{{ t().projects.hub.publicPage }}</b>
+                    @if (publicUrl(); as url) {
+                        <a class="kv-link" [href]="url" target="_blank" rel="noopener">
+                            {{ project()?.showcaseSlug }} <app-icon name="arrow-square-out" size="xs" />
+                        </a>
+                    } @else {
+                        <span class="kv-none">{{ t().projects.hub.notPublished }}</span>
+                    }
+                    @if (project()?.customDomain; as host) {
+                        <b>{{ t().projects.edit.showcaseDomainLabel }}</b>
+                        <span>{{ host }}</span>
+                    }
+                    @if (pressUrl(); as url) {
+                        <b>{{ t().projects.showcase.pressPage }}</b>
+                        <a class="kv-link" [href]="url" target="_blank" rel="noopener">/press <app-icon name="arrow-square-out" size="xs" /></a>
+                    }
+                </div>
+            </div>
+
+            <!--Only where there are numbers to read: a counter card over a page nobody has yet
+            published says zero about the game and something wrong about the app.-->
+            @if (stats(); as s) {
+                <div class="card side-card" [attr.aria-label]="t().projects.showcase.numbers">
+                    <span class="label">{{ t().projects.showcase.numbers }}</span>
+                    <div class="kv">
+                        <b>{{ t().projects.hub.publicViews }}</b>
+                        <span>{{ s.viewTotal }}</span>
+                        @for (click of s.clicks; track click.label) {
+                            <b>{{ click.label }}</b>
+                            <span>{{ click.count }}</span>
+                        }
+                        <b>{{ t().projects.hub.followers }}</b>
+                        <span>{{ s.followerCount }}</span>
+                    </div>
+                </div>
+            }
+        </aside>
     </div>
 </div>
 

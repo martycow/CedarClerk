@@ -1,9 +1,10 @@
-/* One sheet on the bench wall, no chrome (ADR-166). The longest continuous prose in the product,
+/* One card on the canvas, no chrome (ADR-166). The longest continuous prose in the product,
    so it is set in the reading serif at the writing sheet's own size. */
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--surface-page);
+    background: var(--canvas);
+    color: var(--wood-ink);
     font-family: var(--font-sans);
 }
 
@@ -29,7 +30,7 @@
     max-width: 720px;
     box-sizing: border-box;
     margin-top: var(--space-5);
-    --paper-card-pad: var(--space-7) var(--space-8) var(--space-6);
+    padding: var(--space-7) var(--space-8) var(--space-6);
 
     .legal-header {
         display: flex;

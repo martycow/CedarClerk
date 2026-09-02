@@ -7,8 +7,6 @@ import { FormPresetsService } from '../core/form-presets.service';
 import { PostsService } from '../core/posts.service';
 import { PublishService } from '../core/publish.service';
 import { CommentsService } from '../core/comments.service';
-import { RulerService } from '../core/ruler.service';
-import { RailActionsService } from '../core/rail-actions.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AuthService } from '../core/auth.service';
 import { en } from '../core/i18n/en';
@@ -29,8 +27,8 @@ function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
 // went out, one archived. The three publish states are what the status stamp is read against,
 // and the unpublished one is what proves the blog row says so rather than rendering an empty
 // link. Four posts, two published, one archived and one pending schedule: every number the
-// rule and the shelf print is different from every other, so none of them can be standing in
-// for a neighbour.
+// header and the inspector print is different from every other, so none of them can be standing
+// in for a neighbour.
 const LIVE = draft('live', {
     title: 'Devlog 12', blogSlug: 'devlog-12', isBlogPublished: true,
     blogPublishedAt: '2026-08-10T09:00:00', languages: ['en'],
@@ -105,20 +103,19 @@ class FakeComments {
 describe('posts manager', () => {
     let fixture: ComponentFixture<PostsManagerComponent>;
     let feedback: CommentsService;
-    let ruler: RulerService;
-    let rail: RailActionsService;
     const t = en.manager;
 
     const page = () => fixture.componentInstance;
     const el = () => fixture.nativeElement as HTMLElement;
-    const tiles = () => [...el().querySelectorAll('app-index-tabs .it-tile')] as HTMLElement[];
+    const tiles = () => [...el().querySelectorAll('.manager-tabs [role="tab"]')] as HTMLElement[];
     const cards = () => [...el().querySelectorAll('.post-card')] as HTMLElement[];
     const card = (title: string) => cards().find(c => c.textContent?.includes(title))!;
-    const shelf = () => el().querySelector('app-shelf-panel.inspector') as HTMLElement;
+    const shelf = () => el().querySelector('.inspector') as HTMLElement;
     const rows = () => [...shelf().querySelectorAll('app-spec-row')] as HTMLElement[];
     const row = (label: string) => rows().find(r => r.querySelector('.label')?.textContent?.trim() === label);
     const rowValue = (label: string) => row(label)?.querySelector('.text')?.textContent?.trim();
-    const sheet = () => el().querySelector('app-worktop.sheet') as HTMLElement;
+    const sheet = () => el().querySelector('.sheet') as HTMLElement;
+    const header = () => el().querySelector('app-page-header') as HTMLElement;
 
     async function settle() {
         fixture.detectChanges();
@@ -138,8 +135,6 @@ describe('posts manager', () => {
             ],
         });
         feedback = TestBed.inject(CommentsService);
-        ruler = TestBed.inject(RulerService);
-        rail = TestBed.inject(RailActionsService);
         TestBed.inject(LocaleService).set('en');
         // A blog lives at its owner's subdomain, and the component asks the server which one.
         TestBed.inject(AuthService).blogUrl.set('https://martycow.cedarclerk.app');
@@ -147,38 +142,41 @@ describe('posts manager', () => {
         await settle();
     });
 
-    // ADR-167 clause 1 — the strip is IndexTabs, and the tally it carries is the badge rules'
-    // own: nothing at zero, and the count when there is one.
-    it('draws the sections as index tiles and badges the feedback tally on Posts', async () => {
-        expect(tiles().map(x => x.querySelector('.it-label')?.textContent?.trim()))
+    // The strip is a tablist, and the tally it carries is the badge rules' own: nothing at zero,
+    // and the count when there is one.
+    it('draws the sections as tabs and badges the feedback tally on Posts', async () => {
+        expect(tiles().map(x => x.firstChild?.textContent?.trim()))
             .toEqual([t.tabs.posts, t.tabs.stats, t.tabs.forms]);
-        expect(tiles()[0].querySelector('.it-badge')).toBeNull();
+        expect(tiles()[0].getAttribute('aria-selected')).toBe('true');
+        expect(tiles()[0].querySelector('.seg-badge')).toBeNull();
 
         feedback.newComments.set(3);
         feedback.newReactions.set(4);
         await settle();
-        expect(tiles()[0].querySelector('.it-badge')?.textContent?.trim()).toBe('7');
+        expect(tiles()[0].querySelector('.seg-badge')?.textContent?.trim()).toBe('7');
     });
 
-    it('switches the body with the tile, and keeps the sheet out of the forms tab until one is picked', async () => {
+    it('switches the body with the tab, and keeps the inspector out of the forms tab', async () => {
         expect(page().tab()).toBe('posts');
         tiles()[2].click();
         await settle();
 
         expect(page().tab()).toBe('forms');
-        expect(el().querySelector('app-shelf-panel.inspector')).toBeNull();
+        expect(el().querySelector('.inspector')).toBeNull();
     });
 
-    // ADR-167 clause 2 — every command here belongs to one tab, so the rail gets none of them and
-    // the rule takes the screen-level counts instead.
-    it('publishes counts to the rule and no primary action to the rail', () => {
-        expect(rail.primary()).toBeNull();
-        expect(ruler.label()).toBe(t.crumb);
-        expect(ruler.right().map(r => r.text))
-            .toEqual([t.rulerPosts(4), t.rulerPublished(2), t.rulerScheduled(1)]);
+    // ADR-239 clause 6 — the screen-level counts are the header's meta line, the same on every
+    // tab; the primary slot holds the forms tab's one command and nothing on Posts until a post
+    // is picked.
+    it('draws the counts in the page header and the tab-level primary action beside them', async () => {
+        expect(header().querySelector('.page-title')?.textContent?.trim()).toBe(t.crumb);
+        const meta = [...header().querySelectorAll('.page-meta > span:not(.sep)')].map(s => s.textContent?.trim());
+        expect(meta).toEqual([t.rulerPosts(4), t.rulerPublished(2), t.rulerScheduled(1)]);
+        expect(header().querySelector('.page-actions .btn')).toBeNull();
 
-        fixture.destroy();
-        expect(ruler.right()).toEqual([]);
+        tiles()[2].click();
+        await settle();
+        expect(header().querySelector('.page-actions .btn')?.textContent?.trim()).toBe(t.forms.newPreset);
     });
 
     // ADR-167 clause 4. The values are the assertion: a shelf that stayed on the library's numbers
@@ -196,7 +194,7 @@ describe('posts manager', () => {
         expect(page().inspectorScope()).toBe('selection');
         expect(rows().every(r => r.getAttribute('data-scope') === 'selection')).toBe(true);
         expect(row(t.inspector.posts)).toBeUndefined();
-        expect(shelf().querySelector('app-stamp-badge')?.textContent?.trim()).toBe('LIVE');
+        expect(shelf().querySelector('.tag')?.textContent?.trim()).toBe('LIVE');
         expect(rowValue(t.inspector.visibility)).toBe(t.inspector.public);
     });
 
@@ -223,22 +221,21 @@ describe('posts manager', () => {
         expect(page().regForm()?.questions[0]?.options?.[0]?.label).toBe('Yes');
     });
 
-    // ADR-163/ADR-169 — the one action here that opens something carries its address, and the
-    // address names the picked post: the editor falls back to the newest draft when the query is
-    // missing, so a link to the wrong id and a link to none look identical on screen.
-    it('opens the picked post in the editor as a link, not a handler', async () => {
+    // ADR-163/ADR-169 — the one action here that opens something is the header's primary and
+    // carries its address, and the address names the picked post: the editor falls back to the
+    // newest draft when the query is missing, so a link to the wrong id and a link to none look
+    // identical on screen.
+    it('opens the picked post in the editor as the header link, not a handler', async () => {
         card('Devlog 12').click();
         await settle();
 
-        const open = [...sheet().querySelectorAll('.detail-actions .btn-ghost')]
-            .find(x => x.textContent?.includes(t.openInEditor)) as HTMLAnchorElement;
+        const open = header().querySelector('.open-in-editor a') as HTMLAnchorElement;
         expect(open.tagName).toBe('A');
         expect(open.getAttribute('href')).toBe('/editor?draft=live');
 
         card('Notes').click();
         await settle();
-        const other = [...sheet().querySelectorAll('.detail-actions .btn-ghost')]
-            .find(x => x.textContent?.includes(t.openInEditor)) as HTMLAnchorElement;
+        const other = header().querySelector('.open-in-editor a') as HTMLAnchorElement;
         expect(other.getAttribute('href')).toBe('/editor?draft=drafted');
     });
 

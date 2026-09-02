@@ -4,7 +4,9 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { Editor } from '@tiptap/core';
 import { EditorState, NodeSelection, PluginKey, TextSelection } from '@tiptap/pm/state';
 import Suggestion from '@tiptap/suggestion';
@@ -79,17 +81,21 @@ import { BrandIconComponent, BrandIconName } from '../shared/brand-icon.componen
 import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
 import { avatarFill, avatarInitial } from '../core/avatar-color.util';
-import { RulerReadout } from '../bench/chrome/ruler-bar.component';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
+import { ButtonComponent } from '../bench/forms/button.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { WorktopComponent } from '../bench/worktop/worktop.component';
-import { RailActionsService } from '../core/rail-actions.service';
 import {
-    ProjectsService, DocumentType, DOCUMENT_TYPES, DOCUMENT_TYPE_ICONS, isPublishableType,
+    ProjectsService, ProjectSummary, DocumentType, DOCUMENT_TYPES, DOCUMENT_TYPE_ICONS, isPublishableType,
 } from '../core/projects.service';
-import { RulerService } from '../core/ruler.service';
+import { CurrentProjectService } from '../core/current-project.service';
+import { PreviewService } from '../core/preview.service';
+import { DocumentFrameComponent, DocumentTab, DocumentTabItem } from '../shell/document-frame.component';
+import { HeaderMeta } from '../shell/page-header.component';
+import { SidebarProject } from '../shell/project-switcher.component';
+import { EditorPreviewComponent, PreviewDraftFacts } from './editor-preview/editor-preview.component';
 import { STRIP_GROUP_IDS } from '../core/toolbar-layout';
 import { ToolbarFit, fitToolbar } from '../core/toolbar-fit';
 import { NodeLike, SelectionKind, SelectionSpec, describeSelection, mediaPathOf } from '../core/selection-spec';
@@ -232,7 +238,8 @@ interface UploadItem {
     selector: 'app-editor',
     imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
-        DocumentOutlineComponent, PlanLockComponent, LocationInputComponent, LanguageMenuComponent],
+        DocumentOutlineComponent, PlanLockComponent, LocationInputComponent, LanguageMenuComponent,
+        DocumentFrameComponent, EditorPreviewComponent, ButtonComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -248,43 +255,179 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private route = inject(ActivatedRoute);
     private assets = inject(AssetsService);
     private tagUsageApi = inject(TagUsageService);
-    private ruler = inject(RulerService);
-    private rail = inject(RailActionsService);
+    private router = inject(Router);
+    private previewApi = inject(PreviewService);
+    private currentProject = inject(CurrentProjectService);
 
-    // What the brass rule at the foot of the screen says while this page is open (ADR-153). The
-    // counts are behind the same preference the status bar honoured; the sync word is not, because
-    // a document that failed to save has to say so whether or not counts are wanted.
-    private readonly rulerFeed = effect(() => {
-        const t = this.t();
-        const right: RulerReadout[] = [];
-        if (this.appearance.prefs().showWordCount) {
-            right.push({ text: t.editor.words(this.wordCount()) });
-            right.push({ text: t.editor.chars(this.charCount()) });
-            right.push({ text: t.editor.blockOf(this.blockIndex(), this.blockCount()) });
+    // ─── The document frame (ADR-239 clause 9, CONTRACT §D3) ─────────────────────────────────
+    // One document, three tabs, addressed by ?tab=. Publish is a door to the export window until
+    // T-365, so it never becomes the selected tab.
+    private readonly tabParam = toSignal(this.route.queryParamMap.pipe(map(p => p.get('tab'))),
+        { initialValue: this.route.snapshot.queryParamMap.get('tab') });
+    readonly tab = computed<DocumentTab>(() => this.tabParam() === 'preview' ? 'preview' : 'write');
+    readonly frameTabs = computed<DocumentTabItem[]>(() => {
+        const t = this.t().editor.tabs;
+        return [
+            { id: 'write', label: t.write, icon: 'pencil-simple' },
+            { id: 'preview', label: t.preview, icon: 'eye' },
+            { id: 'publish', label: t.publish, icon: 'upload-simple' },
+        ];
+    });
+    /** The Details title action folds the inspector away and back. */
+    inspectorOpen = signal(true);
+    /** Bumped after every successful save, so the Preview tab follows the stored document. */
+    savedVersion = signal(0);
+    private lastSavedAt = signal<number | null>(null);
+    /** Ticks so the footer's "saved N min ago" moves without a save. */
+    private clock = signal(Date.now());
+    private clockTimer?: ReturnType<typeof setInterval>;
+    projectSummaries = signal<ProjectSummary[]>([]);
+    testSendBusy = signal(false);
+
+    setTab(id: DocumentTab) {
+        if (id === 'publish') { void this.openExportModal(); return; }
+        void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { tab: id === 'write' ? null : id },
+            queryParamsHandling: 'merge',
+        });
+    }
+
+    frameTitle(): string {
+        return this.title.trim() || this.t().drafts.untitled;
+    }
+
+    private currentMeta(): DraftMeta | undefined {
+        return this.drafts().find(d => d.id === this.currentId());
+    }
+
+    private draftProjectSummary(): ProjectSummary | null {
+        const id = this.currentMeta()?.projectId || this.currentProject.id();
+        return id ? this.projectSummaries().find(p => p.id === id) ?? null : null;
+    }
+
+    /** "Blog · 23 documents" — the project the document belongs to, when there is one. */
+    frameKicker(): string {
+        const summary = this.draftProjectSummary();
+        if (!summary) return '';
+        const kind = this.t().projects.projectTypes[summary.projectType]?.name ?? '';
+        return [kind, this.t().editor.frame.documents(summary.documentCount)].filter(Boolean).join(' · ');
+    }
+
+    frameProject(): SidebarProject | null {
+        if (!this.auth.indieDev()) return null;
+        const id = this.currentMeta()?.projectId || this.currentProject.id();
+        if (!id) return { id: '', name: this.t().shell.allProjects, kind: '', link: '/projects' };
+        const summary = this.projectSummaries().find(p => p.id === id);
+        const name = summary?.name || (this.currentProject.id() === id ? this.currentProject.name() : '');
+        return { id, name: name || '…', kind: '', link: ['/projects', id] };
+    }
+
+    frameProjects(): SidebarProject[] {
+        if (!this.auth.indieDev() || !this.projectSummaries().length) return [];
+        return [
+            ...this.projectSummaries().map(p => ({ id: p.id, name: p.name, kind: '', link: ['/projects', p.id] })),
+            { id: '', name: this.t().shell.allProjects, kind: '', link: '/projects' },
+        ];
+    }
+
+    statusTag(): HeaderMeta {
+        const t = this.t().editor;
+        if (this.isLive()) return { text: t.state.live, tone: 'ok' };
+        if (this.currentMeta()?.scheduled) return { text: t.frame.scheduled, tone: 'warn' };
+        return { text: t.frame.draft, tone: 'muted' };
+    }
+
+    frameSaveState(): 'saved' | 'saving' | 'error' {
+        switch (this.saveState()) {
+            case 'saved': return 'saved';
+            case 'error': return 'error';
+            default: return 'saving';
         }
-        right.push({ text: this.syncWord() });
-        this.ruler.publish({
-            label: this.currentBlog()?.slug || this.title,
-            left: [{ text: this.lang().toUpperCase() }],
-            right,
-        });
+    }
+
+    dateLabel(): string {
+        const iso = this.currentMeta()?.updatedAt;
+        if (!iso) return '';
+        const date = new Date(iso);
+        if (!Number.isFinite(date.getTime())) return '';
+        return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    /** "Synced · saved 2 min ago · 366 words" — the ruler's readouts, on the document's own foot. */
+    footerText(): string {
+        const t = this.t().editor;
+        const parts = [this.syncWord()];
+        const saved = this.lastSavedAt();
+        if (this.saveState() === 'saved' && saved !== null) {
+            const minutes = Math.floor((this.clock() - saved) / 60_000);
+            parts.push(minutes < 1 ? t.frame.savedJustNow
+                : minutes < 60 ? t.frame.savedMinutesAgo(minutes)
+                    : t.frame.savedHoursAgo(Math.floor(minutes / 60)));
+        }
+        if (this.appearance.prefs().showWordCount) {
+            parts.push(t.words(this.wordCount()));
+            parts.push(t.chars(this.charCount()));
+        }
+        return parts.join(' · ');
+    }
+
+    /** What the Preview tab is told; a computed so the tab refetches on a change, not on every tick. */
+    readonly previewFacts = computed<PreviewDraftFacts | null>(() => {
+        const id = this.currentId();
+        if (!id) return null;
+        this.savedVersion();
+        const meta = this.drafts().find(d => d.id === id);
+        const languages = Object.keys(this.translations());
+        return {
+            id,
+            title: this.title,
+            typeName: this.t().projects.docTypes[this.documentType()].name,
+            isWorkingMaterial: this.isWorkingMaterial(),
+            primaryLanguage: this.primaryLanguage,
+            languages,
+            staleLanguages: languages.filter(l => this.isStale(l)),
+            coverImagePath: meta?.coverImagePath ?? null,
+            blog: this.currentBlog(),
+            isPrivate: this.isPrivate(),
+            scheduled: meta?.scheduled ?? null,
+        };
     });
 
-    // The rail's own two slots (ADR-159): the save drop, and the one primary action. Published
-    // rather than projected, because a page rendered into the outlet cannot reach the chrome above
-    // it, and cleared in ngOnDestroy so the button does not outlive the screen that owns it.
-    private readonly railFeed = effect(() => {
-        const t = this.t();
-        this.rail.publish({
-            save: { state: this.saveState() === 'saved' ? 'set' : 'forming', hint: this.syncWord() },
-            primary: {
-                label: t.editor.export,
-                icon: 'paper-plane-tilt',
-                hint: t.editor.export,
-                run: () => this.openExportModal(),
-            },
-        });
-    });
+    /** The one channel a test send may go to (`.claude/rules/telegram-bot.md`); absent = no button. */
+    readonly testChannel = computed(() => this.channels().find(c => c.username?.toLowerCase() === 'testingandfun') ?? null);
+
+    async sendTest() {
+        const id = this.currentId();
+        const channel = this.testChannel();
+        if (!id || !channel || this.testSendBusy()) return;
+        this.testSendBusy.set(true);
+        try {
+            if (this.saveState() !== 'saved') await this.save();
+            await this.posts.export(id, String(channel.telegramChatId), this.format, this.lang(), this.compressionLevel);
+            this.showAiToast(this.t().editor.frame.testSent);
+        } catch (e) {
+            this.showAiToast(httpErrorMessage(e, this.t().editor.frame.testFailed));
+        } finally {
+            this.testSendBusy.set(false);
+        }
+    }
+
+    /** Share preview: the existing link if there is one, a new one otherwise, copied either way. */
+    async sharePreview() {
+        const id = this.currentId();
+        if (!id || this.previewLinkBusy()) return;
+        if (!this.previewLinkUrl()) {
+            try {
+                const existing = await this.previewApi.previewLink(id);
+                if (existing) this.previewLinkUrl.set(existing.url);
+            } catch { /* fall through to creating one */ }
+        }
+        if (!this.previewLinkUrl()) await this.createPreviewLink();
+        if (!this.previewLinkUrl()) { this.showAiToast(this.t().editor.frame.linkFailed); return; }
+        await this.copyPreviewLink();
+        this.showAiToast(this.t().editor.frame.linkCopied);
+    }
 
     @ViewChild('editorHost') editorHost!: ElementRef<HTMLElement>;
     @ViewChild('toolStrip') toolStrip?: ElementRef<HTMLElement>;
@@ -1912,8 +2055,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         document.addEventListener('visibilitychange', this.onVisibilityChange);
         window.addEventListener('pagehide', this.onPageHide);
 
-        // Refreshes the rail's tally on the way in — fire-and-forget, never blocks setup.
+        // Refreshes the sidebar's tally on the way in — fire-and-forget, never blocks setup.
         this.feedback.refreshNewCount();
+        this.clockTimer = setInterval(() => this.clock.set(Date.now()), 30_000);
+        if (this.auth.indieDev()) {
+            this.projectsApi.list().then(list => this.projectSummaries.set(list)).catch(() => { /* the kicker stays empty */ });
+        }
         const mediaNodeTypes = new Set(['image', 'video', 'audio', 'carousel', 'collage']);
         // Mirrors AssetEndpoints.Allowed — anything else is left to the browser's default handling.
         const uploadTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'audio/mpeg', 'audio/ogg']);
@@ -2065,8 +2212,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     ngOnDestroy() {
         document.removeEventListener('visibilitychange', this.onVisibilityChange);
         window.removeEventListener('pagehide', this.onPageHide);
-        this.ruler.clear();
-        this.rail.clear();
+        clearInterval(this.clockTimer);
         this.stripObserver?.disconnect();
         clearTimeout(this.saveTimer);
         clearTimeout(this.saveRetryTimer);
@@ -2125,6 +2271,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             }
             this.saveAttempt = 0;
             this.saveState.set('saved');
+            this.lastSavedAt.set(Date.now());
+            this.savedVersion.update(v => v + 1);
             void this.loadDraftGlossary();
         } catch (e) {
             // A refusal is not a failure to reach the server — the server understood and said no.
@@ -2910,6 +3058,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.editor?.commands.setContent(JSON.parse(draft.cedarJson || EMPTY_DOC), { emitUpdate: false });
             this.resetHistory();
             this.saveState.set('saved');
+            this.lastSavedAt.set(Number.isFinite(Date.parse(draft.updatedAt)) ? Date.parse(draft.updatedAt) : null);
             this.currentBlog.set(draft.blogSlug ? { slug: draft.blogSlug, isPublished: draft.isBlogPublished } : null);
             this.blogError.set(null);
             void this.loadDraftGlossary();

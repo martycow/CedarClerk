@@ -1,8 +1,9 @@
-/* The other half of the workshop door (ADR-166) — same wall, same sheet, one more field. */
+/* The other half of the door (ADR-166) — same canvas, same card, one more field. */
 :host {
     display: block;
     min-height: 100vh;
-    background: var(--surface-page);
+    background: var(--canvas);
+    color: var(--wood-ink);
     font-family: var(--font-sans);
 }
 
@@ -27,7 +28,7 @@
 .auth-card[data-surface="paper"] {
     width: 340px;
     box-sizing: border-box;
-    --paper-card-pad: var(--space-6);
+    padding: var(--space-6);
 
     .auth-header {
         display: flex;

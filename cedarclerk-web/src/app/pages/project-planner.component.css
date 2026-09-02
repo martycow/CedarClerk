@@ -1,71 +1,68 @@
-.planner {
-    padding: var(--space-3);
+/* The paper-first shell (ADR-239): the stretches fill the page and scroll in their own column; the
+   summary is a plain card beside them. */
+:host {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .hint {
+    margin: 0;
     color: var(--t2);
     font-size: var(--fs-ui);
 }
+
+.main > .hint { color: var(--wood-ink-soft); }
 
 .spacer {
     flex: 1;
 }
 
 .error-line {
+    margin: 0 0 var(--space-3);
     color: var(--danger);
     font-size: var(--fs-ui);
 }
 
 /* ---------- The two columns ---------- */
-/* The kit's proportions, and no width breakpoint of its own (ADR-147). */
-.planner-grid {
+.grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
-    gap: var(--space-3);
-    align-items: start;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-5);
+    align-items: stretch;
+    min-height: 0;
 }
 
-.top-body {
+.main {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-4) var(--space-5) var(--space-5);
+    gap: var(--space-4);
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
 }
 
-.head {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-}
-
-.head-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: var(--fs-34);
-    font-weight: 700;
-    letter-spacing: -.01em;
-}
-
-.empty-state {
+.side {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    gap: var(--space-1);
+    align-self: start;
+    padding: var(--space-4) 18px;
+}
+
+.side-head {
+    display: flex;
+    align-items: baseline;
     gap: var(--space-2);
-    padding: var(--space-7) var(--space-4);
-    color: var(--t2);
-    text-align: center;
+    margin-bottom: var(--space-2);
 }
 
-.empty-state app-icon {
-    color: var(--t2);
-}
-
-.empty-title {
-    margin: 0;
-    font-size: var(--fs-body);
+.side-count {
+    font-size: var(--fs-13);
     font-weight: 600;
-    color: var(--text);
+    color: var(--t3);
 }
 
 /* ---------- One stretch ---------- */
@@ -157,28 +154,22 @@
     color: var(--text);
 }
 
-/* ---------- The shelf ---------- */
+/* ---------- The summary ---------- */
 .grp {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     margin: var(--space-3) 0 var(--space-1);
-    font-family: var(--font-display);
-    font-size: var(--fs-ui);
+    font-size: var(--fs-11);
     font-weight: 700;
-    letter-spacing: .1em;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    color: var(--t2);
-}
-
-.grp:first-child {
-    margin-top: 0;
+    color: var(--t3);
 }
 
 .grp-link {
-    font-family: var(--font-sans);
-    font-size: var(--fs-ui);
-    font-weight: 400;
+    font-size: var(--fs-13);
+    font-weight: 600;
     letter-spacing: normal;
     text-transform: none;
     color: var(--accent);
@@ -278,8 +269,4 @@
 .btn-ghost.danger:hover:not(:disabled) {
     color: var(--danger);
     border-color: var(--danger);
-}
-
-@media (max-width: 760px) {
-    .field-grid { grid-template-columns: 1fr; }
 }

@@ -9,7 +9,6 @@ import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { PaperCardComponent } from '../bench/display/paper-card.component';
 
 // T-003 / ADR-237 — where the Google callback lands somebody who has no account yet. The provider
 // gave us a verified address and nothing else; the invite code and the account name are what it
@@ -21,7 +20,7 @@ import { PaperCardComponent } from '../bench/display/paper-card.component';
     selector: 'app-external-complete',
     imports: [
         CedarLogoComponent, LangSwitchComponent,
-        ButtonComponent, InputComponent, PaperCardComponent, IconComponent,
+        ButtonComponent, InputComponent, IconComponent,
     ],
     templateUrl: 'external-complete.component.html',
     styleUrls: ['../pages/register.component.css'],

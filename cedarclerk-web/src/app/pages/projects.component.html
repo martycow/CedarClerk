@@ -1,133 +1,95 @@
-<div class="index" data-density="compact">
-    <div class="index-grid">
-        <div class="index-mid">
-            <!--The chalk edge carries the counts, so the head under it says the screen's name once.-->
-            <app-worktop class="hero" [meta]="t().projects.sub(projects().length, activeCount())">
-                <div class="hero-body">
-                    <h1 class="hero-title">{{ t().projects.title }}</h1>
-                    <div class="hero-actions">
-                        <app-button variant="pine" (clicked)="startCreate()">
-                            <app-icon name="plus" weight="bold" size="sm" />
-                            {{ t().projects.newProject }}
-                        </app-button>
-                    </div>
-                </div>
-            </app-worktop>
+<div class="page">
+    <app-page-header [title]="t().projects.shelfTitle" [meta]="headerMeta()">
+        <app-button primary variant="pine" (clicked)="startCreate()">
+            <app-icon name="plus" weight="bold" size="sm" />
+            {{ t().projects.newProject }}
+        </app-button>
+    </app-page-header>
 
-            <!--The tiles are cut into the board's own edge, so the two are one stack and the
-            column's gap never gets between them (ADR-200).-->
-            <div class="list-stack">
-            <!--The state filter, with its counts as tab badges (ADR-164 rule 1): nothing is drawn
-            at zero, and the shelf beside the list prints every count including the zeros.-->
-            <app-index-tabs [items]="filterTabs()" [value]="filter()" [label]="t().projects.colState"
-                            (selected)="pickFilter($event)" />
-
-            <app-shelf-panel class="list-panel" [title]="t().projects.shelfTitle" [count]="visible().length" flush>
-                <app-input actions class="search" [dense]="true" type="search"
-                           [placeholder]="t().projects.search"
-                           [ngModel]="search()" (ngModelChange)="search.set($event)" />
-
-                @if (loadError(); as err) {
-                    <p class="load-error pad">{{ err }}</p>
-                } @else if (loading()) {
-                    <p class="hint pad">{{ t().projects.loading }}</p>
-                } @else if (filter() === 'shared') {
-                    <!--T-302 — projects other people share. Their own cards: there is no cover, no
-                    counts and no archive state to draw, and inventing them would say things about
-                    somebody else's project that this account cannot actually see.-->
-                    <div class="cards">
-                        @for (p of visibleShared(); track p.id) {
-                            <a class="card is-shared" [routerLink]="['/projects', p.id, 'canvas']"
-                               [attr.aria-label]="p.name">
-                                <span class="cover">
-                                    <span class="cover-initials">{{ initials(p.name) }}</span>
-                                    <app-stamp-badge class="card-state" tone="brass" [rotate]="-2">
-                                        {{ roleWord(p.role) }}
-                                    </app-stamp-badge>
-                                </span>
-                                <span class="card-body">
-                                    <span class="card-name" [title]="p.name">{{ p.name }}</span>
-                                    <span class="card-type">{{ t().projects.sharedBy(p.ownerName) }}</span>
-                                    <span class="card-stats">
-                                        <span class="card-stat" [title]="t().projects.canvas.crumb">
-                                            <app-icon name="squares-four" size="xs" /> {{ p.boardCount }}
-                                        </span>
-                                        <span class="card-when">{{ p.lastActivityAt | zonedDate:'MM/dd/yyyy' }}</span>
-                                    </span>
-                                </span>
-                            </a>
-                        } @empty {
-                            <div class="empty-state">
-                                <app-icon name="squares-four" size="lg" />
-                                <p class="empty-title">{{ t().projects.sharedEmpty }}</p>
-                                <p class="hint">{{ t().projects.sharedEmptyHint }}</p>
-                            </div>
-                        }
-                    </div>
-                } @else if (projects().length === 0) {
-                    <div class="empty-state">
-                        <app-icon name="squares-four" size="lg" />
-                        <p class="empty-title">{{ t().projects.empty }}</p>
-                        <p class="hint">{{ t().projects.emptyHint }}</p>
-                        <app-button variant="pine" (clicked)="startCreate()">
-                            <app-icon name="plus" weight="bold" size="sm" />
-                            {{ t().projects.newProject }}
-                        </app-button>
-                    </div>
-                } @else {
-                    <!--T-332 — cards, not a cold row list: the cover leads, the counts are the
-                    plate's own strip. A card is a door to the hub, so it is an anchor (ADR-163).-->
-                    <div class="cards">
-                        @for (p of visible(); track p.id) {
-                            <a class="card" [class.dim]="!!p.archivedAt"
-                               [routerLink]="['/projects', p.id]" [attr.aria-label]="p.name">
-                                <span class="cover" [class.has-image]="!!p.coverUrl">
-                                    @if (p.coverUrl) {
-                                        <img [src]="p.coverUrl" alt="" loading="lazy">
-                                    } @else {
-                                        <span class="cover-initials">{{ initials(p.name) }}</span>
-                                    }
-                                    <app-stamp-badge class="card-state" [tone]="p.archivedAt ? 'ink' : 'pine'" [rotate]="-2">
-                                        {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}
-                                    </app-stamp-badge>
-                                </span>
-                                <span class="card-body">
-                                    <span class="card-name" [title]="p.name">{{ p.name }}</span>
-                                    <span class="card-type">{{ t().projects.projectTypes[p.projectType].name }}</span>
-                                    <span class="card-stats">
-                                        <span class="card-stat" [title]="t().projects.colDocs">
-                                            <app-icon name="file-text" size="xs" /> {{ p.documentCount }}
-                                        </span>
-                                        <!--The open count, so a finished project does not show its
-                                        largest number on the day it stopped having work left.-->
-                                        <span class="card-stat" [title]="t().projects.colTasks">
-                                            <app-icon name="check-square" size="xs" /> {{ p.openTaskCount }}
-                                        </span>
-                                        <span class="card-stat" [title]="t().projects.colAssets">
-                                            <app-icon name="images" size="xs" /> {{ p.assetCount }}
-                                        </span>
-                                        <span class="card-when">{{ p.lastActivityAt | zonedDate:'MM/dd/yyyy' }}</span>
-                                    </span>
-                                </span>
-                            </a>
-                        } @empty {
-                            <p class="hint pad">{{ t().projects.emptyFiltered }}</p>
-                        }
-                    </div>
-                }
-            </app-shelf-panel>
-            </div>
-        </div>
-
-        <!--Sums over the rows already on screen: the shelf asks the API for nothing (ADR-168).-->
-        <app-shelf-panel class="shelf-right" [title]="t().projects.summary" [count]="projects().length">
-            <app-spec-row [label]="t().projects.filterActive" value="{{ activeCount() }}" />
-            <app-spec-row [label]="t().projects.filterArchived" value="{{ archivedCount() }}" />
-            <app-spec-row [label]="t().projects.colDocs" value="{{ totals().documents }}" />
-            <app-spec-row [label]="t().projects.colTasks" value="{{ totals().tasks }}" />
-            <app-spec-row [label]="t().projects.colAssets" value="{{ totals().assets }}" />
-        </app-shelf-panel>
+    <div class="toolbar">
+        <app-index-tabs [items]="filterTabs()" [value]="filter()" [label]="t().projects.colState"
+                        (selected)="pickFilter($event)" />
+        <span class="spacer"></span>
+        <label class="named-elsewhere" for="projects-search">{{ t().projects.search }}</label>
+        <app-input class="search" inputId="projects-search" type="search"
+                   [placeholder]="t().projects.search"
+                   [ngModel]="search()" (ngModelChange)="search.set($event)" />
     </div>
+
+    @if (loadError(); as err) {
+        <p class="load-error">{{ err }}</p>
+    } @else if (loading()) {
+        <p class="hint">{{ t().projects.loading }}</p>
+    } @else if (filter() === 'shared') {
+        <!--T-302 — projects other people share. Their own cards: there is no cover, no counts
+        and no archive state to draw, and inventing them would say things about somebody else's
+        project that this account cannot actually see.-->
+        <div class="cards">
+            @for (p of visibleShared(); track p.id) {
+                <a class="card project-card is-shared" [routerLink]="['/projects', p.id, 'canvas']"
+                   [attr.aria-label]="p.name">
+                    <span class="cover">
+                        <span class="cover-initials">{{ initials(p.name) }}</span>
+                        <span class="tag muted card-state">{{ roleWord(p.role) }}</span>
+                    </span>
+                    <span class="card-body">
+                        <span class="card-name" [title]="p.name">{{ p.name }}</span>
+                        <span class="card-type">{{ t().projects.sharedBy(p.ownerName) }}</span>
+                        <span class="card-stats">
+                            <span class="card-stat" [title]="t().projects.canvas.crumb">
+                                <app-icon name="squares-four" size="xs" /> {{ p.boardCount }}
+                            </span>
+                            <span>{{ t().projects.edited }} {{ p.lastActivityAt | zonedDate:'d MMM' }}</span>
+                        </span>
+                    </span>
+                </a>
+            } @empty {
+                <app-empty-state class="new-card" icon="squares-four" [title]="t().projects.sharedEmpty"
+                                 [text]="t().projects.sharedEmptyHint" />
+            }
+        </div>
+    } @else {
+        <!--T-332 — cards, not a cold row list: the cover leads, the counts are the plate's own
+        strip. A card is a door to the hub, so it is an anchor (ADR-163). The last cell is the
+        invitation to start the next project, whatever the filter says.-->
+        <div class="cards">
+            @for (p of visible(); track p.id) {
+                <a class="card project-card" [class.dim]="!!p.archivedAt"
+                   [routerLink]="['/projects', p.id]" [attr.aria-label]="p.name">
+                    <span class="cover" [class.has-image]="!!p.coverUrl">
+                        @if (p.coverUrl) {
+                            <img [src]="p.coverUrl" alt="" loading="lazy">
+                        } @else {
+                            <span class="cover-initials">{{ initials(p.name) }}</span>
+                        }
+                        <span class="tag card-state" [class.ok]="!p.archivedAt" [class.muted]="!!p.archivedAt">
+                            {{ p.archivedAt ? t().projects.stateArchived : t().projects.stateActive }}
+                        </span>
+                    </span>
+                    <span class="card-body">
+                        <span class="card-name" [title]="p.name">{{ p.name }}</span>
+                        <span class="card-type">{{ t().projects.projectTypes[p.projectType].name }}</span>
+                        <span class="card-stats">
+                            <span>{{ t().projects.documentCount(p.documentCount) }}</span>
+                            <!--The open count, so a finished project does not show its largest
+                            number on the day it stopped having work left.-->
+                            <span>{{ t().projects.openTaskCount(p.openTaskCount) }}</span>
+                            <span>{{ t().projects.assetCount(p.assetCount) }}</span>
+                            <span>{{ t().projects.edited }} {{ p.lastActivityAt | zonedDate:'d MMM' }}</span>
+                        </span>
+                    </span>
+                </a>
+            } @empty {
+                @if (projects().length > 0) {
+                    <app-empty-state class="new-card is-note" [icon]="null" [text]="t().projects.emptyFiltered" />
+                }
+            }
+            <app-empty-state class="new-card" icon="plus" [title]="t().projects.startNew"
+                             [text]="t().projects.startNewHint">
+                <app-button variant="paper" size="sm" (clicked)="startCreate()">{{ t().projects.newProject }}</app-button>
+            </app-empty-state>
+        </div>
+    }
 </div>
 
 @if (creating()) {

@@ -1,128 +1,114 @@
-<div class="tasks-page" data-density="compact">
-    <div class="tasks-body">
-        <div class="tasks-toolbar">
-            <!--app-input names its field with a visible label or with nothing; this one is a
-            toolbar search that has never had a caption, so the name is given from outside.-->
-            <label class="named-elsewhere" for="tasks-search">{{ t().projects.tasks.search }}</label>
-            <app-input class="search-input" inputId="tasks-search" type="search" [dense]="true"
-                       [placeholder]="t().projects.tasks.search"
-                       [value]="search()" (valueChange)="search.set($any($event) ?? '')" />
+<div class="page">
+    <app-page-header [title]="t().projects.tasks.title" [meta]="headerMeta()">
+        <app-button secondary variant="paper" [link]="['/projects', projectId(), 'planner']">
+            <app-icon name="flag" size="sm" />
+            {{ t().projects.tasks.sprints }}
+        </app-button>
+        <app-button primary variant="pine" [disabled]="busy()" (clicked)="startCreating()">
+            <app-icon name="plus" weight="bold" size="sm" />
+            {{ t().projects.tasks.newTask }}
+        </app-button>
+    </app-page-header>
 
-            <span class="spacer"></span>
-
-            <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating()">
-                <app-icon name="plus" weight="bold" size="sm"></app-icon>
-                {{ t().projects.tasks.newTask }}
-            </app-button>
+    <div class="toolbar">
+        <div class="seg" role="tablist" [attr.aria-label]="t().projects.tasks.viewStrip">
+            <button type="button" role="tab" [class.is-on]="view() === 'board'" [attr.aria-selected]="view() === 'board'"
+                    (click)="setView('board')">{{ t().projects.tasks.viewBoard }}</button>
+            <button type="button" role="tab" [class.is-on]="view() === 'list'" [attr.aria-selected]="view() === 'list'"
+                    (click)="setView('list')">{{ t().projects.tasks.viewList }}</button>
         </div>
 
-        <div class="filter-row">
-            <app-leaf-tag interactive [state]="filter() === 'all' ? 'active' : 'idle'"
-                          (activated)="filter.set('all')">
-                {{ t().projects.tasks.filterAll }} <span class="chip-count">{{ tasks().length }}</span>
-            </app-leaf-tag>
-            <app-leaf-tag interactive [state]="filter() === 'open' ? 'active' : 'idle'"
-                          (activated)="filter.set('open')">
-                {{ t().projects.tasks.filterOpen }} <span class="chip-count">{{ openCount() }}</span>
-            </app-leaf-tag>
+        <div class="seg" role="group" [attr.aria-label]="t().projects.tasks.stateStrip">
+            <button type="button" [class.is-on]="filter() === 'all'" [attr.aria-pressed]="filter() === 'all'"
+                    (click)="filter.set('all')">{{ t().projects.tasks.filterAll }}</button>
+            <button type="button" [class.is-on]="filter() === 'open'" [attr.aria-pressed]="filter() === 'open'"
+                    (click)="filter.set('open')">{{ t().projects.tasks.filterOpen }}</button>
             @if (overdueCount() > 0) {
-                <app-leaf-tag interactive [state]="filter() === 'overdue' ? 'active' : 'idle'"
-                              (activated)="filter.set('overdue')">
-                    {{ t().projects.tasks.filterOverdue }} <span class="chip-count">{{ overdueCount() }}</span>
-                </app-leaf-tag>
-            }
-
-            <!--T-124 — sprint chips, only once there are sprints to pick between. A lone "All"
-            chip beside a lone sprint is a control with nothing to control.-->
-            @if (sprints().length) {
-                <span class="chip-divider"></span>
-                <app-leaf-tag interactive [state]="sprintFilter() === null ? 'active' : 'idle'"
-                              (activated)="sprintFilter.set(null)">
-                    {{ t().projects.tasks.filterAll }}
-                </app-leaf-tag>
-                @for (s of sprints(); track s.id) {
-                    <app-leaf-tag interactive [hint]="s.name"
-                                  [state]="sprintFilter() === s.id ? 'active' : 'idle'"
-                                  (activated)="sprintFilter.set(s.id)">
-                        S{{ s.number }} <span class="chip-count">{{ sprintTaskCount(s.id) }}</span>
-                    </app-leaf-tag>
-                }
-                <app-leaf-tag interactive [state]="sprintFilter() === '' ? 'active' : 'idle'"
-                              (activated)="sprintFilter.set('')">
-                    {{ t().projects.planner.unassigned }} <span class="chip-count">{{ sprintTaskCount('') }}</span>
-                </app-leaf-tag>
+                <button type="button" [class.is-on]="filter() === 'overdue'" [attr.aria-pressed]="filter() === 'overdue'"
+                        (click)="filter.set('overdue')">{{ t().projects.tasks.filterOverdue }}</button>
             }
         </div>
 
-        @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+        <!--T-124 — the sprint strip, only once there are sprints to pick between. A lone "All"
+        beside a lone sprint is a control with nothing to control.-->
+        @if (sprints().length) {
+            <div class="seg" role="group" [attr.aria-label]="t().projects.tasks.sprintStrip">
+                @for (s of sprints(); track s.id) {
+                    <button type="button" [title]="s.name" [class.is-on]="sprintFilter() === s.id"
+                            [attr.aria-pressed]="sprintFilter() === s.id" (click)="sprintFilter.set(s.id)">S{{ s.number }}</button>
+                }
+                <button type="button" [class.is-on]="sprintFilter() === ''" [attr.aria-pressed]="sprintFilter() === ''"
+                        (click)="sprintFilter.set('')">{{ t().projects.planner.unassigned }}</button>
+                <button type="button" [class.is-on]="sprintFilter() === null" [attr.aria-pressed]="sprintFilter() === null"
+                        (click)="sprintFilter.set(null)">{{ t().projects.tasks.filterAll }}</button>
+            </div>
+        }
 
-        <!--The tiles are cut into the edge of the board they switch (ADR-200), so the strip and
-        the board are one stack and the column's gap never gets between them.-->
-        <div class="view-stack">
-        <app-index-tabs [items]="viewTabs()" [value]="view()" [label]="t().projects.tasks.title"
-                        (selected)="setView($any($event))" />
+        <span class="spacer"></span>
 
-        @if (loading()) {
-            <p class="hint">{{ t().projects.loading }}</p>
-        } @else if (loadError(); as e) {
-            <p class="error-line">{{ e }}</p>
-        } @else if (empty()) {
-            <app-shelf-panel class="empty-panel" [title]="t().projects.tasks.title" [count]="0">
-                <div class="empty-state">
-                    <app-icon name="check-square" size="lg"></app-icon>
-                    <p class="empty-title">{{ t().projects.tasks.empty }}</p>
-                    <p class="hint">{{ t().projects.tasks.emptyHint }}</p>
-                </div>
-            </app-shelf-panel>
-        } @else if (view() === 'board') {
-            <!--Cork lanes (the kit's own shelf tone): a pinboard surface under the paper tags, so
-            a column reads as a place cards are pinned rather than another paper sheet.
-            T-354 — the columns are one cdkDropListGroup so a card drags between them; a drop into
-            a different column is a status change, which reloads the board like every other one.-->
-            <div class="board" cdkDropListGroup>
-                @for (status of statuses; track status) {
-                    <app-shelf-panel class="column" tone="cork" [title]="t().projects.tasks.status[status]"
-                                     [count]="columnCount(status)">
-                        <app-button actions variant="rail" size="sm" [disabled]="busy()"
-                                    [title]="t().projects.tasks.newTask" (clicked)="startCreating(status)">
-                            <app-icon name="plus" weight="bold" size="xs" [label]="t().projects.tasks.newTask"></app-icon>
+        <!--app-input names its field with a visible label or with nothing; this one is a toolbar
+        search that has never had a caption, so the name is given from outside.-->
+        <label class="named-elsewhere" for="tasks-search">{{ t().projects.tasks.search }}</label>
+        <app-input class="search-input" inputId="tasks-search" type="search"
+                   [placeholder]="t().projects.tasks.search"
+                   [value]="search()" (valueChange)="search.set($any($event) ?? '')" />
+    </div>
+
+    @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
+
+    @if (loading()) {
+        <p class="hint">{{ t().projects.loading }}</p>
+    } @else if (loadError(); as e) {
+        <p class="error-line">{{ e }}</p>
+    } @else if (view() === 'board') {
+        <!--Four full-height columns (ADR-239 clause 7). T-354 — one cdkDropListGroup so a card
+        drags between them; a drop into a different column is a status change, which reloads the
+        board like every other one.-->
+        <div class="board" cdkDropListGroup>
+            @for (status of statuses; track status) {
+                <section class="card is-tinted column" [attr.aria-label]="t().projects.tasks.status[status]">
+                    <header class="column-head">
+                        <span class="column-name">{{ t().projects.tasks.status[status] }}</span>
+                        <span class="column-count">{{ columnCount(status) }}</span>
+                        <span class="spacer"></span>
+                        <app-button variant="rail" size="sm" [disabled]="busy()"
+                                    [title]="t().projects.tasks.addHere" (clicked)="startCreating(status)">
+                            <app-icon name="plus" weight="bold" size="xs" [label]="t().projects.tasks.addHere"></app-icon>
                         </app-button>
+                    </header>
 
-                        <div class="column-cards" cdkDropList [cdkDropListData]="status"
-                             (cdkDropListDropped)="onDrop($event)">
-                            @for (task of column(status); track task.id) {
-                                <app-task-tag cdkDrag [cdkDragData]="task"
-                                              [link]="boardLink()" [queryParams]="{ task: task.id }"
-                                              [prio]="task.priority" [due]="dueLabel(task)"
-                                              [overdue]="overdue(task)" [done]="task.status === 'done'"
-                                              [rotate]="tilt($index)" [hint]="task.title">
-                                    <span class="card-title">{{ task.title }}</span>
-                                    @if (sprintOf(task); as s) {
-                                        <app-stamp-badge stamp tone="brass" [rotate]="-1.5"
-                                                         [title]="s.name">S{{ s.number }}</app-stamp-badge>
-                                    }
-                                    @if (task.assignee) { <span class="assignee">{{ task.assignee }}</span> }
-                                    @if (task.links.length) {
-                                        <span class="link-chips">
-                                            @for (link of task.links; track link.type + link.id) {
-                                                <span class="link-chip" [title]="link.label || t().projects.tasks.linkGone">
-                                                    <app-icon [name]="linkIcons[link.type]" size="xs"></app-icon>
-                                                    <span class="link-label" [class.gone]="!link.label">
-                                                        {{ link.label || t().projects.tasks.linkGone }}
-                                                    </span>
-                                                </span>
-                                            }
+                    <div class="column-cards" cdkDropList [cdkDropListData]="status"
+                         (cdkDropListDropped)="onDrop($event)">
+                        @for (task of column(status); track task.id) {
+                            <!--The card as Board.png draws it: title, priority, sprint, linked
+                            documents. An anchor addressed at its own task (ADR-163).-->
+                            <a class="card task-card" cdkDrag [cdkDragData]="task"
+                               [class.is-done]="task.status === 'done'"
+                               [routerLink]="boardLink()" [queryParams]="{ task: task.id }" [title]="task.title">
+                                <span class="task-title">{{ task.title }}</span>
+                                <span class="task-foot">
+                                    <span class="tag" [class.danger]="prioTone(task.priority) === 'danger'"
+                                          [class.warn]="prioTone(task.priority) === 'warn'"
+                                          [class.muted]="prioTone(task.priority) === 'muted'">{{ t().projects.tasks.priority(task.priority) }}</span>
+                                    @if (sprintOf(task); as s) { <span class="task-sprint" [title]="s.name">S{{ s.number }}</span> }
+                                    @if (task.dueAt) { <span class="task-due" [class.is-late]="overdue(task)">{{ dueLabel(task) }}</span> }
+                                    <span class="spacer"></span>
+                                    @if (docLinkCount(task); as n) {
+                                        <span class="task-links" [title]="t().projects.tasks.linkedDocs">
+                                            <app-icon name="file-text" size="xs" /> {{ n }}
                                         </span>
                                     }
-                                </app-task-tag>
-                            } @empty {
-                                <p class="column-empty">{{ t().projects.tasks.emptyColumn }}</p>
-                            }
-                        </div>
-                    </app-shelf-panel>
-                }
-            </div>
-        } @else {
+                                </span>
+                            </a>
+                        } @empty {
+                            <app-empty-state [icon]="null" [text]="columnEmpty(status)" />
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    } @else {
+        <div class="card list-card">
             <div class="tasks-table">
                 <div class="tasks-row head-row">
                     <button class="sort-head" (click)="setSort('title')">{{ t().projects.tasks.colTask }}</button>
@@ -139,9 +125,9 @@
                        queryParamsHandling="merge" [attr.aria-label]="task.title">
                         <div class="title-cell" [title]="task.title">{{ task.title }}</div>
                         <div>
-                            <app-stamp-badge [tone]="statusTone(task.status)" [rotate]="0">
-                                {{ t().projects.tasks.status[task.status] }}
-                            </app-stamp-badge>
+                            <span class="tag" [class.ok]="statusTone(task.status) === 'ok'"
+                                  [class.warn]="statusTone(task.status) === 'warn'"
+                                  [class.muted]="statusTone(task.status) === 'muted'">{{ t().projects.tasks.status[task.status] }}</span>
                         </div>
                         <div class="right">
                             <span class="prio" [class.p1]="task.priority === 1">
@@ -149,9 +135,7 @@
                             </span>
                         </div>
                         <div class="due" [class.overdue]="overdue(task)">
-                            @if (task.dueAt) {
-                                {{ task.dueAt | zonedDate:'MM/dd' }}@if (overdue(task)) {<span> · {{ t().projects.tasks.overdue }}</span>}
-                            } @else { <span class="none">—</span> }
+                            @if (task.dueAt) { {{ dueLabel(task) }} } @else { <span class="none">—</span> }
                         </div>
                         <div class="links-cell">
                             {{ t().projects.tasks.linkSummary(
@@ -159,23 +143,23 @@
                         </div>
                     </a>
                 } @empty {
-                    <p class="hint empty-filtered">{{ t().projects.tasks.emptyFiltered }}</p>
+                    <app-empty-state class="list-empty" [icon]="null"
+                                     [text]="tasks().length ? t().projects.tasks.emptyFiltered : t().projects.tasks.emptyHint" />
                 }
             </div>
-        }
         </div>
-    </div>
+    }
 </div>
 
 <!-- The task card. A centered modal, the design's chosen variant. -->
 @if (openTask(); as task) {
     <app-modal [width]="560" (closed)="close()">
         <span modal-title class="modal-head-row">
-            <app-stamp-badge [tone]="statusTone(task.status)" [rotate]="-1.5">
-                {{ t().projects.tasks.status[task.status] }}
-            </app-stamp-badge>
+            <span class="tag" [class.ok]="statusTone(task.status) === 'ok'"
+                  [class.warn]="statusTone(task.status) === 'warn'"
+                  [class.muted]="statusTone(task.status) === 'muted'">{{ t().projects.tasks.status[task.status] }}</span>
             @if (task.archivedAt) {
-                <app-stamp-badge tone="ink" [rotate]="1">{{ t().projects.tasks.archived }}</app-stamp-badge>
+                <span class="tag muted">{{ t().projects.tasks.archived }}</span>
             }
         </span>
 
@@ -309,12 +293,12 @@
             </div>
 
             <p class="stamp">
-                {{ t().projects.tasks.created }} {{ task.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}
+                {{ t().projects.tasks.created }} {{ task.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}
                 <span class="dot">·</span>
-                {{ t().projects.tasks.updated }} {{ task.updatedAt | zonedDate:'MM/dd/yyyy, HH:mm' }}
+                {{ t().projects.tasks.updated }} {{ task.updatedAt | zonedDate:'d MMM yyyy, HH:mm' }}
                 @if (task.completedAt) {
                     <span class="dot">·</span>
-                    {{ t().projects.tasks.completed }} {{ task.completedAt | zonedDate:'MM/dd/yyyy, HH:mm' }}
+                    {{ t().projects.tasks.completed }} {{ task.completedAt | zonedDate:'d MMM yyyy, HH:mm' }}
                 }
             </p>
 

@@ -9,9 +9,11 @@ import { PublishService } from '../core/publish.service';
 import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from '../shared/icon.component';
+import { IconName } from '../shared/icon-data.generated';
 import { ModalComponent } from '../shared/modal.component';
+import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
+import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
 import { seriesColor } from '../bench/worktop/growth-chart.component';
 
 // The whole wave's timezone rule (frozen): the server stores and serves UTC only; this page
@@ -47,6 +49,11 @@ const NETWORK_SLOTS: Record<string, 1 | 2 | 3 | 4 | 5 | 6> = {
     telegram: 1, blog: 2, bluesky: 3, discord: 4, x: 5,
 };
 
+/** The chip names its network by icon, never by colour alone (ADR-149). */
+const NETWORK_ICONS: Record<string, IconName> = {
+    telegram: 'paper-plane-tilt', blog: 'globe', bluesky: 'cloud', discord: 'chat-teardrop-dots', x: 'at',
+};
+
 export function networkColor(network: string): string {
     return seriesColor(NETWORK_SLOTS[network] ?? 6);
 }
@@ -63,9 +70,12 @@ function utcDate(iso: string): Date {
     return new Date(/Z|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : iso + 'Z');
 }
 
+// Calendar.png (ADR-239): the month is the page title, the networks and counts its meta line, the
+// view strip and the month navigation beside the one Schedule action; the grid is a card whose
+// rows stretch to the viewport, with the queue as a second card beside it when it is open.
 @Component({
     selector: 'app-calendar',
-    imports: [FormsModule, IconComponent, ModalComponent, ButtonComponent, ShelfPanelComponent],
+    imports: [FormsModule, IconComponent, ModalComponent, ButtonComponent, PageHeaderComponent, EmptyStateComponent],
     templateUrl: 'calendar.component.html',
     styleUrls: ['calendar.component.css'],
 })
@@ -204,7 +214,33 @@ export class CalendarComponent implements OnInit {
         return out;
     });
 
+    /** The cells as rows, so each week is one grid row that shares the card's height. */
+    weeks = computed<CalendarCell[][]>(() => {
+        const cells = this.cells();
+        const out: CalendarCell[][] = [];
+        for (let i = 0; i < cells.length; i += 7) out.push(cells.slice(i, i + 7));
+        return out;
+    });
+
     isEmptyBoard = computed(() => !this.scheduled().length && !this.slots().length);
+
+    /** Posts still to go out — the header's count, whatever month is on screen. */
+    pendingCount = computed(() => this.scheduled().filter(p => p.status === 'Pending').length);
+
+    /** Unfilled slot occurrences in the visible weeks. */
+    openSlotCount = computed(() => {
+        let n = 0;
+        for (const tickets of this.slotTickets().values()) n += tickets.length;
+        return n;
+    });
+
+    /** The networks on the board and the two counts. A swatch beside a network is not a HeaderMeta option. */
+    headerMeta = computed<HeaderMeta[]>(() => {
+        const meta: HeaderMeta[] = this.legendNetworks().map(n => ({ text: this.networkLabel(n) }));
+        meta.push({ text: this.t().calendar.scheduledCount(this.pendingCount()) });
+        if (this.slots().length) meta.push({ text: this.t().calendar.openSlots(this.openSlotCount()) });
+        return meta;
+    });
 
     stepMonth(delta: number) {
         const a = this.monthAnchor();
@@ -218,7 +254,11 @@ export class CalendarComponent implements OnInit {
 
     networkColor = networkColor;
 
-    /** Networks actually on the board, for the legend — plus the resin slot swatch when any exist. */
+    networkIcon(network: string): IconName {
+        return NETWORK_ICONS[network] ?? 'paper-plane-tilt';
+    }
+
+    /** Networks actually on the board, for the legend. */
     legendNetworks = computed(() => {
         const seen = new Set(this.scheduled().map(p => p.network || 'telegram'));
         return ['telegram', 'bluesky', 'discord', 'x', 'blog'].filter(n => seen.has(n));

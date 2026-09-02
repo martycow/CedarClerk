@@ -1,59 +1,20 @@
 /* Phase 11 / T-081 — first screen migrated to tokens v2 (ADR-071). This page carries
    data-density="compact" on its root (set in the template), which is what makes --dens-* resolve
    to the tighter set here; the tokens are never read for a literal value in this file. The shell
-   owns the ground under the page (ADR-139), so nothing here paints one. */
+   owns the ground under the page (ADR-239), so nothing here paints one; the layout classes are the
+   paper-first vocabulary in styles.scss and this file only adds the page's own columns. */
 .drafts-page {
-    display: flex;
-    flex-direction: column;
     gap: var(--space-3);
-    padding: var(--space-3);
 }
 
-/* The index tiles hang off the panel's top edge: the strip overlaps its border by a hair so a lit
-   tile reads as raised out of it, the way the glossary and the posts manager already draw it. The
-   column's own gap is cancelled here, or the tiles float a step above the board they switch — the
-   threshold ADR-200 names. */
-.drafts-view-row {
-    position: relative;
-    z-index: 1;
-    padding: 0 var(--space-1);
-    margin-bottom: calc(-1px - var(--space-3));
-}
-
-/* The kit's proportions and no width breakpoint of its own (ADR-147). The tree is structure and
-   the folder filter does not apply to it (ADR-128), so its shelf is absent and the panel takes
-   the whole board. */
-.drafts-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
-    gap: var(--space-3);
-    align-items: start;
-}
-
-.drafts-grid.no-shelf {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-/* Projected into the panel header, which is a single non-wrapping row. */
-.search {
-    width: 200px;
-}
-
-.pad {
-    padding: var(--space-3);
-}
-
+/* Text on the wall writes with the wall's ink (ADR-141): --t2 is a paper ink and vanishes at night. */
 .hint {
-    color: var(--t2);
+    color: var(--wood-ink-soft);
     font-size: var(--dens-fs);
 }
 
-/* .icon and .icon-sm were 15px and 14px — a one-pixel difference carrying two names, which is the
-   kind of thing the icon tokens exist to end. Both resolve to --icon-sm now; T-079 should delete
-   whichever class survives the Phosphor migration. */
-.icon {
-    width: var(--icon-sm);
-    height: var(--icon-sm);
+.spacer {
+    flex: 1;
 }
 
 .icon-sm {
@@ -61,58 +22,88 @@
     height: var(--icon-sm);
 }
 
-.spacer {
-    flex: 1;
-}
-
-/* flex-wrap, not nowrap: on a phone this row holds the tag manager, two imports and New draft,
-   which is more than 390px of viewport. Without wrapping the row simply grew past the edge and the
-   global overflow-x:hidden clipped whatever fell off. */
-.drafts-toolbar {
-    display: flex;
-    align-items: center;
-    gap: var(--dens-gap);
-    flex-wrap: wrap;
-}
-
+/* The view toggle and the data commands, on the wall above the card. flex-wrap because on a phone
+   this row holds the tag manager and two imports, which is more than 390px of viewport. */
 .drafts-view-row {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
     gap: var(--space-2);
+    flex: none;
     min-width: 0;
 }
 
 .view-spacer { flex: 1; }
 
+/* The kit's proportions and no width breakpoint of its own (ADR-147). The tree is structure and
+   the folder filter does not apply to it (ADR-128), so its card is absent and the list takes the
+   whole width. Both columns stretch to the page's bottom (ADR-239 clause 7). */
+.drafts-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--bench-dock-w);
+    gap: var(--space-3);
+    flex: 1;
+    min-height: 0;
+}
+
+.drafts-grid.no-shelf {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.doc-list,
+.aside {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* The card's caption line (Main.png): the label with its count, the state strip, the search. */
+.doc-head,
+.aside-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: none;
+    min-height: var(--hit-touch);
+    padding: var(--space-2) var(--space-4);
+}
+
+.doc-name {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex: none;
+}
+
+.doc-count,
+.aside-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
+}
+
+.search {
+    width: 220px;
+}
+
+.aside-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 var(--space-4) var(--space-4);
+}
+
+/* The one scroller for both axes: rows keep their computed min-width (B24) and the header stays in
+   view while the list scrolls under it. */
 .drafts-table {
-    /* Was overflow:hidden (only there to clip the rounded corners), which meant the fixed-width
-       column grid below simply got cut off on iPad with no way to reach it — B24. */
-    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
 .drafts-row {
-    display: grid;
-    /* Static fallback; gridTemplate() sets the real values inline. Kept in step with
-       DEFAULT_COL_WIDTHS so the first paint doesn't jump. */
-    grid-template-columns: minmax(200px, 1fr) 200px 120px 170px 190px 140px 140px 80px;
-    gap: var(--dens-gap);
-    align-items: center;
-    padding: var(--dens-row-y) var(--dens-control-x);
-    border-bottom: 1px solid var(--border);
     cursor: pointer;
-    /* min-width is set inline by rowMinWidth(), because it depends on which columns are showing
-       and on their current widths. It used to be a hardcoded 1020px here — 136px short of what
-       the row actually needs before the title gets a single pixel, which is exactly how an iPad
-       ended up with a table containing no titles and two headers drawn on top of each other. */
-}
-
-.drafts-row:last-child {
-    border-bottom: none;
-}
-
-.drafts-row:hover {
-    background: var(--hover);
 }
 
 .drafts-row.busy {
@@ -121,19 +112,17 @@
 }
 
 .drafts-row-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    min-height: var(--hit-target);
+    border-top: none;
+    background: var(--sheet);
     cursor: default;
-    background: var(--alt);
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    font-weight: 600;
-    color: var(--t2);
-    padding: var(--space-2) var(--dens-control-x);
 }
 
 .drafts-row-head:hover {
-    background: var(--alt);
+    background: var(--sheet);
 }
 
 /* N1: the header cell is a sort button; the handle inside it resizes the column. */
@@ -169,7 +158,6 @@
 
 .col-reset {
     text-align: right;
-    color: var(--t2);
 }
 
 /* Widened by a transparent margin — a 1px line is unhittable with a finger.
@@ -200,37 +188,21 @@
 }
 
 .drafts-title {
-    font-size: var(--fs-14);
-    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.status-badge {
-    display: inline-block;
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--alt);
-    color: var(--t2);
-}
-
-.status-badge.tone-danger {
-    background: var(--danger-soft);
-    color: var(--danger);
-}
-
-.status-badge.tone-ok {
-    background: var(--ok-soft);
-    color: var(--ok);
+/* One line per row (T-271): the state tag and its detail sit side by side and the detail gives way. */
+.state-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
 }
 
 .status-detail {
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    margin-top: 2px;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -245,7 +217,7 @@
     font-size: var(--fs-caption);
     font-weight: 600;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: var(--asoft);
     color: var(--accent);
 }
@@ -254,8 +226,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
     min-width: 0;
 }
 
@@ -266,10 +236,7 @@
 /* Blog views/reactions with a since-last-session delta (B23) */
 .activity-cell {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: var(--fs-meta);
-    color: var(--t2);
+    gap: 10px;
 }
 
 .activity-metric {
@@ -284,13 +251,7 @@
 }
 
 .activity-empty {
-    color: var(--t2);
-}
-
-.draft-card .activity-cell {
-    flex-direction: row;
-    gap: 10px;
-    margin-top: 6px;
+    color: var(--t3);
 }
 
 .row-actions {
@@ -337,13 +298,21 @@
 .drafts-grid-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-auto-rows: max-content;
     gap: var(--space-3);
-    padding: var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+/* With nothing to lay out the grid hands its height to the one empty state instead. */
+.drafts-grid-cards.is-empty {
+    display: flex;
+    flex-direction: column;
 }
 
 .draft-card-body {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
 }
 
@@ -356,15 +325,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    align-self: stretch;
     margin-top: 6px;
     font-size: var(--fs-meta);
     color: var(--t2);
-}
-
-/* ---------- Folders ---------- */
-.icon-xs {
-    width: var(--icon-xs);
-    height: var(--icon-xs);
 }
 
 .private-lock {
@@ -374,11 +338,11 @@
 }
 
 /* ---------- Draft inspector (T-256) ----------
-   The shelf shares its column with the folder filter, so nothing here places itself — the two
-   panels are alternatives, not neighbours. */
+   The card shares its column with the folder filter, so nothing here places itself — the two are
+   alternatives, not neighbours. */
 
-/* Which document the sheet describes. Reading matter on the shelf's paper sheet, so it takes
-   paper's floor rather than chrome's (ADR-159 clause 8). */
+/* Which document the card describes. Reading matter on paper, so it takes paper's floor rather
+   than chrome's (ADR-159 clause 8). */
 [data-surface="paper"] .insp-name {
     margin: 0 0 var(--space-2);
     font-size: var(--fs-ui);
@@ -387,11 +351,10 @@
     color: var(--text);
 }
 
-/* Everything else on this shelf is projected into a spec row, and a spec row is chrome — the
+/* Everything else on this card is projected into a spec row, and a spec row is chrome — the
    table's own --fs-caption would be a paper measurement standing on a chrome band. */
 [data-surface="chrome"] .insp-detail,
 [data-surface="chrome"] .insp-none,
-[data-surface="chrome"] .status-badge,
 [data-surface="chrome"] .draft-lang-badge,
 [data-surface="chrome"] .tag-chip-ro,
 [data-surface="chrome"] .activity-metric {
@@ -408,14 +371,14 @@
 
 .insp-none { color: var(--t3); }
 
-/* A translation that predates the last edit of its source — the same fact the status badge states
+/* A translation that predates the last edit of its source — the same fact the status tag states
    for the document as a whole, said per language. */
 .draft-lang-badge.is-stale {
     background: var(--warn-soft);
     color: var(--warn);
 }
 
-/* ---------- Folders shelf ---------- */
+/* ---------- Folders card ---------- */
 .folder-list {
     display: flex;
     flex-direction: column;
@@ -428,9 +391,10 @@
     gap: var(--space-2);
     width: 100%;
     box-sizing: border-box;
+    min-height: var(--hit-target);
     padding: var(--space-1) var(--space-2);
     border: none;
-    border-radius: var(--radius-paper);
+    border-radius: var(--radius-sm);
     background: none;
     color: var(--text);
     font-family: inherit;
@@ -457,9 +421,9 @@
 }
 
 .folder-count {
-    font-family: var(--font-mono);
     font-size: var(--fs-caption);
-    color: var(--t2);
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
     flex: none;
 }
 
@@ -554,7 +518,7 @@
     display: flex;
     align-items: flex-start;
     gap: 7px;
-    margin: 8px 0 0;
+    margin: 0;
     padding: 7px 10px;
     border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
     background: var(--danger-soft);
@@ -570,7 +534,7 @@
     color: var(--danger);
 }
 
-/* Real upload-percentage bar (28.07.2026) — same shape as the editor's auto-translate progress. */
+/* Real upload-percentage bar — same shape as the editor's auto-translate progress. */
 .translate-progress {
     display: flex;
     flex-direction: column;
@@ -612,16 +576,16 @@
    inside its own container). What was never handled is everything around it, which is what made a
    phone page wider than its viewport. */
 
-/* Phone. The toolbar becomes a stack: the search field and the folder trigger each take the full
-   width instead of holding a fixed 240px that cannot fit beside anything else. */
+/* Phone. The command row becomes a stack instead of holding controls that cannot fit beside
+   anything else. */
 @media (max-width: 700px) {
-    .drafts-toolbar {
+    .drafts-view-row {
         align-items: stretch;
     }
 
     /* The spacer exists to push controls right on a wide row; once the row wraps it would insert a
        full blank line before the imports. */
-    .spacer {
+    .view-spacer {
         display: none;
     }
 
@@ -637,21 +601,20 @@
 .drafts-tree {
     display: flex;
     flex-direction: column;
-    gap: 2px;
 }
 
 .tree-row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm);
+    min-height: var(--hit-touch);
+    padding: 0 var(--space-4);
+    border-top: 1px solid var(--paper-edge);
     cursor: pointer;
     min-width: 0;
 }
 
-.tree-row:hover { background: var(--hover); }
+.tree-row:hover { background: var(--alt); }
 .tree-row.busy { opacity: .6; pointer-events: none; }
 
 .tree-caret {
@@ -673,7 +636,6 @@
 .tree-caret-spacer { width: 18px; flex: none; }
 
 .tree-title {
-    font-size: var(--fs-ui);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
