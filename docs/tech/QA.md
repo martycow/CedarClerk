@@ -137,7 +137,7 @@ This is the most incident-hardened surface in the project (ADR-065/066/067, afte
   there is no `@everyone` ping even when the text contains one.
 - **Bluesky with an image.** `uploadBlob` against real bsky.social. Maintainer only — list building and
   text are unit-tested, the upload is not.
-- **X and Bluesky connection lives in Settings → Integrations only.** The Export modal selects from
+- **X and Bluesky connection lives in Settings → Integrations only.** The Publish / Export tab selects from
   what is connected and offers a "Connect →" link where nothing is; it never grows a form of its own
   (ADR-095).
 
@@ -248,7 +248,7 @@ checks are shaped by.
 
 - **Project and export presets.** A project preset appears in New project and builds what it describes
   (type, first document, its title, the description), and editing the fields after picking it still
-  wins. An export preset fills step 2 of the Export modal in one pick, and a language the post does not
+  wins. An export preset fills the Publish / Export tab's rack in one pick, and a language the post does not
   have is ignored rather than ticked. New project offers Empty / Blog / Game / Product; Empty's first
   note has no skeleton, and an older jam or prototype project still names its type on the dashboard.
 - **Post card thumbnails.** On an account with existing posts the first listing fills covers in (50 at a

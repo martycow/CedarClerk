@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-02 — Publish / Export is the third tab
+
+The editor's third tab is a real state: `?tab=publish` selects it, deep-links to it, and holds the
+Export window's steps as a three-column workspace — the destination rack, the active destination's
+settings under the version row, and a readiness review — with a stepper across the top that moves
+focus to the region it names, and the file exports in a utility strip underneath. The modal and the
+top-bar Publish split button are gone; the footer carries one primary action per state (Continue to
+Preview · Continue to Publish · Publish to N destinations) with Back before it. A destination card is
+two controls — a labelled checkbox and a settings button — instead of a checkbox inside a button.
+Preview and Publish read their checks under one vocabulary (Blocking · Warnings · Ready · Needs setup ·
+Unavailable), every state an icon with a word, a Fix only where a route or an action exists. The
+publication checklist stays a modal over the workspace; Write stays mounted behind both tabs. The
+tool strip's groups are History, Text, Insert, Lists, Media, Blocks and More, and Details opens
+closed. ADR-242.
+
 ## 2026-09-02 — The sidebar carries every screen
 
 An open project's sidebar no longer empties while the access answer is in flight: an own project
