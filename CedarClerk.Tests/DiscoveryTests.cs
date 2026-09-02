@@ -83,6 +83,97 @@ public class DiscoveryTests
         Assert.True(result.Stage?.ScreenshotSaturday);
     }
 
+    [Fact]
+    public void Empty_discovery_is_one_honest_invitation()
+    {
+        var snapshot = Snapshot([], [], eligible: 0);
+
+        var body = Body(DiscoveryEndpoints.Render(false, snapshot, "all", null, ""));
+
+        Assert.Equal(1, Count(body, "class=\"stage-empty discovery-empty\""));
+        Assert.DoesNotContain("class=\"feed ", body);
+        Assert.DoesNotContain("class=\"category-card\"", body);
+        Assert.DoesNotContain("class=\"shuffle\"", body);
+        Assert.DoesNotContain("/og-default.png", body);
+        Assert.Contains("for=\"discovery-search\"", body);
+        Assert.Contains("Publish the first project", body);
+    }
+
+    [Fact]
+    public void An_empty_lens_offers_one_way_back_without_fake_sections()
+    {
+        var snapshot = Snapshot([], [Item("blog", "A real blog")], eligible: 1);
+
+        var body = Body(DiscoveryEndpoints.Render(false, snapshot, "projects", null, ""));
+
+        Assert.Equal(1, Count(body, "class=\"stage-empty discovery-empty\""));
+        Assert.Contains("Nothing matches this view", body);
+        Assert.Contains("href=\"/discovery?lang=en\"", body);
+        Assert.DoesNotContain("class=\"shuffle\"", body);
+        Assert.DoesNotContain("Project Showcase", body);
+    }
+
+    [Fact]
+    public void Blog_and_devlog_lenses_do_not_mix_their_cards()
+    {
+        var snapshot = Snapshot([], [Item("blog", "Independent notes"), Item("devlog", "Build diary")], eligible: 2);
+
+        var blogs = Body(DiscoveryEndpoints.Render(false, snapshot, "blogs", null, ""));
+        var devlogs = Body(DiscoveryEndpoints.Render(false, snapshot, "devlogs", null, ""));
+
+        Assert.Contains("Independent notes", blogs);
+        Assert.DoesNotContain("Build diary", blogs);
+        Assert.Contains("Build diary", devlogs);
+        Assert.DoesNotContain("Independent notes", devlogs);
+        Assert.Contains("type=blogs&amp;lang=en", blogs.Replace("&", "&amp;"));
+        Assert.Contains("type=devlogs&amp;lang=en", devlogs.Replace("&", "&amp;"));
+    }
+
+    [Fact]
+    public void Populated_sections_are_numbered_without_gaps_and_zero_categories_are_absent()
+    {
+        var snapshot = Snapshot(
+            [Item("project", "Mosslight", DiscoveryCategories.Games)],
+            [Item("devlog", "Build diary", DiscoveryCategories.Games)],
+            eligible: 2,
+            screenshotSaturday: false);
+
+        var body = Body(DiscoveryEndpoints.Render(false, snapshot, "all", null, ""));
+
+        Assert.Contains("<span>01</span><h2>Project Showcase</h2>", body);
+        Assert.Contains("<span>02</span><h2>Project devlogs</h2>", body);
+        Assert.Contains("<span>03</span><h2>Project categories</h2>", body);
+        Assert.DoesNotContain("<span>04</span>", body);
+        Assert.Contains("category=games", body);
+        Assert.DoesNotContain("category=hardware", body);
+        Assert.DoesNotContain("category=other", body);
+    }
+
+    private static DiscoveryEndpoints.Snapshot Snapshot(
+        IReadOnlyList<DiscoveryEndpoints.Item> projects,
+        IReadOnlyList<DiscoveryEndpoints.Item> blogs,
+        int eligible,
+        bool screenshotSaturday = true)
+    {
+        var settings = new DiscoveryEndpoints.Settings(true, screenshotSaturday, true, true,
+            new LandingText("Discovery", "Discovery"), new LandingText("Intro", "Intro"));
+        var stage = screenshotSaturday
+            ? blogs.FirstOrDefault(i => i.ScreenshotSaturday) ?? projects.FirstOrDefault()
+            : projects.FirstOrDefault();
+        return new DiscoveryEndpoints.Snapshot(settings, projects, blogs, stage, 1, eligible);
+    }
+
+    private static DiscoveryEndpoints.Item Item(string kind, string title,
+        string category = DiscoveryCategories.Other) => new(
+        kind, title, $"{title} summary", $"https://maker.test/{Uri.EscapeDataString(title)}",
+        "/media/cover.png", "Maker", null, new DateTime(2026, 9, 1), [], category,
+        kind == "devlog" ? "Mosslight" : null, null, false);
+
+    private static string Body(string html) => html[(html.IndexOf("<body>", StringComparison.Ordinal) + 6)..];
+
+    private static int Count(string value, string needle) =>
+        value.Split(needle, StringSplitOptions.None).Length - 1;
+
     private static Draft Post(string owner, string title, bool isPrivate, Guid? projectId = null, bool listed = false) => new()
     {
         OwnerId = owner,
