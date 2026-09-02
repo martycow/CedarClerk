@@ -39,6 +39,12 @@ public class Project
     public string ProjectType { get; set; } = CedarClerk.Core.ProjectTypes.FullGame;
 
     /// <summary>
+    /// ADR-243 — the fixed public category used by Discovery. It has no effect until the owner
+    /// opts in and the Project has a live Showcase.
+    /// </summary>
+    public string DiscoveryCategory { get; set; } = CedarClerk.Core.DiscoveryCategories.Other;
+
+    /// <summary>
     /// A /media/... path from the ordinary asset upload — same whitelist, same quota, same public
     /// serving as ApplicationUser.AvatarUrl and GlossaryTerm.ImageUrl. Null = no cover.
     /// </summary>

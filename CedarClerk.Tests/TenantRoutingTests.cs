@@ -78,6 +78,7 @@ public class TenantRoutingTests : IDisposable
         services.AddLogging();
         services.AddSingleton(tenant);
         services.AddSingleton<IWebHostEnvironment>(new WebRoot(_webRoot));
+        services.AddScoped(_ => TenantProvider.Platform());
         services.AddScoped(_ => NewDb());
         var provider = services.BuildServiceProvider();
 

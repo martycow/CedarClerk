@@ -17,6 +17,8 @@ public class PlatformPathsTests
     [InlineData("/api/billing/stripe/webhook")]
     [InlineData("/api/billing/paypal/capture")]
     [InlineData("/api/drafts/import-markdown-local")]
+    [InlineData("/discovery")]
+    [InlineData("/DISCOVERY")]
     public void Reads_across_owners(string path) =>
         Assert.True(PlatformPaths.IsPlatform(new PathString(path)), path);
 
@@ -34,6 +36,8 @@ public class PlatformPathsTests
     [InlineData("/api/administrator")]
     [InlineData("/api/administrators")]
     [InlineData("/media/asset_x.png")]
+    [InlineData("/discovery/owner")]
+    [InlineData("/discover")]
     public void Stays_inside_one_owner(string path) =>
         Assert.False(PlatformPaths.IsPlatform(new PathString(path)), path);
 
@@ -41,11 +45,19 @@ public class PlatformPathsTests
     public void An_empty_path_is_not_platform() =>
         Assert.False(PlatformPaths.IsPlatform(PathString.Empty));
 
-    // A page reading across owners would be a cross-tenant HTML surface — the thing the subdomain
-    // work exists to remove.
+    // Prefix exemptions stay API-only. Cross-account public HTML must be named as one exact path,
+    // otherwise a future child route inherits an exemption nobody reviewed.
     [Fact]
     public void Every_platform_prefix_is_an_api_path() =>
         Assert.All(PlatformPaths.Prefixes, prefix => Assert.StartsWith("/api/", prefix));
+
+    [Fact]
+    public void Public_platform_pages_are_exact() =>
+        Assert.All(PlatformPaths.ExactPaths, path =>
+        {
+            Assert.True(PlatformPaths.IsPlatform(path));
+            Assert.False(PlatformPaths.IsPlatform(path + "/child"));
+        });
 
     // One prefix covering another means somebody widened the gate and the narrower entry is now
     // decoration.

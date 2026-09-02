@@ -164,6 +164,21 @@ export interface AdminLanding {
     waitlist: number;
 }
 
+export interface AdminDiscovery {
+    enabled: boolean;
+    showScreenshotSaturday: boolean;
+    showProjects: boolean;
+    showBlogs: boolean;
+    titleEn: string | null;
+    titleRu: string | null;
+    introEn: string | null;
+    introRu: string | null;
+    defaults: { title: LandingTextPair; intro: LandingTextPair };
+    optedInAuthors: number;
+    eligibleProjects: number;
+    eligiblePosts: number;
+}
+
 export interface AdminWaitlistEntry {
     id: string;
     email: string;
@@ -288,5 +303,15 @@ export class AdminService {
 
     waitlist() {
         return firstValueFrom(this.http.get<AdminWaitlistEntry[]>('/api/admin/landing/waitlist'));
+    }
+
+    discovery() {
+        return firstValueFrom(this.http.get<AdminDiscovery>('/api/admin/discovery'));
+    }
+
+    saveDiscovery(body: Pick<AdminDiscovery,
+        'enabled' | 'showScreenshotSaturday' | 'showProjects' | 'showBlogs'
+        | 'titleEn' | 'titleRu' | 'introEn' | 'introRu'>) {
+        return firstValueFrom(this.http.put('/api/admin/discovery', body));
     }
 }

@@ -52,9 +52,12 @@ public static class LandingEndpoints
             }
 
             var ru = ChooseRussian(ctx);
-            var content = await LandingContent.LoadAsync(
-                ctx.RequestServices.GetRequiredService<CedarDbContext>(),
-                ctx.RequestServices.GetRequiredService<IConfiguration>());
+            // ADR-243 — the preview is the same consent-filtered cross-account pool as Discovery.
+            ctx.RequestServices.GetRequiredService<TenantProvider>().UsePlatform();
+            var db = ctx.RequestServices.GetRequiredService<CedarDbContext>();
+            var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+            var content = await LandingContent.LoadAsync(db, cfg);
+            var discovery = await DiscoveryEndpoints.LoadAsync(db, cfg);
 
             ctx.Response.ContentType = "text/html; charset=utf-8";
             // A marketing page is worth caching at the edge, but not for long: it carries prices.
@@ -63,11 +66,10 @@ public static class LandingEndpoints
             // ?lang= override needs no Vary — it is part of the URL, which the cache keys on.
             ctx.Response.Headers.Vary = "Accept-Language";
 
-            var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
             var analyticsKey = cfg.GetValue(Consts.Analytics.EnabledCfg, false)
                 ? cfg[Consts.Analytics.ProjectKeyCfg]
                 : null;
-            await ctx.Response.WriteAsync(Render(ru, content,
+            await ctx.Response.WriteAsync(Render(ru, content, discovery,
                 string.IsNullOrWhiteSpace(analyticsKey) ? null : analyticsKey,
                 cfg[Consts.Analytics.HostCfg] ?? Consts.Analytics.DefaultHost));
         });
@@ -161,17 +163,8 @@ public static class LandingEndpoints
     private static string E(string value) => WebUtility.HtmlEncode(value);
 
     /// <summary>The wordmark's conifer, the one drawing on this page that is not a Phosphor glyph.</summary>
-    private static string Mark(int size) => $"""
-        <svg width="{size}" height="{size}" viewBox="0 0 100 100" aria-hidden="true" focusable="false" style="display:block;flex:none">
-          <g fill="var(--rail-ink)" stroke="var(--rail-ink)" stroke-width="3" stroke-linejoin="round">
-            <path d="M50 10L69 31L31 31Z"/><path d="M50 35L79 53L21 53Z"/>
-            <path d="M50 49L85 75L15 75Z"/><rect x="41" y="73" width="18" height="16" rx="3"/>
-          </g>
-          <g fill="var(--danger)" stroke="var(--danger)" stroke-width="1.4" stroke-linejoin="round">
-            <path d="M50 35.5L56 41.5L50 47.5L44 41.5Z"/><path d="M47 47L53 47L56.5 69L50 76L43.5 69Z"/>
-          </g>
-        </svg>
-        """;
+    private static string Mark(int size) =>
+        $"""<img src="/favicon.png" width="{size}" height="{size}" alt="" style="display:block;flex:none;object-fit:contain">""";
 
     // A plain (non-interpolated) raw string: CSS is mostly braces, and in an interpolated raw
     // string every one of them would have to be doubled. Same Replace-a-placeholder shape as
@@ -208,35 +201,32 @@ public static class LandingEndpoints
                 position: sticky; top: 0; z-index: 20;
                 display: flex; align-items: center; gap: 12px;
                 height: var(--bench-rail-h); padding: 0 24px;
-                background-color: var(--rail-mid);
-                background-image: var(--tex-wood), var(--surface-rail);
-                background-size: 420px, auto;
-                border-bottom: 2px solid var(--rail-edge);
-                box-shadow: var(--shadow-rail);
+                background: var(--paper-bright);
+                border-bottom: 1px solid var(--rule-ink-soft);
+                box-shadow: var(--shadow-paper-sm);
             }
             .rail-name {
                 font-family: var(--font-display); font-size: 18px; font-weight: 700;
-                letter-spacing: .02em; color: var(--rail-ink);
-                text-shadow: 0 1px 1px var(--rail-edge);
+                letter-spacing: .02em; color: var(--text);
             }
-            .rail-chip { font-family: var(--font-mono); font-size: 11px; color: var(--rail-ink-soft); }
+            .rail-chip { font-family: var(--font-mono); font-size: 11px; color: var(--t3); }
             .rail-nav { display: flex; gap: 14px; }
-            .rail-nav a { font-size: 12.5px; font-weight: 600; color: var(--rail-ink-soft); text-decoration: none; }
-            .rail-nav a:hover { color: var(--rail-ink); }
+            .rail-nav a { font-size: 12.5px; font-weight: 600; color: var(--t2); text-decoration: none; }
+            .rail-nav a:hover { color: var(--accent); }
 
             .lang {
                 display: flex; gap: 4px; padding: 3px;
-                border: 1px solid var(--rail-edge); border-radius: var(--radius-stamp);
-                background: var(--rail-btn-face);
+                border: var(--border-paper); border-radius: var(--radius-stamp);
+                background: var(--sheet);
             }
             .lang a {
                 display: inline-flex; align-items: center; justify-content: center;
                 min-width: 34px; height: 24px; border: 1px solid transparent; border-radius: 3px;
                 font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .06em;
-                color: var(--rail-ink-soft); text-decoration: none;
+                color: var(--t2); text-decoration: none;
             }
             .lang a[aria-current] {
-                border-color: var(--brass-edge); background: var(--grad-sign-tile); color: var(--rail-ink);
+                border-color: var(--abord); background: var(--asoft); color: var(--accent);
             }
 
             /* ---- controls ---------------------------------------------------------------- */
@@ -483,6 +473,33 @@ public static class LandingEndpoints
             }
             .band span.sub { display: block; margin-top: 5px; font-size: 13px; color: var(--rail-ink-soft); }
 
+            /* ADR-243 — a live sample of the public commons, not a screenshot of one. */
+            .discover-preview {
+                display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.5fr);
+                gap: 34px; margin-top: 62px; padding: 34px;
+                color: var(--text-on-pine); background: var(--pine-deep);
+                border: 1px solid var(--pine-deep); border-radius: var(--radius-paper);
+                box-shadow: var(--shadow-paper);
+            }
+            .discover-copy h2 { margin: 10px 0 8px; font: 700 30px/1.08 var(--font-display); }
+            .discover-copy p { margin: 0 0 20px; color: color-mix(in srgb, var(--text-on-pine) 76%, transparent); }
+            .discover-copy .stamp { color: var(--brass); background: transparent; }
+            .discover-copy .btn { width: fit-content; border-color: var(--brass-edge); }
+            .discover-minis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .discover-mini {
+                display: grid; grid-template-columns: 98px minmax(0, 1fr); gap: 12px;
+                min-height: 92px; padding: 8px; color: var(--text-on-pine); text-decoration: none;
+                background: rgb(255 255 255 / .055); border: 1px solid rgb(255 255 255 / .13);
+                border-radius: var(--radius-paper);
+            }
+            .discover-mini img { width: 98px; height: 76px; object-fit: cover; border-radius: 2px; }
+            .discover-mini span { align-self: center; min-width: 0; }
+            .discover-mini small, .discover-mini em, .discover-mini b { display: block; }
+            .discover-mini small { color: var(--brass); font: 9px var(--font-mono); text-transform: uppercase; }
+            .discover-mini b { margin: 4px 0; font: 700 14px/1.15 var(--font-display); }
+            .discover-mini em { color: color-mix(in srgb, var(--text-on-pine) 62%, transparent); font: 10px var(--font-mono); }
+            .discover-empty { grid-template-columns: 1fr auto; align-items: center; }
+
             .ruler {
                 display: flex; align-items: center; gap: 16px; min-height: 30px; padding: 0 24px;
                 border-top: 1px solid var(--rail-edge);
@@ -516,6 +533,7 @@ public static class LandingEndpoints
             @media (max-width: 1000px) {
                 .hero, .story { grid-template-columns: minmax(0, 1fr); gap: 32px; }
                 .gallery, .features, .plans, .shelves { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .discover-preview { grid-template-columns: 1fr; }
             }
             @media (max-width: 720px) {
                 .rail-nav { display: none; }
@@ -523,6 +541,8 @@ public static class LandingEndpoints
                 section { padding-top: 44px; }
                 .gallery, .features, .plans, .shelves { grid-template-columns: minmax(0, 1fr); }
                 .band { flex-direction: column; align-items: flex-start; gap: 16px; }
+                .discover-minis { grid-template-columns: 1fr; }
+                .discover-preview { padding: 24px; }
                 /* Off the tilt at phone width: a rotated sheet in a single column reads as a bug,
                    not as a hand — there is no stack for it to be part of. */
                 .paper { transform: none; }
@@ -634,15 +654,16 @@ public static class LandingEndpoints
             """;
     }
 
-    private static string Render(bool ru, LandingContent c, string? analyticsKey, string analyticsHost)
+    private static string Render(bool ru, LandingContent c, DiscoveryEndpoints.Snapshot discovery,
+        string? analyticsKey, string analyticsHost)
     {
         string T(string russian, string english) => ru ? russian : english;
 
         var languageCount = Languages.ContentLanguages.Count;
         var networkCount = PublishNetworks.All.Count;
 
-        var title = T("Cedar Clerk — делайте игру, растите аудиторию. Один верстак.",
-                      "Cedar Clerk — build your game, grow your audience. One bench.");
+        var title = T("Cedar Clerk — публикуйтесь независимо. Показывайте, что создаёте.",
+                      "Cedar Clerk — publish independently. Show what you make.");
         var description = c.HeroSub.Pick(ru);
 
         // Stated as what the product does, not as adjectives about it, and in the devlog-first
@@ -720,6 +741,8 @@ public static class LandingEndpoints
         };
 
         var nav = new List<string>();
+        nav.Add($"""<a href="/discovery">{T("Discovery", "Discovery")}</a>""");
+        if (discovery.Settings.Enabled) nav.Add($"""<a href="#discover">{T("Сообщество", "Community")}</a>""");
         if (c.ShowShots) nav.Add($"""<a href="#shots">{T("Скриншоты", "Screenshots")}</a>""");
         if (c.ShowFeatures) nav.Add($"""<a href="#features">{T("Что умеет", "What it does")}</a>""");
         if (c.ShowPricing) nav.Add($"""<a href="#pricing">{T("Цены", "Pricing")}</a>""");
@@ -913,6 +936,8 @@ public static class LandingEndpoints
                         </div>
                     </div>
                 </section>
+
+                {DiscoveryEndpoints.RenderLandingPreview(ru, discovery)}
 
                 {gallery}
 

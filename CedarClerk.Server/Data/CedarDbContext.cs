@@ -58,6 +58,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<FeedbackEntry> FeedbackEntries => Set<FeedbackEntry>();
     public DbSet<Preset> Presets => Set<Preset>();
     public DbSet<LandingSettings> LandingSettings => Set<LandingSettings>();
+    public DbSet<DiscoverySettings> DiscoverySettings => Set<DiscoverySettings>();
     public DbSet<BlogSubscriber> BlogSubscribers => Set<BlogSubscriber>();
     public DbSet<BlogNotifyJob> BlogNotifyJobs => Set<BlogNotifyJob>();
     public DbSet<QueueSlot> QueueSlots => Set<QueueSlot>();
@@ -286,6 +287,8 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<WaitlistEntry>()
             .HasIndex(w => w.Email)
             .IsUnique();
+        builder.Entity<Project>().Property(p => p.DiscoveryCategory)
+            .HasDefaultValue(DiscoveryCategories.Other);
         // T-122 — the scan's upsert key: a file is the same file if it is at the same relative path
         // in the same project. Unique, so two scans racing cannot double a row.
         builder.Entity<AssetEntry>()

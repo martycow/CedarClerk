@@ -10,6 +10,13 @@ namespace CedarClerk.Server.Tenancy;
 /// </summary>
 public static class PlatformPaths
 {
+    /// <summary>Exact public pages that aggregate rows from consenting owners.</summary>
+    public static readonly IReadOnlyList<string> ExactPaths =
+    [
+        // ADR-243 — public only after the owner and item-level publication gates pass.
+        "/discovery",
+    ];
+
     /// <summary>The gate itself, readable so a test can hold it to its own shape.</summary>
     public static readonly IReadOnlyList<string> Prefixes =
     [
@@ -26,5 +33,6 @@ public static class PlatformPaths
     ];
 
     public static bool IsPlatform(PathString path) =>
-        Prefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
+        ExactPaths.Any(exact => path.Equals(exact, StringComparison.OrdinalIgnoreCase))
+        || Prefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
 }

@@ -4,7 +4,9 @@ import { ActivatedRoute } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { AuthService } from '../core/auth.service';
-import { ProjectDetail, ProjectsService, ShowcaseStats } from '../core/projects.service';
+import {
+    DISCOVERY_CATEGORIES, DiscoveryCategory, ProjectDetail, ProjectsService, ShowcaseStats,
+} from '../core/projects.service';
 import { IconComponent } from '../shared/icon.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -47,6 +49,8 @@ export class ProjectShowcaseComponent {
     slug = signal('');
     links = signal('');
     trailer = signal('');
+    discoveryCategory = signal<DiscoveryCategory>('other');
+    readonly discoveryCategories = DISCOVERY_CATEGORIES;
     gallery = signal('');
     galleryPickerOpen = signal(false);
     domain = signal('');
@@ -137,6 +141,7 @@ export class ProjectShowcaseComponent {
         this.links.set(project.showcaseLinks ?? '');
         this.gallery.set(project.showcaseGallery ?? '');
         this.trailer.set(project.showcaseTrailerUrl ?? '');
+        this.discoveryCategory.set(project.discoveryCategory ?? 'other');
         this.domain.set(project.customDomain ?? '');
         this.pressContact.set(project.pressContactEmail ?? '');
         this.pressPrice.set(project.pressPrice ?? '');
@@ -167,6 +172,7 @@ export class ProjectShowcaseComponent {
                 pressEngine: this.pressEngine().trim() || null,
                 pressGenre: this.pressGenre().trim() || null,
                 pressFactsheetRows: this.pressFactsheet().trim() || null,
+                discoveryCategory: this.discoveryCategory(),
             });
             const next: ProjectDetail = {
                 ...project,
@@ -180,6 +186,7 @@ export class ProjectShowcaseComponent {
                 pressEngine: this.pressEngine().trim() || null,
                 pressGenre: this.pressGenre().trim() || null,
                 pressFactsheetRows: this.pressFactsheet().trim() || null,
+                discoveryCategory: result.discoveryCategory,
             };
             this.project.set(next);
             this.fillFrom(next);

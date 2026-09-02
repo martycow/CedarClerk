@@ -531,6 +531,7 @@ public static partial class AdminEndpoints
 
         // AdminEndpoints.Landing.cs — inside this group, so the gate above covers it too (ADR-215).
         MapLandingAdmin(group);
+        MapDiscoveryAdmin(group);
     }
 
     public record HandledRequest(bool Handled);

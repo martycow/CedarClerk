@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-09-02
 source_of_truth_for: requirement invariants, non-requirements, blocked items
 guard: none
 ---
@@ -31,6 +31,10 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
   corrections (incremental re-translation).
 - **The blog is a first-class destination**, not a mirror: reactions and comments on fragments,
   tags, RSS, view/geo stats without storing raw IPs.
+- **Discovery never widens publication by inference.** An account must opt in, a Project must have a
+  live Showcase, and a post must already be public. Private posts, including tenant-local
+  `IsListedWhilePrivate` teasers, never enter the cross-account feed. Independent Blogs remain
+  eligible without a Project (ADR-243).
 - **Private posts stay private on every path**: registration-form gate, revocable access, watermark
   and copy-protection on the page — and any new public surface (OG tags, media endpoints — `T-174`,
   `T-088`) must decide its private-post behaviour *before* shipping.

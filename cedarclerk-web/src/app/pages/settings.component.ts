@@ -83,6 +83,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     profileBusy = signal(false);
     profileSaved = signal(false);
     profileError = signal<string | null>(null);
+    discoveryOptIn = false;
 
     socialTwitterUrlText = '';
     socialInstagramUrlText = '';
@@ -232,6 +233,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
+        this.discoveryOptIn = this.auth.discoveryOptIn();
         this.loadLinkTexts();
         this.headerSlot1 = this.auth.headerSlot1Type();
         this.headerSlot2 = this.auth.headerSlot2Type();
@@ -538,6 +540,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         switch (this.tab()) {
             case 'profile': return [
                 { id: 'sec-profile', label: t.profile.nav },
+                { id: 'sec-discovery', label: t.discovery.nav },
                 { id: 'sec-header-slots', label: t.headerSlots.nav },
                 { id: 'sec-cross-links', label: t.crossLinks.nav },
                 { id: 'sec-social-links', label: t.social.nav },
@@ -824,6 +827,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 telegramLinkText: this.linkTextDrafts[DEFAULT_PRIMARY_LANGUAGE]?.telegram ?? '',
                 blogLinkTexts: this.linkTextMap('blog'),
                 telegramLinkTexts: this.linkTextMap('telegram'),
+                discoveryOptIn: this.discoveryOptIn,
             });
             this.readBackProfile();
             this.profileSaved.set(true);
@@ -841,6 +845,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
+        this.discoveryOptIn = this.auth.discoveryOptIn();
         this.headerSlot1 = this.auth.headerSlot1Type();
         this.headerSlot2 = this.auth.headerSlot2Type();
         this.headerSlot3 = this.auth.headerSlot3Type();

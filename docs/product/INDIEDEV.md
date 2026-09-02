@@ -19,6 +19,11 @@ Nothing existing is replaced in the process. The module **adds** — the editor,
 
 ## Positioning
 
+Since ADR-243, this is Cedar Clerk's deepest craft-specific module inside a broader platform for
+independent makers. Projects and Devlogs participate in Discovery, but a personal Blog remains a
+complete first-class path without this module. The flag still removes only the project toolkit; it
+does not remove publishing or the shared Blog discovery lens.
+
 This is also the answer to `Q-1` in `docs/tasks/BACKLOG.md`, which had stood open since 30.07.2026: back then four focuses were named (bloggers, photographers/videomakers, writer assistance, indie gamedev assistance) and the wording of the fifth was lost. The brief picks one — **indie game developer** — and picks it for an honest reason: it is Marty himself, i.e. the only audience whose needs are checked here not by guesswork but by his own work.
 
 Importantly, the audience is not narrowed down to "a programmer" in the process. The brief's wording lists the roles of one person: programmer, game designer, producer, writer, sound designer, composer, director, marketer, analyst. The toolkit is addressed to this set of roles, not to a type of employment.

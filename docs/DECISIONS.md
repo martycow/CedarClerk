@@ -255,3 +255,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-240 — The sidebar carries every screen; the account menu holds the person](adr/ADR-240.md)
 - [ADR-241 — X carries pictures, and the matrix says what goes where](adr/ADR-241.md)
 - [ADR-242 — Publish / Export is the document's third state, not a door to a window](adr/ADR-242.md)
+- [ADR-243 — Discovery is an opt-in public commons for projects and independent blogs](adr/ADR-243.md)

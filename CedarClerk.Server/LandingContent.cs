@@ -152,17 +152,16 @@ public sealed class LandingContent
     /// </summary>
     public static class Defaults
     {
-        // ADR-135's positioning, kept word for word — the mock restated it, and this is the decision.
-        public static readonly LandingText Kicker = new("a devlog bench", "верстак девлогов");
+        public static readonly LandingText Kicker = new("publishing for independent makers", "публикация для независимых авторов");
 
         public static readonly LandingText HeroTitle = new(
-            "Build your game.<br>Grow your audience.<br>One bench.",
-            "Делайте игру.<br>Растите аудиторию.<br>Один верстак.");
+            "Build in public.<br>Keep your own home.<br>Get discovered.",
+            "Делайте открыто.<br>Храните у себя.<br>Находите читателей.");
 
         public static readonly LandingText HeroSub = new(
-            "Your game's tasks, sprints and builds turn into devlog posts — published to your blog, "
-            + $"Telegram, X, Bluesky and Discord in {Languages.ContentLanguages.Count} languages, from one editor.",
-            "Задачи, спринты и билды вашей игры превращаются в посты девлога — и уходят в блог, "
-            + $"Telegram, X, Bluesky и Discord на {Languages.ContentLanguages.Count} языках, из одного редактора.");
+            "Write a personal blog or connect every devlog to a project. Publish to your own site, "
+            + $"Telegram, X, Bluesky and Discord in {Languages.ContentLanguages.Count} languages — and join Discovery when you choose.",
+            "Ведите личный блог или связывайте каждый девлог с проектом. Публикуйте на своём сайте, "
+            + $"в Telegram, X, Bluesky и Discord на {Languages.ContentLanguages.Count} языках — и включайте Discovery, когда решите.");
     }
 }

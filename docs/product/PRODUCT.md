@@ -1,31 +1,52 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-09-02
 source_of_truth_for: what the product is, who it's for, pricing snapshot
 guard: none
 ---
 
 # Product
 
-> **Turning point, 10.08.2026 — the audience is now indie game developers.** Marty's out-of-repo brief (`Gamedev_Focused_Rework.md`) narrows the target audience from "creators publishing across channels" to one: the indie game developer. A post becomes one document type among several, living inside a **project**; around it grow tasks, sprints, an asset index, and game-design tooling. This answers `Q-1`, open since 30.07.2026.
+> **Turning point, 02.09.2026 — Cedar Clerk is a platform for independent makers.** Projects,
+> Devlogs and personal Blogs are three first-class ways to publish work; Discovery gives people who
+> opt in a shared place to be found. "Maker" is deliberately broad: games, apps, tools, comics,
+> illustration, film, animation, music, audio and hardware all fit.
 >
-> The sections below still describe the product **as it is today**, and they stay accurate — the module adds, it does not replace (ADR-101). What the module changes is in `docs/product/INDIEDEV.md`; **Phase 13's MUST list shipped 11.08.2026** (projects, document types, tasks, sprints, builds, asset index, desktop) and lives in `master` behind `Cedar:Modules:IndieDev` — the reversibility the brief asked for is the flag now, not a branch.
+> The 10.08 indie-game-developer turn remains a shipped specialist module, not the platform's outer
+> boundary. It adds Projects, document types, tasks, sprints, builds, the asset index and desktop
+> tooling behind `Cedar:Modules:IndieDev` (ADR-101); it does not make a Project mandatory for a Blog.
 
-## Who it's for after the turn
+## Who it's for
 
-An indie game developer who is also, by necessity, everything else: programmer, game designer, producer, writer, sound designer, composer, filmmaker, marketer and analyst. That list is Marty's own, and it is the point — the toolkit addresses a set of roles held by one person, not a job title.
+An independent developer or creator who makes something and wants one durable home for explaining
+the work: a solo game developer, an app or tool builder, an artist, filmmaker, musician, hardware
+maker, or a person whose work is simply a Blog. One person may still hold the roles of programmer,
+designer, producer, writer, composer and marketer; Cedar Clerk serves that working pattern rather
+than requiring one industry label.
 
-Why this audience and not one of the four floated in `Q-1` (bloggers, photo/video makers, writers, indie devs): it is the one whose needs are verified by doing the work rather than by guessing. Marty is the first user, and the only one so far.
+The common need is not a specific medium. It is to publish progress, keep an owned archive, reach
+several networks without rewriting the same update, and optionally let new readers discover the
+public result.
 
-The product name stays **Cedar Clerk** (Q-17 closed by Marty 18.08.2026): the platform keeps its name, and the indie-developer focus is expressed in a subtitle — a rename would drag the domain, the bot handle, the `.cedar` extension and a hundred ADRs behind it.
+The product name stays **Cedar Clerk** (Q-17): the name now carries the platform while each module
+can speak to its own craft.
 
 ## What Cedar Clerk is
 
-A hosted, write-once-publish-everywhere SaaS for creators who maintain a presence across multiple channels (see ADR-021, `docs/DECISIONS.md`; true self-hosting is a future option — `docs/product/MULTITENANCY.md` §4, `T-151`). A web rich-text editor (TipTap) is the spine — a post is written once and published to co-equal destinations: a Telegram channel via a shared bot, a hosted blog page with anchor-based reactions and comments on specific fragments, and **X and Bluesky cross-posting — live, with threads, per-target override text and scheduling** (ADR-077/079/092/094/099/100). The blog is not a "Telegram mirror" — it's a first-class output in its own right. Multilingual posts are a first-class feature, not a bolt-on: **nine content languages** (`Languages.ContentLanguages`) with a per-draft primary language (ADR-064/065) and AI auto-translate.
+A hosted publishing and project-presence SaaS for independent makers. A web rich-text editor (TipTap)
+is the spine: write once, publish to Telegram, a hosted Blog, X and Bluesky, and keep the owned page
+as the durable source. A Project adds Devlogs, planning and a public Showcase; an independent Blog
+needs no Project. Discovery is an opt-in lens over work that is already public (ADR-243). True
+self-hosting remains a future option (`docs/product/MULTITENANCY.md` §4, `T-151`). Multilingual
+content is first-class: **nine content languages** (`Languages.ContentLanguages`) with a per-Draft
+primary language (ADR-064/065) and AI auto-translate.
 
 Telegram is currently the most-developed output (furthest along, most battle-tested — see the Bot API 10.2 renderer work in `docs/DECISIONS.md` ADR-018/019) but is not the product identity; the architecture is channel-agnostic at the core (`docs/tech/ARCHITECTURE.md` — "one document, many renderers").
 
-Currently a single-operator product (Marty is both the builder and the first user, running his own Telegram channel and Dev Diary/blog through it). The multi-tenant machinery (Phase 6) is code-complete — ownership filtering, quotas, billing — but **registration stays invite-only on purpose** until the gates in `docs/product/BUSINESS.md` §2 close (chiefly `T-172` quotas-vs-disk and `T-149` untested restore). Strangers meet a server-rendered landing at `/` (`LandingEndpoints`, prices from `PlanLimitations`); repositioning it devlog-first in English with a waitlist is `T-154`.
+Currently a single-operator product (Marty is both the builder and the first user). The multi-tenant
+machinery is code-complete — ownership filtering, quotas and billing — but **registration stays
+invite-only on purpose** until the gates in `docs/product/BUSINESS.md` §2 close. Strangers meet the
+server-rendered landing at `/`; `/discovery` introduces opted-in public Projects, Devlogs and Blogs.
 
 ## What the publishing half offers
 
@@ -59,8 +80,11 @@ Payment providers: **Stripe is live and proven with real money** (first real pay
 Carried forward from planning sessions — genuine unknowns, not implementation gaps:
 > TODO (Marty): name for the shared Telegram bot (public-facing, used for onboarding every new user's channel).
 > TODO (Marty): domain strategy — direction now resolved (ADR-020: separate dedicated domain for tenant blogs, working name `cedarclerk.app`), but three sub-questions remain open: exact domain name; whether `blog.mooexe.dev` migrates or stays Marty's personal blog; subdomain vs. path scheme for tenants.
-> ~~TODO (Marty): target market positioning~~ — **answered 10.08.2026**: indie game developers, see the top of this file and `docs/product/INDIEDEV.md`. Competitors and success metrics remain unarticulated.
-> ~~TODO (Marty): long-term vision beyond Phase 7/8~~ — **answered 10.08.2026**: the indie-gamedev toolkit is the long-term direction (Phase 13). Phase 7 (Entertainer role) is not cancelled, just no longer the horizon.
+> ~~TODO (Marty): target market positioning~~ — **answered 02.09.2026**: independent makers, with
+> indie game development as the deepest specialist module rather than the whole addressable audience.
+> Competitors and success metrics remain unarticulated.
+> ~~TODO (Marty): long-term vision beyond Phase 7/8~~ — **answered 02.09.2026**: an owned publishing
+> home plus optional public discovery, extended by craft-specific project modules.
 > ~~TODO (Marty): product name~~ — **answered 18.08.2026**: the name stays Cedar Clerk (Q-17 closed), the focus lives in a subtitle.
 
 Lifetime-deal pricing is resolved: yes, via the Founder/Lifetime invite-code plan (ADR-022, `docs/DECISIONS.md`) — the only open piece is the invite code's actual value.

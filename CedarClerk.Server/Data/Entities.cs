@@ -81,6 +81,12 @@ public class ApplicationUser : IdentityUser
     public bool NotifyOnEngagement { get; set; }
 
     /// <summary>
+    /// ADR-243 — explicit consent for otherwise-public work to appear in the platform-wide
+    /// Discovery feed. Publishing a blog or Showcase does not imply this; false is the default.
+    /// </summary>
+    public bool DiscoveryOptIn { get; set; }
+
+    /// <summary>
     /// Profile picture (IF1) — a /media/... path produced by the normal asset upload, so it goes
     /// through the same type whitelist, storage quota and public serving as post media. Null =
     /// the initial-letter avatar the app has always drawn.
@@ -1403,5 +1409,20 @@ public class LandingSettings
     public string? RoadmapJson { get; set; }
     public string? StoryJson { get; set; }
 
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>The platform-owned switches and bilingual copy for the public Discovery page.</summary>
+public class DiscoverySettings
+{
+    public int Id { get; set; } = 1;
+    public bool Enabled { get; set; } = true;
+    public bool ShowScreenshotSaturday { get; set; } = true;
+    public bool ShowProjects { get; set; } = true;
+    public bool ShowBlogs { get; set; } = true;
+    public string? TitleEn { get; set; }
+    public string? TitleRu { get; set; }
+    public string? IntroEn { get; set; }
+    public string? IntroRu { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

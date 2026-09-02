@@ -34,7 +34,9 @@ public static class AuthEndpoints
         // rather than one language per request: the page has a single Save, and a request per
         // language would mean a partial save the moment one of them failed.
         Dictionary<string, string>? BlogLinkTexts = null,
-        Dictionary<string, string>? TelegramLinkTexts = null);
+        Dictionary<string, string>? TelegramLinkTexts = null,
+        // Nullable so an older client cannot turn off an existing opt-in by omitting the field.
+        bool? DiscoveryOptIn = null);
     public record NotificationPrefsRequest(bool NotifyOnEngagement);
     public record ToolbarLayoutRequest(string? LayoutJson);
     public record AppearanceRequest(string? PrefsJson);
@@ -236,6 +238,7 @@ public static class AuthEndpoints
                 telegramUsername = appUser?.TelegramUsername,
                 telegramLinkedAt = appUser?.TelegramLinkedAt,
                 notifyOnEngagement = appUser?.NotifyOnEngagement ?? false,
+                discoveryOptIn = appUser?.DiscoveryOptIn ?? false,
                 postSignature = appUser?.PostSignature,
                 postSignatureUrl = appUser?.PostSignatureUrl,
                 postSignatureTexts = LocalizedTextMap.All(appUser?.PostSignatureTranslationsJson),
@@ -552,6 +555,8 @@ public static class AuthEndpoints
                 user.BlogLinkTextTranslationsJson = BuildLinkTextMap(req.BlogLinkTexts);
             if (req.TelegramLinkTexts is not null)
                 user.TelegramLinkTextTranslationsJson = BuildLinkTextMap(req.TelegramLinkTexts);
+            if (req.DiscoveryOptIn is not null)
+                user.DiscoveryOptIn = req.DiscoveryOptIn.Value;
             await users.UpdateAsync(user);
 
             return Results.Ok(new
@@ -577,6 +582,7 @@ public static class AuthEndpoints
                 telegramLinkText = user.TelegramLinkText,
                 blogLinkTexts = LocalizedTextMap.All(user.BlogLinkTextTranslationsJson),
                 telegramLinkTexts = LocalizedTextMap.All(user.TelegramLinkTextTranslationsJson),
+                discoveryOptIn = user.DiscoveryOptIn,
             });
         })
         .RequireAuthorization();

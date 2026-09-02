@@ -301,6 +301,7 @@ app.MapWhen(TenantRouting.IsTenantRequest,
 app.MapAuthEndpoints();
 app.MapExternalAuthEndpoints();
 app.MapWaitlistEndpoint();
+app.MapDiscoveryEndpoint();
 app.MapFeedbackEndpoints();
 app.MapPresetEndpoints();
 app.MapDraftEndpoints();

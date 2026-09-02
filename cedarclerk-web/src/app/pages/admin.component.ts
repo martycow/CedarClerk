@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-    AdminService, AdminAuditEntry, AdminBilling, AdminFeedbackEntry, AdminInviteCode, AdminLanding, AdminPost,
+    AdminService, AdminAuditEntry, AdminBilling, AdminDiscovery, AdminFeedbackEntry, AdminInviteCode, AdminLanding, AdminPost,
     AdminSummary, AdminUsage, AdminUser, AdminWaitlistEntry, LandingTextPair,
 } from '../core/admin.service';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -18,7 +18,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { avatarFill, avatarInitial as initialOf } from '../core/avatar-color.util';
 
-export type AdminTab = 'users' | 'invites' | 'posts' | 'landing' | 'reports' | 'feedback';
+export type AdminTab = 'users' | 'invites' | 'posts' | 'landing' | 'discovery' | 'reports' | 'feedback';
 
 // The landing editor's own shapes (ADR-215). A roadmap column carries a list of
 // bilingual items, and a list of pairs is a miserable thing to edit field by field —
@@ -99,6 +99,17 @@ export class AdminComponent implements OnInit {
     roadmapCols: RoadmapVm[] = [];
     storySteps: StoryVm[] = [];
 
+    discovery = signal<AdminDiscovery | null>(null);
+    discoveryBusy = signal(false);
+    discoverySaved = signal(false);
+    df = {
+        enabled: true,
+        showScreenshotSaturday: true,
+        showProjects: true,
+        showBlogs: true,
+        titleEn: '', titleRu: '', introEn: '', introRu: '',
+    };
+
     async ngOnInit() {
         await this.reload();
         this.loading.set(false);
@@ -140,6 +151,7 @@ export class AdminComponent implements OnInit {
     setTab(tab: AdminTab) {
         this.tab.set(tab);
         if (tab === 'landing' && !this.landing()) void this.loadLanding();
+        if (tab === 'discovery' && !this.discovery()) void this.loadDiscovery();
         if (tab === 'feedback' && this.feedback().length === 0) void this.loadFeedback();
     }
 
@@ -151,6 +163,7 @@ export class AdminComponent implements OnInit {
             { id: 'posts', label: labels.posts.title, badge: this.posts().length },
             // The badge is the waitlist, which is the one countable thing the landing produces.
             { id: 'landing', label: labels.landing.title, badge: this.landing()?.waitlist },
+            { id: 'discovery', label: labels.discovery.title, badge: this.discovery()?.eligiblePosts },
             // Reports is three tables and a journal, not a countable set of things.
             { id: 'reports', label: labels.reports.title },
             { id: 'feedback', label: this.t().feedbackForm.inbox, badge: this.feedback().filter(f => !f.handledAt).length },
@@ -433,6 +446,53 @@ export class AdminComponent implements OnInit {
             this.error.set(httpErrorMessage(e, this.t().admin.actionFailed));
         } finally {
             this.landingBusy.set(false);
+        }
+    }
+
+    async loadDiscovery() {
+        this.discoveryBusy.set(true);
+        try {
+            const data = await this.api.discovery();
+            this.discovery.set(data);
+            this.df = {
+                enabled: data.enabled,
+                showScreenshotSaturday: data.showScreenshotSaturday,
+                showProjects: data.showProjects,
+                showBlogs: data.showBlogs,
+                titleEn: data.titleEn ?? '',
+                titleRu: data.titleRu ?? '',
+                introEn: data.introEn ?? '',
+                introRu: data.introRu ?? '',
+            };
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
+        } finally {
+            this.discoveryBusy.set(false);
+        }
+    }
+
+    async saveDiscovery() {
+        if (this.discoveryBusy()) return;
+        this.discoveryBusy.set(true);
+        this.discoverySaved.set(false);
+        this.error.set('');
+        try {
+            await this.api.saveDiscovery({
+                enabled: this.df.enabled,
+                showScreenshotSaturday: this.df.showScreenshotSaturday,
+                showProjects: this.df.showProjects,
+                showBlogs: this.df.showBlogs,
+                titleEn: this.df.titleEn.trim() || null,
+                titleRu: this.df.titleRu.trim() || null,
+                introEn: this.df.introEn.trim() || null,
+                introRu: this.df.introRu.trim() || null,
+            });
+            this.discoverySaved.set(true);
+            await this.loadDiscovery();
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().admin.actionFailed));
+        } finally {
+            this.discoveryBusy.set(false);
         }
     }
 

@@ -23,7 +23,8 @@ public static class ProjectEndpoints
     public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
         string? TrailerUrl, string? CustomDomain,
         string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
-        string? PressGenre = null, string? PressFactsheetRows = null);
+        string? PressGenre = null, string? PressFactsheetRows = null,
+        string? DiscoveryCategory = null);
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title, Guid? PresetId);
@@ -95,6 +96,7 @@ public static class ProjectEndpoints
                 p.Name,
                 p.Description,
                 p.ProjectType,
+                p.DiscoveryCategory,
                 p.CoverUrl,
                 p.CreatedAt,
                 p.ArchivedAt,
@@ -143,6 +145,7 @@ public static class ProjectEndpoints
                 project.Name,
                 project.Description,
                 project.ProjectType,
+                project.DiscoveryCategory,
                 project.CoverUrl,
                 project.TeamId,
                 project.CreatedAt,
@@ -199,7 +202,14 @@ public static class ProjectEndpoints
             var name = req.Name.Trim();
             var description = req.Description?.Trim();
             if (string.IsNullOrEmpty(description)) description = preset?.Description ?? "";
-            var project = new Project { OwnerId = uid, Name = name, Description = description, ProjectType = projectType };
+            var project = new Project
+            {
+                OwnerId = uid,
+                Name = name,
+                Description = description,
+                ProjectType = projectType,
+                DiscoveryCategory = DiscoveryCategories.ForProjectType(projectType),
+            };
 
             var title = string.IsNullOrWhiteSpace(req.DocumentTitle)
                 ? preset?.DocumentTitle ?? name
@@ -260,6 +270,12 @@ public static class ProjectEndpoints
             if (trailer.Length > 0 && YouTubeLink.VideoId(trailer) is null)
                 return Results.BadRequest(new { error = ErrorMessages.ShowcaseTrailerNotYouTube });
             project.ShowcaseTrailerUrl = trailer.Length == 0 ? null : trailer;
+            if (req.DiscoveryCategory is not null)
+            {
+                if (!DiscoveryCategories.IsKnown(req.DiscoveryCategory))
+                    return Results.BadRequest(new { error = ErrorMessages.UnknownDiscoveryCategory(req.DiscoveryCategory) });
+                project.DiscoveryCategory = req.DiscoveryCategory;
+            }
 
             // Wave 1 item 6 — the press page's fields, every one optional. Bounded here, rendered
             // there; an empty field is a section the page omits.
@@ -291,7 +307,13 @@ public static class ProjectEndpoints
             {
                 project.ShowcaseSlug = null;
                 await db.SaveChangesAsync();
-                return Results.Ok(new { showcaseSlug = (string?)null, url = (string?)null, customDomain = project.CustomDomain });
+                return Results.Ok(new
+                {
+                    showcaseSlug = (string?)null,
+                    url = (string?)null,
+                    customDomain = project.CustomDomain,
+                    discoveryCategory = project.DiscoveryCategory,
+                });
             }
 
             var slug = SlugGenerator.Slugify(string.IsNullOrWhiteSpace(req.Slug) ? project.Name : req.Slug);
@@ -311,6 +333,7 @@ public static class ProjectEndpoints
                 showcaseSlug = slug,
                 url = blogHost is null ? null : $"https://{blogHost}/games/{slug}",
                 customDomain = project.CustomDomain,
+                discoveryCategory = project.DiscoveryCategory,
             });
         });
 

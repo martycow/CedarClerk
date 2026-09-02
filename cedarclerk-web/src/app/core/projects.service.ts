@@ -21,6 +21,11 @@ import { Sprint } from './sprints.service';
 export type ProjectType = 'empty' | 'blog' | 'fullgame' | 'product' | 'jam' | 'prototype' | 'released';
 export const PROJECT_TYPES: ProjectType[] = ['empty', 'blog', 'fullgame', 'product'];
 
+export type DiscoveryCategory = 'games' | 'apps-tools' | 'comics-art' | 'film-animation' | 'music-audio' | 'hardware' | 'other';
+export const DISCOVERY_CATEGORIES: DiscoveryCategory[] = [
+    'games', 'apps-tools', 'comics-art', 'film-animation', 'music-audio', 'hardware', 'other',
+];
+
 /** One of CedarClerk.Core.DocumentTypes. `post` is what every draft written before the module is. */
 export type DocumentType = 'post' | 'regular' | 'design' | 'script' | 'plot' | 'changelog' | 'note';
 export const DOCUMENT_TYPES: DocumentType[] = ['post', 'regular', 'design', 'script', 'plot', 'changelog', 'note'];
@@ -69,6 +74,7 @@ export interface ProjectSummary {
     name: string;
     description: string;
     projectType: ProjectType;
+    discoveryCategory?: DiscoveryCategory;
     coverUrl: string | null;
     createdAt: string;
     archivedAt: string | null;
@@ -131,6 +137,7 @@ export interface ShowcaseInput {
     pressEngine: string | null;
     pressGenre: string | null;
     pressFactsheetRows: string | null;
+    discoveryCategory?: DiscoveryCategory;
 }
 
 export interface ShowcaseStats {
@@ -179,7 +186,7 @@ export class ProjectsService {
 
     /** T-159 (ADR-134) — the public game page's switch; the server slugifies and answers the URL. */
     setShowcase(id: string, input: ShowcaseInput) {
-        return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null; customDomain: string | null }>(
+        return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null; customDomain: string | null; discoveryCategory: DiscoveryCategory }>(
             `/api/projects/${id}/showcase`, input));
     }
 

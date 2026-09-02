@@ -64,6 +64,22 @@
     box-shadow: none;
 }
 
+.discovery-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+}
+
+.discovery-stat {
+    padding: var(--space-3) var(--space-4);
+    box-shadow: none;
+}
+
+@media (max-width: 700px) {
+    .discovery-summary { grid-template-columns: 1fr; }
+}
+
 .summary-value {
     font-size: var(--fs-20);
     font-weight: 700;

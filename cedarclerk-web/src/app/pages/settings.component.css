@@ -5,6 +5,38 @@
     min-height: 0;
 }
 
+.switch-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--rule-ink-soft);
+    border-radius: var(--radius-paper);
+    background: var(--alt);
+    cursor: pointer;
+}
+
+.switch-row input {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--accent);
+}
+
+.switch-row span,
+.switch-row b,
+.switch-row small {
+    display: block;
+}
+
+.switch-row small {
+    margin-top: var(--space-1);
+    color: var(--t2);
+    font-size: var(--fs-meta);
+    font-weight: 400;
+}
+
 .spacer {
     flex: 1;
 }

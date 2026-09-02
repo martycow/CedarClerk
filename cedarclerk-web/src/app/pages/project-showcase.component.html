@@ -39,6 +39,17 @@
                                    [value]="slug()" (valueChange)="slug.set($any($event) ?? '')" />
 
                         <div class="field">
+                            <label class="field-label" for="discovery-category">{{ t().projects.edit.discoveryCategory }}</label>
+                            <select id="discovery-category" [ngModel]="discoveryCategory()"
+                                    (ngModelChange)="discoveryCategory.set($event)">
+                                @for (category of discoveryCategories; track category) {
+                                <option [value]="category">{{ $any(t().projects.edit.discoveryCategories)[category] }}</option>
+                                }
+                            </select>
+                            <p class="hint">{{ t().projects.edit.discoveryCategoryHint }}</p>
+                        </div>
+
+                        <div class="field">
                             <label class="field-label" for="showcase-links">{{ t().projects.edit.showcaseLinksLabel }}</label>
                             <textarea id="showcase-links" rows="3" maxlength="2000"
                                       [ngModel]="links()" (ngModelChange)="links.set($event)"

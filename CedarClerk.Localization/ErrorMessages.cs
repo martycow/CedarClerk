@@ -360,6 +360,9 @@ public static class ErrorMessages
     public static string UnknownProjectType(string type) =>
         Ru($"Неизвестный тип проекта «{type}».", $"Unknown project type '{type}'.");
 
+    public static string UnknownDiscoveryCategory(string category) =>
+        Ru($"Неизвестная категория Discovery «{category}».", $"Unknown Discovery category '{category}'.");
+
     public static string UnknownDocumentType(string type) =>
         Ru($"Неизвестный тип документа «{type}».", $"Unknown document type '{type}'.");
 

@@ -50,6 +50,7 @@
                     }
                 </div>
             </section>
+
             }
 
             <!-- ============ PROFILE ============ -->
@@ -163,6 +164,24 @@
                     @if (signatureError()) { <p class="field-error">{{ signatureError() }}</p> }
                     @if (translateTextsError()) { <p class="field-error">{{ translateTextsError() }}</p> }
                 </div>
+            </section>
+            }
+
+            @if (tab() === 'profile') {
+            <section id="sec-discovery" class="card settings-card">
+                <h2>{{ t().settings.discovery.title }}</h2>
+                <p class="settings-lead">{{ t().settings.discovery.lead }}</p>
+                <label class="switch-row">
+                    <input type="checkbox" [(ngModel)]="discoveryOptIn">
+                    <span>
+                        <b>{{ t().settings.discovery.toggle }}</b>
+                        <small>{{ t().settings.discovery.hint }}</small>
+                    </span>
+                </label>
+                <p class="field-hint">
+                    {{ t().settings.discovery.publicOnly }}
+                    <a href="/discovery" target="_blank" rel="noopener">{{ t().settings.discovery.open }}</a>
+                </p>
             </section>
             }
 

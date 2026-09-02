@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-02 — Discovery for independent makers (T-369, ADR-243)
+
+The public front door now speaks to independent makers of games, apps, tools, art, film, music,
+hardware and personal Blogs. The landing keeps its waitlist and product proof, but adds a live
+privacy-filtered Discovery preview and a direct public route. `/discovery` is a server-rendered
+shuffled mix with search, Project/Blog lenses, a `#ScreenshotSaturday` stage, independent Blog and
+Project Devlog sections, Project Showcase cards and fixed bilingual categories.
+
+Consent is explicit at both levels. Settings → Profile adds an account opt-in that defaults off;
+Discovery still admits only a live Showcase or a public Blog post, and never admits a private post
+or a tenant-local `IsListedWhilePrivate` teaser. Showcase owns the Project category. Admin →
+Discovery can pause the page or its three public sections and edit its bilingual introduction, but
+cannot opt an author in. The schema change is `AddDiscovery`; eight focused backend privacy/type
+tests and the frontend suite cover the new contract.
+
 ## 2026-09-02 — Publish / Export is the third tab
 
 The editor's third tab is a real state: `?tab=publish` selects it, deep-links to it, and holds the

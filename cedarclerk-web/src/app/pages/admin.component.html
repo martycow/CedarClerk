@@ -345,6 +345,66 @@ the Posts Manager and inherit its density through the cascade.-->
             }
             }
 
+            @if (tab() === 'discovery') {
+            @if (discoveryBusy() && !discovery()) {
+            <p class="hint in-card">{{ t().common.loading }}</p>
+            } @else if (discovery(); as D) {
+            <div class="landing-bar">
+                <a class="landing-preview" href="/discovery" target="_blank" rel="noopener">
+                    {{ t().admin.discovery.preview }} &rarr;
+                </a>
+                <span class="spacer"></span>
+                @if (discoverySaved()) { <span class="chip">{{ t().admin.discovery.saved }}</span> }
+                <app-button variant="pine" size="sm" [disabled]="discoveryBusy()" (clicked)="saveDiscovery()">
+                    {{ t().admin.discovery.save }}
+                </app-button>
+            </div>
+            <p class="field-hint-inline">{{ t().admin.discovery.intro }}</p>
+
+            <div class="discovery-summary">
+                <div class="card is-tinted discovery-stat">
+                    <span class="summary-value">{{ D.optedInAuthors }}</span>
+                    <span class="summary-label">{{ t().admin.discovery.authors }}</span>
+                </div>
+                <div class="card is-tinted discovery-stat">
+                    <span class="summary-value">{{ D.eligibleProjects }}</span>
+                    <span class="summary-label">{{ t().admin.discovery.projects }}</span>
+                </div>
+                <div class="card is-tinted discovery-stat">
+                    <span class="summary-value">{{ D.eligiblePosts }}</span>
+                    <span class="summary-label">{{ t().admin.discovery.posts }}</span>
+                </div>
+            </div>
+
+            <h2 class="label landing-section-title">{{ t().admin.discovery.sections }}</h2>
+            <div class="landing-toggles">
+                <label><input type="checkbox" [(ngModel)]="df.enabled"> {{ t().admin.discovery.enabled }}</label>
+                <label><input type="checkbox" [(ngModel)]="df.showScreenshotSaturday"> #ScreenshotSaturday</label>
+                <label><input type="checkbox" [(ngModel)]="df.showProjects"> {{ t().admin.discovery.projectShowcase }}</label>
+                <label><input type="checkbox" [(ngModel)]="df.showBlogs"> {{ t().admin.discovery.independentBlogs }}</label>
+            </div>
+            <p class="field-hint-inline">{{ t().admin.discovery.optInNote }}</p>
+
+            <h2 class="label landing-section-title">{{ t().admin.discovery.copy }}</h2>
+            <div class="landing-fields">
+                <div class="lf">
+                    <label>{{ t().admin.discovery.headline }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><input [(ngModel)]="df.titleEn" [placeholder]="D.defaults.title.en || ''" maxlength="160">
+                        <span class="lf-lang">RU</span><input [(ngModel)]="df.titleRu" [placeholder]="D.defaults.title.ru || ''" maxlength="160">
+                    </div>
+                </div>
+                <div class="lf">
+                    <label>{{ t().admin.discovery.description }}</label>
+                    <div class="lf-pair">
+                        <span class="lf-lang">EN</span><textarea rows="3" [(ngModel)]="df.introEn" [placeholder]="D.defaults.intro.en || ''" maxlength="400"></textarea>
+                        <span class="lf-lang">RU</span><textarea rows="3" [(ngModel)]="df.introRu" [placeholder]="D.defaults.intro.ru || ''" maxlength="400"></textarea>
+                    </div>
+                </div>
+            </div>
+            }
+            }
+
             @if (tab() === 'reports') {
             @if (billing(); as b) {
             <h2 class="label">{{ t().admin.reports.revenue }}</h2>

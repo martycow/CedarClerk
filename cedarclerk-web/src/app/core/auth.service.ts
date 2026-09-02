@@ -17,6 +17,7 @@ interface MeResponse {
     email: string; blogUrl?: string | null; createdAt: string | null; emailConfirmed?: boolean; isAdmin: boolean; planTier: string | null; planExpiresAt: string | null; trialUsed: boolean;
     telegramLinked: boolean; telegramUsername: string | null; telegramLinkedAt: string | null;
     notifyOnEngagement: boolean;
+    discoveryOptIn?: boolean;
     postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
     authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
     headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
@@ -75,6 +76,7 @@ export class AuthService {
     readonly telegramUsername = signal<string | null>(null);
     readonly telegramLinkedAt = signal<string | null>(null);
     readonly notifyOnEngagement = signal(false);
+    readonly discoveryOptIn = signal(false);
     readonly postSignature = signal<string | null>(null);
     readonly postSignatureUrl = signal<string | null>(null);
     // FI5 — the same signature in the other content languages, keyed by language code; a
@@ -211,6 +213,7 @@ export class AuthService {
         this.telegramUsername.set(me.telegramUsername);
         this.telegramLinkedAt.set(me.telegramLinkedAt);
         this.notifyOnEngagement.set(me.notifyOnEngagement);
+        this.discoveryOptIn.set(me.discoveryOptIn ?? false);
         this.postSignature.set(me.postSignature);
         this.postSignatureUrl.set(me.postSignatureUrl);
         this.postSignatureTexts.set(me.postSignatureTexts ?? {});
@@ -257,6 +260,7 @@ export class AuthService {
         this.telegramUsername.set(null);
         this.telegramLinkedAt.set(null);
         this.notifyOnEngagement.set(false);
+        this.discoveryOptIn.set(false);
         this.postSignature.set(null);
         this.postSignatureUrl.set(null);
         this.postSignatureTexts.set({});
@@ -312,6 +316,7 @@ export class AuthService {
         blogLinkText?: string; telegramLinkText?: string;
         // The other languages, whole — one Save sends every language it edited.
         blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
+        discoveryOptIn?: boolean;
     }): Promise<void> {
         const res = await firstValueFrom(this.http.post<{
             authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
@@ -321,6 +326,7 @@ export class AuthService {
             socialTelegramUrl: string | null; socialThreadsUrl: string | null; socialBlueskyUrl: string | null; socialRedditUrl: string | null; socialSteamUrl: string | null; socialItchUrl: string | null;
             blogLinkText: string | null; telegramLinkText: string | null;
             blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
+            discoveryOptIn?: boolean;
         }>('/api/auth/profile', profile));
         this.authorDisplayName.set(res.authorDisplayName);
         this.profileUrl.set(res.profileUrl);
@@ -329,6 +335,7 @@ export class AuthService {
         this.blogLinkTexts.set(res.blogLinkTexts ?? {});
         this.telegramLinkTexts.set(res.telegramLinkTexts ?? {});
         this.telegramLinkText.set(res.telegramLinkText);
+        this.discoveryOptIn.set(res.discoveryOptIn ?? this.discoveryOptIn());
         this.headerSlot1Type.set(res.headerSlot1Type);
         this.headerSlot2Type.set(res.headerSlot2Type);
         this.headerSlot3Type.set(res.headerSlot3Type);

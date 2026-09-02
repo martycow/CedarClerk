@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-09-01
+last_verified: 2026-09-02
 source_of_truth_for: what is in progress now, decisions waiting on Marty, which verification checks are still outstanding (how to run them: docs/tech/QA.md)
 guard: none
 ---
@@ -13,6 +13,7 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [x] `T-369` Turn the public front door into an independent-maker platform — Landing now names Projects, Devlogs and personal Blogs; `/discovery` is a server-rendered shuffled public commons with `#ScreenshotSaturday`, Project Showcase, Blog/Devlog lenses, search and fixed Project categories; Settings owns an off-by-default account opt-in, Showcase owns the category, and Admin owns the page copy and section switches. ADR-243 #growth #discovery #blog #phase13 P0
 - [x] `T-129` + `T-155` The reference board, and a project that can have other people on it — the moodboard and the whiteboard were one thing and are built as one: boards of notes, images, frames and links under a single pan/zoom transform, live over SignalR, last writer wins by an item version, with a membership that grants the canvas and nothing else and a fourth case on the media gate so a picture on a shared board is readable by the board's people. ADR-217/218/219. **What it shipped without is `T-301`…`T-316`, and the biggest of them is `T-301`**: the shell has no notion of a shared project, so a member sees seven hooks that 404 #canvas #phase13 P1
 - [x] Showcase gets its own screen, and three layout defects go with it — `/projects/:id/showcase` with a rail hook, because the settings modal had a whole site hidden behind its scroll bar; the tool wall cut to one width for every hook; `accent-color` on checkboxes so the export modal's language ticks stop rendering OS blue; Settings' language rows; and a 401 interceptor that ends the session and returns the reader to the URL they were on rather than leaving an open screen silently dead #ui P1
 - [x] `T-283` Assets belong to projects — Asset.ProjectId with null as a real bucket, a file follows the document that uses it, a sweep button for the backlog, a project strip on the library and a source strip (Uploaded / On disk) on the project's Assets screen. Closes "blog assets did not move" and "shared assets are unreachable". ADR-204 #assets #phase13 P0
