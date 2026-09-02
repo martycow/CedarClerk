@@ -141,10 +141,7 @@ public class ApplicationUser : IdentityUser
     public HeaderSlotType? HeaderSlot2Type { get; set; }
     public HeaderSlotType? HeaderSlot3Type { get; set; }
 
-    // Social profile links — purely informational/reference for now (Settings > Profile), not
-    // yet wired into any blog/header display. Kept as individual named columns rather than a
-    // JSON blob to match the existing flat-column convention for profile fields (AuthorDisplayName
-    // etc. above).
+    // Named columns keep each public profile destination explicit and independently removable.
     public string? SocialTwitterUrl { get; set; }
     public string? SocialInstagramUrl { get; set; }
     public string? SocialFacebookUrl { get; set; }

@@ -13,14 +13,15 @@ public static partial class BlogEndpoints
 {
     private static async Task RenderPressAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var channel = await GetBlogChannelInfoAsync(db, site);
+        var header = await GetBlogHeaderInfoAsync(db, site);
+        var channel = header.Channel;
         var project = await FindShowcaseAsync(db, site, slug);
         if (project is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
             await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>",
-                Languages.Russian, RenderHeader(channel, Languages.Russian)));
+                Languages.Russian, RenderHeader(header, Languages.Russian)));
             return;
         }
 
@@ -183,6 +184,6 @@ public static partial class BlogEndpoints
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(PageShell($"{project.Name} — press kit", sb.ToString(), pageLang,
-            RenderHeader(channel, pageLang), meta, mainClass: "site-main--press"));
+            RenderHeader(header, pageLang), meta, mainClass: "site-main--press"));
     }
 }

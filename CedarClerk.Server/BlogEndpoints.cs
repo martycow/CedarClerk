@@ -29,6 +29,8 @@ public static partial class BlogEndpoints
     private record CommentRequest(string? AnnotationId, string? AuthorName, string Text, Guid? ParentCommentId = null);
     private record RegistrationRequest(string? Name, string? Nickname, string? Email, string? SocialLink, Dictionary<string, string>? Answers);
     private record BlogChannelInfo(string Title, string? Username, int? MemberCount, string? AvatarUrl);
+    private record BlogAuthorLink(string Label, string Url);
+    private record BlogHeaderInfo(BlogChannelInfo? Channel, IReadOnlyList<BlogAuthorLink> AuthorLinks);
     private record MarkSeenRequest(DateTime? SeenAt);
     // ADR-065 — language → the fingerprint of the version the owner was shown before confirming.
     // NotifySubscribers is the export modal's opt-in toggle: mailing the blog-wide list is a
@@ -1106,6 +1108,57 @@ public static partial class BlogEndpoints
         return new BlogChannelInfo(channel.Title, channel.Username, memberCount, channel.AvatarPath is null ? null : "/media/" + channel.AvatarPath);
     }
 
+    private static async Task<BlogHeaderInfo> GetBlogHeaderInfoAsync(CedarDbContext db, BlogSite site)
+    {
+        var channel = await GetBlogChannelInfoAsync(db, site);
+        var owner = await db.Users
+            .Where(u => u.Id == site.OwnerId)
+            .Select(u => new
+            {
+                u.ProfileUrl,
+                u.SocialTwitterUrl,
+                u.SocialInstagramUrl,
+                u.SocialFacebookUrl,
+                u.SocialYoutubeUrl,
+                u.SocialGithubUrl,
+                u.SocialTelegramUrl,
+                u.SocialThreadsUrl,
+                u.SocialBlueskyUrl,
+                u.SocialRedditUrl,
+                u.SocialSteamUrl,
+                u.SocialItchUrl,
+            })
+            .SingleOrDefaultAsync();
+
+        if (owner is null)
+            return new BlogHeaderInfo(channel, []);
+
+        var links = new List<BlogAuthorLink>();
+        AddPublicAuthorLink(links, "Website", owner.ProfileUrl);
+        AddPublicAuthorLink(links, "X", owner.SocialTwitterUrl);
+        AddPublicAuthorLink(links, "Instagram", owner.SocialInstagramUrl);
+        AddPublicAuthorLink(links, "Facebook", owner.SocialFacebookUrl);
+        AddPublicAuthorLink(links, "YouTube", owner.SocialYoutubeUrl);
+        AddPublicAuthorLink(links, "GitHub", owner.SocialGithubUrl);
+        AddPublicAuthorLink(links, "Telegram", owner.SocialTelegramUrl);
+        AddPublicAuthorLink(links, "Threads", owner.SocialThreadsUrl);
+        AddPublicAuthorLink(links, "Bluesky", owner.SocialBlueskyUrl);
+        AddPublicAuthorLink(links, "Reddit", owner.SocialRedditUrl);
+        AddPublicAuthorLink(links, "Steam", owner.SocialSteamUrl);
+        AddPublicAuthorLink(links, "itch.io", owner.SocialItchUrl);
+        return new BlogHeaderInfo(channel, links);
+    }
+
+    private static void AddPublicAuthorLink(List<BlogAuthorLink> links, string label, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)
+            || !Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+            return;
+
+        links.Add(new BlogAuthorLink(label, uri.AbsoluteUri));
+    }
+
     private sealed record ReadingChrome(
         string Menu, string Theme, string Day, string Night, string System, string Size, string Face);
 
@@ -1135,8 +1188,9 @@ public static partial class BlogEndpoints
             ["ka"] = new("კითხვა", "თემა", "დღე", "ღამე", "სისტემური", "ტექსტის ზომა", "შრიფტი"),
         };
 
-    private static string RenderHeader(BlogChannelInfo? channel, string lang)
+    private static string RenderHeader(BlogHeaderInfo header, string lang)
     {
+        var channel = header.Channel;
         string identity;
         string openInTelegram = "";
 
@@ -1192,16 +1246,51 @@ public static partial class BlogEndpoints
             </a>
             """;
 
+        var authorLinks = AuthorLinksHtml(header.AuthorLinks, lang);
         var reading = ReadingMenuHtml(lang);
 
         return $"""
             <div class="site-header"><div class="site-header-inner">
             <a class="site-identity" href="/{(lang == Languages.Russian ? "?lang=ru" : "")}">{identity}</a>
             <div class="spacer"></div>
+            {authorLinks}
             {rssButton}
             {openInTelegram}
             {reading}
             </div></div>
+            """;
+    }
+
+    private static string AuthorLinksHtml(IReadOnlyList<BlogAuthorLink> links, string lang)
+    {
+        if (links.Count == 0)
+            return "";
+
+        var title = lang == Languages.Russian ? "Ссылки автора" : "Author links";
+        var shortLabel = lang == Languages.Russian ? "Автор" : "Author";
+        var items = new StringBuilder();
+        foreach (var link in links)
+        {
+            items.Append("<a class=\"author-link\" href=\"")
+                .Append(System.Net.WebUtility.HtmlEncode(link.Url))
+                .Append("\" target=\"_blank\" rel=\"noopener noreferrer\">")
+                .Append(System.Net.WebUtility.HtmlEncode(link.Label))
+                .Append("</a>");
+        }
+
+        return $"""
+            <div class="author-links-anchor" id="authorLinksAnchor">
+            <button type="button" class="tg-open-btn author-links-btn" id="authorLinksBtn"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="authorLinksMenu"
+                    title="{System.Net.WebUtility.HtmlEncode(title)}" aria-label="{System.Net.WebUtility.HtmlEncode(title)}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
+            <span class="tg-open-label author-links-label">{System.Net.WebUtility.HtmlEncode(shortLabel)}</span>
+            </button>
+            <div class="author-links-menu" id="authorLinksMenu" role="group" aria-label="{System.Net.WebUtility.HtmlEncode(title)}" hidden>
+            <div class="reading-title">{System.Net.WebUtility.HtmlEncode(title)}</div>
+            <nav class="author-links-list" aria-label="{System.Net.WebUtility.HtmlEncode(title)}">{items}</nav>
+            </div>
+            </div>
             """;
     }
 
@@ -1533,7 +1622,8 @@ public static partial class BlogEndpoints
         // Item 7 — the subscribe box on the index foot; the post page carries its twin.
         sb.Append(RenderSubscribeBox(ctx, indexLang != Languages.Russian, "/?lang=" + indexLang));
 
-        var channel = await GetBlogChannelInfoAsync(db, site);
+        var header = await GetBlogHeaderInfoAsync(db, site);
+        var channel = header.Channel;
         var blogBase = site.BaseUrl;
         var indexMeta = OgMetaBuilder.Build(new OgMetaInput(
             channel?.Title ?? "Blog", null, blogBase + "/",
@@ -1541,7 +1631,7 @@ public static partial class BlogEndpoints
             channel?.Title ?? "Cedar Clerk", indexLang,
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(channel, indexLang), indexMeta));
+        await ctx.Response.WriteAsync(PageShell("Blog", sb.ToString(), indexLang, RenderHeader(header, indexLang), indexMeta));
     }
 
     // ADR-125 — the series landing: what the index would show, narrowed to one series and ordered
@@ -1549,14 +1639,15 @@ public static partial class BlogEndpoints
     // empty page, not a 404 — the URL is printed on every member post.
     private static async Task RenderSeriesAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var channel = await GetBlogChannelInfoAsync(db, site);
+        var header = await GetBlogHeaderInfoAsync(db, site);
+        var channel = header.Channel;
         // Series.Slug is unique per owner, so the owner is part of the lookup and not an extra check.
         var series = await db.Series.FirstOrDefaultAsync(s => s.Slug == slug && s.OwnerId == site.OwnerId);
         if (series is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Series not found.</p>", Languages.Russian, RenderHeader(header, Languages.Russian)));
             return;
         }
 
@@ -1620,7 +1711,7 @@ public static partial class BlogEndpoints
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
+        await ctx.Response.WriteAsync(PageShell(series.Name, body, pageLang, RenderHeader(header, pageLang), meta));
     }
 
     // ADR-134 (T-159) — the public game page. Everything on it is opt-in: the page exists only
@@ -1692,13 +1783,14 @@ public static partial class BlogEndpoints
 
     private static async Task RenderPostAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var channel = await GetBlogChannelInfoAsync(db, site);
+        var header = await GetBlogHeaderInfoAsync(db, site);
+        var channel = header.Channel;
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.BlogSlug == slug && d.OwnerId == site.OwnerId && d.IsBlogPublished);
         if (draft is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian)));
+            await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(header, Languages.Russian)));
             return;
         }
 
@@ -1761,13 +1853,13 @@ public static partial class BlogEndpoints
                         draft.RegistrationFormJson, draft.RegistrationFormTranslationsJson);
                     await ctx.Response.WriteAsync(PageShell(gateTitle,
                         CedarToBlogHtmlRenderer.RegistrationFormHtml(form, gateTitle, gateLang, gateLanguages),
-                        gateLang, RenderHeader(channel, gateLang), SemiPublicMeta(gateLang)));
+                        gateLang, RenderHeader(header, gateLang), SemiPublicMeta(gateLang)));
                     return;
                 }
 
                 ctx.Response.StatusCode = StatusCodes.Status404NotFound;
                 ctx.Response.ContentType = "text/html; charset=utf-8";
-                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(channel, Languages.Russian), SemiPublicMeta(Languages.Russian)));
+                await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Post not found.</p>", Languages.Russian, RenderHeader(header, Languages.Russian), SemiPublicMeta(Languages.Russian)));
                 return;
             }
 
@@ -2142,7 +2234,7 @@ public static partial class BlogEndpoints
         }
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(channel, lang), metaHtml, mainClass: "site-main--post"));
+        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(header, lang), metaHtml, mainClass: "site-main--post"));
     }
 
     // Wraps a resolved end-of-post signature (see PlanLimitations.ResolveSignature, Phase 8 Step 5)
@@ -2325,6 +2417,21 @@ public static partial class BlogEndpoints
         .tg-open-btn:hover { background: var(--rail-btn-face-hover); }
         .rss-btn { background: var(--rail-btn-face); border-color: var(--rail-ink-soft); color: var(--rail-ink); }
         .rss-btn:hover { background: var(--rail-btn-face-hover); }
+        .author-links-anchor { position: relative; flex: none; }
+        .author-links-btn[aria-expanded="true"] { background: var(--rail-btn-face-hover); }
+        .author-links-menu {
+            position: absolute; top: calc(100% + var(--space-2)); right: 0; z-index: 20;
+            width: 220px; padding: var(--space-4); background-color: var(--sheet);
+            background-image: var(--tex-paper); border: 1px solid var(--paper-edge);
+            border-radius: var(--radius-paper); box-shadow: var(--shadow-sheet); color: var(--text);
+        }
+        .author-links-list { display: grid; gap: var(--space-1); }
+        .author-link {
+            display: flex; align-items: center; min-height: 44px; padding: 0 var(--space-3);
+            border-radius: var(--radius-field); color: var(--text); font-size: var(--fs-14);
+            font-weight: 600;
+        }
+        .author-link:hover, .author-link:focus-visible { background: var(--alt); color: var(--accent); }
         /* ── The reading menu (ADR-181) ──────────────────────────────────────────────────────────
            One control for the two things a reader may change. ADR-175 settled its face: a tinted
            button on the rail needs wood under it to read as anything, and at the chrome box the
@@ -2352,7 +2459,7 @@ public static partial class BlogEndpoints
         .seg-face button { font-size: 12.5px; }
         /* On a phone the popover would hang off the right edge of a 390px viewport. */
         @media (max-width: 420px) {
-            .reading-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; }
+            .reading-menu, .author-links-menu { right: -8px; width: calc(100vw - 32px); max-width: 260px; }
         }
 
         .site-main { max-width: 960px; margin: 0 auto; padding: var(--space-6) var(--space-5) var(--space-8); width: 100%; }
@@ -3228,6 +3335,65 @@ public static partial class BlogEndpoints
                 if (e.key === 'ArrowLeft') { show(at - 1); e.preventDefault(); }
                 if (e.key === 'ArrowRight') { show(at + 1); e.preventDefault(); }
             });
+        })();
+
+        /* ADR-250 — one public identity control works by hover, focus and press without making the
+           configured services permanent header chrome. */
+        (function () {
+            var anchor = document.getElementById('authorLinksAnchor');
+            var btn = document.getElementById('authorLinksBtn');
+            var menu = document.getElementById('authorLinksMenu');
+            if (!anchor || !btn || !menu) return;
+            var revealedWithoutPress = false;
+
+            function open(state) {
+                menu.hidden = !state;
+                btn.setAttribute('aria-expanded', state ? 'true' : 'false');
+                if (!state) revealedWithoutPress = false;
+                if (state) {
+                    var readingBtn = document.getElementById('readingBtn');
+                    var readingMenu = document.getElementById('readingMenu');
+                    if (readingBtn && readingMenu) {
+                        readingMenu.hidden = true;
+                        readingBtn.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+
+            anchor.addEventListener('mouseenter', function () {
+                if (menu.hidden) revealedWithoutPress = true;
+                open(true);
+            });
+            anchor.addEventListener('mouseleave', function () {
+                if (!anchor.contains(document.activeElement)) open(false);
+            });
+            anchor.addEventListener('focusin', function () {
+                if (menu.hidden) revealedWithoutPress = true;
+                open(true);
+            });
+            anchor.addEventListener('focusout', function () {
+                setTimeout(function () {
+                    if (!anchor.contains(document.activeElement) && !anchor.matches(':hover')) open(false);
+                }, 0);
+            });
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (revealedWithoutPress) {
+                    revealedWithoutPress = false;
+                    open(true);
+                } else {
+                    open(menu.hidden);
+                }
+            });
+            menu.addEventListener('click', function (e) { e.stopPropagation(); });
+            document.addEventListener('click', function (e) {
+                if (!anchor.contains(e.target)) open(false);
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
+            });
+            var readingBtn = document.getElementById('readingBtn');
+            if (readingBtn) readingBtn.addEventListener('click', function () { open(false); });
         })();
 
         /* ADR-181 — the reading menu. Two segmented controls over the same mechanism: a value goes

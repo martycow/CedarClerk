@@ -81,7 +81,7 @@ public static partial class BlogEndpoints
             """;
 
         const string meta = "<meta name=\"robots\" content=\"noindex, nofollow\">";
-        var page = PageShell(title, html, language, RenderHeader(null, language), meta, mainClass: "site-main--post");
+        var page = PageShell(title, html, language, RenderHeader(new BlogHeaderInfo(null, []), language), meta, mainClass: "site-main--post");
 
         return theme is PreviewThemes.Light or PreviewThemes.Dark
             ? page.Replace($"<html lang=\"{language}\">", $"<html lang=\"{language}\" data-theme=\"{theme}\">")

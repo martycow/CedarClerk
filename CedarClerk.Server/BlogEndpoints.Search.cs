@@ -35,7 +35,7 @@ public static partial class BlogEndpoints
 
     private static async Task RenderSearchAsync(HttpContext ctx, CedarDbContext db, BlogSite site)
     {
-        var channel = await GetBlogChannelInfoAsync(db, site);
+        var header = await GetBlogHeaderInfoAsync(db, site);
 
         // The same convention the index follows: English chrome unless the reader asked for a
         // language the page has words for.
@@ -96,6 +96,6 @@ public static partial class BlogEndpoints
         const string meta = "<meta name=\"robots\" content=\"noindex\">";
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(PageShell(en ? "Search" : "Поиск", sb.ToString(), lang,
-            RenderHeader(channel, lang), meta));
+            RenderHeader(header, lang), meta));
     }
 }

@@ -15,14 +15,15 @@ public static partial class BlogEndpoints
 {
     private static async Task RenderShowcaseAsync(HttpContext ctx, CedarDbContext db, BlogSite site, string slug)
     {
-        var channel = await GetBlogChannelInfoAsync(db, site);
+        var header = await GetBlogHeaderInfoAsync(db, site);
+        var channel = header.Channel;
         var project = await FindShowcaseAsync(db, site, slug);
         if (project is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             ctx.Response.ContentType = "text/html; charset=utf-8";
             await ctx.Response.WriteAsync(PageShell("Not found", "<p class=\"empty\">Page not found.</p>",
-                Languages.Russian, RenderHeader(channel, Languages.Russian)));
+                Languages.Russian, RenderHeader(header, Languages.Russian)));
             return;
         }
 
@@ -284,7 +285,7 @@ public static partial class BlogEndpoints
         meta += $"<link rel=\"alternate\" type=\"application/rss+xml\" title=\"{Html(project.Name)}\" href=\"{ShowcasePath(ctx, project, "/rss.xml")}\">";
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta,
+        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(header, pageLang), meta,
             mainClass: "site-main--showcase"));
     }
 
