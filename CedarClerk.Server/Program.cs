@@ -325,6 +325,7 @@ app.MapAiJobEndpoints();
 app.MapSearchEndpoints();
 app.MapExportTextEndpoints();
 app.MapDraftPreviewEndpoints();
+app.MapPreviewEndpoints();
 
 // Wave 1 item 8 — the public preview page, on the app host and deliberately anonymous: the token
 // is the whole credential, and the handler answers a wrong one with a plain 404.

@@ -140,7 +140,7 @@ public static class TelegramThreadSplitter
         return text.Length <= LabelLength ? text : text[..(LabelLength - 1)].TrimEnd() + "…";
     }
 
-    private static string PlainText(RichRun? run) => run switch
+    public static string PlainText(RichRun? run) => run switch
     {
         null => "",
         RichRunText t => t.Text,

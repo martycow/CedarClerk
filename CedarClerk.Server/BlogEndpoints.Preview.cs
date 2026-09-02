@@ -11,6 +11,12 @@ namespace CedarClerk.Server;
 // revoked token is a plain 404, indistinguishable from a path that never existed.
 public static partial class BlogEndpoints
 {
+    public static class PreviewThemes
+    {
+        public const string Light = "light";
+        public const string Dark = "dark";
+    }
+
     public static async Task HandleDraftPreviewAsync(HttpContext ctx)
     {
         var token = ctx.Request.RouteValues["token"]?.ToString()
@@ -35,13 +41,24 @@ public static partial class BlogEndpoints
             return;
         }
 
-        var lang = draft.PrimaryLanguage;
-        var en = lang != Languages.Russian;
-        var title = draft.ArticleTitle ?? draft.Title;
+        ctx.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+        ctx.Response.ContentType = "text/html; charset=utf-8";
+        await ctx.Response.WriteAsync(RenderDraftPreviewPage(draft.PrimaryLanguage, draft.CedarJson,
+            draft.ArticleTitle ?? draft.Title, theme: null));
+    }
+
+    /// <summary>
+    /// The preview page for one version of a draft — shared by the token page above and the
+    /// owner's own per-language preview (ADR-239). <paramref name="theme"/> pins
+    /// <c>data-theme</c> on the served document; null leaves the reader's own setting in charge.
+    /// </summary>
+    public static string RenderDraftPreviewPage(string language, string cedarJson, string title, string? theme)
+    {
+        var en = language != Languages.Russian;
 
         // Media stays relative: /media/* is served by this same host.
-        var body = CedarToBlogHtmlRenderer.Render(draft.CedarJson, "", lang);
-        var titleHeading = HeadingOutline.StartsWithHeading(draft.CedarJson)
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, "", language);
+        var titleHeading = HeadingOutline.StartsWithHeading(cedarJson)
             ? ""
             : $"<h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>";
 
@@ -64,9 +81,10 @@ public static partial class BlogEndpoints
             """;
 
         const string meta = "<meta name=\"robots\" content=\"noindex, nofollow\">";
-        ctx.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
-        ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(title, html, lang, RenderHeader(null, lang), meta,
-            mainClass: "site-main--post"));
+        var page = PageShell(title, html, language, RenderHeader(null, language), meta, mainClass: "site-main--post");
+
+        return theme is PreviewThemes.Light or PreviewThemes.Dark
+            ? page.Replace($"<html lang=\"{language}\">", $"<html lang=\"{language}\" data-theme=\"{theme}\">")
+            : page;
     }
 }
