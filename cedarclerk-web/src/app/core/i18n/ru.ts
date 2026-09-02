@@ -66,6 +66,8 @@ export const ru: Dict = {
         projectsCount: (n: number) => `${n} ${plural(n, 'проект', 'проекта', 'проектов')}`,
         debugConsole: 'Консоль отладки',
         alerts: 'Новые комментарии и реакции',
+        collapseSidebar: 'Свернуть сайдбар',
+        expandSidebar: 'Развернуть сайдбар',
         version: (v: string) => `Версия ${v}`,
     },
     matrix: {
@@ -93,6 +95,7 @@ export const ru: Dict = {
         hint: 'Баг, идея или что угодно ещё — дойдёт до команды с привязкой к вашему аккаунту.',
         kindLabel: 'Тип',
         kinds: { bug: 'Баг', idea: 'Идея', other: 'Другое' },
+        messageLabel: 'Ваше сообщение',
         placeholder: 'Что случилось или что хотелось бы…',
         send: 'Отправить',
         thanks: 'Спасибо — получили.',

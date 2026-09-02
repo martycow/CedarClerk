@@ -27,7 +27,8 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
                 }
             </div>
 
-            <textarea class="fb-message" rows="5" [(ngModel)]="message"
+            <label class="fb-label" for="cedar-feedback-message">{{ t().feedbackForm.messageLabel }}</label>
+            <textarea id="cedar-feedback-message" class="fb-message" rows="5" [(ngModel)]="message"
                       [placeholder]="t().feedbackForm.placeholder" maxlength="4000"></textarea>
 
             @if (error()) { <p class="fb-error">{{ error() }}</p> }
@@ -43,6 +44,10 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
     styles: [`
         .fb-hint { margin: 0 0 var(--space-3); font-size: var(--fs-ui); color: var(--t2); line-height: 1.45; }
         .fb-kinds { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
+        .fb-label {
+            display: block; margin: 0 0 var(--space-1); color: var(--text);
+            font-size: var(--fs-13); font-weight: 700;
+        }
         .fb-message {
             box-sizing: border-box; width: 100%; padding: var(--space-2) var(--space-3);
             border: 1px solid var(--border); border-radius: var(--radius-md);

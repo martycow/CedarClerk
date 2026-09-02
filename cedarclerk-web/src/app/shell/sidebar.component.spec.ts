@@ -23,7 +23,9 @@ const FOOT: NavItem[] = [{ id: 'settings', label: 'Settings', icon: 'gear', link
         <app-sidebar [mode]="mode()" [groups]="groups" [foot]="foot" activeId="documents"
                      [project]="project()" [projects]="projects()" projectHint="Switch project"
                      navLabel="Screens" brand="Cedar Clerk" brandLabel="Cedar Clerk — home"
-                     allProjectsLabel="All projects" alertsTitle="New comments and reactions" [alerts]="alerts()" />
+                     allProjectsLabel="All projects" alertsTitle="New comments and reactions" [alerts]="alerts()"
+                     collapseLabel="Collapse sidebar" expandLabel="Expand sidebar"
+                     (modeChange)="mode.set($event)" />
     `,
 })
 class Host {
@@ -131,19 +133,24 @@ describe('SidebarComponent', () => {
         expect(h.el.querySelector('.side-dot')).toBeTruthy();
     });
 
-    // ADR-239 clause 5 — the rail is the same list drawn as icon over caption: no card, no group
-    // labels, no counts, and the account still reachable.
-    it('draws the rail without the card, the labels and the counts', () => {
+    it('draws the rail with compact project and footer context', () => {
         const h = mount();
         h.host.mode.set('rail');
         h.fixture.detectChanges();
         expect(h.el.querySelector('app-sidebar')!.classList).toContain('is-rail');
-        expect(h.el.querySelector('app-project-switcher')).toBeNull();
+        expect(h.el.querySelector('app-project-switcher.is-compact')).toBeTruthy();
+        expect((h.el.querySelector('app-project-switcher .side-project') as HTMLElement).getAttribute('aria-label')).toBe('Cedar Quest');
         expect(h.el.querySelector('.side-label')).toBeNull();
         expect(h.el.querySelector('.side-count')).toBeNull();
         expect(h.el.querySelector('.side-wordmark')).toBeNull();
         expect(h.texts()).toEqual(['Documents', 'Assets', 'Metrics', 'Settings']);
         expect(h.el.querySelector('app-account-menu .account-trigger')).toBeTruthy();
-        expect(h.el.querySelector('.side-bell')).toBeNull();
+        expect(h.el.querySelector('.side-bell')).toBeTruthy();
+        const toggle = h.el.querySelector('.side-mode') as HTMLButtonElement;
+        expect(toggle.getAttribute('aria-label')).toBe('Expand sidebar');
+        toggle.click();
+        h.fixture.detectChanges();
+        expect(h.host.mode()).toBe('full');
+        expect(toggle.getAttribute('aria-label')).toBe('Collapse sidebar');
     });
 });

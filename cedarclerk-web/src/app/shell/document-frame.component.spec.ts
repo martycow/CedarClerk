@@ -64,16 +64,20 @@ describe('DocumentFrameComponent', () => {
         expect(el.querySelector('.frame-footer-end button')!.textContent!.trim()).toBe('Next');
     });
 
-    it('renders the top bar only in the shell rail mode', () => {
+    it('renders document controls in both modes and only repeats the project switcher in rail mode', () => {
         const full = mount('full');
-        expect(full.el.querySelector('.frame-top')).toBeNull();
-        expect(full.el.querySelector('.frame-primary')).toBeNull();
+        const fullTop = full.el.querySelector('.frame-top') as HTMLElement;
+        expect(fullTop).toBeTruthy();
+        expect(fullTop.querySelector('app-project-switcher')).toBeNull();
+        expect(fullTop.querySelector('.frame-primary button')!.textContent!.trim()).toBe('Publish');
+        expect(fullTop.querySelector('.frame-save')!.textContent!.trim()).toBe('Synced');
         full.fixture.destroy();
         TestBed.resetTestingModule();
 
         const rail = mount('rail');
         const top = rail.el.querySelector('.frame-top') as HTMLElement;
         expect(top).toBeTruthy();
+        expect(top.querySelector('app-project-switcher')).toBeTruthy();
         expect(top.querySelector('.frame-primary button')!.textContent!.trim()).toBe('Publish');
         expect(top.querySelector('.frame-save')!.textContent!.trim()).toBe('Synced');
         expect(top.querySelector('.frame-date')!.textContent!.trim()).toBe('Sep 1, 2026');

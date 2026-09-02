@@ -13,6 +13,7 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [ ] Screenshot-derived UI coherence pass — one persisted sidebar model, task-specific page measures, fluid panes, one scroll owner per axis, shared row and selection anatomy, mutually exclusive overlays, actionable empty states, and an editorial Discovery zero state across the full 18-screen evidence set. ADR-246 #design #ux #a11y P0
 - [x] `T-357` Advanced Showcase editor — an ordered safe-block model, block list + live result + per-block inspector, reviewed AI prose suggestions, and canonical `/showcase/{slug}` routes for Projects of any kind. ADR-245 #showcase #editor P3
 - [x] `T-323` Account display timezone — IANA timezone in the profile, one formatter across the app/calendar/blog, with UTC on the wire unchanged. ADR-244 #ui #decision P2
 - [x] `T-322` Calendar week view — Month and Week over the same scheduled posts and queue-slot projection, with no new endpoint. #publishing #ui P3

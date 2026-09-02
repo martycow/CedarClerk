@@ -20,13 +20,15 @@ export interface SidebarProject {
     host: {
         'data-surface': 'paper',
         '[class.is-inline]': "variant() === 'inline'",
+        '[class.is-compact]': "variant() === 'compact'",
         '(document:click)': 'onDocumentClick($event)',
         '(document:keydown.escape)': 'onEscape()',
     },
     template: `
         @if (projects().length) {
             <button #trigger type="button" class="side-project" aria-haspopup="true"
-                    [attr.aria-expanded]="open()" [attr.title]="hint() || null" (click)="toggle()">
+                    [attr.aria-expanded]="open()" [attr.title]="hint() || null"
+                    [attr.aria-label]="variant() === 'compact' ? name() : null" (click)="toggle()">
                 <ng-container *ngTemplateOutlet="face" />
                 <app-icon name="caret-down" size="xs" />
             </button>
@@ -37,25 +39,26 @@ export interface SidebarProject {
                 }
             </div>
         } @else {
-            <a class="side-project" [routerLink]="fallbackLink()" [attr.title]="hint() || null">
+            <a class="side-project" [routerLink]="fallbackLink()" [attr.title]="hint() || null"
+               [attr.aria-label]="variant() === 'compact' ? name() : null">
                 <ng-container *ngTemplateOutlet="face" />
             </a>
         }
 
         <ng-template #face>
-            @if (variant() === 'card') {
+            @if (variant() !== 'inline') {
                 @if (project()?.id) {
                     <span class="side-project-tile" [style.background]="fill()">{{ initials() }}</span>
                 } @else {
                     <span class="side-project-tile is-hub"><app-icon name="folder-open" size="sm" /></span>
                 }
             }
-            <span class="side-project-text">
+            @if (variant() !== 'compact') { <span class="side-project-text">
                 <span class="side-project-name">{{ name() }}</span>
                 @if (variant() === 'card' && project()?.kind) {
                     <span class="side-project-kind">{{ project()!.kind }}</span>
                 }
-            </span>
+            </span> }
         </ng-template>
     `,
     styles: [`
@@ -128,6 +131,15 @@ export interface SidebarProject {
         :host(.is-inline) .side-project:hover { background: var(--hover); }
         :host(.is-inline) .side-project-name { font-size: var(--fs-15); }
 
+        :host(.is-compact) .side-project {
+            justify-content: center;
+            width: 72px;
+            min-height: var(--hit-touch);
+            padding: 0 var(--space-2);
+        }
+
+        :host(.is-compact) .side-project-panel { min-width: 220px; }
+
         .side-project-panel {
             position: absolute;
             top: calc(100% + var(--space-1));
@@ -167,7 +179,7 @@ export class ProjectSwitcherComponent {
     readonly project = input<SidebarProject | null>(null);
     readonly projects = input<readonly SidebarProject[]>([]);
     readonly hint = input('');
-    readonly variant = input<'card' | 'inline'>('card');
+    readonly variant = input<'card' | 'inline' | 'compact'>('card');
     readonly fallbackName = input('');
     readonly fallbackLink = input<string | readonly unknown[]>('/projects');
 
@@ -185,6 +197,7 @@ export class ProjectSwitcherComponent {
     });
     protected readonly initials = computed(() => {
         const name = this.project()?.name ?? '';
+        if (!name) return '…';
         const words = name.split(/\s+/).filter(Boolean);
         const letters = words.length > 1 ? words[0][0] + words[1][0] : name.slice(0, 2);
         return letters.toUpperCase();

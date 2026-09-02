@@ -40,6 +40,16 @@ const NAV_PREFIXES: readonly (readonly [string, string])[] = [
 const PROJECT_CHILDREN: ReadonlySet<string> =
     new Set(['assets', 'tasks', 'planner', 'builds', 'canvas', 'showcase', 'dialogues']);
 
+const SIDEBAR_MODE_KEY = 'cedar-sidebar-mode';
+
+function initialSidebarMode(): 'full' | 'rail' {
+    try {
+        return localStorage.getItem(SIDEBAR_MODE_KEY) === 'rail' ? 'rail' : 'full';
+    } catch {
+        return 'full';
+    }
+}
+
 function matches(path: string, pattern: string): boolean {
     const p = path.split('/').filter(Boolean);
     const q = pattern.split('/').filter(Boolean);
@@ -49,8 +59,8 @@ function matches(path: string, pattern: string): boolean {
 
 // The paper-first shell (ADR-239): a sidebar beside the page, and nothing above or below it. A
 // parent route rather than the root component so the pre-auth pages are outside it by the shape
-// of the route tree (ADR-139 clause 1). The sidebar collapses to its rail on the editor and
-// nowhere else, decided by the route (clause 5).
+// of the route tree (ADR-139 clause 1). Expanded/collapsed is a person's stable preference and
+// never a route side effect (ADR-246 clause 1).
 @Component({
     selector: 'app-shell',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,7 +79,8 @@ function matches(path: string, pattern: string): boolean {
                          [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
                          [brand]="t().shell.brand" [brandLabel]="t().shell.logoHome"
                          [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts"
-                         (openAppearance)="appearance().open.set(true)" />
+                         [collapseLabel]="t().shell.collapseSidebar" [expandLabel]="t().shell.expandSidebar"
+                         (modeChange)="setMode($event)" (openAppearance)="appearance().open.set(true)" />
             <main class="body" data-surface="paper">
                 <router-outlet />
             </main>
@@ -125,7 +136,7 @@ export class AppShellComponent {
     private readonly url = signal(this.router.url);
     private readonly path = computed(() => this.url().split('?')[0].split('#')[0]);
 
-    readonly mode = computed<'full' | 'rail'>(() => this.path().startsWith('/editor') ? 'rail' : 'full');
+    readonly mode = signal<'full' | 'rail'>(initialSidebarMode());
 
     /** Resolved once per shell; the switcher lists them and the counts are read off them. */
     private readonly summaries = signal<readonly ProjectSummary[]>([]);
@@ -311,6 +322,15 @@ export class AppShellComponent {
         if ((event.ctrlKey || event.metaKey) && !event.altKey && (event.key === '`' || event.code === 'Backquote')) {
             event.preventDefault();
             this.log.open.update(v => !v);
+        }
+    }
+
+    setMode(mode: 'full' | 'rail'): void {
+        this.mode.set(mode);
+        try {
+            localStorage.setItem(SIDEBAR_MODE_KEY, mode);
+        } catch {
+            // Storage may be disabled; the current session still keeps the explicit choice.
         }
     }
 }

@@ -60,6 +60,7 @@ describe('app shell', () => {
         TestBed.inject(LocaleService).uiLang.set('en');
         router = TestBed.inject(Router);
         localStorage.removeItem('cedar-project');
+        localStorage.removeItem('cedar-sidebar-mode');
         fixture = TestBed.createComponent(AppShellComponent);
         fixture.detectChanges();
     });
@@ -76,14 +77,21 @@ describe('app shell', () => {
         expect(main.getAttribute('data-surface')).toBe('paper');
     });
 
-    it('collapses to the rail on the editor and nowhere else', async () => {
+    it('keeps one sidebar mode across routes and persists an explicit change', async () => {
         await go('/drafts');
         expect(fixture.componentInstance.mode()).toBe('full');
         expect(el().querySelector('app-sidebar')!.classList).not.toContain('is-rail');
         await go('/editor?draft=1');
+        expect(fixture.componentInstance.mode()).toBe('full');
+        const toggle = el().querySelector('app-sidebar .side-mode') as HTMLButtonElement;
+        toggle.click();
+        fixture.detectChanges();
         expect(fixture.componentInstance.mode()).toBe('rail');
         expect(el().querySelector('app-sidebar')!.classList).toContain('is-rail');
         expect(el().querySelector('app-sidebar .side-label')).toBeNull();
+        expect(localStorage.getItem('cedar-sidebar-mode')).toBe('rail');
+        await go('/drafts');
+        expect(fixture.componentInstance.mode()).toBe('rail');
     });
 
     it('counts unread feedback on Metrics, and draws nothing at zero', () => {

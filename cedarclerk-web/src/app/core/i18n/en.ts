@@ -66,6 +66,8 @@ export const en = {
         projectsCount: (n: number) => `${n} ${n === 1 ? 'project' : 'projects'}`,
         debugConsole: 'Debug console',
         alerts: 'New comments and reactions',
+        collapseSidebar: 'Collapse sidebar',
+        expandSidebar: 'Expand sidebar',
         version: (v: string) => `Version ${v}`,
     },
     // T-191 — the feedback channel's modal, opened from the tray.
@@ -94,6 +96,7 @@ export const en = {
         hint: 'A bug, an idea, or anything else — it reaches the maintainers with your account attached.',
         kindLabel: 'What kind',
         kinds: { bug: 'Bug', idea: 'Idea', other: 'Other' },
+        messageLabel: 'Your message',
         placeholder: 'What happened, or what you would like…',
         send: 'Send',
         thanks: 'Thanks — got it.',

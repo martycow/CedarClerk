@@ -15,19 +15,21 @@ export interface DocumentTabItem {
 }
 
 // The editor is one document with three tabs (ADR-239 clause 9). The frame draws the top bar, the
-// title line, the tabs and the footer; the editor lane fills the slots. The top bar exists only in
-// the shell's rail mode — in full mode the sidebar carries the switcher.
+// title line, the tabs and the footer; the editor lane fills the slots. The top bar is document
+// chrome and therefore stays in both sidebar modes (ADR-246 clause 1); only its duplicate project
+// switcher is withheld while the expanded sidebar already carries it.
 @Component({
     selector: 'app-document-frame',
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [IconComponent, ProjectSwitcherComponent],
     host: { 'data-surface': 'paper' },
     template: `
-        @if (rail()) {
-            <div class="frame-top">
+        <div class="frame-top">
+            @if (rail()) {
                 <app-project-switcher variant="inline" [project]="project()" [projects]="projects()"
                                       [hint]="t().shell.switchProject" [fallbackName]="t().shell.allProjects" />
                 <span class="frame-divider" aria-hidden="true"></span>
+            }
                 <span class="frame-history">
                     <button type="button" class="frame-icon-btn" [disabled]="!canUndo()"
                             [attr.title]="t().editor.tb.undo" [attr.aria-label]="t().editor.tb.undo" (click)="undo.emit()">
@@ -50,8 +52,7 @@ export interface DocumentTabItem {
                     <span class="frame-divider" aria-hidden="true"></span>
                 }
                 <span class="frame-primary"><ng-content select="[primary]" /></span>
-            </div>
-        }
+        </div>
 
         <div class="frame-head">
             <div class="frame-heading">

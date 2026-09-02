@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, input, output, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { CreditBalanceService } from '../core/credit-balance.service';
@@ -56,16 +56,16 @@ import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
                     <li><a class="account-item" routerLink="/settings" [queryParams]="{ tab: 'account' }">
                         <app-icon name="sparkle" size="sm" />{{ t().settings.tabs.account }}
                     </a></li>
-                    <li><button type="button" class="account-item" (click)="feedbackForm.open.set(true)">
+                    <li><button type="button" class="account-item" (click)="openFeedback()">
                         <app-icon name="chat-teardrop-dots" size="sm" />{{ t().feedbackForm.title }}
                     </button></li>
                     <li class="account-sep" role="separator"></li>
                     <li class="label account-label">{{ t().shell.display }}</li>
                     <li class="account-tools">
-                        <button type="button" class="account-item account-tool" (click)="openAppearance.emit()">
+                        <button type="button" class="account-item account-tool" (click)="openAppearancePanel()">
                             <app-icon name="palette" size="sm" /><span>{{ t().settings.appearance.title }}</span>
                         </button>
-                        <button type="button" class="account-item account-tool" (click)="theme.toggle()">
+                        <button type="button" class="account-item account-tool" (click)="toggleTheme()">
                             <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" /><span>{{ t().common.toggleTheme }}</span>
                         </button>
                         <button type="button" class="account-item account-tool" (click)="toggleFullscreen()">
@@ -86,7 +86,7 @@ import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
                     </a></li>
                     }
                     <li class="account-sep" role="separator"></li>
-                    <li><button type="button" class="account-item is-quiet" (click)="log.open.update(toggle)">
+                    <li><button type="button" class="account-item is-quiet" (click)="toggleConsole()">
                         <app-icon name="terminal-window" size="sm" />{{ t().shell.debugConsole }}
                         <kbd class="account-kbd">Ctrl+\`</kbd>
                     </button></li>
@@ -95,7 +95,7 @@ import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
                         @if (versionLabel(); as v) { <span class="account-version" [title]="t().shell.version(v)">{{ v }}</span> }
                     </a></li>
                     <li class="account-sep" role="separator"></li>
-                    <li><button type="button" class="account-item is-danger" (click)="auth.logout()">
+                    <li><button type="button" class="account-item is-danger" (click)="logout()">
                         <app-icon name="sign-out" size="sm" />{{ t().editor.logout }}
                     </button></li>
                 </ul>
@@ -108,6 +108,8 @@ export class AccountMenuComponent {
     readonly face = input<'avatar' | 'row'>('avatar');
     readonly openAppearance = output<void>();
 
+    private readonly popover = viewChild.required(PopoverComponent);
+
     auth = inject(AuthService);
     theme = inject(ThemeService);
     log = inject(DebugLogService);
@@ -115,8 +117,6 @@ export class AccountMenuComponent {
     t = inject(LocaleService).t;
     private readonly version = inject(VersionService);
     private readonly creditBalance = inject(CreditBalanceService);
-
-    protected readonly toggle = (v: boolean) => !v;
 
     protected readonly isFullscreen = signal(!!document.fullscreenElement);
 
@@ -149,6 +149,7 @@ export class AccountMenuComponent {
     }
 
     protected async toggleFullscreen() {
+        this.popover().close();
         try {
             if (document.fullscreenElement) await document.exitFullscreen();
             else await document.documentElement.requestFullscreen();
@@ -156,6 +157,31 @@ export class AccountMenuComponent {
             // Denied by the browser (permissions policy, or not a user gesture) — the entry simply
             // does not take effect.
         }
+    }
+
+    protected openFeedback(): void {
+        this.popover().close();
+        this.feedbackForm.open.set(true);
+    }
+
+    protected openAppearancePanel(): void {
+        this.popover().close();
+        this.openAppearance.emit();
+    }
+
+    protected toggleTheme(): void {
+        this.theme.toggle();
+        this.popover().close();
+    }
+
+    protected toggleConsole(): void {
+        this.popover().close();
+        this.log.open.update(v => !v);
+    }
+
+    protected logout(): void {
+        this.popover().close();
+        this.auth.logout();
     }
 
     avatarInitial(): string {
