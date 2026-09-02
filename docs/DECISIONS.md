@@ -263,3 +263,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-248 — Navigation gives each destination one door](adr/ADR-248.md)
 - [ADR-249 — The editor starts with the document, not its chrome](adr/ADR-249.md)
 - [ADR-250 — Author social links appear at the public blog header](adr/ADR-250.md)
+- [ADR-251 — The initial-bundle ceiling follows the measured bilingual shell](adr/ADR-251.md)
