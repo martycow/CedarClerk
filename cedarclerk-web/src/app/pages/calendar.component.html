@@ -51,6 +51,7 @@ their network's icon, unfilled queue slots as dashed chips.-->
                                                 [class.is-sent]="ticket.status === 'Sent'"
                                                 [class.is-failed]="ticket.status === 'Failed'"
                                                 [class.is-slot]="ticket.kind === 'slot'"
+                                                [class.is-dashed]="ticket.kind === 'slot'"
                                                 [class.is-dragging]="draggingId() === ticket.id"
                                                 [draggable]="ticket.kind === 'post' && ticket.status === 'Pending'"
                                                 (dragstart)="onDragStart(ticket, $event)" (dragend)="onDragEnd()"

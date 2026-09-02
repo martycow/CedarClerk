@@ -6,13 +6,9 @@
 
 .icon-sm { width: 14px; height: 14px; }
 
-/* The bottom inset is the bench's own chrome, not padding: the drawer lip and the rule stand above
-   this overlay's stacking context, so a dialog centred in the raw viewport puts its action row
-   under them — and a click on Create then lands on the drawer's pull instead. */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    bottom: var(--bench-bottom-h, 0px);
     background: var(--scrim);
     display: flex;
     align-items: center;

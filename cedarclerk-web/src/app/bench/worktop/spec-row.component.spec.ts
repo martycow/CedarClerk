@@ -112,9 +112,9 @@ describe('SpecRowComponent', () => {
         const el = fixture.nativeElement as HTMLElement;
         expect(el.style.getPropertyValue('--spec-label-w')).toBe('');
 
-        fixture.componentRef.setInput('labelWidth', 'var(--bench-tool-w)');
+        fixture.componentRef.setInput('labelWidth', '9ch');
         fixture.detectChanges();
-        expect(el.style.getPropertyValue('--spec-label-w')).toBe('var(--bench-tool-w)');
+        expect(el.style.getPropertyValue('--spec-label-w')).toBe('9ch');
     });
 
     it('gives the value slot to projected content, and drops the text it would have drawn', () => {

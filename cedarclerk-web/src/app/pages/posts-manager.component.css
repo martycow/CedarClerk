@@ -60,21 +60,6 @@
     color: var(--wood-ink-soft);
 }
 
-/* The feedback tally on the Posts tab: the seg has no badge of its own, so the page draws one. */
-.manager-tabs .seg-badge {
-    display: inline-flex;
-    align-items: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: var(--radius-stamp);
-    background: var(--asoft);
-    color: var(--accent);
-    font-size: var(--fs-11);
-    font-variant-numeric: tabular-nums;
-    justify-content: center;
-}
-
 .mg-grid {
     display: flex;
     flex: 1;
@@ -107,23 +92,9 @@
 }
 
 .card-head {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex: none;
-    box-sizing: border-box;
-    min-height: var(--hit-touch);
-    padding: 0 var(--space-4);
     border-bottom: 1px solid var(--paper-edge);
 }
 
-.card-count {
-    font-size: var(--fs-13);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--t3);
-    white-space: nowrap;
-}
 
 .card-title {
     min-width: 0;
@@ -141,7 +112,6 @@
     white-space: nowrap;
 }
 
-.card-body,
 .sheet-body {
     display: flex;
     flex-direction: column;
@@ -174,30 +144,12 @@
    title gives way to the tag and the tag never to the title (T-271). */
 .post-card {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
-    width: 100%;
     padding-top: var(--space-2);
     padding-bottom: var(--space-2);
-    border-inline: 0;
-    border-bottom: 0;
-    background: none;
-    color: var(--text);
-    font-family: inherit;
-    text-align: left;
-    cursor: pointer;
 }
 
 .post-card.is-preset {
     grid-template-columns: minmax(0, 1fr);
-}
-
-.post-card.on {
-    background: var(--asoft);
-}
-
-/* The same pine rule down the row's edge the other lists use; :not(:focus-visible) so it cannot
-   out-specify the global focus halo (ADR-140). */
-.post-card.on:not(:focus-visible) {
-    box-shadow: inset 2px 0 0 var(--accent);
 }
 
 /* T-337 — the type plate: a small tinted square carrying the document-type icon, so a glance

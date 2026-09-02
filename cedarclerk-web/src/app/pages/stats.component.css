@@ -42,32 +42,10 @@
 
 /* ---------- Card caption line ---------- */
 :host([data-surface="paper"]) .card-head {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex: none;
-    box-sizing: border-box;
-    min-height: var(--hit-touch);
-    padding: 0 var(--space-4);
     border-bottom: 1px solid var(--paper-edge);
 }
 
-:host([data-surface="paper"]) .card-count {
-    font-size: var(--fs-ui);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--t3);
-    white-space: nowrap;
-}
 
-:host([data-surface="paper"]) .card-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    padding: var(--space-4);
-}
 
 /* ---------- Filter strip: the legend and the filter are one control (ADR-149) ---------- */
 :host([data-surface="paper"]) .filter-strip {

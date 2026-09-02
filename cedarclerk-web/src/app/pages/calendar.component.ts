@@ -234,9 +234,9 @@ export class CalendarComponent implements OnInit {
         return n;
     });
 
-    /** The networks on the board and the two counts. A swatch beside a network is not a HeaderMeta option. */
+    /** The legend — each network on the board behind its series dot — and the two counts. */
     headerMeta = computed<HeaderMeta[]>(() => {
-        const meta: HeaderMeta[] = this.legendNetworks().map(n => ({ text: this.networkLabel(n) }));
+        const meta: HeaderMeta[] = this.legendNetworks().map(n => ({ text: this.networkLabel(n), swatch: networkColor(n) }));
         meta.push({ text: this.t().calendar.scheduledCount(this.pendingCount()) });
         if (this.slots().length) meta.push({ text: this.t().calendar.openSlots(this.openSlotCount()) });
         return meta;

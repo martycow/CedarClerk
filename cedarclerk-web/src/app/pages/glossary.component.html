@@ -11,7 +11,7 @@
         </app-button>
     </app-page-header>
 
-    @if (error()) { <p class="channel-error">{{ error() }}</p> }
+    @if (error()) { <p class="error-box">{{ error() }}</p> }
 
     <!--Terms are listed per language because that is how they are matched — an English post is
     scanned against the English terms only. The scope control beside the strip narrows the list to
@@ -32,16 +32,16 @@
         <div class="seg scope-strip" role="group" [attr.aria-label]="t().glossary.scopeStrip">
             <button type="button" [class.is-on]="scopeFilter() === null" [attr.aria-pressed]="scopeFilter() === null"
                     (click)="selectScope(null)">
-                {{ t().glossary.scopeAll }}<span class="seg-note">{{ scopeCount(null) }}</span>
+                {{ t().glossary.scopeAll }}<span class="seg-badge">{{ scopeCount(null) }}</span>
             </button>
             <button type="button" [class.is-on]="scopeFilter() === ''" [attr.aria-pressed]="scopeFilter() === ''"
                     (click)="selectScope('')">
-                {{ t().glossary.scopeGlobal }}<span class="seg-note">{{ scopeCount('') }}</span>
+                {{ t().glossary.scopeGlobal }}<span class="seg-badge">{{ scopeCount('') }}</span>
             </button>
             @for (p of projects(); track p.id) {
             <button type="button" [class.is-on]="scopeFilter() === p.id" [attr.aria-pressed]="scopeFilter() === p.id"
                     [title]="p.name" (click)="selectScope(p.id)">
-                {{ p.name }}<span class="seg-note">{{ scopeCount(p.id) }}</span>
+                {{ p.name }}<span class="seg-badge">{{ scopeCount(p.id) }}</span>
             </button>
             }
         </div>
@@ -242,7 +242,7 @@
             </label>
             }
         </div>
-        @if (translateError()) { <p class="channel-error">{{ translateError() }}</p> }
+        @if (translateError()) { <p class="error-box">{{ translateError() }}</p> }
         <app-button modal-actions variant="paper" (clicked)="closeTranslate()"
                     [disabled]="translatingLang() !== null">{{ t().common.cancel }}</app-button>
         <app-button modal-actions variant="pine" (clicked)="runTranslate()" [disabled]="!canTranslate()">
@@ -267,7 +267,7 @@
             </label>
             }
         </div>
-        @if (translateError()) { <p class="channel-error">{{ translateError() }}</p> }
+        @if (translateError()) { <p class="error-box">{{ translateError() }}</p> }
         <app-button modal-actions variant="paper" (clicked)="closeTranslateAll()"
                     [disabled]="translatingLang() !== null">{{ t().common.cancel }}</app-button>
         <app-button modal-actions variant="pine" (clicked)="runTranslateAll()" [disabled]="!canTranslate()">

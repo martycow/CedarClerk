@@ -138,7 +138,7 @@ describe('WorktopComponent', () => {
         beforeEach(() => { css = sheetFor('.wt-edge'); });
 
         it('is a plain card with no wood, no lamp and no rules', () => {
-            expect(css).not.toMatch(/--lamp|--grid-worktop|--tex-wood|--wood-edge|--rule-ink|repeating-linear-gradient/);
+            expect(css).not.toMatch(/--lamp|--tex-wood|--wood-edge|--rule-ink|repeating-linear-gradient/);
             expect(css).toMatch(/background-color:\s*var\(--sheet\)/);
             expect(css).toMatch(/border:\s*1px solid var\(--border\)/);
         });

@@ -43,29 +43,8 @@
     width: var(--bench-dock-w-wide);
 }
 
-.card-head {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    flex: none;
-    min-height: var(--hit-touch);
-    padding: var(--space-3) var(--space-4) 0;
-}
 
-.card-count {
-    font-size: var(--fs-13);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--t3);
-    white-space: nowrap;
-}
 
-.card-body {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    padding: var(--space-4);
-}
 
 /* The sheet's body: the form at the top, the list, the pager — one scroll. */
 .sheet-column {
@@ -83,12 +62,6 @@
     white-space: nowrap;
     font-size: var(--fs-13);
     color: var(--t3);
-}
-
-.seg-note {
-    margin-left: var(--space-1);
-    font-variant-numeric: tabular-nums;
-    opacity: .7;
 }
 
 .term-form {
@@ -299,11 +272,3 @@
 .hint { color: var(--wood-ink-soft); font-size: var(--fs-ui); }
 .hint.in-card { margin: 0; padding: var(--space-3) var(--space-4); color: var(--t2); }
 
-.channel-error {
-    margin: 0 0 var(--space-3);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    background: var(--danger-soft);
-    color: var(--danger);
-    font-size: var(--fs-ui);
-}

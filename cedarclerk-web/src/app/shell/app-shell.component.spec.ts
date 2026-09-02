@@ -67,7 +67,7 @@ describe('app shell', () => {
     it('draws the sidebar beside the ground and nothing above or below them', () => {
         expect(el().querySelector('.shell > app-sidebar')).toBeTruthy();
         expect(el().querySelector('.shell > main.body router-outlet')).toBeTruthy();
-        expect(el().querySelector('app-rail-header, app-hook-rail, app-ruler-bar, app-bench-drawer')).toBeNull();
+        expect(el().querySelectorAll('.shell > *').length).toBe(2);
         expect(el().querySelector('app-debug-console')).toBeTruthy();
     });
 

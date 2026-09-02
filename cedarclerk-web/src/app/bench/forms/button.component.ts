@@ -98,14 +98,15 @@ export type ButtonSurface = 'paper' | 'chrome';
         .btn.pine:hover:not(:disabled) { background: var(--pine-deep); border-color: var(--pine-deep); }
 
         /* The wood is gone, so the variant that was painted on it is the ghost: no face until
-           approached. */
+           approached, and the ink of whatever it stands on — the wall's at night, paper's in a
+           card (the surface hands the pair down, styles.scss). */
         .btn.rail {
             border-color: transparent;
             background: transparent;
-            color: var(--t2);
+            color: var(--surface-ink-soft, var(--t2));
         }
 
-        .btn.rail:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+        .btn.rail:hover:not(:disabled) { background: var(--hover); color: var(--surface-ink, var(--text)); }
 
         .btn.danger {
             border: none;

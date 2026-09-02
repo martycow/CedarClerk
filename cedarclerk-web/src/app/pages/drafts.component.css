@@ -512,27 +512,7 @@
     cursor: pointer;
 }
 
-/* Same bordered/tinted/iconed shape as .hint-bubble elsewhere, in the danger tone — errors and
-   hints both get a colored box with an icon, never bare text (Marty, 28.07.2026). */
-.error-box {
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    margin: 0;
-    padding: 7px 10px;
-    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
-    background: var(--danger-soft);
-    border-radius: var(--radius-md);
-    font-size: var(--fs-meta);
-    line-height: 1.45;
-    color: var(--text);
-}
-
-.error-box .icon-sm {
-    flex: none;
-    margin-top: 1px;
-    color: var(--danger);
-}
+.error-box { margin: 0; }
 
 /* Real upload-percentage bar — same shape as the editor's auto-translate progress. */
 .translate-progress {

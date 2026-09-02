@@ -359,6 +359,10 @@ const WALL = ['--bg', '--canvas'];
 const pairs = [];
 for (const s of WALL) {
     pairs.push({ fg: '--wood-ink', bg: s, min: 4.5, note: 'chrome text on the wall' });
+    // The page meta line, a margin note and a ghost button's label all stand on the wall in the
+    // soft ink; the ghost's hover wash is translucent, so the full ink is scored through it.
+    pairs.push({ fg: '--wood-ink-soft', bg: s, min: 4.5, note: 'soft text on the wall' });
+    pairs.push({ fg: '--wood-ink', bg: '--hover', under: s, min: 4.5, note: 'ghost label hovered on the wall' });
 }
 for (const s of PAPER) {
     pairs.push({ fg: '--text', bg: s, min: 4.5, note: 'body text' });
@@ -430,13 +434,10 @@ for (const fill of AVATAR_FILLS) {
 pairs.push({ fg: '--sheet', bg: '--grad-pine', min: 4.5, note: 'text on a primary button face' });
 pairs.push({ fg: '--text-on-pine', bg: '--grad-pine', min: 4.5, note: 'bench ink on a primary button face' });
 
-// The layered materials. Each is a stack, and the ink is scored against the whole stack: the dots
-// of the pegboard are holes onto the rail below them, and the two pencil rules are drawn on paper.
-pairs.push({ fg: '--rail-ink', bg: '--pegboard', min: 4.5, note: 'chrome text on the pegboard' });
-for (const grid of ['--grid-worktop', '--grid-graph']) {
-    pairs.push({ fg: '--text', bg: grid, under: '--surface', min: 4.5, note: 'body text on ruled paper' });
-    pairs.push({ fg: '--t2', bg: grid, under: '--surface', min: 4.5, note: 'secondary text on ruled paper' });
-}
+// The layered material. It is a stack, and the ink is scored against the whole stack: the pencil
+// rules are drawn on paper.
+pairs.push({ fg: '--text', bg: '--grid-graph', under: '--surface', min: 4.5, note: 'body text on ruled paper' });
+pairs.push({ fg: '--t2', bg: '--grid-graph', under: '--surface', min: 4.5, note: 'secondary text on ruled paper' });
 // The chart's graph paper is painted on the shelf sheet, so the ground that is scored is the one
 // the ink actually lands on as well as the deeper cream ADR-158 names.
 pairs.push({ fg: '--text', bg: '--grid-graph', under: '--sheet', min: 4.5, note: 'body text on the chart sheet' });
@@ -473,12 +474,9 @@ pairs.push({ fg: '--rail-ink', bg: '--wood-edge', min: 4.5, note: 'priority chip
 pairs.push({ fg: '--rail-edge', bg: '--resin-hi', min: 4.5, note: 'priority-one chip on the lit stop of its resin' });
 pairs.push({ fg: '--rail-edge', bg: '--resin', min: 4.5, note: 'priority-one chip on the shaded stop of its resin' });
 
-// The shell's own chrome (ADR-139), which paints combinations no page did. The sign tile is the
-// carved wood a caption is cut into — the project tile, the current hook, a shelf panel's title
-// and an index tab all take it — and the rail gradient is what the header's own brand and crumbs
-// sit on; both are ramps, so each is scored along its stops. The two translucent faces are named
-// tokens rather than inline color-mixes for exactly this reason: a surface carrying text has to be
-// nameable here, and `under` is what it is painted on rather than a guess at the page ground.
+// The served chrome (ADR-215): the blog and the landing still cut their captions into the sign
+// tile and stand their brand and crumbs on the rail gradient; both are ramps, so each is scored
+// along its stops. The app's own shell is paper now (ADR-239) and paints none of these.
 pairs.push({ fg: '--rail-ink', bg: '--grad-sign-tile', min: 4.5, note: 'caption carved into a sign tile' });
 pairs.push({ fg: '--rail-ink-dim', bg: '--grad-sign-tile', min: 4.5, note: 'resting index tab' });
 // The account plaque and the rule both write the rail's darkest wood on the brass ramp.
@@ -487,27 +485,6 @@ pairs.push({ fg: '--rail-ink', bg: '--surface-rail', min: 4.5, note: 'brand and 
 // The conifer beside the wordmark is a graphical object, so 3:1, and the wood under it is the
 // whole gradient rather than one stop — it is small enough to sit on any of them.
 pairs.push({ fg: '--pine-mark', bg: '--surface-rail', min: 3.0, note: 'the pine on the rail' });
-pairs.push({ fg: '--rail-ink', bg: '--hook-face', under: '--pegboard', min: 4.5, note: 'tool caption on its hook' });
-// The bar that marks the current tool. It is a shape and not a label, so it owes 3:1 as a
-// graphical object, and the surface it owes it against is the wall rather than the tile: it is
-// offset past the hook's right edge and stands on the pegboard.
-pairs.push({
-    fg: '--grad-brass', bg: '--pegboard', min: 3.0, note: 'current-tool bar against the wall',
-    exceptIn: 'light',
-    except: 'ADR-172 — 2.91 by day at the lightest stop of both ramps, 4.42 at night. The bar is '
-        + 'aria-hidden and reinforces a state the bold caption already carries on a passing pair; '
-        + 'the raised tile is relief and not colour, measuring 1.00 against this same wall',
-});
-pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--grad-sign-tile', min: 4.5, note: 'index-tab counter on its resin badge' });
-
-// The same resin badge hung on the hook rail as a work ticket (ADR-155). The resin is 90% opaque,
-// so what it lies on is part of its colour, and the ticket is notched over the tile's top corner:
-// part of it is on the tile and part on the bare wall. The census cannot reach these — it resolves
-// a badge's backdrop to the page ground when no enclosing rule paints one, which for an absolutely
-// positioned ticket is the wrong surface — so the three grounds it can cover are named here.
-pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--pegboard', min: 4.5, note: 'work ticket where it overhangs the wall' });
-pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--hook-face', min: 4.5, note: 'work ticket on a hook tile' });
-pairs.push({ fg: '--rail-edge', bg: '--tab-badge', under: '--rail-lo', min: 4.5, note: 'work ticket on a hovered hook tile' });
 
 // The soft cream, which is spent on two things and neither of them is a word: the crumb
 // separator (`content: '/'`, never announced) and the resting face of a tool-strip button, whose

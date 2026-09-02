@@ -8,13 +8,13 @@
                 <p class="invite-line">{{ body(invite) }}</p>
                 <p class="hint">{{ t().projects.canvas.inviteRole }}: {{ roleWord(invite.role) }}</p>
 
-                @if (failed(); as e) { <p class="error-line" role="alert">{{ e }}</p> }
+                @if (failed(); as e) { <p class="error-box" role="alert">{{ e }}</p> }
 
                 <app-button variant="pine" [disabled]="busy()" (clicked)="accept()">
                     {{ t().projects.canvas.acceptButton }}
                 </app-button>
             } @else {
-                <p class="error-line" role="alert">{{ failed() ?? t().projects.canvas.acceptFailed }}</p>
+                <p class="error-box" role="alert">{{ failed() ?? t().projects.canvas.acceptFailed }}</p>
             }
         </section>
     </div>

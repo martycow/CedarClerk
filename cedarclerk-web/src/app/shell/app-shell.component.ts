@@ -78,10 +78,7 @@ function matches(path: string, pattern: string): boolean {
         <app-debug-console />
     `,
     styles: [`
-        :host {
-            display: block;
-            --bench-bottom-h: 0px;
-        }
+        :host { display: block; }
 
         /* The shell owns the viewport, so the page never sizes itself from it (ADR-239 clause 7). */
         .shell {
@@ -92,7 +89,8 @@ function matches(path: string, pattern: string): boolean {
         }
 
         /* The ground is the wall, and the wall carries the wall's ink (ADR-141); a card restates
-           paper's. */
+           paper's. The pair is also handed down for what paints no ground of its own — a ghost
+           button, a margin note — so it reads on the wall at night. */
         .body {
             display: flex;
             flex: 1;
@@ -102,6 +100,8 @@ function matches(path: string, pattern: string): boolean {
             overflow: auto;
             background: var(--canvas);
             color: var(--wood-ink);
+            --surface-ink: var(--wood-ink);
+            --surface-ink-soft: var(--wood-ink-soft);
         }
     `],
 })

@@ -110,22 +110,11 @@
     color: var(--text-on-pine);
 }
 
-/* A scheduled post: accent-tinted, its network named by the icon (ADR-149). */
+/* A scheduled post: the global chip, filling its day; its network named by the icon (ADR-149). */
 .chip {
     display: flex;
     flex: none;
-    align-items: center;
-    gap: 6px;
     width: 100%;
-    padding: 5px var(--space-2);
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm);
-    background: var(--asoft);
-    color: var(--accent);
-    font-family: var(--font-sans);
-    font-size: var(--fs-12);
-    font-weight: 600;
-    line-height: 1.3;
     text-align: left;
     cursor: grab;
 }
@@ -155,19 +144,12 @@
     cursor: grabbing;
 }
 
-/* An unfilled queue slot: a promise the job has not turned into a post yet, so a dashed outline. */
-.chip.is-slot {
-    border: 1px dashed var(--border);
-    background: transparent;
-    color: var(--t2);
-    cursor: default;
-}
+/* An unfilled queue slot: a promise the job has not turned into a post yet, so the dashed chip. */
+.chip.is-slot { cursor: default; }
 
-/* The hand-written hint stands on the wall, so it takes the wall's ink (ADR-141). */
 .cal-note {
     flex: none;
     margin: 10px 0 0;
-    color: var(--wood-ink-soft);
     transform-origin: left;
 }
 
@@ -265,21 +247,6 @@
     margin: 4px 0 0;
     color: var(--danger);
     font-size: var(--fs-13);
-}
-
-.error-box {
-    display: flex;
-    flex: none;
-    align-items: flex-start;
-    gap: var(--space-2);
-    margin: 0 0 var(--space-3);
-    padding: var(--space-2) 10px;
-    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
-    background: var(--danger-soft);
-    border-radius: var(--radius-md);
-    font-size: var(--fs-13);
-    line-height: 1.45;
-    color: var(--text);
 }
 
 /* ── "+ Schedule" dialog ── */

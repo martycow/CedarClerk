@@ -12,8 +12,8 @@
     <input #fileInput type="file" accept="image/*,video/*,audio/*" multiple hidden
            (change)="onUploadPicked($event)" [disabled]="uploading()">
 
-    @if (loadError(); as err) { <p class="load-error" role="alert">{{ err }}</p> }
-    @if (uploadError(); as err) { <p class="load-error" role="alert">{{ err }}</p> }
+    @if (loadError(); as err) { <p class="error-box load-error" role="alert">{{ err }}</p> }
+    @if (uploadError(); as err) { <p class="error-box load-error" role="alert">{{ err }}</p> }
 
     @if (loading()) {
         <section class="card library">
@@ -166,7 +166,7 @@
                         <p class="hint">{{ t().media.deleteForever }}</p>
 
                         @if (deleteError(); as err) {
-                            <p class="load-error" role="alert">{{ err }}</p>
+                            <p class="error-box load-error" role="alert">{{ err }}</p>
                             @if (usedBy().length) {
                                 <p class="hint">{{ t().media.usedBy }}</p>
                                 <ul class="used-by">

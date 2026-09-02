@@ -27,7 +27,7 @@ the Posts Manager and inherit its density through the cascade.-->
             to be stopped from propagating.-->
             <div class="row-list user-cards">
                 @for (u of users(); track u.id) {
-                <button type="button" class="row user-card" [class.on]="expandedId() === u.id"
+                <button type="button" class="row user-card" [class.is-on]="expandedId() === u.id"
                         [attr.aria-label]="t().admin.userModal.open(u.email ?? t().admin.userModal.untitled)"
                         (click)="openUser(u)">
                     <span class="user-avatar" [style.background]="avatarColor(u.email)">{{ avatarInitial(u.email) }}</span>

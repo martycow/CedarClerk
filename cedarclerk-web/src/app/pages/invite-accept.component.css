@@ -31,12 +31,3 @@
     font-size: var(--fs-ui);
 }
 
-.error-line {
-    margin: 0 0 var(--space-3);
-    padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--danger);
-    border-radius: var(--radius-sm);
-    background: var(--danger-soft);
-    color: var(--danger);
-    font-size: var(--fs-ui);
-}

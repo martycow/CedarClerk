@@ -60,7 +60,7 @@ so it stays addressable by the name the smoke suite binds.-->
                 exactly one publish state — archived wins over live, live over unpublished. The
                 title column is the only one that shrinks, so a long title gives way to the tag
                 and never the reverse (T-271).-->
-                <button class="row post-card" [class.on]="selectedId() === d.id" (click)="select(d)">
+                <button class="row post-card" [class.is-on]="selectedId() === d.id" (click)="select(d)">
                     @if (d.coverImagePath; as cover) {
                     <span class="post-card-type has-thumb">
                         <img [src]="'/media/' + cover" alt="" loading="lazy">
@@ -534,7 +534,7 @@ so it stays addressable by the name the smoke suite binds.-->
                 @for (p of presets(); track p.id) {
                 <!--Same row as the posts list: two lists on one screen that behaved and looked
                 differently was a difference with no meaning behind it.-->
-                <button class="row post-card is-preset" [class.on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
+                <button class="row post-card is-preset" [class.is-on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
                     <span class="post-card-main">
                         <span class="post-card-title"><span class="t post-card-title-text">{{ p.name }}</span></span>
                         <!--ADR-060: every language the preset carries text for, first = primary.-->

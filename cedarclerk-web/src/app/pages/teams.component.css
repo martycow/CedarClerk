@@ -36,30 +36,10 @@
     overflow: hidden;
 }
 
-.card-head {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    flex: none;
-    min-height: var(--hit-touch);
-    padding: var(--space-3) var(--space-4) 0;
-}
 
-.card-count {
-    font-size: var(--fs-13);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--t3);
-}
 
 .card-body {
-    display: flex;
-    flex-direction: column;
     gap: var(--space-4);
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    padding: var(--space-4);
 }
 
 .tm-list-card { flex: none; width: var(--bench-dock-w); }
@@ -71,21 +51,11 @@
 
 .tm-row {
     grid-template-columns: auto minmax(0, 1fr);
-    width: 100%;
     padding-top: var(--space-2);
     padding-bottom: var(--space-2);
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    background: none;
-    color: var(--text);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
 }
 
 .tm-row > app-icon { color: var(--t3); }
-.tm-row.is-on { background: var(--asoft); }
 .tm-row.is-on > app-icon { color: var(--accent); }
 /* A team somebody else owns is shown, not offered: there is nothing here to pick it for. */
 .tm-row.is-joined { cursor: default; }

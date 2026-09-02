@@ -29,23 +29,6 @@
 .section { flex: 1; }
 .summary { flex: none; width: var(--bench-dock-w); }
 
-.card-head {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    flex: none;
-    min-height: var(--hit-touch);
-    padding: var(--space-3) var(--space-4) 0;
-}
-
-.card-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    padding: var(--space-3) var(--space-4) var(--space-4);
-}
 
 .spacer { flex: 1; }
 
@@ -105,18 +88,6 @@
     font-size: var(--dens-fs);
 }
 
-.table .row.head {
-    min-height: var(--hit-chrome);
-    font-size: var(--fs-11);
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--t3);
-    background: var(--alt);
-}
-
-.table .row.head:hover { background: var(--alt); }
-
 .invite-row {
     grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.4fr) 120px 140px 130px;
     min-width: 780px;
@@ -150,20 +121,11 @@
    so it can be the door it always behaved like — reachable from the keyboard. */
 .user-card {
     grid-template-columns: auto minmax(0, 1fr);
-    width: 100%;
     padding-top: var(--space-2);
     padding-bottom: var(--space-2);
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    background: none;
-    color: inherit;
-    font: inherit;
     text-align: left;
     cursor: pointer;
 }
-
-.user-card.on { background: var(--asoft); }
 
 .user-avatar {
     flex: none;

@@ -179,7 +179,6 @@
     --dens-control-y: 7px;   /* control padding, vertical */
     --dens-control-x: 14px;  /* control padding, horizontal */
     --dens-gap: var(--space-3);
-    --dens-section: var(--space-5);
     --dens-radius: var(--radius-md);
     --dens-fs: var(--fs-body);
     --dens-elev: var(--shadow);
@@ -240,19 +239,8 @@
     --ease: cubic-bezier(.2, .6, .3, 1);
     --ease-settle: cubic-bezier(.3, 1.4, .45, 1);
     --ease-swing: cubic-bezier(.3, 1.3, .5, 1);
-    --dur-publish: 600ms;
     --dur-tap: 150ms;
     --dur-control: 190ms;
-    --dur-move: 250ms;
-
-    /* "Cedar Aero" chrome materials (ADR-035) — toolbars, popovers and modals only; content
-       sheets stay solid for readability. */
-    --blur: saturate(1.6) blur(14px);
-    --glass: color-mix(in srgb, var(--surface) 80%, transparent);
-    --glass-strong: color-mix(in srgb, var(--surface) 90%, transparent);
-    --glass-border: color-mix(in srgb, #ffffff 55%, var(--border));
-    --gloss-top: inset 0 1px 0 color-mix(in srgb, #ffffff 65%, transparent);
-    --glow-accent: 0 1px 10px color-mix(in srgb, var(--accent) 22%, transparent);
 
     /* ── Bench materials (ADR-137, additive) ────────────────────────────────────────────────
        A material name answers "what is this made of"; a contract name answers "what is this
@@ -266,9 +254,8 @@
     --wood: #9C7350;
     --wood-lo: #7C5939;
     --wood-edge: #573E26;
-    --wood-groove: #6B4C2F;
     --wood-ink: #3A2918;
-    --wood-ink-soft: rgba(58, 41, 24, .68);
+    --wood-ink-soft: rgba(58, 41, 24, .72);
 
     --wall-hi: var(--bg);
     --wall-lo: var(--canvas);
@@ -291,12 +278,10 @@
     --grad-sign-tile: linear-gradient(180deg, var(--sign-tile-hi), var(--sign-tile-lo));
 
     --paper: var(--sheet);
-    --paper-2: var(--surface);
     --paper-bright: #FFFDF4;
     --paper-edge: #DDD2B8;
 
     --ink: var(--text);
-    --ink-2: var(--t2);
     --ink-3: var(--t3);
 
     --pine: var(--accent);
@@ -353,33 +338,21 @@
     --shadow-sheet-inset: inset 0 1px 3px rgba(58, 38, 16, .3);
     --shadow-sheet: 0 2px 4px rgba(50, 30, 10, .2), 0 14px 28px rgba(50, 30, 10, .22);
     --shadow-tag: drop-shadow(0 1px 2px rgba(50, 30, 10, .3)) drop-shadow(0 6px 12px rgba(50, 30, 10, .24));
-    --shadow-worktop-inset: inset 0 1px 3px rgba(58, 38, 16, .28), inset 0 0 0 1px rgba(255, 248, 225, .18);
-    --shadow-worktop: var(--shadow-worktop-inset);
 
     --border-paper: 1px solid rgba(120, 96, 58, .35);
     --border-field: 1px solid rgba(110, 86, 50, .5);
     --border-rail-btn: 1px solid rgba(242, 232, 206, .3);
-    --frame-board: linear-gradient(160deg, var(--rail-hi), var(--rail-lo));
     --shelf-frame: linear-gradient(160deg, var(--wood-hi), var(--wood-lo) 62%, var(--wood-edge));
-    /* The hole is a 1px core with a 1px feather, not a hard stop: a radial gradient that goes
-       opaque-to-transparent at one radius rasterises as a jagged disc at fractional zoom. */
-    --pegboard:
-        radial-gradient(circle at 50% 50%, rgba(30, 18, 6, .5) 0 1px, rgba(0, 0, 0, 0) 2px) 0 0 / 26px 26px,
-        var(--surface-rail);
     /* Two translucent faces that carry a caption, named because a surface with text on it has to
-       be reachable by the contrast pair table, and a color-mix written inline in a component is
+       be reachable by the contrast pair table, and a color-mix written inline in a server sheet is
        not. Both let their own board show through, which is why neither is a flat token. */
-    --hook-face: rgba(0, 0, 0, .16);
-    --tab-badge: color-mix(in srgb, var(--resin) 90%, transparent);
     --rail-btn-face: rgba(0, 0, 0, .16);
     --rail-btn-face-hover: rgba(0, 0, 0, .28);
-    --tile-edge: rgba(20, 12, 4, .5);
 
     --radius-plaque: var(--radius-md);
     --radius-field: var(--radius-sm);
     --radius-stamp: 3px;
     --radius-paper: 3px;
-    --radius-shelf: 5px;
 
     --font-display: 'Vollkorn', Georgia, serif;
     --font-note: 'Caveat', cursive;
@@ -389,38 +362,22 @@
        (ADR-191) regardless of size. */
     --font-readout: 'Departure Mono', var(--font-mono);
 
-    /* Pencil rules: the worktop is squared paper, the chart is graph paper. */
+    /* Pencil rules: the chart is graph paper. */
     --rule-ink: rgba(120, 96, 58, .32);
     --rule-ink-soft: rgba(120, 96, 58, .15);
-    --grid-worktop:
-        repeating-linear-gradient(0deg, transparent 0 23px, var(--rule-ink-soft) 23px 24px),
-        repeating-linear-gradient(90deg, transparent 0 23px, var(--rule-ink-soft) 23px 24px);
     --grid-graph:
         repeating-linear-gradient(0deg, transparent 0 27px, var(--rule-ink-soft) 27px 28px),
         repeating-linear-gradient(90deg, transparent 0 59px, var(--rule-ink-soft) 59px 60px);
 
-    /* The bench shell's own dimensions, and the chrome half of the surface split (ADR-138):
-       wood and brass may be dense, paper may not. --text-readout aliases the scale rather than
+    /* The height the served header stands at (ADR-215), and the chrome half of the surface split
+       (ADR-138): wood and brass may be dense, paper may not. --text-readout aliases the scale rather than
        carrying 21px itself — a semantic role holding a bare number is the debt integers-only
        exists to stop. */
     --bench-rail-h: 56px;
-    /* 56 → 64 (T-335, 31.08): at 56 the wall's longest caption ("Dialogues") ellipsized and every
-       tool read cramped; 64 seats all captions in both languages at the 11px chrome size. */
-    --bench-tool-w: 64px;
-    --bench-dock-w-narrow: 224px;
+    /* The two inspector widths a page still names beside its list. */
     --bench-dock-w: 300px;
     --bench-dock-w-wide: 340px;
-    --bench-dock-w-hub: 262px;
-    --bench-dock-w-hub-wide: 322px;
     --bench-panel-hd: 30px;
-    --bench-worktop-edge-h: 26px;
-    --bench-drawer-lip: 32px;
-    --bench-drawer-open: 172px;
-    --bench-cover-h: 296px;
-    --bench-ruler-h: 30px;
-    /* What the shut drawer and the rule take together. Derived, because a page reserving room
-       for the bottom chrome and the chrome itself must never be able to disagree. */
-    --bench-bottom-h: calc(var(--bench-drawer-lip) + var(--bench-ruler-h));
     --hit-chrome: 30px;
     /* Two numbers because they answer two questions (ADR-182): --hit-target is the box a paper
        control is drawn at, taken from the mirror's .btn-md; --hit-touch is the floor a finger is
@@ -433,9 +390,6 @@
     --text-chrome: var(--fs-13);
     --text-chrome-sm: var(--fs-11);
     --text-readout: var(--fs-21);
-
-    --page-max: 1380px;
-    --page-pad: 28px;
 
     /* The paper-first shell (ADR-239): the sidebar's two widths, decided by route, and the two
        bands the editor's document frame adds above and below the page. */
@@ -496,7 +450,6 @@
     --wood: #4B3823;
     --wood-lo: #3A2A1A;
     --wood-edge: #20150C;
-    --wood-groove: #332516;
     /* The one ink that flips: the wall is dark at night, and nothing but chrome draws on it. */
     --wood-ink: #E3D3AE;
     --wood-ink-soft: rgba(227, 211, 174, .66);
@@ -540,7 +493,6 @@
     --dens-control-y: 5px;
     --dens-control-x: 10px;
     --dens-gap: var(--space-2);
-    --dens-section: var(--space-4);
     --dens-radius: var(--radius-sm);
     --dens-fs: var(--fs-ui);
     --dens-elev: none;
@@ -560,10 +512,8 @@ html, body {
         --motion-fast: 1ms;
         --motion-base: 1ms;
         --motion-slow: 1ms;
-        --dur-publish: 1ms;
         --dur-tap: 1ms;
         --dur-control: 1ms;
-        --dur-move: 1ms;
     }
 
     *, *::before, *::after {
@@ -737,6 +687,17 @@ body {
     padding: 0 var(--space-10) var(--space-6);
 }
 
+/* The wall carries one ink and paper another (ADR-141), and a control that paints no ground of
+   its own — a ghost button, a margin note — has to take whichever it is standing on. The surface
+   declares the pair and the control spends it, the same shape --hit-surface takes: the shell's
+   ground names the wall's, .card and the two card components restate paper's. */
+.card,
+app-shelf-panel,
+app-worktop {
+    --surface-ink: var(--text);
+    --surface-ink-soft: var(--t2);
+}
+
 /* The header stands on the wall, so it writes with the wall's ink (ADR-141) — the card below it
    goes back to paper's. */
 .page-header {
@@ -770,6 +731,25 @@ body {
     color: var(--border);
 }
 
+/* One item may be a folder path; it is cut, not wrapped, so the line stays one line. */
+.page-meta > span:not(.sep):not(.tag) {
+    max-width: 36ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A legend dot before an item, painted from a series token the page names (ADR-146). */
+.page-meta .swatch {
+    display: inline-block;
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 50%;
+    vertical-align: 0;
+}
+
 .card {
     background: var(--sheet);
     border: 1px solid var(--border);
@@ -780,6 +760,43 @@ body {
 
 .card.is-tinted {
     background: var(--surface);
+}
+
+/* A card that is the column: flex so its body, or an empty state, takes the height. */
+.card.is-fill {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* The caption line: a .label, the count beside it, the card's own commands on the right. */
+.card-head {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    box-sizing: border-box;
+    min-height: var(--hit-touch);
+    padding: 0 var(--space-4);
+}
+
+.card-head .card-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+.card-head .spacer { flex: 1; }
+
+.card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-4);
 }
 
 /* The trough is --surface, not the artboard's wall colour: the wall goes dark at night (ADR-141)
@@ -822,6 +839,22 @@ body {
     box-shadow: var(--shadow-paper-sm);
 }
 
+/* A count behind a tile, on the accent wash like app-index-tabs' badge. */
+.seg-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-stamp);
+    background: var(--asoft);
+    color: var(--accent);
+    font-size: var(--fs-11);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 .tag {
     display: inline-flex;
     align-items: center;
@@ -840,6 +873,49 @@ body {
 .tag.warn { background: var(--warn-soft); color: var(--warn); }
 .tag.danger { background: var(--danger-soft); color: var(--danger); }
 .tag.is-plain { text-transform: none; letter-spacing: 0; }
+
+/* A chip is a thing on a board — a scheduled post, a queue slot: tinted in the accent by default,
+   dashed when it stands for something not there yet. */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    padding: 5px var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--asoft);
+    color: var(--accent);
+    font-family: var(--font-sans);
+    font-size: var(--fs-12);
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.chip.is-dashed {
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--t2);
+}
+
+/* An error is a box with the danger ink on its own wash, never bare red text. */
+.error-box {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
+    color: var(--danger);
+    font-size: var(--fs-13);
+    line-height: 1.45;
+}
+
+.error-box app-icon,
+.error-box .icon-sm { flex: none; margin-top: 1px; }
 
 /* 1px, not the artboard's 1.5 (integers only, ADR-138). The ink is inherited on purpose: inside a
    card it is paper's, on the wall it is the wall's, and neither theme loses it. */
@@ -890,6 +966,36 @@ body {
 .row .t { font-weight: 600; color: var(--text); }
 .row .m { color: var(--t3); font-size: var(--fs-13); }
 
+/* A row that is picked is a button wearing the row: the native face goes, the row stays. */
+button.row {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+/* The selected row: the accent wash and the pine rule down its edge. :not(:focus-visible) so the
+   rule cannot out-specify the focus halo (ADR-140). */
+.row.is-on { background: var(--asoft); }
+.row.is-on:not(:focus-visible) { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* A header row is a label line on the alt paper, and it does not light on hover. */
+.row.head,
+.row.head:hover {
+    min-height: var(--hit-chrome);
+    background: var(--alt);
+    font-size: var(--fs-11);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--t3);
+}
+
 .kv {
     display: grid;
     grid-template-columns: 96px 1fr;
@@ -932,16 +1038,16 @@ body {
 .btn:hover { background: var(--surface); }
 .btn.primary { background: var(--pine); border-color: var(--pine); color: var(--text-on-pine); }
 .btn.primary:hover { background: var(--pine-deep); border-color: var(--pine-deep); }
-.btn.ghost { background: transparent; border-color: transparent; color: var(--t2); }
-.btn.ghost:hover { background: var(--hover); color: var(--text); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--surface-ink-soft, var(--t2)); }
+.btn.ghost:hover { background: var(--hover); color: var(--surface-ink, var(--text)); }
 .btn.sm { min-height: var(--hit-chrome); padding: 0 10px; font-size: var(--fs-13); }
 
-/* Margin notes and empty states — the one place the hand-written face is allowed. On the wall the
-   ink is --wood-ink (ADR-141). */
+/* Margin notes and empty states — the one place the hand-written face is allowed. The ink is the
+   surface's soft one: --t2 in a card, --wood-ink-soft on the wall (ADR-141). */
 .margin-note {
     font-family: var(--font-note);
     font-size: var(--fs-17);
-    color: var(--t2);
+    color: var(--surface-ink-soft, var(--t2));
     transform: rotate(-1.4deg);
 }
 

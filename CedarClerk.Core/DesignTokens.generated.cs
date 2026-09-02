@@ -31,7 +31,7 @@ public static partial class DesignTokens
         ["ok"] = "#356842",
         ["warn"] = "#7A5520",
         ["wood-ink"] = "#3A2918",
-        ["wood-ink-soft"] = "rgba(58, 41, 24, .68)",
+        ["wood-ink-soft"] = "rgba(58, 41, 24, .72)",
         ["series-1"] = "#39543C",
         ["series-2"] = "#3E5A76",
         ["series-3"] = "#92631B",

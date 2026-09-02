@@ -1,8 +1,7 @@
 import { Component } from '@angular/core';
 
 // The hardware for anything that HANGS — a task tag. Paper that lies on a surface takes
-// app-brass-pin, a tool fixed to the wall takes app-brass-nail; swapping them breaks the
-// workshop's physical logic. Never labelled: a hook is scenery, and what hangs from it carries
+// app-brass-pin; swapping them breaks the workshop's physical logic. Never labelled: a hook is scenery, and what hangs from it carries
 // whatever the row means.
 @Component({
     selector: 'app-brass-hook',

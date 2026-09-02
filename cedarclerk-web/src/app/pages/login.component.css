@@ -57,16 +57,7 @@
 
     .primary-btn { display: flex; }
 
-    .error-box {
-        margin: var(--space-2) 0 var(--space-3);
-        padding: var(--space-2) var(--space-3);
-        border: 1px solid var(--danger);
-        border-radius: var(--radius-sm);
-        background: var(--danger-soft);
-        color: var(--danger);
-        font-size: var(--fs-ui);
-        line-height: 1.4;
-    }
+    .error-box { margin-top: var(--space-2); }
 
     .session-notice {
         display: flex;
