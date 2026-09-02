@@ -1,7 +1,18 @@
-// Every time this app prints is Pacific, whatever the machine showing it thinks (ADR-115).
-// The backend keeps the same value in Consts.General.DisplayTimeZone — these two constants are the
-// place a per-user timezone would replace.
-export const DISPLAY_TIME_ZONE = 'America/Los_Angeles';
+// ADR-244 — Pacific preserves existing accounts; /api/auth/me replaces it with the account's IANA
+// timezone before authenticated screens render.
+export const DEFAULT_DISPLAY_TIME_ZONE = 'America/Los_Angeles';
+let currentTimeZone = DEFAULT_DISPLAY_TIME_ZONE;
+
+export function displayTimeZone(): string { return currentTimeZone; }
+
+export function setDisplayTimeZone(timeZoneId: string): void {
+    try {
+        new Intl.DateTimeFormat('en-US', { timeZone: timeZoneId }).format(0);
+        currentTimeZone = timeZoneId;
+    } catch {
+        currentTimeZone = DEFAULT_DISPLAY_TIME_ZONE;
+    }
+}
 
 // LocaleService writes the UI language onto <html lang>; reading it back here keeps every date the
 // app prints — through the pipe or a direct call — in that language without threading a service
@@ -19,11 +30,81 @@ function monthsShort(): readonly string[] {
 // A named zone, not a fixed -8: Los Angeles is on PDT from March to November, and a fixed offset
 // would be an hour wrong for most of the year.
 // hourCycle rather than hour12: false — with hour12: false some engines print midnight as 24:00.
-const PARTS = new Intl.DateTimeFormat('en-US', {
-    timeZone: DISPLAY_TIME_ZONE,
-    year: 'numeric', month: 'numeric', day: 'numeric',
-    hour: 'numeric', minute: 'numeric', hourCycle: 'h23',
-});
+const PARTS = new Map<string, Intl.DateTimeFormat>();
+
+function partsFormatter(timeZoneId: string): Intl.DateTimeFormat {
+    let formatter = PARTS.get(timeZoneId);
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn', {
+            timeZone: timeZoneId,
+            year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23',
+        });
+        PARTS.set(timeZoneId, formatter);
+    }
+    return formatter;
+}
+
+export interface ZonedParts {
+    year: number; month: number; day: number; hour: number; minute: number; second: number;
+}
+
+export function partsInZone(
+    value: string | number | Date | null | undefined,
+    timeZoneId = currentTimeZone,
+): ZonedParts | null {
+    const date = toInstant(value);
+    if (!date) return null;
+    const parts: Record<string, string> = {};
+    for (const part of partsFormatter(timeZoneId).formatToParts(date)) {
+        if (part.type !== 'literal') parts[part.type] = part.value;
+    }
+    return {
+        year: Number(parts['year']), month: Number(parts['month']), day: Number(parts['day']),
+        hour: Number(parts['hour']), minute: Number(parts['minute']), second: Number(parts['second']),
+    };
+}
+
+const pad = (value: number | string) => String(value).padStart(2, '0');
+
+export function dayInZone(value: string | number | Date, timeZoneId = currentTimeZone): string {
+    const parts = partsInZone(value, timeZoneId);
+    return parts ? `${parts.year}-${pad(parts.month)}-${pad(parts.day)}` : '';
+}
+
+export function timeInZone(value: string | number | Date, timeZoneId = currentTimeZone): string {
+    const parts = partsInZone(value, timeZoneId);
+    return parts ? `${pad(parts.hour)}:${pad(parts.minute)}` : '';
+}
+
+/** Account wall-clock input to a UTC instant. Invalid daylight-saving gaps return null. */
+export function wallClockToInstant(day: string, time: string, timeZoneId = currentTimeZone): Date | null {
+    const [year, month, date] = day.split('-').map(Number);
+    const [hour, minute] = time.split(':').map(Number);
+    if (![year, month, date, hour, minute].every(Number.isFinite)) return null;
+
+    const wanted = Date.UTC(year, month - 1, date, hour, minute, 0);
+    let guess = wanted;
+    for (let i = 0; i < 4; i++) {
+        const actual = partsInZone(guess, timeZoneId);
+        if (!actual) return null;
+        const actualWall = Date.UTC(actual.year, actual.month - 1, actual.day, actual.hour, actual.minute, 0);
+        const delta = wanted - actualWall;
+        guess += delta;
+        if (delta === 0) break;
+    }
+
+    const matches = (instant: number) => {
+        const p = partsInZone(instant, timeZoneId);
+        return p?.year === year && p.month === month && p.day === date && p.hour === hour && p.minute === minute;
+    };
+    const candidates: number[] = [];
+    for (let offset = -120; offset <= 120; offset += 30) {
+        const candidate = guess + offset * 60_000;
+        if (matches(candidate)) candidates.push(candidate);
+    }
+    return candidates.length ? new Date(Math.min(...candidates)) : null;
+}
 
 /**
  * The server sends UTC with a trailing Z since ADR-115. A value without one is still read as UTC
@@ -47,17 +128,10 @@ export function formatInZone(value: string | number | Date | null | undefined, p
     const date = toInstant(value);
     if (!date) return '';
 
-    const parts: Record<string, string> = {};
-    for (const part of PARTS.formatToParts(date)) {
-        if (part.type !== 'literal') parts[part.type] = part.value;
-    }
+    const parts = partsInZone(date);
+    if (!parts) return '';
 
-    const year = Number(parts['year']);
-    const month = Number(parts['month']);
-    const day = Number(parts['day']);
-    const hour = parts['hour'] ?? '00';
-    const minute = parts['minute'] ?? '00';
-    const pad = (n: number | string) => String(n).padStart(2, '0');
+    const { year, month, day, hour, minute } = parts;
 
     return pattern.replace(/yyyy|yy|y|MMM|MM|M|dd|d|HH|mm/g, token => {
         switch (token) {
@@ -79,7 +153,7 @@ export function formatInZone(value: string | number | Date | null | undefined, p
 export function zoneAbbreviation(value: string | number | Date | null | undefined): string {
     const date = toInstant(value);
     if (!date) return '';
-    const named = new Intl.DateTimeFormat('en-US', { timeZone: DISPLAY_TIME_ZONE, timeZoneName: 'short' })
+    const named = new Intl.DateTimeFormat('en-US', { timeZone: currentTimeZone, timeZoneName: 'short' })
         .formatToParts(date)
         .find(part => part.type === 'timeZoneName');
     return named?.value ?? '';

@@ -1,6 +1,9 @@
 using System.Security.Claims;
+using System.Text.Json;
 using CedarClerk.Core;
 using CedarClerk.Localization;
+using CedarClerk.Server.Ai;
+using CedarClerk.Server.Analytics;
 using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +27,8 @@ public static class ProjectEndpoints
         string? TrailerUrl, string? CustomDomain,
         string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
         string? PressGenre = null, string? PressFactsheetRows = null,
-        string? DiscoveryCategory = null);
+        string? DiscoveryCategory = null, string? BlocksJson = null);
+    public record ShowcaseAssistRequest(string Kind, string Text);
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title, Guid? PresetId);
@@ -153,6 +157,7 @@ public static class ProjectEndpoints
                 project.ShowcaseSlug,
                 project.ShowcaseLinks,
                 project.ShowcaseGallery,
+                project.ShowcaseBlocksJson,
                 project.ShowcaseTrailerUrl,
                 project.CustomDomain,
                 project.PressContactEmail,
@@ -265,6 +270,7 @@ public static class ProjectEndpoints
             if ((req.Gallery ?? "").Length > Consts.Showcase.GalleryMaxLength)
                 return Results.BadRequest(new { error = ErrorMessages.ShowcaseGalleryTooLong(Consts.Showcase.GalleryMaxLength) });
             project.ShowcaseGallery = string.Join("\n", ShowcaseGallery.Parse(req.Gallery));
+            project.ShowcaseBlocksJson = ShowcaseLayouts.Serialize(ShowcaseLayouts.Parse(req.BlocksJson));
 
             var trailer = (req.TrailerUrl ?? "").Trim();
             if (trailer.Length > 0 && YouTubeLink.VideoId(trailer) is null)
@@ -313,6 +319,7 @@ public static class ProjectEndpoints
                     url = (string?)null,
                     customDomain = project.CustomDomain,
                     discoveryCategory = project.DiscoveryCategory,
+                    blocksJson = project.ShowcaseBlocksJson,
                 });
             }
 
@@ -331,10 +338,87 @@ public static class ProjectEndpoints
             return Results.Ok(new
             {
                 showcaseSlug = slug,
-                url = blogHost is null ? null : $"https://{blogHost}/games/{slug}",
+                url = blogHost is null ? null : $"https://{blogHost}/showcase/{slug}",
                 customDomain = project.CustomDomain,
                 discoveryCategory = project.DiscoveryCategory,
+                blocksJson = project.ShowcaseBlocksJson,
             });
+        });
+
+        group.MapPost("/{id:guid}/showcase/assist", async (
+            Guid id, ShowcaseAssistRequest req, ClaimsPrincipal user, CedarDbContext db,
+            IConfiguration cfg, IHttpClientFactory httpFactory, IServiceScopeFactory scopeFactory,
+            AiJobService jobs, ProductAnalytics analytics) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (!await db.Projects.AnyAsync(p => p.Id == id && p.OwnerId == uid))
+                return Results.NotFound();
+
+            var text = (req.Text ?? "").Trim();
+            if (text.Length == 0 || text.Length > ShowcaseLayouts.BodyMaxLength)
+                return Results.BadRequest(new { error = $"Showcase text must be 1–{ShowcaseLayouts.BodyMaxLength} characters" });
+
+            var kind = req.Kind switch
+            {
+                "polish" => AiEditKind.Polish,
+                "shorten" => AiEditKind.Shorten,
+                "ideas" => AiEditKind.Ideas,
+                _ => (AiEditKind?)null,
+            };
+            if (kind is null) return Results.BadRequest(new { error = $"Unknown Showcase AI kind: {req.Kind}" });
+
+            var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
+            if (!PlanLimitations.HasAiFeatures(tier))
+                return Results.Json(new { error = ErrorMessages.AiEditProPlus }, statusCode: StatusCodes.Status403Forbidden);
+
+            IAiEditProvider? provider;
+            try { provider = AiEditProviderFactory.Create(cfg, httpFactory); }
+            catch (AiEditException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status501NotImplemented);
+            }
+            if (provider is null)
+                return Results.Json(new { error = ErrorMessages.AiEditNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
+
+            if (await SubscriptionPlan.ChargeAiOrRefuseAsync(db, uid, CreditPacks.AiSmallCost, analytics, "showcase") is { } refusal)
+                return refusal;
+
+            var cedarJson = JsonSerializer.Serialize(new
+            {
+                type = "doc",
+                content = new[]
+                {
+                    new { type = "paragraph", content = new[] { new { type = "text", text } } },
+                },
+            });
+            var jobId = jobs.Start(uid, async ct =>
+            {
+                AiEditResult result;
+                try { result = await provider.EditAsync("Showcase block", cedarJson, kind.Value, ct); }
+                catch (AiEditException ex)
+                {
+                    return AiJobOutcome.Fail(ex.Message, StatusCodes.Status502BadGateway);
+                }
+
+                string suggestion;
+                try { suggestion = string.Join("\n\n", CedarPlainText.Paragraphs(result.CedarJson)).Trim(); }
+                catch (JsonException)
+                {
+                    return AiJobOutcome.Fail("AI returned invalid Showcase text", StatusCodes.Status502BadGateway);
+                }
+                if (suggestion.Length == 0 || suggestion.Length > ShowcaseLayouts.BodyMaxLength)
+                    return AiJobOutcome.Fail("AI returned unusable Showcase text", StatusCodes.Status502BadGateway);
+
+                return AiJobOutcome.Ok(new { suggestion });
+            }, Consts.Anthropic.RequestTimeout,
+            onFailure: async () =>
+            {
+                using var refundScope = scopeFactory.CreateTenantScope(uid);
+                await SubscriptionPlan.RefundAiAsync(
+                    refundScope.ServiceProvider.GetRequiredService<CedarDbContext>(), uid, CreditPacks.AiSmallCost);
+            });
+
+            return Results.Accepted(value: new { jobId });
         });
 
         // T-296/T-297 — what the public page did, for the owner who cannot see their own counters

@@ -35,7 +35,7 @@ public class PressPageTests
         Assert.Equal(StatusCodes.Status200OK, status);
         Assert.Contains("press kit", body);
         Assert.Contains("Cedar Station", body);
-        Assert.Contains("/games/cedar-station/press/pack.zip", body);
+        Assert.Contains("/showcase/cedar-station/press/pack.zip", body);
         // No trailer, no gallery, no press contact — the sections simply are not there. Markup
         // markers, not bare class names, which also occur in the shell's stylesheet.
         Assert.DoesNotContain("<div class=\"showcase-trailer\">", body);
@@ -90,6 +90,18 @@ public class PressPageTests
 
         var (_, body) = await Get(db, "/games/cedar-station");
 
-        Assert.Contains("href=\"/games/cedar-station/press\"", body);
+        Assert.Contains("href=\"/showcase/cedar-station/press\"", body);
+    }
+
+    [Fact]
+    public async Task The_press_description_names_a_project_not_a_game()
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        Seed(db, p => p.Description = "A tool, comic, album or game can use the same page.");
+
+        var (_, body) = await Get(db, "/showcase/cedar-station/press");
+
+        Assert.Contains("О проекте", body);
+        Assert.DoesNotContain("Об игре", body);
     }
 }

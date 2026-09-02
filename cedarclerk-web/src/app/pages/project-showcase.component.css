@@ -1,5 +1,3 @@
-/* The paper-first shell (ADR-239): the form is a scrolling card, the readings plain cards beside
-   it. */
 :host {
     display: flex;
     flex: 1;
@@ -7,138 +5,230 @@
     min-height: 0;
 }
 
-.grid {
+.showcase-page { min-height: 0; }
+
+.builder {
     display: grid;
     flex: 1;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: var(--space-5);
-    align-items: stretch;
-    min-height: 0;
-}
-
-.main {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    min-width: 0;
-    min-height: 0;
-    padding: var(--space-4) 18px 18px;
-    overflow: auto;
-}
-
-.side {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: minmax(14rem, .72fr) minmax(26rem, 1.6fr) minmax(18rem, .9fr);
     gap: var(--space-4);
-    min-width: 0;
     min-height: 0;
+}
+
+.block-rail, .live-result, .inspector { min-width: 0; min-height: 0; }
+
+.block-rail {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4);
+    overflow: hidden;
+}
+
+.panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.panel-head p {
+    margin: var(--space-1) 0 0;
+    color: var(--t3);
+    font-size: var(--fs-13);
+    line-height: normal;
+}
+
+.panel-head h2 { margin: var(--space-1) 0 0; font-size: var(--fs-18); }
+
+.block-count {
+    display: grid;
+    flex: none;
+    place-items: center;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--t2);
+    font-weight: 700;
+}
+
+.block-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-height: 0;
+    margin: var(--space-4) calc(-1 * var(--space-2));
     overflow: auto;
 }
 
-.side-card {
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-4) 18px;
-}
-
-.kv-link {
-    display: inline-flex;
+.block-row {
+    display: grid;
+    grid-template-columns: var(--hit-target) minmax(0, 1fr) var(--hit-target);
     align-items: center;
-    gap: 6px;
-    min-width: 0;
+    min-height: calc(var(--hit-target) + var(--space-2));
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
     color: var(--text);
-    text-decoration: none;
-}
-
-.kv-link:hover { color: var(--accent); }
-
-.kv-none { color: var(--t3); }
-
-.hint {
-    margin: 0;
-    color: var(--t2);
-    font-size: var(--fs-ui);
-}
-
-.error-line {
-    margin: 0;
-    color: var(--danger);
-    font-size: var(--fs-ui);
-}
-
-.checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--fs-ui);
+    text-align: left;
     cursor: pointer;
 }
 
-.fields {
+.block-row:hover { background: var(--hover); }
+.block-row.is-selected { border-color: var(--accent); background: var(--asoft); }
+.block-row.is-hidden { opacity: .58; }
+.block-row > span { display: flex; flex-direction: column; min-width: 0; }
+.block-row b, .block-row small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.block-row b { font-size: var(--fs-ui); }
+.block-row small { color: var(--t3); font-size: var(--fs-12); }
+
+.add-block {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-}
-
-/* app-input draws its own label; a textarea has none of its own, so this is the same face restated
-   for the two fields the bench has no component for. */
-.field-label {
-    font-family: var(--font-sans);
-    font-size: var(--fs-ui);
-    font-weight: 700;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    color: var(--t2);
-}
-
-.field textarea {
-    width: 100%;
-    font-family: var(--font-mono);
-    font-size: var(--fs-ui);
-}
-
-/* The press-kit fields are one group of the same form; the label rules them off from the
-   page-address fields above without becoming a second card. */
-.press-group-label {
-    margin: var(--space-2) 0 0;
+    gap: var(--space-2);
     padding-top: var(--space-3);
     border-top: 1px solid var(--border);
-    font-family: var(--font-sans);
-    font-size: var(--fs-ui);
-    font-weight: 700;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    color: var(--t2);
 }
 
-.press-link {
-    margin-left: var(--space-2);
-    color: var(--accent);
-    font-weight: 600;
-}
+.live-result { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); }
 
-.save-row {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3);
-}
-
-.saved-note {
-    color: var(--ok);
-    font-size: var(--fs-ui);
-}
-
-/* T-353 - the gallery field's own command, under the textarea it fills. */
-.field-actions {
+.preview-bar {
     display: flex;
-    justify-content: flex-end;
-    margin-top: var(--space-1);
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--hit-target);
+    padding: 0 var(--space-4);
+    border-bottom: 1px solid var(--border);
+    color: var(--t3);
+    font-size: var(--fs-12);
+}
+
+.preview-page {
+    flex: 1;
+    min-height: 0;
+    margin: var(--space-3);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-md);
+    background: var(--sheet);
+    box-shadow: var(--shadow);
+    overflow: auto;
+}
+
+.preview-block {
+    position: relative;
+    padding: var(--space-5);
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+
+.preview-block + .preview-block { border-top: 1px solid var(--paper-edge); }
+.preview-block:hover { background: var(--hover); }
+.preview-block.is-selected { border-color: var(--accent); background: var(--asoft); }
+.preview-block h1 { margin: 0 0 var(--space-2); font-size: var(--fs-34); }
+.preview-block h2 { margin: 0 0 var(--space-3); font-size: var(--fs-22); }
+.preview-block p { margin: 0; color: var(--t2); line-height: var(--lh-read); white-space: pre-line; }
+
+.preview-block:has(.preview-cover) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: var(--space-5); }
+.preview-cover { width: 100%; height: 100%; min-height: 12rem; object-fit: cover; border-radius: var(--radius-md); }
+.preview-hero-copy { align-self: center; }
+.preview-kicker { display: block; margin-bottom: var(--space-2); color: var(--accent); font-size: var(--fs-12); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.preview-text-link { display: inline-block; margin-top: var(--space-3); color: var(--accent); font-size: var(--fs-13); font-weight: 700; }
+
+.preview-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.preview-actions span { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--pine); color: var(--text-on-pine); font-weight: 700; }
+.preview-actions em, .preview-gallery em, .preview-posts em { color: var(--t3); font-size: var(--fs-ui); }
+
+.preview-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-md);
+    background: var(--pine);
+    color: var(--text-on-pine);
+}
+
+.preview-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.preview-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-sm); background: var(--surface); }
+
+.preview-derived {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.preview-posts { display: grid; gap: var(--space-2); }
+.preview-posts span { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--paper-edge); border-radius: var(--radius-sm); }
+.preview-posts small { color: var(--t3); text-transform: uppercase; }
+
+.preview-follow { display: grid; grid-template-columns: 1fr auto; margin-top: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.preview-follow span, .preview-follow b { padding: var(--space-3); }
+.preview-follow span { color: var(--t3); }
+.preview-follow b { background: var(--pine); color: var(--text-on-pine); }
+
+.inspector { display: flex; flex-direction: column; gap: var(--space-3); overflow: auto; }
+.inspector-card, .metrics-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+
+.order-actions { display: flex; gap: var(--space-1); }
+.order-actions button {
+    display: grid;
+    place-items: center;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--t2);
+    cursor: pointer;
+}
+.order-actions button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.order-actions button:disabled { opacity: .4; cursor: default; }
+.order-actions .remove-block { margin-left: auto; color: var(--danger); }
+
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field-label { color: var(--t2); font-size: var(--fs-12); font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.field textarea { width: 100%; resize: vertical; font-family: var(--font-sans); line-height: normal; }
+
+.checkbox-row { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-ui); cursor: pointer; }
+
+.ai-tools { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.ai-head, .ai-actions, .suggestion-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.ai-head { justify-content: space-between; }
+.suggestion { padding: var(--space-3); border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--asoft); }
+.suggestion p { margin: var(--space-2) 0; white-space: pre-line; line-height: normal; }
+.suggestion-actions { justify-content: flex-end; }
+
+.settings-card { flex: none; overflow: hidden; }
+.settings-card summary { padding: var(--space-3) var(--space-4); font-weight: 800; cursor: pointer; }
+.settings-body { display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4) var(--space-4); }
+
+.save-row { display: inline-flex; align-items: center; gap: var(--space-3); }
+.saved-note { color: var(--ok); font-size: var(--fs-ui); }
+.hint { margin: 0; color: var(--t2); font-size: var(--fs-ui); }
+.error-line { margin: 0; color: var(--danger); font-size: var(--fs-ui); }
+.action-error { margin-top: var(--space-3); }
+
+@media (max-width: 1200px) {
+    .builder { grid-template-columns: minmax(13rem, .65fr) minmax(24rem, 1.35fr); }
+    .inspector { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+    .inspector-card { grid-row: span 3; }
+}
+
+@media (max-width: 760px) {
+    .builder { display: flex; flex-direction: column; overflow: visible; }
+    .block-list { max-height: 18rem; }
+    .live-result { min-height: 32rem; }
+    .inspector { display: flex; }
+    .preview-block:has(.preview-cover) { grid-template-columns: 1fr; }
+    .preview-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

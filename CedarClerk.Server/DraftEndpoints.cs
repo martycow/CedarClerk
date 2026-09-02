@@ -1617,16 +1617,17 @@ public static class DraftEndpoints
             // pointing somewhere real rather than at another blog.
             var blogHost = await BlogTenant.HostForOwnerAsync(db, cfg, draft.OwnerId)
                 ?? cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
-            var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{blogHost}", language);
             var owner = await db.Users.Where(u => u.Id == uid)
-                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt })
+                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt, u.TimeZoneId })
                 .FirstAsync();
+            var body = CedarToBlogHtmlRenderer.Render(cedarJson, $"https://{blogHost}", language,
+                timeZoneId: owner.TimeZoneId);
             var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
             var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, language);
             var signature = PlanLimitations.ResolveSignature(ownerPlan, localizedSignature, owner.PostSignatureUrl);
             var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
 
-            var html = StaticExportHtml(title, body, language, signature, publishedAt, cedarJson);
+            var html = StaticExportHtml(title, body, language, signature, publishedAt, cedarJson, owner.TimeZoneId);
             var fileName = SanitizeFileName(title) + ".html";
             return Results.File(System.Text.Encoding.UTF8.GetBytes(html), "text/html", fileName);
         });
@@ -1643,7 +1644,7 @@ public static class DraftEndpoints
 
             var translations = await db.DraftTranslations.Where(t => t.DraftId == id).ToListAsync();
             var owner = await db.Users.Where(u => u.Id == uid)
-                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt })
+                .Select(u => new { u.PostSignature, u.PostSignatureUrl, u.PostSignatureTranslationsJson, u.PlanTier, u.PlanExpiresAt, u.TimeZoneId })
                 .FirstAsync();
             var ownerPlan = SubscriptionPlanHelper.CheckPlanExpiration(owner.PlanTier, owner.PlanExpiresAt, DateTime.UtcNow);
             var publishedAt = draft.BlogPublishedAt ?? draft.CreatedAt;
@@ -1663,13 +1664,13 @@ public static class DraftEndpoints
                     // "." rather than the blog host: ResolveUrl prefixes it onto the leading
                     // slash of /media/..., which turns every asset into ./media/... — relative
                     // to the page, which is exactly the layout inside the archive.
-                    var body = CedarToBlogHtmlRenderer.Render(cedarJson, ".", lang);
+                    var body = CedarToBlogHtmlRenderer.Render(cedarJson, ".", lang, timeZoneId: owner.TimeZoneId);
                     // FI5 — each language's page in the archive gets that language's own signature,
                     // not the primary one on repeat (this loop used to resolve the signature once,
                     // outside the loop, before per-language signatures existed).
                     var localizedSignature = LocalizedTextMap.Pick(owner.PostSignature, owner.PostSignatureTranslationsJson, lang);
                     var signature = PlanLimitations.ResolveSignature(ownerPlan, localizedSignature, owner.PostSignatureUrl);
-                    var html = StaticExportHtml(title, body, lang, signature, publishedAt, cedarJson);
+                    var html = StaticExportHtml(title, body, lang, signature, publishedAt, cedarJson, owner.TimeZoneId);
                     var pageName = lang == draft.PrimaryLanguage ? "index.html" : $"index.{lang}.html";
                     var pageEntry = zip.CreateEntry(pageName, CompressionLevel.Optimal);
                     await using (var pageStream = pageEntry.Open())
@@ -1980,7 +1981,8 @@ public static class DraftEndpoints
     // file with no external <link>/fetch of any kind. The palette itself is not duplicated:
     // it is inlined from DesignTokens (T-101), so the export stays self-contained without
     // carrying its own copy of the colours.
-    private static string StaticExportHtml(string title, string bodyHtml, string lang, ResolvedSignature? signature, DateTime publishedAt, string cedarJson)
+    private static string StaticExportHtml(string title, string bodyHtml, string lang, ResolvedSignature? signature,
+        DateTime publishedAt, string cedarJson, string timeZoneId)
     {
         var mathAssets = bodyHtml.Contains("math-tex")
             ? """<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" onload="document.querySelectorAll('.math-tex').forEach(function (el) { try { katex.render(el.textContent, el, { displayMode: el.dataset.display === 'true', throwOnError: false }); } catch (e) {} });"></script>"""
@@ -2055,7 +2057,7 @@ public static class DraftEndpoints
             <div class="page">
             <div class="post-sheet">
             {{titleHeading}}
-            <div class="post-meta">{{DisplayTime.ToZone(publishedAt).ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}}</div>
+            <div class="post-meta">{{DisplayTime.ToZone(publishedAt, timeZoneId).ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}}</div>
             {{bodyHtml}}
             {{signatureBlock}}
             </div>

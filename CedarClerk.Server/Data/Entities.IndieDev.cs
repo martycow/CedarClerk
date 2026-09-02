@@ -91,7 +91,8 @@ public class Project
     public DateTime? AssetsIndexedAt { get; set; }
 
     /// <summary>
-    /// T-159 (ADR-134) — the public game page's slug on the blog host (`/games/{slug}`), globally
+    /// T-159 (ADR-134/245) — the public Project page's slug on the blog host
+    /// (<c>/showcase/{slug}</c>), globally
     /// unique. Null = no public page, and the page answers 404. Archiving the project hides the
     /// page the same way.
     /// </summary>
@@ -107,6 +108,10 @@ public class Project
     /// no bytes to serve (ADR-134, narrowed by ADR-216).</summary>
     public string ShowcaseGallery { get; set; } = "";
 
+    /// <summary>The ordered safe-block composition for the public Showcase. Empty uses the
+    /// canonical default so existing Projects need no data rewrite.</summary>
+    public string ShowcaseBlocksJson { get; set; } = "";
+
     /// <summary>A YouTube link, rendered through the same nocookie embed the blog renderer emits.
     /// Null = no trailer.</summary>
     public string? ShowcaseTrailerUrl { get; set; }
@@ -118,7 +123,7 @@ public class Project
     /// </summary>
     public string? CustomDomain { get; set; }
 
-    // Wave 1 item 6 — the /games/{slug}/press page's own fields, every one optional: an empty
+    // The /showcase/{slug}/press page's own fields, every one optional: an empty
     // section is omitted from the page, never rendered blank. Flat columns like the Showcase*
     // fields above, and for the same reason — a fixed field set, not a growable bag.
     public string? PressContactEmail { get; set; }

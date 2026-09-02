@@ -15,7 +15,7 @@ public sealed class TenantContext
     /// <summary>
     /// T-300 — the showcase this host answers with at its root, when the host is a project's own
     /// domain rather than a tenant subdomain. Null on every other request, including a showcase
-    /// reached the ordinary way at <c>/games/{slug}</c>.
+    /// reached the ordinary way at <c>/showcase/{slug}</c>.
     /// </summary>
     public string? ShowcaseSlug { get; private set; }
 

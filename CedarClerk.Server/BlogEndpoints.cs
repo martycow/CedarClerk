@@ -355,20 +355,24 @@ public static partial class BlogEndpoints
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
+        var timeZoneId = await db.Users.Where(u => u.Id == site.OwnerId)
+            .Select(u => u.TimeZoneId)
+            .FirstOrDefaultAsync();
+        site = site with { TimeZoneId = TimeZones.NormalizeOrDefault(timeZoneId) };
 
         var path = ctx.Request.Path.Value?.Trim('/') ?? "";
         string[] segments = path.Length == 0 ? [] : path.Split('/');
 
         // T-300 — on a project's own domain the showcase is the site, so its paths lose the
-        // /games/{slug} prefix. Putting the prefix back here rather than duplicating every branch
+        // canonical prefix. Putting the prefix back here rather than duplicating every branch
         // below keeps one set of routes: the domain decides the address, not the behaviour.
         if (ctx.RequestServices.GetService<TenantContext>()?.ShowcaseSlug is { } domainSlug)
             segments = segments switch
             {
-                [] => ["games", domainSlug],
-                ["rss.xml"] or ["follow"] or ["confirm"] or ["unsubscribe"] or ["press"] => ["games", domainSlug, segments[0]],
-                ["go", var goIndex] => ["games", domainSlug, "go", goIndex],
-                ["press", "pack.zip"] => ["games", domainSlug, "press", "pack.zip"],
+                [] => ["showcase", domainSlug],
+                ["rss.xml"] or ["follow"] or ["confirm"] or ["unsubscribe"] or ["press"] => ["showcase", domainSlug, segments[0]],
+                ["go", var goIndex] => ["showcase", domainSlug, "go", goIndex],
+                ["press", "pack.zip"] => ["showcase", domainSlug, "press", "pack.zip"],
                 _ => segments,
             };
 
@@ -391,7 +395,8 @@ public static partial class BlogEndpoints
 
         // T-297 — the follow form posts as a plain form and answers with a redirect, so the page
         // needs no JavaScript to collect an address. Above the GET gate for that reason.
-        if (segments is ["games", var followSlug, "follow"] && ctx.Request.Method == HttpMethods.Post)
+        if (segments is [var followRoot, var followSlug, "follow"] && IsShowcaseRoot(followRoot)
+            && ctx.Request.Method == HttpMethods.Post)
         {
             await PostFollowAsync(ctx, db, site, followSlug);
             return;
@@ -474,7 +479,7 @@ public static partial class BlogEndpoints
         }
 
         // ADR-134 — the public project showcase (T-159).
-        if (segments is ["games", var gameSlug])
+        if (segments is [var showcaseRoot, var gameSlug] && IsShowcaseRoot(showcaseRoot))
         {
             await RenderShowcaseAsync(ctx, db, site, gameSlug);
             return;
@@ -482,38 +487,38 @@ public static partial class BlogEndpoints
 
         // ADR-216 — the showcase's own feed (T-298), its counted store links (T-296) and the two
         // links a follow mail carries (T-297).
-        if (segments is ["games", var feedSlug, "rss.xml"])
+        if (segments is [var feedRoot, var feedSlug, "rss.xml"] && IsShowcaseRoot(feedRoot))
         {
             await RenderShowcaseRssAsync(ctx, db, site, feedSlug);
             return;
         }
 
-        if (segments is ["games", var linkSlug, "go", var linkIndex])
+        if (segments is [var linkRoot, var linkSlug, "go", var linkIndex] && IsShowcaseRoot(linkRoot))
         {
             await RedirectShowcaseLinkAsync(ctx, db, site, linkSlug, linkIndex);
             return;
         }
 
-        if (segments is ["games", var confirmSlug, "confirm"])
+        if (segments is [var confirmRoot, var confirmSlug, "confirm"] && IsShowcaseRoot(confirmRoot))
         {
             await ConfirmFollowAsync(ctx, db, site, confirmSlug);
             return;
         }
 
-        if (segments is ["games", var byeSlug, "unsubscribe"])
+        if (segments is [var byeRoot, var byeSlug, "unsubscribe"] && IsShowcaseRoot(byeRoot))
         {
             await UnsubscribeFollowerAsync(ctx, db, site, byeSlug);
             return;
         }
 
         // Item 6 — the press kit page and its downloadable pack (PressPackEndpoint, lane-data).
-        if (segments is ["games", var pressSlug, "press"])
+        if (segments is [var pressRoot, var pressSlug, "press"] && IsShowcaseRoot(pressRoot))
         {
             await RenderPressAsync(ctx, db, site, pressSlug);
             return;
         }
 
-        if (segments is ["games", var packSlug, "press", "pack.zip"])
+        if (segments is [var packRoot, var packSlug, "press", "pack.zip"] && IsShowcaseRoot(packRoot))
         {
             await PressPackEndpoint.HandleAsync(ctx, db, site, packSlug);
             return;
@@ -521,6 +526,8 @@ public static partial class BlogEndpoints
 
         ctx.Response.StatusCode = StatusCodes.Status404NotFound;
     }
+
+    private static bool IsShowcaseRoot(string value) => value is "showcase" or "games";
 
     private static string VisitorHash(HttpContext ctx)
     {
@@ -1430,7 +1437,7 @@ public static partial class BlogEndpoints
 
         // T-294 — the games this blog is about, above the posts that are about them. Without it the
         // showcase is a page only a reader who already knows its URL can reach.
-        sb.Append(await RenderGamesStripAsync(db, site, indexLang));
+        sb.Append(await RenderShowcaseStripAsync(db, site, indexLang));
 
         if (pageItems.Count == 0)
         {
@@ -1447,13 +1454,13 @@ public static partial class BlogEndpoints
                 // claim an order the list is not actually in.
                 if (sort is "new" or "old")
                 {
-                    var monthKey = DisplayTime.ToZone(p.BlogPublishedAt)?.ToString("yyyy-MM") ?? "";
+                    var monthKey = DisplayTime.ToZone(p.BlogPublishedAt, site.TimeZoneId)?.ToString("yyyy-MM") ?? "";
                     if (monthKey != lastMonthKey)
                     {
                         lastMonthKey = monthKey;
                         if (p.BlogPublishedAt is { } monthDate)
                         {
-                            var monthLabel = BlogDateFormatter.MonthHeadingLocal(monthDate, indexLang);
+                            var monthLabel = BlogDateFormatter.MonthHeadingLocal(monthDate, indexLang, site.TimeZoneId);
                             sb.Append("<div class=\"timeline-month-sep\"><span class=\"sep-line\"></span><span class=\"sep-label\">")
                               .Append(monthLabel).Append("</span><span class=\"sep-line\"></span></div>");
                         }
@@ -1485,7 +1492,7 @@ public static partial class BlogEndpoints
                 sb.Append("<div class=\"post-card-content\">");
                 sb.Append("<div class=\"post-card-meta\">");
                 sb.Append("<span class=\"post-card-date\">")
-                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, indexLang) : "")
+                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, indexLang, site.TimeZoneId) : "")
                   .Append("</span>");
 
                 // T-186 — the primary badge said "RU" for every post while the primary language has
@@ -1589,7 +1596,7 @@ public static partial class BlogEndpoints
                 sb.Append("<div class=\"post-card-meta\">");
                 sb.Append("<span class=\"series-part-no\">").Append(en ? "Part " : "Часть ").Append(part).Append("</span>");
                 sb.Append("<span class=\"post-card-date\">")
-                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang) : "")
+                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang, site.TimeZoneId) : "")
                   .Append("</span>");
                 if (p.IsPrivate)
                     sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
@@ -1855,7 +1862,7 @@ public static partial class BlogEndpoints
         // T-345 — the document's own location wins over the profile's when set (a trip).
         var headerSlotsLine = RenderHeaderSlotsLine(owner.HeaderSlot1Type, owner.HeaderSlot2Type, owner.HeaderSlot3Type,
             owner.AuthorDisplayName, owner.ProfileUrl, draft.LocationText ?? owner.ProfileLocation,
-            ownerPlan, draft.BlogPublishedAt, cedarJson, viewCount);
+            ownerPlan, draft.BlogPublishedAt, cedarJson, viewCount, site.TimeZoneId);
 
         // Idea #11 - the owner's glossary for the language being shown. Empty for an owner who
         // never defined one, which costs a single indexed read and changes nothing downstream.
@@ -1870,9 +1877,9 @@ public static partial class BlogEndpoints
                 .Where(d => wikiIds.Contains(d.Id) && d.OwnerId == draft.OwnerId
                     && d.IsBlogPublished && d.BlogSlug != null && (!d.IsPrivate || d.IsListedWhilePrivate))
                 .ToDictionaryAsync(d => d.Id, d => d.BlogSlug!);
-        var body = CedarToBlogHtmlRenderer.Render(cedarJson, blogBase, lang, glossary, wikiTargets);
+        var body = CedarToBlogHtmlRenderer.Render(cedarJson, blogBase, lang, glossary, wikiTargets, site.TimeZoneId);
         var dateLine = draft.BlogPublishedAt is { } published
-            ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeLocal(published, lang)}</span>"
+            ? $"<span class=\"post-card-date\">{BlogDateFormatter.DateTimeLocal(published, lang, site.TimeZoneId)}</span>"
             : "";
         // I15 — author's own wording when set; escaped, unlike the built-in defaults which carry
         // their own arrow entity.
@@ -1962,7 +1969,7 @@ public static partial class BlogEndpoints
                     <a class="neighbour-card" href="/{blogSlug}?lang={lang}">
                     <div class="neighbour-dir">{dirLabel}</div>
                     <div class="neighbour-title">{System.Net.WebUtility.HtmlEncode(title2)}</div>
-                    <div class="neighbour-date">{BlogDateFormatter.DateLocal(publishedUtc, lang)}</div>
+                    <div class="neighbour-date">{BlogDateFormatter.DateLocal(publishedUtc, lang, site.TimeZoneId)}</div>
                     </a>
                     """;
                 var newerCard = newer is null ? "<span></span>"
@@ -2004,7 +2011,7 @@ public static partial class BlogEndpoints
                       .Append(System.Net.WebUtility.HtmlEncode(r.ArticleTitle ?? r.Title)).Append("</div>");
                     if (r.BlogPublishedAt is { } relatedDate)
                         relatedSb.Append("<div class=\"neighbour-date\">")
-                          .Append(BlogDateFormatter.DateLocal(relatedDate, lang)).Append("</div>");
+                          .Append(BlogDateFormatter.DateLocal(relatedDate, lang, site.TimeZoneId)).Append("</div>");
                     relatedSb.Append("</a>");
                 }
                 relatedSb.Append("</div></div>");
@@ -2062,7 +2069,7 @@ public static partial class BlogEndpoints
             : "<div class=\"annotation article-annotation\" data-annotation-id=\"\""
               + (draft.DisableReactions ? " data-no-reactions=\"1\"" : "")
               + (draft.DisableComments ? " data-no-comments=\"1\"" : "") + ">"
-              + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang, owner.AuthorDisplayName, draft.BlogPublishedAt) + "</div>";
+              + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang, owner.AuthorDisplayName, draft.BlogPublishedAt, site.TimeZoneId) + "</div>";
 
         var backLinkLabel = lang == Languages.English ? "All posts" : "Все посты";
         var backToTopLabel = lang == Languages.English ? "Back to top" : "Наверх";
@@ -2074,7 +2081,7 @@ public static partial class BlogEndpoints
             """;
         var html = $"""
             <a class="back-link" href="/?lang={lang}">{BlogIcons.ArrowLeft} {backLinkLabel}</a>
-            {await RenderPostGameLinkAsync(db, site, draft, lang)}
+            {await RenderPostProjectLinkAsync(db, site, draft, lang)}
             <div class="post-reader">
             {postSheet}
             </div>
@@ -2157,7 +2164,7 @@ public static partial class BlogEndpoints
     private static string RenderHeaderSlotsLine(
         HeaderSlotType? slot1, HeaderSlotType? slot2, HeaderSlotType? slot3,
         string? authorDisplayName, string? profileUrl, string? profileLocation,
-        PlanTiers currentPlan, DateTime? publishedAt, string cedarJson, int viewCount)
+        PlanTiers currentPlan, DateTime? publishedAt, string cedarJson, int viewCount, string timeZoneId)
     {
         var configured = new[] { slot1, slot2, slot3 }.Take(PlanLimitations.MaxHeaderSlots(currentPlan));
 
@@ -2165,7 +2172,7 @@ public static partial class BlogEndpoints
         try { text = string.Join(" ", TipTapTextNodes.ExtractTexts(cedarJson)).Trim(); }
         catch (Exception) { text = ""; }
         var wordCount = text.Length == 0 ? 0 : text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        var ctx = new HeaderSlotContext(authorDisplayName, profileUrl, profileLocation, publishedAt, text.Length, wordCount, viewCount);
+        var ctx = new HeaderSlotContext(authorDisplayName, profileUrl, profileLocation, publishedAt, text.Length, wordCount, viewCount, timeZoneId);
 
         var parts = configured
             .Where(s => s is not null)
@@ -2490,6 +2497,8 @@ public static partial class BlogEndpoints
         .showcase-cover { width: 180px; border: 1px solid var(--paper-edge); border-radius: var(--radius-paper); box-shadow: var(--shadow-paper); flex: none; }
         .showcase-head-text h1 { font-family: var(--font-display); font-size: 27px; font-weight: 700; line-height: 1.22; margin: 0 0 6px; }
         .showcase-desc { color: var(--wood-ink); font-size: 15px; line-height: 1.55; margin: 0 0 12px; }
+        .showcase-head .post-game a { color: var(--wood-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+        .showcase-head .post-game a:hover { color: var(--rail-ink); }
         .showcase-links { display: flex; flex-wrap: wrap; gap: 8px; }
         /* A pine plaque: the one colour in the system that acts (ADR-169 — a pine button as a link is a
            pine button). */

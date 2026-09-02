@@ -13,6 +13,12 @@ import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { LibraryAsset } from '../core/assets.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
+import { PlanLockComponent } from '../shared/plan-lock.component';
+import { IconName } from '../shared/icon-data.generated';
+import {
+    newShowcaseBlock, parseShowcaseLayout, serializeShowcaseLayout, ShowcaseBlock,
+    ShowcaseBlockKind, SHOWCASE_BLOCK_KINDS,
+} from '../core/showcase-layout';
 
 // The public game page, edited on a screen of its own (T-159/ADR-134, grown into a site by
 // ADR-216). It used to be a block at the bottom of the project-settings modal, which is where a
@@ -26,6 +32,7 @@ import { MediaPickerComponent } from '../shared/media-picker.component';
     selector: 'app-project-showcase',
     imports: [
         FormsModule, IconComponent, PageHeaderComponent, ButtonComponent, InputComponent, MediaPickerComponent,
+        PlanLockComponent,
     ],
     templateUrl: 'project-showcase.component.html',
     styleUrls: ['project-showcase.component.css'],
@@ -33,7 +40,7 @@ import { MediaPickerComponent } from '../shared/media-picker.component';
 export class ProjectShowcaseComponent {
     private api = inject(ProjectsService);
     private route = inject(ActivatedRoute);
-    private auth = inject(AuthService);
+    auth = inject(AuthService);
     t = inject(LocaleService).t;
 
     projectId = signal('');
@@ -44,6 +51,12 @@ export class ProjectShowcaseComponent {
     busy = signal(false);
     actionError = signal<string | null>(null);
     saved = signal(false);
+    blocks = signal<ShowcaseBlock[]>([]);
+    selectedBlockId = signal('hero');
+    addBlockKind = signal<ShowcaseBlockKind>('about');
+    aiBusy = signal(false);
+    aiSuggestion = signal<string | null>(null);
+    aiError = signal<string | null>(null);
 
     enabled = signal(false);
     slug = signal('');
@@ -60,6 +73,27 @@ export class ProjectShowcaseComponent {
     pressEngine = signal('');
     pressGenre = signal('');
     pressFactsheet = signal('');
+
+    selectedBlock = computed(() => this.blocks().find(block => block.id === this.selectedBlockId()) ?? null);
+    visibleBlocks = computed(() => this.blocks().filter(block => block.visible));
+    availableBlockKinds = computed(() => SHOWCASE_BLOCK_KINDS.filter(
+        kind => !this.blocks().some(block => block.kind === kind)));
+    galleryImages = computed(() => this.gallery().split('\n').map(value => value.trim()).filter(Boolean));
+    previewLinks = computed(() => this.links().split('\n').map(value => {
+        const [label, url] = value.split('|', 2).map(part => part?.trim());
+        return label && url ? { label, url } : null;
+    }).filter((value): value is { label: string; url: string } => !!value));
+
+    private readonly blockIcons: Record<ShowcaseBlockKind, IconName> = {
+        hero: 'layout', about: 'text-align-left', links: 'link', trailer: 'film-slate', gallery: 'images',
+        downloads: 'download-simple', devlog: 'newspaper', follow: 'heart', roadmap: 'list-checks',
+    };
+
+    blockIcon(kind: ShowcaseBlockKind): IconName { return this.blockIcons[kind]; }
+
+    blockLabel(kind: ShowcaseBlockKind): string {
+        return this.t().projects.showcase.blocks[kind];
+    }
 
     // T-353 — the gallery is a list of URLs, one per line, and it stays that way: an author can
     // still paste a link to something hosted elsewhere. What the picker adds is the case that had
@@ -83,7 +117,7 @@ export class ProjectShowcaseComponent {
     publicUrl = computed(() => {
         const slug = this.project()?.showcaseSlug;
         const base = this.auth.blogUrl();
-        return slug && base ? `${base}/games/${slug}` : null;
+        return slug && base ? `${base}/showcase/${slug}` : null;
     });
 
     published = computed(() => !!this.project()?.showcaseSlug);
@@ -148,6 +182,97 @@ export class ProjectShowcaseComponent {
         this.pressEngine.set(project.pressEngine ?? '');
         this.pressGenre.set(project.pressGenre ?? '');
         this.pressFactsheet.set(project.pressFactsheetRows ?? '');
+        const layout = parseShowcaseLayout(project.showcaseBlocksJson);
+        this.blocks.set(layout.blocks);
+        this.selectedBlockId.set(layout.blocks[0]?.id ?? 'hero');
+        this.aiSuggestion.set(null);
+        this.aiError.set(null);
+    }
+
+    selectBlock(id: string) {
+        this.selectedBlockId.set(id);
+        this.aiSuggestion.set(null);
+        this.aiError.set(null);
+    }
+
+    updateSelected(patch: Partial<Pick<ShowcaseBlock, 'visible' | 'title' | 'body'>>) {
+        const id = this.selectedBlockId();
+        this.blocks.update(blocks => blocks.map(block => block.id === id
+            ? { ...block, ...patch, visible: block.kind === 'hero' ? true : (patch.visible ?? block.visible) }
+            : block));
+        this.saved.set(false);
+    }
+
+    moveSelected(delta: number) {
+        const blocks = [...this.blocks()];
+        const from = blocks.findIndex(block => block.id === this.selectedBlockId());
+        const to = from + delta;
+        if (from < 0 || to < 0 || to >= blocks.length) return;
+        [blocks[from], blocks[to]] = [blocks[to], blocks[from]];
+        this.blocks.set(blocks);
+        this.saved.set(false);
+    }
+
+    removeSelected() {
+        const selected = this.selectedBlock();
+        if (!selected || selected.kind === 'hero') return;
+        this.blocks.update(blocks => blocks.filter(block => block.id !== selected.id));
+        this.selectedBlockId.set(this.blocks()[0]?.id ?? 'hero');
+        this.saved.set(false);
+    }
+
+    addBlock() {
+        const kind = this.addBlockKind();
+        if (this.blocks().some(block => block.kind === kind)) return;
+        const block = newShowcaseBlock(kind);
+        this.blocks.update(blocks => [...blocks, block]);
+        this.selectBlock(block.id);
+        this.saved.set(false);
+        this.addBlockKind.set(this.availableBlockKinds()[0] ?? 'about');
+    }
+
+    blockTitle(block: ShowcaseBlock): string {
+        return block.title || this.blockLabel(block.kind);
+    }
+
+    blockBody(block: ShowcaseBlock): string {
+        if (block.body) return block.body;
+        return block.kind === 'hero' ? this.project()?.description ?? '' : '';
+    }
+
+    async assist(kind: 'polish' | 'shorten' | 'ideas') {
+        const block = this.selectedBlock();
+        const text = block ? this.blockBody(block).trim() : '';
+        if (!block || !text || this.aiBusy() || !this.auth.hasAiPlan()) return;
+
+        this.aiBusy.set(true);
+        this.aiSuggestion.set(null);
+        this.aiError.set(null);
+        try {
+            const { jobId } = await this.api.startShowcaseAssist(this.projectId(), kind, text);
+            const deadline = Date.now() + 600_000;
+            while (Date.now() < deadline) {
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                const job = await this.api.getShowcaseAssist(jobId);
+                if (job.status === 'completed' && job.result) {
+                    this.aiSuggestion.set(job.result.suggestion);
+                    return;
+                }
+                if (job.status === 'failed') throw new Error(job.error || this.t().projects.showcase.aiFailed);
+            }
+            throw new Error(this.t().projects.showcase.aiTimedOut);
+        } catch (e) {
+            this.aiError.set(e instanceof Error ? e.message : httpErrorMessage(e, this.t().projects.showcase.aiFailed));
+        } finally {
+            this.aiBusy.set(false);
+        }
+    }
+
+    applySuggestion() {
+        const suggestion = this.aiSuggestion();
+        if (!suggestion) return;
+        this.updateSelected({ body: suggestion });
+        this.aiSuggestion.set(null);
     }
 
     async save() {
@@ -173,6 +298,7 @@ export class ProjectShowcaseComponent {
                 pressGenre: this.pressGenre().trim() || null,
                 pressFactsheetRows: this.pressFactsheet().trim() || null,
                 discoveryCategory: this.discoveryCategory(),
+                blocksJson: serializeShowcaseLayout(this.blocks()),
             });
             const next: ProjectDetail = {
                 ...project,
@@ -180,6 +306,7 @@ export class ProjectShowcaseComponent {
                 showcaseLinks: this.links().trim(),
                 showcaseGallery: this.gallery().trim(),
                 showcaseTrailerUrl: this.trailer().trim() || null,
+                showcaseBlocksJson: result.blocksJson,
                 customDomain: result.customDomain,
                 pressContactEmail: this.pressContact().trim() || null,
                 pressPrice: this.pressPrice().trim() || null,

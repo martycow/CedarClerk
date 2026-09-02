@@ -51,8 +51,8 @@ public static partial class BlogEndpoints
             Url($"/series/{slug}");
         foreach (var slug in showcases)
         {
-            Url($"/games/{slug}");
-            Url($"/games/{slug}/press");
+            Url($"/showcase/{slug}");
+            Url($"/showcase/{slug}/press");
         }
 
         sb.Append("</urlset>");

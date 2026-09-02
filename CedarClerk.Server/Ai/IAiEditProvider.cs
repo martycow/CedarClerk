@@ -1,6 +1,6 @@
 namespace CedarClerk.Server.Ai;
 
-public enum AiEditKind { FixErrors, Schizo }
+public enum AiEditKind { FixErrors, Schizo, Polish, Shorten, Ideas }
 
 public record AiEditResult(string Title, string CedarJson);
 

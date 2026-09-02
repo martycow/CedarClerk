@@ -247,6 +247,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
             .HasFilter("\"BlogSlug\" IS NOT NULL");
         builder.Entity<Project>().Property(p => p.ShowcaseLinks).HasDefaultValue("");
         builder.Entity<Project>().Property(p => p.ShowcaseGallery).HasDefaultValue("");
+        builder.Entity<Project>().Property(p => p.ShowcaseBlocksJson).HasDefaultValue("");
+        builder.Entity<ApplicationUser>().Property(u => u.TimeZoneId)
+            .HasDefaultValue(Consts.General.DisplayTimeZone);
         // T-300 — a host answers for one project across the whole installation, not per owner: two
         // accounts claiming one domain is one of them serving the other's page.
         builder.Entity<Project>()

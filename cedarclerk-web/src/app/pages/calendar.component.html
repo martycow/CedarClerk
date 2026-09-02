@@ -1,24 +1,24 @@
-<!--The content calendar (Wave 2 item 9) on the paper-first shell (Calendar.png, ADR-239): the
-month as the title, the networks and counts as the meta line, one Schedule action; a card grid
-whose weeks share the height, today as an accent disc, scheduled posts as tinted chips carrying
-their network's icon, unfilled queue slots as dashed chips.-->
 <div class="page cal-page">
-    <app-page-header [title]="monthLabel()" [meta]="headerMeta()">
+    <app-page-header [title]="periodLabel()" [meta]="headerMeta()">
         <div secondary class="cal-controls">
-            <!--Cut #1 taken: month only this wave. Week stays visible but disabled with a "soon"
-            title, so the toggle's future home is already on the board (T-322).-->
             <div class="seg" role="group" [attr.aria-label]="t().calendar.views">
-                <button type="button" class="is-on" aria-pressed="true">{{ t().calendar.month }}</button>
-                <button type="button" disabled [title]="t().calendar.weekSoon">{{ t().calendar.week }}</button>
+                <button type="button" [class.is-on]="view() === 'month'"
+                        [attr.aria-pressed]="view() === 'month'" (click)="setView('month')">
+                    {{ t().calendar.month }}
+                </button>
+                <button type="button" [class.is-on]="view() === 'week'"
+                        [attr.aria-pressed]="view() === 'week'" (click)="setView('week')">
+                    {{ t().calendar.week }}
+                </button>
                 <button type="button" [class.is-on]="queueOpen()" [attr.aria-pressed]="queueOpen()"
                         (click)="toggleQueue()">{{ t().calendar.queue.title }}</button>
             </div>
-            <app-button variant="paper" (clicked)="stepMonth(-1)" [title]="t().calendar.prevMonth">
-                <app-icon name="caret-left" size="sm" [label]="t().calendar.prevMonth"></app-icon>
+            <app-button variant="paper" (clicked)="stepPeriod(-1)" [title]="periodBackTitle()">
+                <app-icon name="caret-left" size="sm" [label]="periodBackTitle()"></app-icon>
             </app-button>
             <app-button variant="paper" (clicked)="goToday()" [title]="t().calendar.backToToday">{{ t().calendar.todayAction }}</app-button>
-            <app-button variant="paper" (clicked)="stepMonth(1)" [title]="t().calendar.nextMonth">
-                <app-icon name="caret-right" size="sm" [label]="t().calendar.nextMonth"></app-icon>
+            <app-button variant="paper" (clicked)="stepPeriod(1)" [title]="periodForwardTitle()">
+                <app-icon name="caret-right" size="sm" [label]="periodForwardTitle()"></app-icon>
             </app-button>
         </div>
         <app-button primary variant="pine" (clicked)="openScheduleDialog()">
@@ -32,7 +32,7 @@ their network's icon, unfilled queue slots as dashed chips.-->
         @if (error()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ error() }}</p> }
 
         <div class="cal-layout" [class.with-queue]="queueOpen()">
-            <div class="card cal-card">
+            <div class="card cal-card" [class.is-week]="view() === 'week'">
                 <div class="cal-dows">
                     @for (dow of dowLabels(); track $index) { <div class="label cal-dow">{{ dow }}</div> }
                 </div>

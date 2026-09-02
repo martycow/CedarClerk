@@ -5,21 +5,20 @@ import { CalendarService } from '../core/calendar.service';
 import { QueueService, QueueSlot } from '../core/queue.service';
 import { PublishService } from '../core/publish.service';
 import { DraftsService } from '../core/drafts.service';
+import { dayInZone, setDisplayTimeZone, timeInZone, wallClockToInstant } from '../core/display-time';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** A local wall-clock instant of the current month, serialized the way the server sends it. */
-function utcOfLocal(day: number, hour: number): { iso: string; day: string } {
-    const now = new Date();
-    const local = new Date(now.getFullYear(), now.getMonth(), day, hour, 0, 0, 0);
-    return {
-        iso: local.toISOString(),
-        day: `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}`,
-    };
+function utcOfAccount(day: number, hour: number): { iso: string; day: string } {
+    const today = dayInZone(new Date());
+    const [year, month] = today.split('-').map(Number);
+    const accountDay = `${year}-${pad(month)}-${pad(day)}`;
+    const instant = wallClockToInstant(accountDay, `${pad(hour)}:00`)!;
+    return { iso: instant.toISOString(), day: accountDay };
 }
 
-const PENDING = utcOfLocal(10, 18);
-const SENT = utcOfLocal(3, 12);
+const PENDING = utcOfAccount(10, 18);
+const SENT = utcOfAccount(3, 12);
 
 function post(overrides: Partial<ScheduledPost>): ScheduledPost {
     return {
@@ -65,6 +64,7 @@ describe('content calendar', () => {
     }
 
     beforeEach(async () => {
+        setDisplayTimeZone('America/Los_Angeles');
         calendarApi = new CalendarStub();
         TestBed.configureTestingModule({
             providers: [
@@ -79,7 +79,7 @@ describe('content calendar', () => {
         await settle();
     });
 
-    it('lands a scheduled post on its browser-local day with a local wall-clock time', () => {
+    it('lands a scheduled post on its account day with an account wall-clock time', () => {
         const cell = page().cells().find(c => c.day === PENDING.day)!;
         expect(cell.tickets.map(t => t.id)).toContain('p1');
         expect(cell.tickets.find(t => t.id === 'p1')!.time).toBe('18:00');
@@ -99,8 +99,7 @@ describe('content calendar', () => {
 
         expect(calendarApi.calls.length).toBe(1);
         const moved = new Date(calendarApi.calls[0].at);
-        expect(moved.getHours()).toBe(18);
-        expect(moved.getMinutes()).toBe(0);
+        expect(timeInZone(moved)).toBe('18:00');
         const movedPost = page().scheduled().find(p => p.id === 'p1')!;
         expect(movedPost.scheduledAtUtc).toBe(calendarApi.calls[0].at);
     });
@@ -127,9 +126,18 @@ describe('content calendar', () => {
         expect(filledDay.tickets.some(t => t.kind === 'slot')).toBe(false);
 
         // Next month every day is in the future and nothing is filled — the resin tickets show.
-        page().stepMonth(1);
+        page().stepPeriod(1);
         await settle();
         expect(page().cells().some(c => c.tickets.some(t => t.kind === 'slot'))).toBe(true);
+    });
+
+    it('switches to a seven-day week over the same tickets', async () => {
+        page().anchor.set(new Date(`${PENDING.day}T00:00:00Z`));
+        page().setView('week');
+        await settle();
+
+        expect(page().cells()).toHaveLength(7);
+        expect(page().cells().flatMap(c => c.tickets).map(t => t.id)).toContain('p1');
     });
 
     it('paints a network by its fixed slot token, never a literal', () => {

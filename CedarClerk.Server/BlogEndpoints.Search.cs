@@ -78,7 +78,7 @@ public static partial class BlogEndpoints
                     sb.Append("<div class=\"post-card-meta\">");
                     if (hit.PublishedAt is { } published)
                         sb.Append("<span class=\"post-card-date\">")
-                          .Append(BlogDateFormatter.DateLocal(published, lang)).Append("</span>");
+                          .Append(BlogDateFormatter.DateLocal(published, lang, site.TimeZoneId)).Append("</span>");
                     if (hit.Language.Length > 0)
                         sb.Append("<span class=\"post-card-langs\">").Append(hit.Language.ToUpperInvariant()).Append("</span>");
                     sb.Append("</div>");

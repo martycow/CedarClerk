@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CedarClerk.Server;
 
 /// <summary>
-/// GET /games/{slug}/press/pack.zip (Wave 1 item 6) — everything a journalist wants in one file:
+/// GET /showcase/{slug}/press/pack.zip — everything a journalist wants in one file:
 /// the factsheet as text, the cover, the showcase screenshots. Streamed on the fly, no caching:
 /// the pack is requested rarely and its inputs (gallery, press fields) change without ceremony.
 /// </summary>
@@ -76,7 +76,7 @@ public static class PressPackEndpoint
         AppendRow(sb, "Press contact", project.PressContactEmail);
         AppendRow(sb, "Website", project.CustomDomain is { } domain
             ? $"https://{domain}"
-            : $"{site.BaseUrl}/games/{project.ShowcaseSlug}");
+            : $"{site.BaseUrl}/showcase/{project.ShowcaseSlug}");
 
         if (project.PressFactsheetRows is { Length: > 0 } rows)
             foreach (var line in rows.Split('\n'))

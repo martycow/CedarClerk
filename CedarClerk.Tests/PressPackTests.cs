@@ -146,7 +146,7 @@ public class PressPackTests : IDisposable
         var text = PressPackEndpoint.FactsheetText(bare, new BlogSite("o1", "tenant.cedarclerk.app"));
 
         Assert.Contains("Bare Game", text);
-        Assert.Contains("Website: https://tenant.cedarclerk.app/games/bare", text);
+        Assert.Contains("Website: https://tenant.cedarclerk.app/showcase/bare", text);
         Assert.DoesNotContain("Genre:", text);
         Assert.DoesNotContain("Price:", text);
         Assert.DoesNotContain("Links", text);

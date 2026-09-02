@@ -28,6 +28,16 @@ import { LocationInputComponent } from '../shared/location-input.component';
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
 
+function availableTimeZones(): string[] {
+    const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const values = intl.supportedValuesOf?.('timeZone') ?? [
+        'America/Los_Angeles', 'America/New_York', 'America/Chicago', 'America/Denver',
+        'Europe/London', 'Europe/Berlin', 'Europe/Moscow', 'Asia/Tbilisi', 'Asia/Tokyo', 'UTC',
+    ];
+    return [...new Set([detected, ...values].filter(Boolean))].sort();
+}
+
 @Component({
     selector: 'app-settings',
     imports: [
@@ -67,6 +77,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     authorDisplayNameText = '';
     profileUrlText = '';
     profileLocationText = '';
+    timeZoneText = '';
+    readonly timeZoneOptions = availableTimeZones();
     // I15 — blank means the built-in wording.
     avatarBusy = signal(false);
     avatarError = signal<string | null>(null);
@@ -233,6 +245,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
+        this.timeZoneText = this.auth.timeZoneId();
         this.discoveryOptIn = this.auth.discoveryOptIn();
         this.loadLinkTexts();
         this.headerSlot1 = this.auth.headerSlot1Type();
@@ -809,6 +822,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 authorDisplayName: this.authorDisplayNameText,
                 profileUrl: this.profileUrlText,
                 profileLocation: this.profileLocationText,
+                timeZoneId: this.timeZoneText,
                 headerSlot1Type: this.headerSlot1,
                 headerSlot2Type: this.headerSlot2,
                 headerSlot3Type: this.headerSlot3,
@@ -845,6 +859,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.authorDisplayNameText = this.auth.authorDisplayName() ?? '';
         this.profileUrlText = this.auth.profileUrl() ?? '';
         this.profileLocationText = this.auth.profileLocation() ?? '';
+        this.timeZoneText = this.auth.timeZoneId();
         this.discoveryOptIn = this.auth.discoveryOptIn();
         this.headerSlot1 = this.auth.headerSlot1Type();
         this.headerSlot2 = this.auth.headerSlot2Type();

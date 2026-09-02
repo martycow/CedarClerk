@@ -112,3 +112,47 @@ public class ShowcaseDomainTests
     public void Rejects_what_could_never_be_a_host(string raw) =>
         Assert.True(ShowcaseDomain.Normalize(raw).Rejected);
 }
+
+public class ShowcaseLayoutTests
+{
+    [Fact]
+    public void Empty_layout_uses_the_compatible_default_order()
+    {
+        var layout = ShowcaseLayouts.Parse("");
+
+        Assert.Equal(ShowcaseBlockKinds.Hero, layout.Blocks[0].Kind);
+        Assert.Contains(layout.Blocks, block => block.Kind == ShowcaseBlockKinds.Devlog);
+        Assert.DoesNotContain(layout.Blocks, block => block.Kind == ShowcaseBlockKinds.About);
+    }
+
+    [Fact]
+    public void Normalization_drops_unknown_and_duplicate_blocks_and_restores_hero()
+    {
+        var layout = ShowcaseLayouts.Parse("""
+            {"version":91,"blocks":[
+              {"id":"x","kind":"about","visible":true,"title":" About ","body":"Copy"},
+              {"id":"x2","kind":"about","visible":false},
+              {"id":"evil","kind":"script","visible":true,"body":"<script>"}
+            ]}
+            """);
+
+        Assert.Equal([ShowcaseBlockKinds.Hero, ShowcaseBlockKinds.About], layout.Blocks.Select(block => block.Kind));
+        Assert.Equal("About", layout.Blocks[1].Title);
+        Assert.Equal(ShowcaseLayouts.CurrentVersion, layout.Version);
+    }
+
+    [Fact]
+    public void Hero_cannot_be_hidden_and_authored_text_is_bounded()
+    {
+        var value = new ShowcaseLayoutDocument(1,
+        [
+            new("wrong", ShowcaseBlockKinds.Hero, false, new string('t', 200), new string('b', 2100)),
+        ]);
+
+        var layout = ShowcaseLayouts.Normalize(value);
+
+        Assert.True(layout.Blocks[0].Visible);
+        Assert.Equal(ShowcaseLayouts.TitleMaxLength, layout.Blocks[0].Title!.Length);
+        Assert.Equal(ShowcaseLayouts.BodyMaxLength, layout.Blocks[0].Body!.Length);
+    }
+}

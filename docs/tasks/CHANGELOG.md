@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-02 — Project pages and account time (T-357, T-323, T-322)
+
+Showcase is now an ordered, versioned page rather than a fixed game template. Its editor has a
+block rail, live result and per-block inspector; owners can reorder, hide, add and remove the safe
+Hero, About, Links, Trailer, Gallery, Downloads, Devlog, Follow and Roadmap sections. Pro Plus can
+ask the existing background AI job pipeline to polish, shorten or propose three alternatives for
+the selected prose, then review and apply the answer locally before the ordinary page Save. The
+server normalizes the same contract, encodes every authored string and keeps old Projects on the
+compatible default. Public pages and companion routes use canonical `/showcase/{slug}` URLs while
+`/games/{slug}` remains readable. The press kit and Discovery vocabulary now describe Projects of
+any kind. ADR-245; schema change `AddShowcaseBlocks`.
+
+Every account now owns an IANA display timezone, stored in the profile and applied to authenticated
+dates, Calendar wall-clock input, standalone exports, Blog pages, Showcases and header slots. UTC
+remains the wire and database contract. Invalid zones are refused; missing legacy values fall back
+to `America/Los_Angeles`; DST gaps are refused and repeated wall times choose the earlier instant.
+ADR-244; schema change `AddUserTimeZone`.
+
+Calendar's Week view is live over the same scheduled-post and queue-slot projection as Month. It
+shows one seven-day row, moves by seven days, keeps Today and Schedule, and groups and edits wall
+times in the account timezone without adding an endpoint.
+
 ## 2026-09-02 — Discovery for independent makers (T-369, ADR-243)
 
 The public front door now speaks to independent makers of games, apps, tools, art, film, music,

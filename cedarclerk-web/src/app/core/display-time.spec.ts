@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { formatInZone, toInstant, zoneAbbreviation } from './display-time';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+    dayInZone, formatInZone, setDisplayTimeZone, timeInZone, toInstant, wallClockToInstant, zoneAbbreviation,
+} from './display-time';
 
 // ADR-115. The two sides of a daylight-saving change are the point: a fixed -8 would be an hour
 // wrong from March to November, which is most of the year.
 describe('display-time', () => {
+    beforeEach(() => setDisplayTimeZone('America/Los_Angeles'));
+
     it('shows a summer instant in PDT', () => {
         expect(formatInZone('2026-08-11T21:05:00Z', 'd MMM yyyy, HH:mm')).toBe('11 Aug 2026, 14:05');
         expect(zoneAbbreviation('2026-08-11T21:05:00Z')).toBe('PDT');
@@ -49,5 +53,18 @@ describe('display-time', () => {
         expect(formatInZone(undefined)).toBe('');
         expect(formatInZone('')).toBe('');
         expect(formatInZone('not a date')).toBe('');
+    });
+
+    it('uses the account timezone instead of the browser timezone', () => {
+        setDisplayTimeZone('Asia/Tokyo');
+
+        expect(dayInZone('2026-08-11T21:05:00Z')).toBe('2026-08-12');
+        expect(timeInZone('2026-08-11T21:05:00Z')).toBe('06:05');
+        expect(zoneAbbreviation('2026-08-11T21:05:00Z')).toBe('GMT+9');
+    });
+
+    it('rejects a daylight-saving gap and chooses the earlier repeated instant', () => {
+        expect(wallClockToInstant('2026-03-08', '02:30')).toBeNull();
+        expect(wallClockToInstant('2026-11-01', '01:30')?.toISOString()).toBe('2026-11-01T08:30:00.000Z');
     });
 });

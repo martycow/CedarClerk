@@ -8,7 +8,7 @@ import { formatInZone } from '../core/display-time';
  * `| date` was wrong on both counts: it showed whatever zone the machine was in, and the server's
  * offset-less timestamps made it read UTC as local — seven hours out.
  */
-@Pipe({ name: 'zonedDate', standalone: true })
+@Pipe({ name: 'zonedDate', standalone: true, pure: false })
 export class ZonedDatePipe implements PipeTransform {
     transform(value: string | number | Date | null | undefined, pattern = 'MM/dd/yyyy, HH:mm'): string {
         return formatInZone(value, pattern);

@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { httpErrorMessage } from './http-error.util';
 import { LocaleService, UiLang } from './i18n/locale.service';
 import { FREE_CONTENT_LANGUAGES } from './languages';
+import { DEFAULT_DISPLAY_TIME_ZONE, setDisplayTimeZone } from './display-time';
 
 interface MeResponse {
     // The account key the server writes every product event against (ADR-236). Read here so the
@@ -20,6 +21,7 @@ interface MeResponse {
     discoveryOptIn?: boolean;
     postSignature: string | null; postSignatureUrl: string | null; postSignatureTexts?: Record<string, string>;
     authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
+    timeZoneId?: string | null;
     headerSlot1Type: string | null; headerSlot2Type: string | null; headerSlot3Type: string | null;
     socialTwitterUrl: string | null; socialInstagramUrl: string | null; socialFacebookUrl: string | null;
     socialYoutubeUrl: string | null; socialGithubUrl: string | null;
@@ -88,6 +90,7 @@ export class AuthService {
     readonly authorDisplayName = signal<string | null>(null);
     readonly profileUrl = signal<string | null>(null);
     readonly profileLocation = signal<string | null>(null);
+    readonly timeZoneId = signal(DEFAULT_DISPLAY_TIME_ZONE);
     readonly headerSlot1Type = signal<string | null>(null);
     readonly headerSlot2Type = signal<string | null>(null);
     readonly headerSlot3Type = signal<string | null>(null);
@@ -220,6 +223,9 @@ export class AuthService {
         this.authorDisplayName.set(me.authorDisplayName);
         this.profileUrl.set(me.profileUrl);
         this.profileLocation.set(me.profileLocation);
+        const timeZoneId = me.timeZoneId || DEFAULT_DISPLAY_TIME_ZONE;
+        this.timeZoneId.set(timeZoneId);
+        setDisplayTimeZone(timeZoneId);
         this.headerSlot1Type.set(me.headerSlot1Type);
         this.headerSlot2Type.set(me.headerSlot2Type);
         this.headerSlot3Type.set(me.headerSlot3Type);
@@ -267,6 +273,8 @@ export class AuthService {
         this.authorDisplayName.set(null);
         this.profileUrl.set(null);
         this.profileLocation.set(null);
+        this.timeZoneId.set(DEFAULT_DISPLAY_TIME_ZONE);
+        setDisplayTimeZone(DEFAULT_DISPLAY_TIME_ZONE);
         this.headerSlot1Type.set(null);
         this.headerSlot2Type.set(null);
         this.headerSlot3Type.set(null);
@@ -317,6 +325,7 @@ export class AuthService {
         // The other languages, whole — one Save sends every language it edited.
         blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
         discoveryOptIn?: boolean;
+        timeZoneId?: string;
     }): Promise<void> {
         const res = await firstValueFrom(this.http.post<{
             authorDisplayName: string | null; profileUrl: string | null; profileLocation: string | null;
@@ -327,10 +336,15 @@ export class AuthService {
             blogLinkText: string | null; telegramLinkText: string | null;
             blogLinkTexts?: Record<string, string>; telegramLinkTexts?: Record<string, string>;
             discoveryOptIn?: boolean;
+            timeZoneId?: string;
         }>('/api/auth/profile', profile));
         this.authorDisplayName.set(res.authorDisplayName);
         this.profileUrl.set(res.profileUrl);
         this.profileLocation.set(res.profileLocation);
+        if (res.timeZoneId) {
+            this.timeZoneId.set(res.timeZoneId);
+            setDisplayTimeZone(res.timeZoneId);
+        }
         this.blogLinkText.set(res.blogLinkText);
         this.blogLinkTexts.set(res.blogLinkTexts ?? {});
         this.telegramLinkTexts.set(res.telegramLinkTexts ?? {});

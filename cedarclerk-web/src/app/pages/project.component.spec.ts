@@ -20,7 +20,7 @@ const OTHER: ProjectSummary = { ...SUMMARY, id: 'p2', name: 'Night Lanterns', as
 const DETAIL: ProjectDetail = {
     id: 'p1', name: 'Cedar Quest', description: 'A game about a bench.', projectType: 'fullgame',
     coverUrl: null, teamId: null, createdAt: '2026-08-01T09:00:00', archivedAt: null,
-    showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, customDomain: null,
+    showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, showcaseBlocksJson: '', customDomain: null,
     pressContactEmail: null, pressPrice: null, pressEngine: null, pressGenre: null, pressFactsheetRows: null,
     documents: [
         { id: 'd-old', title: 'Design bible', documentType: 'design', updatedAt: '2026-08-10T09:00:00', isArchived: false, isBlogPublished: false },

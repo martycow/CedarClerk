@@ -2,7 +2,8 @@ namespace CedarClerk.Core;
 
 public sealed record HeaderSlotContext(
     string? AuthorDisplayName, string? ProfileUrl, string? ProfileLocation,
-    DateTime? PublishedAt, int CharacterCount, int WordCount, int ViewCount);
+    DateTime? PublishedAt, int CharacterCount, int WordCount, int ViewCount,
+    string? TimeZoneId = null);
 
 public sealed record HeaderSlotValue(string Text, string? LinkUrl);
 
@@ -15,7 +16,9 @@ public static class HeaderSlotRenderer
         HeaderSlotType.MapLocation => ctx.ProfileLocation is { Length: > 0 } loc
             ? new(loc, $"https://www.google.com/maps/search/?api=1&query={Uri.EscapeDataString(loc)}")
             : null,
-        HeaderSlotType.PublishedDate => ctx.PublishedAt is { } d ? new(DisplayTime.ToZone(d).ToString("d MMM yyyy"), null) : null,
+        HeaderSlotType.PublishedDate => ctx.PublishedAt is { } d
+            ? new(DisplayTime.ToZone(d, ctx.TimeZoneId).ToString("d MMM yyyy"), null)
+            : null,
         HeaderSlotType.Length => new($"{ctx.CharacterCount} characters", null),
         HeaderSlotType.TimeToRead => new($"{Math.Max(1, (int)Math.Ceiling(ctx.WordCount / 200.0))} min read", null),
         // FI5 — two more slot types, both already computed by the caller for other reasons

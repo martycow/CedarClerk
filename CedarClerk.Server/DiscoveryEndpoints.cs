@@ -106,7 +106,7 @@ public static class DiscoveryEndpoints
             var linked = posts.FirstOrDefault(d => d.ProjectId == project.Id);
             projectItems.Add(new Item(
                 "project", project.Name, Limit(project.Description, 190),
-                $"https://{host}/games/{Uri.EscapeDataString(project.ShowcaseSlug!)}",
+                $"https://{host}/showcase/{Uri.EscapeDataString(project.ShowcaseSlug!)}",
                 MediaUrl(host, image), DisplayName(owner), Avatar(host, owner.AvatarUrl),
                 linked?.BlogPublishedAt ?? project.CreatedAt, [], DiscoveryCategories.Normalize(project.DiscoveryCategory),
                 linked is null ? null : linked.ArticleTitle ?? linked.Title,
@@ -128,7 +128,7 @@ public static class DiscoveryEndpoints
                 DisplayName(owner), Avatar(host, owner.AvatarUrl), post.BlogPublishedAt ?? post.UpdatedAt,
                 tags, project is null ? DiscoveryCategories.Other : DiscoveryCategories.Normalize(project.DiscoveryCategory),
                 project?.Name,
-                project is null ? null : $"https://{host}/games/{Uri.EscapeDataString(project.ShowcaseSlug!)}",
+                project is null ? null : $"https://{host}/showcase/{Uri.EscapeDataString(project.ShowcaseSlug!)}",
                 tags.Any(IsScreenshotSaturday)));
         }
 

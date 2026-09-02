@@ -36,7 +36,8 @@ public static class AuthEndpoints
         Dictionary<string, string>? BlogLinkTexts = null,
         Dictionary<string, string>? TelegramLinkTexts = null,
         // Nullable so an older client cannot turn off an existing opt-in by omitting the field.
-        bool? DiscoveryOptIn = null);
+        bool? DiscoveryOptIn = null,
+        string? TimeZoneId = null);
     public record NotificationPrefsRequest(bool NotifyOnEngagement);
     public record ToolbarLayoutRequest(string? LayoutJson);
     public record AppearanceRequest(string? PrefsJson);
@@ -245,6 +246,7 @@ public static class AuthEndpoints
                 authorDisplayName = appUser?.AuthorDisplayName,
                 profileUrl = appUser?.ProfileUrl,
                 profileLocation = appUser?.ProfileLocation,
+                timeZoneId = appUser?.TimeZoneId ?? Consts.General.DisplayTimeZone,
                 headerSlot1Type = appUser?.HeaderSlot1Type?.ToString(),
                 headerSlot2Type = appUser?.HeaderSlot2Type?.ToString(),
                 headerSlot3Type = appUser?.HeaderSlot3Type?.ToString(),
@@ -511,6 +513,9 @@ public static class AuthEndpoints
             var currentPlan = SubscriptionPlanHelper.CheckPlanExpiration(user.PlanTier, user.PlanExpiresAt, DateTime.UtcNow);
             var slot3 = ParseSlotType(req.HeaderSlot3Type);
 
+            if (req.TimeZoneId is not null && !TimeZones.IsValid(req.TimeZoneId))
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedTimeZone });
+
             // The third slot is a Pro feature, but the gate only applies to *setting* it. It used
             // to reject any request that carried a third slot at all, which meant an account whose
             // Pro period had lapsed with a third slot already stored could never save its profile
@@ -557,6 +562,8 @@ public static class AuthEndpoints
                 user.TelegramLinkTextTranslationsJson = BuildLinkTextMap(req.TelegramLinkTexts);
             if (req.DiscoveryOptIn is not null)
                 user.DiscoveryOptIn = req.DiscoveryOptIn.Value;
+            if (req.TimeZoneId is not null)
+                user.TimeZoneId = TimeZones.NormalizeOrDefault(req.TimeZoneId);
             await users.UpdateAsync(user);
 
             return Results.Ok(new
@@ -564,6 +571,7 @@ public static class AuthEndpoints
                 authorDisplayName = user.AuthorDisplayName,
                 profileUrl = user.ProfileUrl,
                 profileLocation = user.ProfileLocation,
+                timeZoneId = user.TimeZoneId,
                 headerSlot1Type = user.HeaderSlot1Type?.ToString(),
                 headerSlot2Type = user.HeaderSlot2Type?.ToString(),
                 headerSlot3Type = user.HeaderSlot3Type?.ToString(),

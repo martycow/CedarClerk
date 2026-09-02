@@ -57,6 +57,15 @@ public static class AiEditPromptGenerator
             "RANDOM CAPS on key words, paranoid conspiratorial tangents, excessive exclamation points and ellipses..., " +
             "numbered \"revelations\", but keep the original topic and core facts recognizable underneath the chaos. " +
             "Keep the original language.",
+        AiEditKind.Polish =>
+            "Polish this Showcase block into clear, confident product copy. Preserve every fact, the original " +
+            "language and the author's voice. Remove filler and do not invent claims.",
+        AiEditKind.Shorten =>
+            "Make this Showcase block substantially shorter and easier to scan. Preserve its facts, original " +
+            "language and tone. Do not add claims.",
+        AiEditKind.Ideas =>
+            "Write three concise alternative versions of this Showcase block, separated by blank lines. Keep the " +
+            "original language and factual scope. Do not invent features, metrics, quotes or availability.",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 }

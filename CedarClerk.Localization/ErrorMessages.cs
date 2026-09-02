@@ -102,6 +102,7 @@ public static class ErrorMessages
     public static string TrialAlreadyUsed => Ru("Пробный период уже использован на этом аккаунте.", "Trial has already been used on this account");
     public static string UnsupportedChatType => Ru("Неподдерживаемый тип чата.", "Unsupported chat type");
     public static string UnsupportedUiLanguage => Ru("Неподдерживаемый язык интерфейса.", "Unsupported interface language");
+    public static string UnsupportedTimeZone => Ru("Неподдерживаемый часовой пояс.", "Unsupported timezone");
     public static string WatermarkTooLong => Ru("Текст водяного знака слишком длинный.", "Watermark text is too long");
     public static string LocationTooLong => Ru("Название локации слишком длинное.", "Location is too long");
     public static string FeedbackEmpty => Ru("Напишите сообщение.", "Write a message.");

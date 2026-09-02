@@ -14,6 +14,7 @@ public static class CedarToBlogHtmlRenderer
     {
         public required string MediaBaseUrl;
         public required string Lang;
+        public required string TimeZoneId;
         public List<string> Footnotes { get; } = [];
         // Idea #11 - glossary terms to mark in body text, and which ones already have been.
         // The set lives on the context rather than per text node so "first occurrence only"
@@ -36,7 +37,8 @@ public static class CedarToBlogHtmlRenderer
     // reference to Localization, so the caller (BlogEndpoints) passes the plain language code.
     public static string Render(string cedarJson, string mediaBaseUrl, string lang = "ru",
         IReadOnlyList<GlossaryEntry>? glossary = null,
-        IReadOnlyDictionary<Guid, string>? wikiTargets = null)
+        IReadOnlyDictionary<Guid, string>? wikiTargets = null,
+        string? timeZoneId = null)
     {
         var root = JsonNode.Parse(cedarJson) ?? throw new ArgumentException("Invalid cedar JSON");
         var doc = root["doc"] ?? root;
@@ -45,6 +47,7 @@ public static class CedarToBlogHtmlRenderer
         {
             MediaBaseUrl = mediaBaseUrl,
             Lang = lang,
+            TimeZoneId = TimeZones.NormalizeOrDefault(timeZoneId),
             Outline = HeadingOutline.Extract(doc),
             Glossary = glossary ?? [],
             WikiTargets = wikiTargets ?? new Dictionary<Guid, string>(),
@@ -265,7 +268,7 @@ public static class CedarToBlogHtmlRenderer
                 var unix = (long?)node["attrs"]?["unix"] ?? 0;
                 var format = (string?)node["attrs"]?["format"] ?? "wDT";
                 var dt = DateTimeOffset.FromUnixTimeSeconds(unix).UtcDateTime;
-                sb.Append($"<time datetime=\"{dt:yyyy-MM-ddTHH:mm:ssZ}\">{Escape(FormatDateTime(dt, format, ctx.Lang))}</time>");
+                sb.Append($"<time datetime=\"{dt:yyyy-MM-ddTHH:mm:ssZ}\">{Escape(FormatDateTime(dt, format, ctx.Lang, ctx.TimeZoneId))}</time>");
                 break;
 
             case "footnote":
@@ -331,7 +334,11 @@ public static class CedarToBlogHtmlRenderer
     // Phase 8 Step 7) — omitted (null) for every per-fragment inline annotation instance, since
     // repeating "post published: ..." inside every in-text comment popup would be noise, and the
     // owner-name data attribute only needs to exist once per page for the hydration script to read.
-    public static string AnnotationControlsHtml(string lang = "ru", string? ownerName = null, DateTime? publishedAt = null)
+    public static string AnnotationControlsHtml(
+        string lang = "ru",
+        string? ownerName = null,
+        DateTime? publishedAt = null,
+        string? timeZoneId = null)
     {
         var comments = lang == "en" ? "Comments" : "Комментарии";
         var showMore = lang == "en" ? "Show more comments" : "Показать больше комментариев";
@@ -345,7 +352,7 @@ public static class CedarToBlogHtmlRenderer
         var publishedLine = publishedAt is { } p
             // T-094 — the third date on this page, missed when the other two were fixed: it printed
             // "1 Aug 2026" under a Russian post. Same formatter as the rest of the blog now.
-            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {BlogDateFormatter.DateTimeLocal(p, lang)}</div>"
+            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {BlogDateFormatter.DateTimeLocal(p, lang, timeZoneId)}</div>"
             : "";
 
         return $"""
@@ -553,17 +560,17 @@ public static class CedarToBlogHtmlRenderer
     // one inside the text, and it follows the page's language for the same reason). The weekday
     // stays invariant: it is three letters and adding nine more month tables for it is not the
     // trade this needs.
-    private static string FormatDateTime(DateTime utc, string format, string lang = "ru")
+    private static string FormatDateTime(DateTime utc, string format, string lang = "ru", string? timeZoneId = null)
     {
         // The node stores a unix timestamp, so this is a real instant and gets the same treatment as
         // every other time on the page (ADR-115): shown in the display zone, and named as such
         // whenever a clock time is part of it.
-        var dt = DisplayTime.ToZone(utc);
+        var dt = DisplayTime.ToZone(utc, timeZoneId);
         var parts = new List<string>();
         if (format.Contains('w')) parts.Add(dt.ToString("ddd", CultureInfo.InvariantCulture));
         if (format.Contains('D')) parts.Add(BlogDateFormatter.Date(dt, lang));
-        if (format.Contains('T')) parts.Add($"{dt.ToString("HH:mm", CultureInfo.InvariantCulture)} {DisplayTime.Abbreviation(utc)}");
-        return parts.Count > 0 ? string.Join(' ', parts) : BlogDateFormatter.DateTimeLocal(utc, lang);
+        if (format.Contains('T')) parts.Add($"{dt.ToString("HH:mm", CultureInfo.InvariantCulture)} {DisplayTime.Abbreviation(utc, timeZoneId)}");
+        return parts.Count > 0 ? string.Join(' ', parts) : BlogDateFormatter.DateTimeLocal(utc, lang, timeZoneId);
     }
 
     private static bool IsGifSrc(string src) =>

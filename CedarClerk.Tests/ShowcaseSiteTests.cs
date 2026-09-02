@@ -56,7 +56,7 @@ public class ShowcaseSiteTests
 
         var body = BlogTestHost.Body(await Send(db, "GET", "/"));
 
-        Assert.Contains("/games/cedar-station", body);
+        Assert.Contains("/showcase/cedar-station", body);
         Assert.Contains("Cedar Station", body);
     }
 
@@ -75,7 +75,7 @@ public class ShowcaseSiteTests
         using var db = BlogTestHost.EmptyDatabase();
         Seed(db);
 
-        Assert.Contains("/games/cedar-station", BlogTestHost.Body(await Send(db, "GET", "/devlog-1")));
+        Assert.Contains("/showcase/cedar-station", BlogTestHost.Body(await Send(db, "GET", "/devlog-1")));
     }
 
     [Fact]
@@ -88,6 +88,40 @@ public class ShowcaseSiteTests
     }
 
     // ---- T-295: gallery and trailer ----------------------------------------
+
+    [Fact]
+    public async Task Canonical_and_legacy_routes_render_the_same_showcase()
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        Seed(db);
+
+        var canonical = await Send(db, "GET", "/showcase/cedar-station");
+        var legacy = await Send(db, "GET", "/games/cedar-station");
+
+        Assert.Equal(StatusCodes.Status200OK, canonical.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status200OK, legacy.Response.StatusCode);
+        Assert.Contains("Cedar Station", BlogTestHost.Body(canonical));
+        Assert.Contains("Cedar Station", BlogTestHost.Body(legacy));
+    }
+
+    [Fact]
+    public async Task Layout_order_and_visibility_drive_the_public_page()
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        Seed(db, project => project.ShowcaseBlocksJson = ShowcaseLayouts.Serialize(new ShowcaseLayoutDocument(1,
+        [
+            new("hero", ShowcaseBlockKinds.Hero, true, null, null),
+            new("about", ShowcaseBlockKinds.About, true, "Why it exists", "A calm authored section."),
+            new("devlog", ShowcaseBlockKinds.Devlog, false, null, null),
+        ])));
+
+        var body = BlogTestHost.Body(await Send(db, "GET", "/showcase/cedar-station"));
+
+        Assert.Contains("Why it exists", body);
+        Assert.Contains("A calm authored section.", body);
+        Assert.DoesNotContain("Devlog", body);
+        Assert.True(body.IndexOf("Cedar Station", StringComparison.Ordinal) < body.IndexOf("Why it exists", StringComparison.Ordinal));
+    }
 
     [Fact]
     public async Task Renders_the_trailer_through_the_nocookie_embed()
@@ -142,7 +176,7 @@ public class ShowcaseSiteTests
 
         var body = BlogTestHost.Body(await Send(db, "GET", "/games/cedar-station"));
 
-        Assert.Contains("/games/cedar-station/go/0", body);
+        Assert.Contains("/showcase/cedar-station/go/0", body);
     }
 
     [Fact]
@@ -394,8 +428,8 @@ public class ShowcaseSiteTests
 
         var body = BlogTestHost.Body(await Send(db, "GET", "/games/cedar-station"));
 
-        Assert.Contains("href=\"/games/cedar-station/go/0\"", body);
-        Assert.Contains("href=\"/games/cedar-station/rss.xml\"", body);
+        Assert.Contains("href=\"/showcase/cedar-station/go/0\"", body);
+        Assert.Contains("href=\"/showcase/cedar-station/rss.xml\"", body);
         Assert.DoesNotContain("href=\"/go/0\"", body);
     }
 

@@ -74,118 +74,131 @@ public static partial class BlogEndpoints
 
         var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
         var mainBase = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
-        var sb = new StringBuilder();
-
-        sb.Append("<div class=\"showcase-head\">");
-        if (project.CoverUrl is { Length: > 0 } cover)
-            sb.Append("<img class=\"showcase-cover\" src=\"").Append(MediaSrc(cover, mainBase)).Append("\" alt=\"\">");
-        sb.Append("<div class=\"showcase-head-text\"><h1>").Append(Html(project.Name)).Append("</h1>");
-        if (project.Description is { Length: > 0 } desc)
-            sb.Append("<p class=\"showcase-desc\">").Append(Html(desc)).Append("</p>");
-
+        var layout = ShowcaseLayouts.Parse(project.ShowcaseBlocksJson);
         var links = ParseShowcaseLinks(project.ShowcaseLinks);
-        if (links.Count > 0)
-        {
-            sb.Append("<div class=\"showcase-links\">");
-            for (var i = 0; i < links.Count; i++)
-            {
-                // T-296 — the click is counted by going through us. Server-side because a page with
-                // no JavaScript cannot report one; the label still says where it leads.
-                sb.Append("<a class=\"showcase-link\" rel=\"noopener\" target=\"_blank\" href=\"")
-                  .Append(ShowcasePath(ctx, project, $"/go/{i}")).Append("\">")
-                  .Append(Html(links[i].Label)).Append("</a>");
-            }
-            sb.Append("</div>");
-        }
-        // The way into the press kit — a quiet line, not a store pill: it is for journalists, not
-        // players, and the pine plaques above are the page's actions.
-        sb.Append("<p class=\"post-game\"><a href=\"").Append(ShowcasePath(ctx, project, "/press")).Append("\">")
-          .Append(en ? "Press kit" : "Пресс-кит").Append("</a></p>");
-        sb.Append("</div></div>");
-
-        if (YouTubeLink.EmbedUrl(project.ShowcaseTrailerUrl) is { } embed)
-            sb.Append("<div class=\"showcase-trailer\"><iframe src=\"").Append(Html(embed))
-              .Append("\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div>");
-
         var gallery = ShowcaseGallery.Parse(project.ShowcaseGallery);
-        if (gallery.Count > 0)
+        var sb = new StringBuilder();
+        void SectionIntro(ShowcaseBlock block, string fallback)
         {
-            sb.Append("<div class=\"showcase-gallery\">");
-            foreach (var image in gallery)
-            {
-                var src = MediaSrc(image, mainBase);
-                sb.Append("<a class=\"showcase-shot\" href=\"").Append(src)
-                  .Append("\" target=\"_blank\" rel=\"noopener\"><img src=\"").Append(src)
-                  .Append("\" loading=\"lazy\" alt=\"\"></a>");
-            }
-            sb.Append("</div>");
+            sb.Append("<h2 class=\"showcase-section\">").Append(Html(block.Title ?? fallback)).Append("</h2>");
+            if (block.Body is { Length: > 0 } body)
+                sb.Append("<p class=\"showcase-desc\">").Append(Html(body)).Append("</p>");
         }
 
-        if (downloads.Count > 0)
+        foreach (var block in layout.Blocks.Where(b => b.Visible))
         {
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Downloads" : "Скачать").Append("</h2>");
-            sb.Append("<div class=\"download-list\">");
-            foreach (var b in downloads)
+            switch (block.Kind)
             {
-                sb.Append("<a class=\"download-row\" rel=\"noopener\" target=\"_blank\" href=\"")
-                  .Append(Html(b.DownloadUrl!)).Append("\">");
-                sb.Append("<span class=\"download-version\">").Append(Html(b.Version)).Append("</span>");
-                if (b.ReleasedAt is { } released)
-                    sb.Append("<span class=\"download-date\">").Append(BlogDateFormatter.DateLocal(released, pageLang)).Append("</span>");
-                if (b.Notes is { Length: > 0 } notes)
-                    sb.Append("<span class=\"download-notes\">").Append(Html(Shorten(notes))).Append("</span>");
-                sb.Append("</a>");
-            }
-            sb.Append("</div>");
-        }
+                case ShowcaseBlockKinds.Hero:
+                    sb.Append("<div class=\"showcase-head\">");
+                    if (project.CoverUrl is { Length: > 0 } cover)
+                        sb.Append("<img class=\"showcase-cover\" src=\"").Append(MediaSrc(cover, mainBase)).Append("\" alt=\"\">");
+                    sb.Append("<div class=\"showcase-head-text\">");
+                    if (block.Title is { Length: > 0 } kicker)
+                        sb.Append("<span class=\"label\">").Append(Html(kicker)).Append("</span>");
+                    sb.Append("<h1>").Append(Html(project.Name)).Append("</h1>");
+                    var heroBody = block.Body ?? project.Description;
+                    if (heroBody.Length > 0)
+                        sb.Append("<p class=\"showcase-desc\">").Append(Html(heroBody)).Append("</p>");
+                    sb.Append("<p class=\"post-game\"><a href=\"").Append(ShowcasePath(ctx, project, "/press")).Append("\">")
+                      .Append(en ? "Press kit" : "Пресс-кит").Append("</a></p></div></div>");
+                    break;
 
-        sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Devlog" : "Девлог").Append("</h2>");
-        if (posts.Count == 0)
-        {
-            sb.Append(en ? "<p class=\"empty\">Nothing published yet.</p>"
-                         : "<p class=\"empty\">Пока ничего не опубликовано.</p>");
-        }
-        else
-        {
-            sb.Append("<div class=\"post-list\">");
-            foreach (var p in posts)
-            {
-                var excerpt = p.IsPrivate ? "" : Excerpt(p.CedarJson);
-                sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
-                sb.Append("<div class=\"post-card-meta\"><span class=\"post-card-date\">")
-                  .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang) : "")
-                  .Append("</span>");
-                if (p.IsPrivate)
-                    sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
-                sb.Append("</div>");
-                sb.Append("<div class=\"post-card-title\">").Append(Html(p.ArticleTitle ?? p.Title)).Append("</div>");
-                if (excerpt.Length > 0)
-                    sb.Append("<div class=\"post-card-excerpt\">").Append(Html(excerpt)).Append("</div>");
-                sb.Append("</a>");
-            }
-            sb.Append("</div>");
-        }
+                case ShowcaseBlockKinds.About:
+                    SectionIntro(block, en ? "About" : "О проекте");
+                    break;
 
-        sb.Append(RenderFollowForm(ctx, project, en));
+                case ShowcaseBlockKinds.Links when links.Count > 0:
+                    if (block.Title is { Length: > 0 }) SectionIntro(block, "");
+                    sb.Append("<div class=\"showcase-links\">");
+                    for (var i = 0; i < links.Count; i++)
+                        sb.Append("<a class=\"showcase-link\" rel=\"noopener\" target=\"_blank\" href=\"")
+                          .Append(ShowcasePath(ctx, project, $"/go/{i}")).Append("\">")
+                          .Append(Html(links[i].Label)).Append("</a>");
+                    sb.Append("</div>");
+                    break;
 
-        if (roadmap.Count > 0)
-        {
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Roadmap" : "Роадмап").Append("</h2>");
-            sb.Append("<div class=\"roadmap-list\">");
-            foreach (var task in roadmap)
-            {
-                var (label, tone) = task.Status switch
-                {
-                    TaskStatuses.InProgress => (en ? "In progress" : "В работе", "now"),
-                    TaskStatuses.Planned => (en ? "Planned" : "Запланировано", "next"),
-                    TaskStatuses.Backlog => (en ? "Someday" : "Когда-нибудь", "later"),
-                    _ => (en ? "Done" : "Готово", "done"),
-                };
-                sb.Append("<div class=\"roadmap-row\"><span class=\"roadmap-status ").Append(tone).Append("\">")
-                  .Append(label).Append("</span><span class=\"roadmap-title\">")
-                  .Append(Html(task.Title)).Append("</span></div>");
+                case ShowcaseBlockKinds.Trailer when YouTubeLink.EmbedUrl(project.ShowcaseTrailerUrl) is { } embed:
+                    if (block.Title is { Length: > 0 }) SectionIntro(block, "");
+                    sb.Append("<div class=\"showcase-trailer\"><iframe src=\"").Append(Html(embed))
+                      .Append("\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div>");
+                    break;
+
+                case ShowcaseBlockKinds.Gallery when gallery.Count > 0:
+                    SectionIntro(block, en ? "Gallery" : "Галерея");
+                    sb.Append("<div class=\"showcase-gallery\">");
+                    foreach (var image in gallery)
+                    {
+                        var src = MediaSrc(image, mainBase);
+                        sb.Append("<a class=\"showcase-shot\" href=\"").Append(src)
+                          .Append("\" target=\"_blank\" rel=\"noopener\"><img src=\"").Append(src)
+                          .Append("\" loading=\"lazy\" alt=\"\"></a>");
+                    }
+                    sb.Append("</div>");
+                    break;
+
+                case ShowcaseBlockKinds.Downloads when downloads.Count > 0:
+                    SectionIntro(block, en ? "Downloads" : "Скачать");
+                    sb.Append("<div class=\"download-list\">");
+                    foreach (var build in downloads)
+                    {
+                        sb.Append("<a class=\"download-row\" rel=\"noopener\" target=\"_blank\" href=\"")
+                          .Append(Html(build.DownloadUrl!)).Append("\"><span class=\"download-version\">")
+                          .Append(Html(build.Version)).Append("</span>");
+                        if (build.ReleasedAt is { } released)
+                            sb.Append("<span class=\"download-date\">").Append(BlogDateFormatter.DateLocal(released, pageLang, site.TimeZoneId)).Append("</span>");
+                        if (build.Notes is { Length: > 0 } notes)
+                            sb.Append("<span class=\"download-notes\">").Append(Html(Shorten(notes))).Append("</span>");
+                        sb.Append("</a>");
+                    }
+                    sb.Append("</div>");
+                    break;
+
+                case ShowcaseBlockKinds.Devlog:
+                    SectionIntro(block, en ? "Devlog" : "Девлог");
+                    if (posts.Count == 0)
+                        sb.Append(en ? "<p class=\"empty\">Nothing published yet.</p>" : "<p class=\"empty\">Пока ничего не опубликовано.</p>");
+                    else
+                    {
+                        sb.Append("<div class=\"post-list\">");
+                        foreach (var post in posts)
+                        {
+                            var excerpt = post.IsPrivate ? "" : Excerpt(post.CedarJson);
+                            sb.Append("<a class=\"post-card\" href=\"/").Append(post.BlogSlug).Append("\"><div class=\"post-card-meta\"><span class=\"post-card-date\">")
+                              .Append(post.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang, site.TimeZoneId) : "").Append("</span>");
+                            if (post.IsPrivate) sb.Append("<span class=\"post-card-locked\">").Append(BlogIcons.Lock).Append("</span>");
+                            sb.Append("</div><div class=\"post-card-title\">").Append(Html(post.ArticleTitle ?? post.Title)).Append("</div>");
+                            if (excerpt.Length > 0) sb.Append("<div class=\"post-card-excerpt\">").Append(Html(excerpt)).Append("</div>");
+                            sb.Append("</a>");
+                        }
+                        sb.Append("</div>");
+                    }
+                    break;
+
+                case ShowcaseBlockKinds.Follow:
+                    if (block.Title is { Length: > 0 } || block.Body is { Length: > 0 })
+                        SectionIntro(block, en ? "Follow" : "Следить за проектом");
+                    sb.Append(RenderFollowForm(ctx, project, en));
+                    break;
+
+                case ShowcaseBlockKinds.Roadmap when roadmap.Count > 0:
+                    SectionIntro(block, en ? "Roadmap" : "Роадмап");
+                    sb.Append("<div class=\"roadmap-list\">");
+                    foreach (var task in roadmap)
+                    {
+                        var (label, tone) = task.Status switch
+                        {
+                            TaskStatuses.InProgress => (en ? "In progress" : "В работе", "now"),
+                            TaskStatuses.Planned => (en ? "Planned" : "Запланировано", "next"),
+                            TaskStatuses.Backlog => (en ? "Someday" : "Когда-нибудь", "later"),
+                            _ => (en ? "Done" : "Готово", "done"),
+                        };
+                        sb.Append("<div class=\"roadmap-row\"><span class=\"roadmap-status ").Append(tone).Append("\">")
+                          .Append(label).Append("</span><span class=\"roadmap-title\">").Append(Html(task.Title)).Append("</span></div>");
+                    }
+                    sb.Append("</div>");
+                    break;
             }
-            sb.Append("</div>");
         }
 
         // A showcase on its own domain has no blog around it to go back to.
@@ -197,7 +210,7 @@ public static partial class BlogEndpoints
         var blogBase = site.BaseUrl;
         var ogImage = project.CoverUrl is { Length: > 0 } c ? MediaSrc(c, mainBase) : $"{blogBase}/og-default.png";
         var meta = OgMetaBuilder.Build(new OgMetaInput(
-            project.Name, project.Description, $"{blogBase}/games/{project.ShowcaseSlug}",
+            project.Name, project.Description, $"{blogBase}/showcase/{project.ShowcaseSlug}",
             ogImage, 1200, 630,
             channel?.Title ?? "Cedar Clerk", pageLang,
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);
@@ -233,14 +246,14 @@ public static partial class BlogEndpoints
 
     /// <summary>
     /// A showcase's own path: the site root when *this request* came in on the project's own domain
-    /// (T-300), <c>/games/{slug}</c> otherwise. Read off the request rather than off the project,
+    /// (T-300), <c>/showcase/{slug}</c> otherwise. Read off the request rather than off the project,
     /// because a project with a domain is still reachable at its subdomain address, and there a
     /// root-relative link would point at a page the blog host does not have.
     /// </summary>
     private static string ShowcasePath(HttpContext ctx, Project project, string suffix) =>
         ctx.RequestServices.GetService<TenantContext>()?.ShowcaseSlug is not null
             ? suffix.Length == 0 ? "/" : suffix
-            : $"/games/{project.ShowcaseSlug}{suffix}";
+            : $"/showcase/{project.ShowcaseSlug}{suffix}";
 
     private static string Html(string text) => System.Net.WebUtility.HtmlEncode(text);
 
@@ -319,7 +332,7 @@ public static partial class BlogEndpoints
             .ToList();
 
         var siteUrl = $"{site.BaseUrl}/";
-        var feedUrl = $"{site.BaseUrl}/games/{project.ShowcaseSlug}";
+        var feedUrl = $"{site.BaseUrl}/showcase/{project.ShowcaseSlug}";
 
         var sb = new StringBuilder();
         sb.Append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").Append('\n');
@@ -355,7 +368,7 @@ public static partial class BlogEndpoints
     /// the same rule the page itself answers by: a strip that listed a switched-off project would
     /// be a row of links to 404s.
     /// </summary>
-    private static async Task<string> RenderGamesStripAsync(CedarDbContext db, BlogSite site, string lang)
+    private static async Task<string> RenderShowcaseStripAsync(CedarDbContext db, BlogSite site, string lang)
     {
         var games = await db.Projects
             .Where(p => p.OwnerId == site.OwnerId && p.ShowcaseSlug != null && p.ArchivedAt == null)
@@ -366,11 +379,11 @@ public static partial class BlogEndpoints
 
         var en = lang != Languages.Russian;
         var sb = new StringBuilder();
-        sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Games" : "Игры").Append("</h2>");
+        sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Projects" : "Проекты").Append("</h2>");
         sb.Append("<div class=\"games-strip\">");
         foreach (var g in games)
         {
-            sb.Append("<a class=\"games-card\" href=\"/games/").Append(g.ShowcaseSlug).Append("\">");
+            sb.Append("<a class=\"games-card\" href=\"/showcase/").Append(g.ShowcaseSlug).Append("\">");
             if (g.CoverUrl is { Length: > 0 } cover)
                 sb.Append("<img class=\"games-cover\" src=\"").Append(Html(cover)).Append("\" loading=\"lazy\" alt=\"\">");
             sb.Append("<span class=\"games-name\">").Append(Html(g.Name)).Append("</span></a>");
@@ -380,10 +393,10 @@ public static partial class BlogEndpoints
     }
 
     /// <summary>
-    /// T-294 — the way back from a devlog to the game it is about. Only when that game has a page:
+    /// T-294 — the way back from a Devlog to the Project it is about. Only when that Project has a page:
     /// a project without a showcase is working material, and naming it here would publish it.
     /// </summary>
-    private static async Task<string> RenderPostGameLinkAsync(CedarDbContext db, BlogSite site, Draft draft, string lang)
+    private static async Task<string> RenderPostProjectLinkAsync(CedarDbContext db, BlogSite site, Draft draft, string lang)
     {
         if (draft.ProjectId is not { } projectId) return "";
 
@@ -393,7 +406,7 @@ public static partial class BlogEndpoints
             .FirstOrDefaultAsync();
         if (game is null) return "";
 
-        var label = lang == Languages.Russian ? "Девлог игры" : "Devlog of";
-        return $"<p class=\"post-game\">{label} <a href=\"/games/{game.ShowcaseSlug}\">{Html(game.Name)}</a></p>";
+        var label = lang == Languages.Russian ? "Проект" : "Project";
+        return $"<p class=\"post-game\">{label}: <a href=\"/showcase/{game.ShowcaseSlug}\">{Html(game.Name)}</a></p>";
     }
 }

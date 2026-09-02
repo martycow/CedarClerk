@@ -39,6 +39,9 @@ public class AiEditPromptGeneratorTests
     [Theory]
     [InlineData(AiEditKind.FixErrors)]
     [InlineData(AiEditKind.Schizo)]
+    [InlineData(AiEditKind.Polish)]
+    [InlineData(AiEditKind.Shorten)]
+    [InlineData(AiEditKind.Ideas)]
     public void Build_IncludesTitleAndDocument(AiEditKind kind)
     {
         var prompt = AiEditPromptGenerator.Build("My Title", """{"type":"doc","content":[]}""", kind);

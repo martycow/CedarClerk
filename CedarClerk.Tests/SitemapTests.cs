@@ -37,8 +37,8 @@ public class SitemapTests
         Assert.Contains("<loc>https://tenant.", body);
         Assert.Contains("/open</loc>", body);
         Assert.Contains("/series/devlog</loc>", body);
-        Assert.Contains("/games/game</loc>", body);
-        Assert.Contains("/games/game/press</loc>", body);
+        Assert.Contains("/showcase/game</loc>", body);
+        Assert.Contains("/showcase/game/press</loc>", body);
         Assert.Contains("<lastmod>", body);
     }
 

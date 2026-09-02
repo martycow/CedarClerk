@@ -302,7 +302,7 @@ export class ProjectComponent {
     showcaseUrl(): string | null {
         const slug = this.project()?.showcaseSlug;
         const base = this.auth.blogUrl();
-        return slug && base ? `${base}/games/${slug}` : null;
+        return slug && base ? `${base}/showcase/${slug}` : null;
     }
 
     async saveEdit() {

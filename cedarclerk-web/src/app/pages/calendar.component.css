@@ -68,6 +68,24 @@
     min-height: 0;
 }
 
+.cal-card.is-week .cal-week { min-height: 100%; }
+
+.cal-card.is-week .cal-cell {
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-3);
+}
+
+.cal-card.is-week .chip {
+    align-items: flex-start;
+    min-height: var(--hit-target);
+    padding-block: var(--space-2);
+}
+
+.cal-card.is-week .chip-text {
+    white-space: normal;
+    line-height: var(--lh-tight);
+}
+
 .cal-cell {
     display: flex;
     flex-direction: column;

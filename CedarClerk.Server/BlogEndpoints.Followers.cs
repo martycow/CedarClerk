@@ -229,7 +229,7 @@ public static partial class BlogEndpoints
 
         foreach (var follower in followers)
         {
-            var unsubscribeUrl = $"{site.BaseUrl}/games/{project.ShowcaseSlug}/unsubscribe?token={follower.UnsubscribeToken}";
+            var unsubscribeUrl = $"{site.BaseUrl}/showcase/{project.ShowcaseSlug}/unsubscribe?token={follower.UnsubscribeToken}";
             try
             {
                 await mailer.SendAsync(follower.Email, subject,

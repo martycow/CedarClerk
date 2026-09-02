@@ -106,6 +106,8 @@ export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'o
     showcaseGallery: string;
     /** A YouTube link, or null. */
     showcaseTrailerUrl: string | null;
+    /** ADR-245 — versioned, normalized safe-block composition. */
+    showcaseBlocksJson: string;
     /** T-300 — the project's own domain, serving the showcase at its root. Null = subdomain only. */
     customDomain: string | null;
     // Wave 1 item 6 — the /press page's facts. All optional; an empty field is a section the
@@ -138,6 +140,7 @@ export interface ShowcaseInput {
     pressGenre: string | null;
     pressFactsheetRows: string | null;
     discoveryCategory?: DiscoveryCategory;
+    blocksJson: string;
 }
 
 export interface ShowcaseStats {
@@ -186,8 +189,20 @@ export class ProjectsService {
 
     /** T-159 (ADR-134) — the public game page's switch; the server slugifies and answers the URL. */
     setShowcase(id: string, input: ShowcaseInput) {
-        return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null; customDomain: string | null; discoveryCategory: DiscoveryCategory }>(
+        return firstValueFrom(this.http.put<{ showcaseSlug: string | null; url: string | null; customDomain: string | null; discoveryCategory: DiscoveryCategory; blocksJson: string }>(
             `/api/projects/${id}/showcase`, input));
+    }
+
+    startShowcaseAssist(id: string, kind: 'polish' | 'shorten' | 'ideas', text: string) {
+        return firstValueFrom(this.http.post<{ jobId: string }>(`/api/projects/${id}/showcase/assist`, { kind, text }));
+    }
+
+    getShowcaseAssist(jobId: string) {
+        return firstValueFrom(this.http.get<{
+            status: 'pending' | 'running' | 'completed' | 'failed';
+            result: { suggestion: string } | null;
+            error: string | null;
+        }>(`/api/ai-jobs/${jobId}`));
     }
 
     /** T-296/T-297 — the public page's own counters, for the owner. */

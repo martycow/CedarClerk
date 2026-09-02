@@ -71,12 +71,14 @@ public static class BlogDateFormatter
     // needs to know what "14:05" means, while a bare date does not move enough to matter.
 
     /// <summary>UTC instant → "17 августа 2026" in the display zone.</summary>
-    public static string DateLocal(DateTime utc, string? lang) => Date(DisplayTime.ToZone(utc), lang);
+    public static string DateLocal(DateTime utc, string? lang, string? timeZoneId = null) =>
+        Date(DisplayTime.ToZone(utc, timeZoneId), lang);
 
     /// <summary>UTC instant → "Август 2026" in the display zone.</summary>
-    public static string MonthHeadingLocal(DateTime utc, string? lang) => MonthHeading(DisplayTime.ToZone(utc), lang);
+    public static string MonthHeadingLocal(DateTime utc, string? lang, string? timeZoneId = null) =>
+        MonthHeading(DisplayTime.ToZone(utc, timeZoneId), lang);
 
     /// <summary>UTC instant → "17 августа 2026, 14:05 PDT" in the display zone.</summary>
-    public static string DateTimeLocal(DateTime utc, string? lang) =>
-        $"{DateTimeShort(DisplayTime.ToZone(utc), lang)} {DisplayTime.Abbreviation(utc)}";
+    public static string DateTimeLocal(DateTime utc, string? lang, string? timeZoneId = null) =>
+        $"{DateTimeShort(DisplayTime.ToZone(utc, timeZoneId), lang)} {DisplayTime.Abbreviation(utc, timeZoneId)}";
 }

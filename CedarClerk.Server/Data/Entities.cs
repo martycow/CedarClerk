@@ -9,6 +9,13 @@ public class ApplicationUser : IdentityUser
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// ADR-244 — the IANA timezone used by the authenticated app and this account's public blog.
+    /// UTC remains the storage and wire format; this value only decides how an instant is printed
+    /// and how the account's wall-clock schedule input is interpreted.
+    /// </summary>
+    public string TimeZoneId { get; set; } = Consts.General.DisplayTimeZone;
+
+    /// <summary>
     /// The tenant name this account's public blog answers at — <c>marty.cedarclerk.app</c>. Stored
     /// lowercase; <see cref="Usernames"/> holds the rules both this and the Host resolver obey.
     ///

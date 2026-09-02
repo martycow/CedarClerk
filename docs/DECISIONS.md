@@ -256,3 +256,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-241 — X carries pictures, and the matrix says what goes where](adr/ADR-241.md)
 - [ADR-242 — Publish / Export is the document's third state, not a door to a window](adr/ADR-242.md)
 - [ADR-243 — Discovery is an opt-in public commons for projects and independent blogs](adr/ADR-243.md)
+- [ADR-244 — Every account owns its display timezone](adr/ADR-244.md)
+- [ADR-245 — A Showcase is an ordered page of safe blocks](adr/ADR-245.md)

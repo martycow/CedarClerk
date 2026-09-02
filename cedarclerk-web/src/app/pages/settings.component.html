@@ -102,6 +102,15 @@
                                         [placeholder]="t().settings.headerSlots.locationPlaceholder"
                                         (valueChange)="profileLocationText = $event" />
                 </div>
+                <div class="field-group">
+                    <label for="cc-time-zone">{{ t().settings.profile.timeZone }}</label>
+                    <input id="cc-time-zone" [(ngModel)]="timeZoneText" list="cc-time-zones"
+                           autocomplete="off" [placeholder]="t().settings.profile.timeZonePlaceholder">
+                    <datalist id="cc-time-zones">
+                        @for (zone of timeZoneOptions; track zone) { <option [value]="zone"></option> }
+                    </datalist>
+                    <p class="field-hint">{{ t().settings.profile.timeZoneHint }}</p>
+                </div>
 
                 <div class="field-group">
                     <label for="cc-sig">{{ t().settings.profile.signature }} @if (!hasProSignature()) { <app-plan-lock tier="pro" /> }</label>

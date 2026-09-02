@@ -15,12 +15,12 @@ import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component'
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { seriesColor } from '../bench/worktop/growth-chart.component';
+import { dayInZone, displayTimeZone, partsInZone, timeInZone, wallClockToInstant } from '../core/display-time';
 
-// The whole wave's timezone rule (frozen): the server stores and serves UTC only; this page
-// renders in the BROWSER timezone, and a drag keeps the local wall-clock time-of-day while
-// writing the recomputed UTC back. Deliberately not display-time.ts's fixed zone — a calendar
-// answers "when does this fire where I am sitting", and the datetime-local pickers the schedule
-// flow already uses are browser-zone too.
+// ADR-244: the server stores and serves UTC only; this page groups, labels and edits in the
+// account's display timezone. Month and Week are two projections over the same tickets (T-322).
+type CalendarView = 'month' | 'week';
+
 export interface CalendarTicket {
     kind: 'post' | 'slot';
     /** Local calendar day, yyyy-MM-dd. */
@@ -60,9 +60,18 @@ export function networkColor(network: string): string {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Local calendar day of an instant, yyyy-MM-dd in the browser zone. */
-function localDay(d: Date): string {
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** A calendar date carried as a UTC Date so browser locale never moves its day. */
+function civilDate(day: string): Date {
+    const [year, month, date] = day.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, date));
+}
+
+function civilDay(date: Date): string {
+    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
+function addCivilDays(date: Date, days: number): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
 }
 
 /** SQLite stores no DateTimeKind; a value without an offset is UTC in fact (ADR-115). */
@@ -88,13 +97,13 @@ export class CalendarComponent implements OnInit {
     private publishApi = inject(PublishService);
     private draftsApi = inject(DraftsService);
     private router = inject(Router);
-
     loading = signal(true);
     error = signal('');
     scheduled = signal<ScheduledPost[]>([]);
     slots = signal<QueueSlot[]>([]);
-    /** First day of the shown month, in the browser zone. */
-    monthAnchor = signal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    view = signal<CalendarView>('month');
+    /** A civil day in the account zone, represented by UTC fields only. */
+    anchor = signal(civilDate(dayInZone(new Date())));
     draggingId = signal<string | null>(null);
     dragOverDay = signal<string | null>(null);
     rescheduleBusy = signal(false);
@@ -114,26 +123,38 @@ export class CalendarComponent implements OnInit {
 
     // ─── Month grid ───────────────────────────────────────────────────────────────────────────
 
-    monthLabel = computed(() =>
-        this.monthAnchor().toLocaleDateString(this.locale.uiLang(), { month: 'long', year: 'numeric' }));
+    periodLabel = computed(() => {
+        const lang = this.locale.uiLang();
+        if (this.view() === 'month') {
+            return this.anchor().toLocaleDateString(lang, {
+                timeZone: 'UTC', month: 'long', year: 'numeric',
+            });
+        }
+        const { start, end } = this.visibleRange();
+        const startLabel = start.toLocaleDateString(lang, { timeZone: 'UTC', day: 'numeric', month: 'short' });
+        const endLabel = end.toLocaleDateString(lang, {
+            timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric',
+        });
+        return `${startLabel} – ${endLabel}`;
+    });
 
     /** Monday-first weekday captions in the UI language, matching the frozen design. */
     dowLabels = computed(() => {
         const lang = this.locale.uiLang();
         // 2026-06-01 is a Monday — a fixed anchor keeps the loop locale-independent.
         return Array.from({ length: 7 }, (_, i) =>
-            new Date(2026, 5, 1 + i).toLocaleDateString(lang, { weekday: 'short' }));
+            new Date(Date.UTC(2026, 5, 1 + i)).toLocaleDateString(lang, { timeZone: 'UTC', weekday: 'short' }));
     });
 
     private postTickets = computed<Map<string, CalendarTicket[]>>(() => {
         const byDay = new Map<string, CalendarTicket[]>();
         for (const p of this.scheduled()) {
             const at = utcDate(p.scheduledAtUtc);
-            const day = localDay(at);
+            const day = dayInZone(at);
             const ticket: CalendarTicket = {
                 kind: 'post',
                 day,
-                time: `${pad(at.getHours())}:${pad(at.getMinutes())}`,
+                time: timeInZone(at),
                 title: p.draftTitle,
                 network: p.network || 'telegram',
                 id: p.id,
@@ -157,25 +178,25 @@ export class CalendarComponent implements OnInit {
         if (!active.length) return byDay;
 
         const filled = new Set(
-            this.scheduled().filter(p => p.slotId).map(p => `${p.slotId}:${localDay(utcDate(p.scheduledAtUtc))}`));
-        const today = localDay(new Date());
+            this.scheduled().filter(p => p.slotId).map(p => `${p.slotId}:${dayInZone(utcDate(p.scheduledAtUtc))}`));
+        const today = dayInZone(new Date());
         const { start, end } = this.visibleRange();
         // Walk the range in UTC days: a slot names a UTC weekday and minute, and each match maps
         // to whatever local day that instant falls on.
-        for (let utc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate() - 1);
-             utc <= Date.UTC(end.getFullYear(), end.getMonth(), end.getDate() + 1);
+        for (let utc = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() - 1);
+             utc <= Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1);
              utc += 86_400_000) {
             const probe = new Date(utc);
             for (const slot of active) {
                 if (probe.getUTCDay() !== slot.dayOfWeek) continue;
                 const instant = new Date(utc + slot.timeUtcMinutes * 60_000);
-                const day = localDay(instant);
+                const day = dayInZone(instant);
                 if (day < today) continue;
                 if (filled.has(`${slot.id}:${day}`)) continue;
                 const ticket: CalendarTicket = {
                     kind: 'slot',
                     day,
-                    time: `${pad(instant.getHours())}:${pad(instant.getMinutes())}`,
+                    time: timeInZone(instant),
                     title: slot.name || slot.targetName,
                     network: slot.network,
                     id: slot.id,
@@ -187,29 +208,41 @@ export class CalendarComponent implements OnInit {
         return byDay;
     });
 
-    /** The grid's local-day span: Monday of the month's first week to Sunday of its last. */
+    /** The selected week, or Monday-to-Sunday rows covering the selected month. */
     private visibleRange(): { start: Date; end: Date } {
-        const anchor = this.monthAnchor();
-        const lead = (anchor.getDay() + 6) % 7; // days back to Monday
-        const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1 - lead);
-        const lastOfMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
-        const tail = (7 - lastOfMonth.getDay()) % 7; // days forward to Sunday
-        const end = new Date(lastOfMonth.getFullYear(), lastOfMonth.getMonth(), lastOfMonth.getDate() + tail);
+        const anchor = this.anchor();
+        if (this.view() === 'week') {
+            const lead = (anchor.getUTCDay() + 6) % 7;
+            const start = addCivilDays(anchor, -lead);
+            return { start, end: addCivilDays(start, 6) };
+        }
+        const monthStart = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1));
+        const lead = (monthStart.getUTCDay() + 6) % 7;
+        const start = addCivilDays(monthStart, -lead);
+        const lastOfMonth = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0));
+        const tail = (7 - lastOfMonth.getUTCDay()) % 7;
+        const end = addCivilDays(lastOfMonth, tail);
         return { start, end };
     }
 
     cells = computed<CalendarCell[]>(() => {
         const { start, end } = this.visibleRange();
-        const month = this.monthAnchor().getMonth();
-        const today = localDay(new Date());
+        const month = this.anchor().getUTCMonth();
+        const today = dayInZone(new Date());
         const posts = this.postTickets();
         const slots = this.slotTickets();
         const out: CalendarCell[] = [];
-        for (let d = new Date(start); d <= end; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
-            const day = localDay(d);
+        for (let d = new Date(start); d <= end; d = addCivilDays(d, 1)) {
+            const day = civilDay(d);
             const tickets = [...(posts.get(day) ?? []), ...(slots.get(day) ?? [])]
                 .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-            out.push({ day, date: d.getDate(), inMonth: d.getMonth() === month, isToday: day === today, tickets });
+            out.push({
+                day,
+                date: d.getUTCDate(),
+                inMonth: this.view() === 'week' || d.getUTCMonth() === month,
+                isToday: day === today,
+                tickets,
+            });
         }
         return out;
     });
@@ -239,19 +272,27 @@ export class CalendarComponent implements OnInit {
         const meta: HeaderMeta[] = this.legendNetworks().map(n => ({ text: this.networkLabel(n), swatch: networkColor(n) }));
         meta.push({ text: this.t().calendar.scheduledCount(this.pendingCount()) });
         if (this.slots().length) meta.push({ text: this.t().calendar.openSlots(this.openSlotCount()) });
+        meta.push({ text: this.t().calendar.timeZone(displayTimeZone()) });
         return meta;
     });
 
-    stepMonth(delta: number) {
-        const a = this.monthAnchor();
-        this.monthAnchor.set(new Date(a.getFullYear(), a.getMonth() + delta, 1));
+    setView(view: CalendarView) {
+        this.view.set(view);
+    }
+
+    stepPeriod(delta: number) {
+        const a = this.anchor();
+        this.anchor.set(this.view() === 'month'
+            ? new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + delta, 1))
+            : addCivilDays(a, delta * 7));
     }
 
     goToday() {
-        const now = new Date();
-        this.monthAnchor.set(new Date(now.getFullYear(), now.getMonth(), 1));
+        this.anchor.set(civilDate(dayInZone(new Date())));
     }
 
+    periodBackTitle = computed(() => this.view() === 'month' ? this.t().calendar.prevMonth : this.t().calendar.prevWeek);
+    periodForwardTitle = computed(() => this.view() === 'month' ? this.t().calendar.nextMonth : this.t().calendar.nextWeek);
     networkColor = networkColor;
 
     networkIcon(network: string): IconName {
@@ -299,11 +340,12 @@ export class CalendarComponent implements OnInit {
         if (!post || post.status !== 'Pending') return;
 
         const at = utcDate(post.scheduledAtUtc);
-        if (localDay(at) === cell.day) return;
-        // The frozen rule: the local wall-clock time-of-day survives the move; the UTC is
-        // recomputed from the new local date.
-        const [y, m, d] = cell.day.split('-').map(Number);
-        const next = new Date(y, m - 1, d, at.getHours(), at.getMinutes(), 0, 0);
+        if (dayInZone(at) === cell.day) return;
+        const next = wallClockToInstant(cell.day, timeInZone(at));
+        if (!next) {
+            this.error.set(this.t().calendar.invalidWallTime);
+            return;
+        }
         const nextUtc = next.toISOString();
 
         const before = this.scheduled();
@@ -347,7 +389,7 @@ export class CalendarComponent implements OnInit {
         this.scheduleDraftId = '';
         this.scheduleTargetId = '';
         const now = new Date(Date.now() + 3_600_000);
-        this.scheduleAt = `${localDay(now)}T${pad(now.getHours())}:00`;
+        this.scheduleAt = `${dayInZone(now)}T${timeInZone(now).slice(0, 2)}:00`;
         this.scheduleOpen.set(true);
         try {
             const [drafts, networks] = await Promise.all([this.draftsApi.list(), this.publishApi.networks()]);
@@ -374,11 +416,17 @@ export class CalendarComponent implements OnInit {
         if (!this.canSchedule()) return;
         const draft = this.scheduleDrafts().find(d => d.id === this.scheduleDraftId);
         if (!draft) return;
+        const [day, time] = this.scheduleAt.split('T');
+        const instant = wallClockToInstant(day, time);
+        if (!instant) {
+            this.scheduleError.set(this.t().calendar.invalidWallTime);
+            return;
+        }
         this.scheduleBusy.set(true);
         this.scheduleError.set('');
         try {
             await this.postsApi.schedule(
-                draft.id, new Date(this.scheduleAt).toISOString(), draft.primaryLanguage,
+                draft.id, instant.toISOString(), draft.primaryLanguage,
                 { targetId: this.scheduleTargetId });
             this.scheduled.set(await this.postsApi.listScheduled());
             this.scheduleOpen.set(false);
@@ -427,20 +475,28 @@ export class CalendarComponent implements OnInit {
     }
 
     private slotLocalParts(slot: QueueSlot): { day: number; time: string } {
-        // Any UTC date with the right weekday works — the local offset is what is being read.
-        // 2026-06-07 is a Sunday, so 7 + dayOfWeek lands on the slot's UTC weekday.
-        const instant = new Date(Date.UTC(2026, 5, 7 + slot.dayOfWeek, 0, slot.timeUtcMinutes));
-        return { day: instant.getDay(), time: `${pad(instant.getHours())}:${pad(instant.getMinutes())}` };
+        const { start } = this.visibleRange();
+        for (let offset = -1; offset <= 7; offset++) {
+            const utcDay = addCivilDays(start, offset);
+            if (utcDay.getUTCDay() !== slot.dayOfWeek) continue;
+            const instant = new Date(utcDay.getTime() + slot.timeUtcMinutes * 60_000);
+            const parts = partsInZone(instant);
+            if (!parts) break;
+            const localDay = civilDate(`${parts.year}-${pad(parts.month)}-${pad(parts.day)}`);
+            return { day: localDay.getUTCDay(), time: `${pad(parts.hour)}:${pad(parts.minute)}` };
+        }
+        return { day: slot.dayOfWeek, time: `${pad(Math.floor(slot.timeUtcMinutes / 60))}:${pad(slot.timeUtcMinutes % 60)}` };
     }
 
     async createSlot() {
         if (!this.slotTargetId || !this.slotTime || this.slotBusy()) return;
-        const [h, m] = this.slotTime.split(':').map(Number);
-        // Local weekday + local time → the UTC pair the server stores. Same fixed-week trick in
-        // reverse: build the local instant on an anchored week (2026-06-01 is a Monday), read its
-        // UTC weekday and minutes.
-        const localDow = this.slotDay === 0 ? 6 : this.slotDay - 1; // offset from Monday
-        const instant = new Date(2026, 5, 1 + localDow, h, m);
+        const { start } = this.visibleRange();
+        const localDow = this.slotDay === 0 ? 6 : this.slotDay - 1;
+        const instant = wallClockToInstant(civilDay(addCivilDays(start, localDow)), this.slotTime);
+        if (!instant) {
+            this.slotError.set(this.t().calendar.invalidWallTime);
+            return;
+        }
         this.slotBusy.set(true);
         this.slotError.set('');
         try {

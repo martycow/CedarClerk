@@ -77,6 +77,22 @@ public class DisplayTimeTests
 
         Assert.Equal("11 August 2026, 21:05", BlogDateFormatter.DateTimeShort(wallClock, "en"));
     }
+
+    [Fact]
+    public void An_account_timezone_drives_dates_and_the_generic_offset_label()
+    {
+        var utc = new DateTime(2026, 8, 11, 21, 5, 0, DateTimeKind.Utc);
+
+        Assert.Equal(new DateTime(2026, 8, 12, 6, 5, 0), DisplayTime.ToZone(utc, "Asia/Tokyo"));
+        Assert.Equal("12 August 2026, 06:05 UTC+09:00", BlogDateFormatter.DateTimeLocal(utc, "en", "Asia/Tokyo"));
+    }
+
+    [Theory]
+    [InlineData("Pacific Standard Time")]
+    [InlineData("Not/A_Zone")]
+    [InlineData("")]
+    public void Profile_timezone_validation_accepts_only_resolvable_IANA_ids(string value) =>
+        Assert.False(TimeZones.IsValid(value));
 }
 
 public class UtcDateTimeConverterTests

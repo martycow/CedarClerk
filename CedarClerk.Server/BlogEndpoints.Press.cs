@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
-// Wave 1 item 6 — the press kit page at /games/{slug}/press. Everything on it is either already
+// The press kit page at /showcase/{slug}/press. Everything on it is either already
 // public on the showcase or one of the five optional press fields the owner filled in; an empty
 // section is omitted, never rendered blank.
 public static partial class BlogEndpoints
@@ -127,7 +127,7 @@ public static partial class BlogEndpoints
 
         if (project.Description is { Length: > 0 } about)
         {
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "About the game" : "Об игре").Append("</h2>");
+            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "About the project" : "О проекте").Append("</h2>");
             sb.Append("<div class=\"press-about\">");
             foreach (var paragraph in about.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 sb.Append("<p>").Append(Html(paragraph)).Append("</p>");
@@ -176,7 +176,7 @@ public static partial class BlogEndpoints
         var blogBase = site.BaseUrl;
         var ogImage = project.CoverUrl is { Length: > 0 } cv ? MediaSrc(cv, mainBase) : $"{blogBase}/og-default.png";
         var meta = OgMetaBuilder.Build(new OgMetaInput(
-            $"{project.Name} — press kit", project.Description, $"{blogBase}/games/{project.ShowcaseSlug}/press",
+            $"{project.Name} — press kit", project.Description, $"{blogBase}/showcase/{project.ShowcaseSlug}/press",
             ogImage, 1200, 630,
             channel?.Title ?? "Cedar Clerk", pageLang,
             [], null, null, null, IsArticle: false), OgMetaPolicy.Full);

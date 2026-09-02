@@ -1,10 +1,8 @@
-<div class="page">
+<div class="page showcase-page">
     <app-page-header [title]="t().projects.showcase.title" [kicker]="project()?.name ?? ''" [meta]="headerMeta()">
-        <!--An anchor, not app-button: the address is off this app entirely (ADR-163).-->
         @if (publicUrl(); as url) {
             <a secondary class="btn" [href]="url" target="_blank" rel="noopener">
-                <app-icon name="arrow-square-out" size="sm" />
-                {{ t().projects.showcase.openPage }}
+                <app-icon name="arrow-square-out" size="sm" />{{ t().projects.showcase.openPage }}
             </a>
         }
         @if (!loading() && !loadError()) {
@@ -17,158 +15,217 @@
         }
     </app-page-header>
 
-    <div class="grid">
-        <div class="card main">
-            <p class="hint">{{ t().projects.edit.showcaseHint }}</p>
-
-            @if (loading()) {
-                <p class="hint">{{ t().projects.loading }}</p>
-            } @else if (loadError(); as e) {
-                <p class="error-line">{{ e }}</p>
-            } @else {
-                <label class="checkbox-row">
-                    <input type="checkbox" [ngModel]="enabled()" (ngModelChange)="enabled.set($event)">
-                    <span>{{ t().projects.edit.showcaseToggle }}</span>
-                </label>
-
-                @if (enabled()) {
-                    <div class="fields">
-                        <app-input [label]="t().projects.edit.showcaseSlugLabel"
-                                   [placeholder]="t().projects.edit.showcaseSlugPlaceholder"
-                                   inputId="showcase-slug"
-                                   [value]="slug()" (valueChange)="slug.set($any($event) ?? '')" />
-
-                        <div class="field">
-                            <label class="field-label" for="discovery-category">{{ t().projects.edit.discoveryCategory }}</label>
-                            <select id="discovery-category" [ngModel]="discoveryCategory()"
-                                    (ngModelChange)="discoveryCategory.set($event)">
-                                @for (category of discoveryCategories; track category) {
-                                <option [value]="category">{{ $any(t().projects.edit.discoveryCategories)[category] }}</option>
-                                }
-                            </select>
-                            <p class="hint">{{ t().projects.edit.discoveryCategoryHint }}</p>
-                        </div>
-
-                        <div class="field">
-                            <label class="field-label" for="showcase-links">{{ t().projects.edit.showcaseLinksLabel }}</label>
-                            <textarea id="showcase-links" rows="3" maxlength="2000"
-                                      [ngModel]="links()" (ngModelChange)="links.set($event)"
-                                      [placeholder]="t().projects.edit.showcaseLinksPlaceholder"></textarea>
-                        </div>
-
-                        <app-input type="url" [label]="t().projects.edit.showcaseTrailerLabel"
-                                   [placeholder]="t().projects.edit.showcaseTrailerPlaceholder"
-                                   inputId="showcase-trailer"
-                                   [value]="trailer()" (valueChange)="trailer.set($any($event) ?? '')" />
-
-                        <div class="field">
-                            <label class="field-label" for="showcase-gallery">{{ t().projects.edit.showcaseGalleryLabel }}</label>
-                            <textarea id="showcase-gallery" rows="3" maxlength="2000"
-                                      [ngModel]="gallery()" (ngModelChange)="gallery.set($event)"
-                                      [placeholder]="t().projects.edit.showcaseGalleryPlaceholder"></textarea>
-                            <div class="field-actions">
-                                <!--T-353 — the one asset window, appending rather than replacing.-->
-                                <app-button variant="paper" size="sm" [disabled]="busy()"
-                                            (clicked)="galleryPickerOpen.set(true)">
-                                    <app-icon name="image" size="sm"></app-icon>
-                                    {{ t().projects.edit.showcaseGalleryPick }}
-                                </app-button>
-                            </div>
-                            <p class="hint">{{ t().projects.edit.showcaseGalleryHint }}</p>
-                        </div>
-
-                        <app-input [label]="t().projects.edit.showcaseDomainLabel"
-                                   [placeholder]="t().projects.edit.showcaseDomainPlaceholder"
-                                   [hint]="t().projects.edit.showcaseDomainHint"
-                                   inputId="showcase-domain"
-                                   [value]="domain()" (valueChange)="domain.set($any($event) ?? '')" />
-
-                        <!--Wave 1 item 6 — the /press page's facts. Every field optional: an
-                        empty one is a section the page omits, never a blank line on it.-->
-                        <p class="press-group-label">{{ t().projects.edit.pressGroup }}</p>
-                        <p class="hint">
-                            {{ t().projects.edit.pressHint }}
-                            @if (pressUrl(); as url) {
-                                <a class="press-link" [href]="url" target="_blank" rel="noopener">{{ t().projects.showcase.pressPage }}</a>
+    @if (loading()) {
+        <p class="hint">{{ t().projects.loading }}</p>
+    } @else if (loadError(); as e) {
+        <p class="error-line">{{ e }}</p>
+    } @else {
+        <div class="builder">
+            <aside class="card block-rail" [attr.aria-label]="t().projects.showcase.blockList">
+                <div class="panel-head">
+                    <div><span class="label">{{ t().projects.showcase.structure }}</span>
+                        <p>{{ t().projects.showcase.structureHint }}</p></div>
+                    <span class="block-count">{{ blocks().length }}</span>
+                </div>
+                <div class="block-list">
+                    @for (block of blocks(); track block.id) {
+                        <button type="button" class="block-row" [class.is-selected]="selectedBlockId() === block.id"
+                                [class.is-hidden]="!block.visible" (click)="selectBlock(block.id)">
+                            <app-icon [name]="blockIcon(block.kind)" size="sm" />
+                            <span><b>{{ blockTitle(block) }}</b><small>{{ blockLabel(block.kind) }}</small></span>
+                            @if (!block.visible) { <app-icon name="eye-slash" size="xs" [label]="t().projects.showcase.hidden" /> }
+                        </button>
+                    }
+                </div>
+                @if (availableBlockKinds().length) {
+                    <div class="add-block">
+                        <select [ngModel]="addBlockKind()" (ngModelChange)="addBlockKind.set($event)"
+                                [attr.aria-label]="t().projects.showcase.addBlock">
+                            @for (kind of availableBlockKinds(); track kind) {
+                                <option [ngValue]="kind">{{ blockLabel(kind) }}</option>
                             }
-                        </p>
+                        </select>
+                        <app-button variant="paper" size="sm" (clicked)="addBlock()">
+                            <app-icon name="plus" size="xs" />{{ t().projects.showcase.addBlock }}
+                        </app-button>
+                    </div>
+                }
+            </aside>
 
-                        <app-input type="email" [label]="t().projects.edit.pressContactLabel"
-                                   [placeholder]="t().projects.edit.pressContactPlaceholder"
-                                   inputId="press-contact"
-                                   [value]="pressContact()" (valueChange)="pressContact.set($any($event) ?? '')" />
+            <main class="card live-result" [attr.aria-label]="t().projects.showcase.liveResult">
+                <div class="preview-bar"><span class="label">{{ t().projects.showcase.liveResult }}</span>
+                    <span>{{ publicUrl() || t().projects.showcase.unsavedAddress }}</span></div>
+                <div class="preview-page">
+                    @for (block of visibleBlocks(); track block.id) {
+                        <section class="preview-block" [class.is-selected]="selectedBlockId() === block.id"
+                                 (click)="selectBlock(block.id)">
+                            @switch (block.kind) {
+                                @case ('hero') {
+                                    @if (project()?.coverUrl; as cover) { <img class="preview-cover" [src]="cover" alt=""> }
+                                    <div class="preview-hero-copy">
+                                        @if (block.title) { <span class="preview-kicker">{{ block.title }}</span> }
+                                        <h1>{{ project()?.name }}</h1>
+                                        @if (blockBody(block)) { <p>{{ blockBody(block) }}</p> }
+                                        <a class="preview-text-link">{{ t().projects.showcase.pressPage }}</a>
+                                    </div>
+                                }
+                                @case ('about') {
+                                    <h2>{{ blockTitle(block) }}</h2><p>{{ blockBody(block) || t().projects.showcase.emptyProse }}</p>
+                                }
+                                @case ('links') {
+                                    @if (block.title) { <h2>{{ block.title }}</h2> }
+                                    <div class="preview-actions">
+                                        @for (link of previewLinks(); track link.url) { <span>{{ link.label }}</span> }
+                                        @if (!previewLinks().length) { <em>{{ t().projects.showcase.emptyLinks }}</em> }
+                                    </div>
+                                }
+                                @case ('trailer') {
+                                    @if (block.title) { <h2>{{ block.title }}</h2> }
+                                    <div class="preview-media"><app-icon name="film-slate" size="lg" />
+                                        <span>{{ trailer() || t().projects.showcase.emptyTrailer }}</span></div>
+                                }
+                                @case ('gallery') {
+                                    <h2>{{ blockTitle(block) }}</h2>
+                                    <div class="preview-gallery">
+                                        @for (image of galleryImages(); track image) { <img [src]="image" alt=""> }
+                                        @if (!galleryImages().length) { <em>{{ t().projects.showcase.emptyGallery }}</em> }
+                                    </div>
+                                }
+                                @case ('downloads') {
+                                    <h2>{{ blockTitle(block) }}</h2><div class="preview-derived">
+                                        <app-icon name="download-simple" size="sm" />{{ t().projects.showcase.downloadsFromBuilds }}</div>
+                                }
+                                @case ('devlog') {
+                                    <h2>{{ blockTitle(block) }}</h2><div class="preview-posts">
+                                        @for (document of project()?.documents?.slice(0, 2); track document.id) {
+                                            <span><small>{{ document.documentType }}</small><b>{{ document.title }}</b></span>
+                                        } @empty { <em>{{ t().projects.showcase.emptyDevlog }}</em> }
+                                    </div>
+                                }
+                                @case ('follow') {
+                                    @if (block.title || block.body) { <h2>{{ blockTitle(block) }}</h2><p>{{ block.body }}</p> }
+                                    <div class="preview-follow"><span>{{ t().projects.showcase.emailPlaceholder }}</span>
+                                        <b>{{ t().projects.showcase.followAction }}</b></div>
+                                }
+                                @case ('roadmap') {
+                                    <h2>{{ blockTitle(block) }}</h2><div class="preview-derived">
+                                        <app-icon name="list-checks" size="sm" />{{ t().projects.showcase.roadmapFromTasks }}</div>
+                                }
+                            }
+                        </section>
+                    }
+                </div>
+            </main>
 
-                        <app-input [label]="t().projects.edit.pressPriceLabel"
-                                   [placeholder]="t().projects.edit.pressPricePlaceholder"
-                                   inputId="press-price"
-                                   [value]="pressPrice()" (valueChange)="pressPrice.set($any($event) ?? '')" />
-
-                        <app-input [label]="t().projects.edit.pressEngineLabel"
-                                   [placeholder]="t().projects.edit.pressEnginePlaceholder"
-                                   inputId="press-engine"
-                                   [value]="pressEngine()" (valueChange)="pressEngine.set($any($event) ?? '')" />
-
-                        <app-input [label]="t().projects.edit.pressGenreLabel"
-                                   [placeholder]="t().projects.edit.pressGenrePlaceholder"
-                                   inputId="press-genre"
-                                   [value]="pressGenre()" (valueChange)="pressGenre.set($any($event) ?? '')" />
-
-                        <div class="field">
-                            <label class="field-label" for="press-factsheet">{{ t().projects.edit.pressFactsheetLabel }}</label>
-                            <textarea id="press-factsheet" rows="4" maxlength="2000"
-                                      [ngModel]="pressFactsheet()" (ngModelChange)="pressFactsheet.set($event)"
-                                      [placeholder]="t().projects.edit.pressFactsheetPlaceholder"></textarea>
-                            <p class="hint">{{ t().projects.edit.pressFactsheetHint }}</p>
+            <aside class="inspector">
+                @if (selectedBlock(); as block) {
+                    <div class="card inspector-card">
+                        <div class="panel-head"><div><span class="label">{{ t().projects.showcase.inspector }}</span>
+                            <h2>{{ blockLabel(block.kind) }}</h2></div><app-icon [name]="blockIcon(block.kind)" size="sm" /></div>
+                        <div class="order-actions">
+                            <button type="button" (click)="moveSelected(-1)" [disabled]="blocks()[0].id === block.id"
+                                    [attr.aria-label]="t().projects.showcase.moveUp"><app-icon name="arrow-up" size="sm" /></button>
+                            <button type="button" (click)="moveSelected(1)" [disabled]="blocks()[blocks().length - 1].id === block.id"
+                                    [attr.aria-label]="t().projects.showcase.moveDown"><app-icon name="arrow-down" size="sm" /></button>
+                            @if (block.kind !== 'hero') {
+                                <button type="button" class="remove-block" (click)="removeSelected()"
+                                        [attr.aria-label]="t().projects.showcase.removeBlock"><app-icon name="trash" size="sm" /></button>
+                            }
                         </div>
+                        @if (block.kind !== 'hero') {
+                            <label class="checkbox-row"><input type="checkbox" [ngModel]="block.visible"
+                                (ngModelChange)="updateSelected({ visible: $event })"><span>{{ t().projects.showcase.visible }}</span></label>
+                        }
+                        <label class="field"><span class="field-label">{{ t().projects.showcase.blockTitle }}</span>
+                            <input maxlength="120" [ngModel]="block.title ?? ''" (ngModelChange)="updateSelected({ title: $event || null })"
+                                   [placeholder]="blockLabel(block.kind)"></label>
+                        <label class="field"><span class="field-label">{{ t().projects.showcase.blockBody }}</span>
+                            <textarea rows="6" maxlength="2000" [ngModel]="block.body ?? ''"
+                                      (ngModelChange)="updateSelected({ body: $event || null })"
+                                      [placeholder]="block.kind === 'hero' ? (project()?.description ?? '') : t().projects.showcase.bodyPlaceholder"></textarea></label>
+
+                        <div class="ai-tools">
+                            <div class="ai-head"><span class="label">{{ t().projects.showcase.aiTitle }}</span>
+                                @if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }</div>
+                            <div class="ai-actions">
+                                <app-button variant="paper" size="sm" [disabled]="aiBusy() || !blockBody(block) || !auth.hasAiPlan()"
+                                            (clicked)="assist('polish')">{{ t().projects.showcase.aiPolish }}</app-button>
+                                <app-button variant="paper" size="sm" [disabled]="aiBusy() || !blockBody(block) || !auth.hasAiPlan()"
+                                            (clicked)="assist('shorten')">{{ t().projects.showcase.aiShorten }}</app-button>
+                                <app-button variant="paper" size="sm" [disabled]="aiBusy() || !blockBody(block) || !auth.hasAiPlan()"
+                                            (clicked)="assist('ideas')">{{ t().projects.showcase.aiIdeas }}</app-button>
+                            </div>
+                            @if (aiBusy()) { <p class="hint">{{ t().projects.showcase.aiWorking }}</p> }
+                            @if (aiError(); as error) { <p class="error-line">{{ error }}</p> }
+                            @if (aiSuggestion(); as suggestion) {
+                                <div class="suggestion"><span class="label">{{ t().projects.showcase.review }}</span><p>{{ suggestion }}</p>
+                                    <div class="suggestion-actions">
+                                        <app-button variant="paper" size="sm" (clicked)="aiSuggestion.set(null)">{{ t().common.cancel }}</app-button>
+                                        <app-button variant="pine" size="sm" (clicked)="applySuggestion()">{{ t().projects.showcase.apply }}</app-button>
+                                    </div></div>
+                            }
+                        </div>
+
+                        @if (block.kind === 'links') {
+                            <label class="field"><span class="field-label">{{ t().projects.edit.showcaseLinksLabel }}</span>
+                                <textarea rows="4" maxlength="2000" [ngModel]="links()" (ngModelChange)="links.set($event)"
+                                          [placeholder]="t().projects.edit.showcaseLinksPlaceholder"></textarea></label>
+                        }
+                        @if (block.kind === 'trailer') {
+                            <app-input type="url" [label]="t().projects.edit.showcaseTrailerLabel"
+                                [placeholder]="t().projects.edit.showcaseTrailerPlaceholder" inputId="showcase-trailer"
+                                [value]="trailer()" (valueChange)="trailer.set($any($event) ?? '')" />
+                        }
+                        @if (block.kind === 'gallery') {
+                            <label class="field"><span class="field-label">{{ t().projects.edit.showcaseGalleryLabel }}</span>
+                                <textarea rows="4" maxlength="2000" [ngModel]="gallery()" (ngModelChange)="gallery.set($event)"></textarea></label>
+                            <app-button variant="paper" size="sm" (clicked)="galleryPickerOpen.set(true)">
+                                <app-icon name="image" size="sm" />{{ t().projects.edit.showcaseGalleryPick }}
+                            </app-button>
+                        }
                     </div>
                 }
 
-                @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
-            }
-        </div>
-
-        <aside class="side">
-            <div class="card side-card" [attr.aria-label]="t().projects.hub.links">
-                <span class="label">{{ t().projects.hub.links }}</span>
-                <div class="kv">
-                    <b>{{ t().projects.hub.publicPage }}</b>
-                    @if (publicUrl(); as url) {
-                        <a class="kv-link" [href]="url" target="_blank" rel="noopener">
-                            {{ project()?.showcaseSlug }} <app-icon name="arrow-square-out" size="xs" />
-                        </a>
-                    } @else {
-                        <span class="kv-none">{{ t().projects.hub.notPublished }}</span>
-                    }
-                    @if (project()?.customDomain; as host) {
-                        <b>{{ t().projects.edit.showcaseDomainLabel }}</b>
-                        <span>{{ host }}</span>
-                    }
-                    @if (pressUrl(); as url) {
-                        <b>{{ t().projects.showcase.pressPage }}</b>
-                        <a class="kv-link" [href]="url" target="_blank" rel="noopener">/press <app-icon name="arrow-square-out" size="xs" /></a>
-                    }
-                </div>
-            </div>
-
-            <!--Only where there are numbers to read: a counter card over a page nobody has yet
-            published says zero about the game and something wrong about the app.-->
-            @if (stats(); as s) {
-                <div class="card side-card" [attr.aria-label]="t().projects.showcase.numbers">
-                    <span class="label">{{ t().projects.showcase.numbers }}</span>
-                    <div class="kv">
-                        <b>{{ t().projects.hub.publicViews }}</b>
-                        <span>{{ s.viewTotal }}</span>
-                        @for (click of s.clicks; track click.label) {
-                            <b>{{ click.label }}</b>
-                            <span>{{ click.count }}</span>
-                        }
-                        <b>{{ t().projects.hub.followers }}</b>
-                        <span>{{ s.followerCount }}</span>
+                <details class="card settings-card" open><summary>{{ t().projects.showcase.publishSettings }}</summary>
+                    <div class="settings-body">
+                        <label class="checkbox-row"><input type="checkbox" [ngModel]="enabled()" (ngModelChange)="enabled.set($event)">
+                            <span>{{ t().projects.edit.showcaseToggle }}</span></label>
+                        <app-input [label]="t().projects.edit.showcaseSlugLabel" inputId="showcase-slug"
+                            [value]="slug()" (valueChange)="slug.set($any($event) ?? '')" />
+                        <label class="field"><span class="field-label">{{ t().projects.edit.discoveryCategory }}</span>
+                            <select [ngModel]="discoveryCategory()" (ngModelChange)="discoveryCategory.set($event)">
+                                @for (category of discoveryCategories; track category) {
+                                    <option [value]="category">{{ $any(t().projects.edit.discoveryCategories)[category] }}</option>
+                                }
+                            </select></label>
+                        <app-input [label]="t().projects.edit.showcaseDomainLabel" inputId="showcase-domain"
+                            [value]="domain()" (valueChange)="domain.set($any($event) ?? '')" />
                     </div>
-                </div>
-            }
-        </aside>
-    </div>
+                </details>
+
+                <details class="card settings-card"><summary>{{ t().projects.edit.pressGroup }}</summary>
+                    <div class="settings-body">
+                        <app-input type="email" [label]="t().projects.edit.pressContactLabel" inputId="press-contact"
+                            [value]="pressContact()" (valueChange)="pressContact.set($any($event) ?? '')" />
+                        <app-input [label]="t().projects.edit.pressPriceLabel" inputId="press-price"
+                            [value]="pressPrice()" (valueChange)="pressPrice.set($any($event) ?? '')" />
+                        <app-input [label]="t().projects.edit.pressEngineLabel" inputId="press-engine"
+                            [value]="pressEngine()" (valueChange)="pressEngine.set($any($event) ?? '')" />
+                        <app-input [label]="t().projects.edit.pressGenreLabel" inputId="press-genre"
+                            [value]="pressGenre()" (valueChange)="pressGenre.set($any($event) ?? '')" />
+                        <label class="field"><span class="field-label">{{ t().projects.edit.pressFactsheetLabel }}</span>
+                            <textarea rows="4" maxlength="2000" [ngModel]="pressFactsheet()" (ngModelChange)="pressFactsheet.set($event)"></textarea></label>
+                    </div>
+                </details>
+                @if (stats(); as s) {
+                    <div class="card metrics-card"><span class="label">{{ t().projects.showcase.numbers }}</span>
+                        <div class="kv"><b>{{ t().projects.hub.publicViews }}</b><span>{{ s.viewTotal }}</span>
+                            <b>{{ t().projects.hub.followers }}</b><span>{{ s.followerCount }}</span></div></div>
+                }
+            </aside>
+        </div>
+        @if (actionError(); as e) { <p class="error-line action-error">{{ e }}</p> }
+    }
 </div>
 
 @if (galleryPickerOpen()) {

@@ -9,7 +9,10 @@ namespace CedarClerk.Server.Tenancy;
 /// a page whose scoping can be tested, and the two together are what keep a slug from resolving
 /// into somebody else's post.
 /// </summary>
-public readonly record struct BlogSite(string OwnerId, string Host)
+public readonly record struct BlogSite(
+    string OwnerId,
+    string Host,
+    string TimeZoneId = Consts.General.DisplayTimeZone)
 {
     public string BaseUrl => $"https://{Host}";
     public string PostUrl(string slug) => $"{BaseUrl}/{slug}";
@@ -46,8 +49,16 @@ public static class BlogTenant
 
     /// <summary>This owner's blog, for the paths that build URLs without a request to read it off.</summary>
     public static async Task<BlogSite?> SiteForOwnerAsync(CedarDbContext db, IConfiguration cfg,
-        string ownerId, CancellationToken ct = default) =>
-        await HostForOwnerAsync(db, cfg, ownerId, ct) is { } host ? new BlogSite(ownerId, host) : null;
+        string ownerId, CancellationToken ct = default)
+    {
+        var user = await db.Users.Where(u => u.Id == ownerId)
+            .Select(u => new { u.TenantUsername, u.TimeZoneId })
+            .FirstOrDefaultAsync(ct);
+
+        return user?.TenantUsername is { } username
+            ? new BlogSite(ownerId, Subdomain(username, cfg), TimeZones.NormalizeOrDefault(user.TimeZoneId))
+            : null;
+    }
 
     /// <summary>Hosts for many owners in one query — the admin post list spans accounts.</summary>
     public static async Task<IReadOnlyDictionary<string, string>> HostsForOwnersAsync(
