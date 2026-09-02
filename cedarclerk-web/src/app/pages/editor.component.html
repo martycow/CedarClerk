@@ -598,7 +598,7 @@
                                                   (include)="includeDestination('blog', $event)" (select)="activeExportDestination.set('blog')" />
                             <app-destination-card id="telegram" [name]="t().editor.exportModal.destinationTelegram" brand="telegram"
                                                   [meta]="destinationMeta('telegram')" [state]="destinationState('telegram')"
-                                                  [includable]="channels().length > 0" [included]="destTelegram()" [active]="activeExportDestination() === 'telegram'"
+                                                  [includable]="true" [included]="destTelegram()" [active]="activeExportDestination() === 'telegram'"
                                                   (include)="includeDestination('telegram', $event)" (select)="activeExportDestination.set('telegram')">
                                 @if (!channels().length) {
                                 <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'integrations' }">{{ t().editor.exportModal.connectInSettings }}</a>

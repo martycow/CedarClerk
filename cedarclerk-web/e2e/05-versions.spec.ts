@@ -23,7 +23,9 @@ test('history lists versions and restores one', async ({ page, context }) => {
     await openDraft(page, id);
     await expect(page.locator('.tiptap')).toContainText('replacement wording');
 
-    await page.getByTitle(/history/i).click();
+    // History lives behind the title's ⋯ menu; the inspector's own button is folded away by default.
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('button', { name: 'History', exact: true }).click();
     const modal = page.locator('app-modal', { hasText: 'history' });
     await expect(modal).toBeVisible();
 

@@ -80,7 +80,8 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await shot(page, '22-publish-ticked');
     await page.getByRole('tab', { name: 'Write' }).click();
 
-    await page.getByTitle(/history/i).click();
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('button', { name: 'History', exact: true }).click();
     await shot(page, '23-version-history');
     await page.keyboard.press('Escape');
 
