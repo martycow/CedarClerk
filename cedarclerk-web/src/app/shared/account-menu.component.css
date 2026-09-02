@@ -66,7 +66,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    min-width: 240px;
+    min-width: 264px;
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow: auto;
+    overscroll-behavior: contain;
 }
 
 .who {
@@ -169,6 +172,53 @@
 .account-item.is-danger,
 .account-item.is-danger app-icon {
     color: var(--danger);
+}
+
+.account-label {
+    padding: var(--space-2) var(--space-2) 2px;
+}
+
+/* The display row: three tiles that read as one control, not three list rows. */
+.account-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+}
+
+.account-item.account-tool {
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-height: 60px;
+    padding: var(--space-2) var(--space-1);
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    font-size: var(--fs-11);
+    font-weight: 600;
+    text-align: center;
+    color: var(--t2);
+}
+
+.account-item.account-tool:hover {
+    background: var(--hover);
+    color: var(--text);
+}
+
+.account-item.account-tool span {
+    overflow: hidden;
+    max-width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.account-item.is-quiet {
+    min-height: var(--space-7);
+    font-weight: 500;
+    color: var(--t2);
+}
+
+.account-item.is-quiet:hover {
+    color: var(--text);
 }
 
 .account-kbd,

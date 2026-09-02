@@ -13,9 +13,9 @@ namespace CedarClerk.Server.Publishing;
 public sealed record XCredentials(string UserId, string Username, string AccessToken, string RefreshToken, DateTime AccessExpiresAt);
 
 /// <summary>
-/// X (Twitter) over API v2 (T-110, ADR-093). Text plus the blog link in v1 — no media, no threads;
-/// the post is a short standalone teaser/override (ADR-077) and the link carries the reader to the
-/// full document.
+/// X (Twitter) over API v2 (T-110, ADR-093). The post is a short standalone teaser/override
+/// (ADR-077) with the blog link, or the document as a thread (ADR-094); the first post carries up
+/// to four of the document's pictures, uploaded through the v2 media endpoint (ADR-241).
 ///
 /// Two things distinguish this target from Bluesky's. **Token rotation**: X invalidates the old
 /// refresh token the moment a new one is issued, so the new pair is saved to the database BEFORE
@@ -31,9 +31,16 @@ public class XPublishTarget(
     PublishTargetSecrets secrets,
     IHttpClientFactory httpFactory,
     IConfiguration cfg,
+    MediaPaths media,
     ILogger<XPublishTarget> logger) : IPublishTarget
 {
     public const string ApiBase = "https://api.x.com";
+
+    /// <summary>What the connect flow asks for; media.write is what lets a picture ride along.</summary>
+    public const string Scopes = "tweet.read tweet.write users.read offline.access media.write";
+
+    /// <summary>X caps a still image at 5 MB; anything bigger is recompressed the way Bluesky's are.</summary>
+    private const long MaxImageBytesValue = 5L * 1024 * 1024;
 
     /// <summary>Refresh this long before the recorded expiry — covers clock skew and transit time.</summary>
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromMinutes(2);
@@ -44,7 +51,8 @@ public class XPublishTarget(
     {
         Network = PublishNetworks.X,
         MaxCharacters = XPostBuilder.MaxWeightedChars,
-        MaxMediaItems = 0,
+        MaxMediaItems = 4,
+        MaxImageBytes = MaxImageBytesValue,
         SupportsVideo = false,
         SupportsAudio = false,
         SupportsRichText = false,
@@ -111,11 +119,19 @@ public class XPublishTarget(
             http.BaseAddress = new Uri(ApiBase);
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", credentials.AccessToken);
 
+            // The pictures ride on the first post only, like Bluesky's — a thread that repeats
+            // its four pictures on every part is not what a thread looks like anywhere.
+            var mediaIds = request.Part is null or { Index: 0 }
+                ? await UploadImagesAsync(http, request, ct)
+                : [];
+
             // ADR-094 — a thread part replies to the one before it, which is what makes X render
             // a thread rather than a scatter of posts.
-            object payload = request.Part?.ReplyToRemoteId is { } replyTo
-                ? new { text, reply = new { in_reply_to_tweet_id = replyTo } }
-                : new { text };
+            var payload = new JsonObject { ["text"] = text };
+            if (request.Part?.ReplyToRemoteId is { } replyTo)
+                payload["reply"] = new JsonObject { ["in_reply_to_tweet_id"] = replyTo };
+            if (mediaIds.Count > 0)
+                payload["media"] = new JsonObject { ["media_ids"] = new JsonArray(mediaIds.Select(id => (JsonNode?)JsonValue.Create(id)).ToArray()) };
             var response = await http.PostAsJsonAsync("/2/tweets", payload, ct);
             if (!response.IsSuccessStatusCode)
             {
@@ -217,6 +233,74 @@ public class XPublishTarget(
         return refreshed;
     }
 
+    /// <summary>
+    /// The document's first pictures as X media ids, at most <see cref="PublishCapabilities.MaxMediaItems"/>.
+    /// Never fails the publish: a post without its picture is worth more than no post. A 403 means
+    /// the connection predates the media scope — the target says so until a reconnect clears it.
+    /// </summary>
+    private async Task<List<string>> UploadImagesAsync(HttpClient http, PublishRequest request, CancellationToken ct)
+    {
+        var ids = new List<string>();
+        foreach (var image in CedarImageRefs.Collect(request.CedarJson))
+        {
+            if (ids.Count >= Capabilities.MaxMediaItems) break;
+
+            var fileName = CedarImageRefs.LocalFileName(image.Src);
+            if (fileName is null) continue;
+            var path = Path.Combine(media.Dir, fileName);
+            if (!File.Exists(path)) continue;
+
+            var bytes = await File.ReadAllBytesAsync(path, ct);
+            var contentType = ContentTypeOf(fileName);
+            if (bytes.LongLength > MaxImageBytesValue)
+            {
+                var compressed = ImageCompressor.TryCompressJpeg(bytes, MaxImageBytesValue, logger);
+                if (compressed is null)
+                {
+                    logger.LogWarning("Skipping {File} for X: {Bytes} bytes and it would not compress under the cap", fileName, bytes.LongLength);
+                    continue;
+                }
+                bytes = compressed;
+                contentType = "image/jpeg";
+            }
+
+            using var form = new MultipartFormDataContent();
+            var part = new ByteArrayContent(bytes);
+            part.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            form.Add(part, "media", fileName);
+            form.Add(new StringContent("tweet_image"), "media_category");
+            form.Add(new StringContent(contentType), "media_type");
+
+            var response = await http.PostAsync("/2/media/upload", form, ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                logger.LogWarning("X refused a media upload for target {TargetId} (403): the connection lacks media.write", request.Target.Id);
+                request.Target.LastError = ErrorMessages.XMediaScopeMissing;
+                return ids;
+            }
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("X refused the upload of {File}: {Status} {Body}", fileName, (int)response.StatusCode, await response.Content.ReadAsStringAsync(ct));
+                continue;
+            }
+
+            var uploaded = await response.Content.ReadFromJsonAsync<MediaUploadResponse>(cancellationToken: ct);
+            if (uploaded?.Data?.Id is { } id) ids.Add(id);
+        }
+
+        if (ids.Count > 0 && request.Target.LastError == ErrorMessages.XMediaScopeMissing)
+            request.Target.LastError = null;
+        return ids;
+    }
+
+    private static string ContentTypeOf(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        _ => "image/jpeg",
+    };
+
     public XCredentials? ReadCredentials(PublishTarget target)
     {
         var plaintext = secrets.TryUnprotect(target.CredentialsProtected);
@@ -249,6 +333,8 @@ public class XPublishTarget(
     }
 
     private sealed record CreateTweetResponse(TweetData? Data);
+    private sealed record MediaUploadResponse(MediaData? Data);
+    private sealed record MediaData(string? Id);
     private sealed record TweetData(string? Id, string? Text);
 
     public sealed record TokenResponse(

@@ -11,9 +11,10 @@ import { PopoverComponent } from './popover.component';
 import { IconComponent } from './icon.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 
-// The account menu is where everything that is not a screen lives (ADR-239 clause 4): the profile
-// pair, the account-wide screens, display preferences, the window, the development surfaces, the
-// console and the way out. The trigger is the sidebar's user row or, on the rail, the avatar alone.
+// The account menu holds what belongs to the person, not to a screen (ADR-240): the profile pair
+// and feedback, the display row (appearance, theme, the window), the developer doors for an admin,
+// the console and the way out. Screens live in the sidebar. The trigger is the sidebar's user row
+// or, on the rail, the avatar alone.
 @Component({
     selector: 'app-account-menu',
     imports: [IconComponent, PopoverComponent, StampBadgeComponent, RouterLink],
@@ -55,34 +56,25 @@ import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
                     <li><a class="account-item" routerLink="/settings" [queryParams]="{ tab: 'account' }">
                         <app-icon name="sparkle" size="sm" />{{ t().settings.tabs.account }}
                     </a></li>
-                    <li class="account-sep" role="separator"></li>
-                    <li><a class="account-item" routerLink="/glossary">
-                        <app-icon name="book-bookmark" size="sm" />{{ t().glossary.crumb }}
-                    </a></li>
-                    <li><a class="account-item" routerLink="/presets">
-                        <app-icon name="squares-four" size="sm" />{{ t().presets.crumb }}
-                    </a></li>
-                    @if (auth.indieDev()) {
-                    <li><a class="account-item" routerLink="/teams">
-                        <app-icon name="user" size="sm" />{{ t().teams.crumb }}
-                    </a></li>
-                    }
-                    <li class="account-sep" role="separator"></li>
-                    <li><button type="button" class="account-item" (click)="openAppearance.emit()">
-                        <app-icon name="palette" size="sm" />{{ t().settings.appearance.title }}
-                    </button></li>
-                    <li><button type="button" class="account-item" (click)="theme.toggle()">
-                        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" />{{ t().common.toggleTheme }}
-                    </button></li>
-                    <li><button type="button" class="account-item" (click)="toggleFullscreen()">
-                        <app-icon [name]="isFullscreen() ? 'arrows-in-simple' : 'arrows-out-simple'" size="sm" />{{ fullscreenLabel() }}
-                    </button></li>
-                    <li class="account-sep" role="separator"></li>
                     <li><button type="button" class="account-item" (click)="feedbackForm.open.set(true)">
                         <app-icon name="chat-teardrop-dots" size="sm" />{{ t().feedbackForm.title }}
                     </button></li>
+                    <li class="account-sep" role="separator"></li>
+                    <li class="label account-label">{{ t().shell.display }}</li>
+                    <li class="account-tools">
+                        <button type="button" class="account-item account-tool" (click)="openAppearance.emit()">
+                            <app-icon name="palette" size="sm" /><span>{{ t().settings.appearance.title }}</span>
+                        </button>
+                        <button type="button" class="account-item account-tool" (click)="theme.toggle()">
+                            <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" /><span>{{ t().common.toggleTheme }}</span>
+                        </button>
+                        <button type="button" class="account-item account-tool" (click)="toggleFullscreen()">
+                            <app-icon [name]="isFullscreen() ? 'arrows-in-simple' : 'arrows-out-simple'" size="sm" /><span>{{ fullscreenLabel() }}</span>
+                        </button>
+                    </li>
                     @if (auth.isAdmin()) {
                     <li class="account-sep" role="separator"></li>
+                    <li class="label account-label">{{ t().shell.developer }}</li>
                     <li><a class="account-item" routerLink="/admin">
                         <app-icon name="shield-check" size="sm" />{{ t().shell.admin }}
                     </a></li>
@@ -94,11 +86,11 @@ import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
                     </a></li>
                     }
                     <li class="account-sep" role="separator"></li>
-                    <li><button type="button" class="account-item" (click)="log.open.update(toggle)">
+                    <li><button type="button" class="account-item is-quiet" (click)="log.open.update(toggle)">
                         <app-icon name="terminal-window" size="sm" />{{ t().shell.debugConsole }}
                         <kbd class="account-kbd">Ctrl+\`</kbd>
                     </button></li>
-                    <li><a class="account-item" href="/welcome">
+                    <li><a class="account-item is-quiet" href="/welcome">
                         <app-icon name="tree-evergreen" size="sm" />{{ t().shell.aboutLanding }}
                         @if (versionLabel(); as v) { <span class="account-version" [title]="t().shell.version(v)">{{ v }}</span> }
                     </a></li>

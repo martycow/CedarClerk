@@ -59,6 +59,9 @@ export const en = {
         groupWrite: 'Write',
         groupPlan: 'Plan',
         groupShip: 'Ship',
+        groupLibrary: 'Library',
+        display: 'Display',
+        developer: 'Developer',
         posts: 'Posts',
         projectsCount: (n: number) => `${n} ${n === 1 ? 'project' : 'projects'}`,
         debugConsole: 'Debug console',
@@ -66,6 +69,26 @@ export const en = {
         version: (v: string) => `Version ${v}`,
     },
     // T-191 — the feedback channel's modal, opened from the tray.
+    matrix: {
+        title: 'What goes where',
+        content: 'Content',
+        blog: 'Blog',
+        inDocument: 'in this document',
+        kinds: {
+            text: 'Text', headings: 'Headings', lists: 'Lists', links: 'Links', images: 'Pictures', video: 'Video',
+            audio: 'Audio', tables: 'Tables', code: 'Code', math: 'Formulas', quotes: 'Quotes',
+        },
+        verdict: { yes: 'goes as is', partial: 'goes with limits', no: 'does not go' },
+        notes: {
+            asText: 'as plain text',
+            teaser: (n: number) => `teaser, ${n} chars`,
+            teaserOrThread: (n: number) => `teaser or thread, ${n} each`,
+            blogLinkOnly: 'the blog link only',
+            linkCard: 'the link card carries one',
+            upTo: (n: number) => `up to ${n}`,
+            upToFirst: (n: number) => `up to ${n}, first post`,
+        },
+    },
     feedbackForm: {
         title: 'Send feedback',
         hint: 'A bug, an idea, or anything else — it reaches the maintainers with your account attached.',
@@ -2523,6 +2546,7 @@ export const en = {
         profile: {
             nav: 'Profile',
             title: 'Profile',
+            lead: 'Who the posts are signed by — the name, picture and links every published page carries.',
             changeAvatar: 'Change picture',
             removeAvatar: 'Remove',
             avatarFailed: 'Failed to update the picture',
@@ -2623,6 +2647,7 @@ export const en = {
         subscription: {
             nav: 'Subscription',
             title: 'Subscription',
+            lead: 'The plan the account is on and how it is paid for.',
             planSuffix: 'plan',
             renews: 'Renews',
             manageStripe: 'Manage billing (Stripe) ↗',

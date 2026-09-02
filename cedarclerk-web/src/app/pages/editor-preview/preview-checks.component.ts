@@ -94,6 +94,12 @@ export interface PreviewCheck {
 
         .pc-all { margin-top: var(--space-3); }
 
+        @media (max-width: 1180px) {
+            :host { width: 100%; flex: none; }
+            .pc-list { overflow: visible; }
+            .pc-row { padding: var(--space-2) 0; }
+        }
+
         .visually-hidden {
             position: absolute;
             width: 1px;

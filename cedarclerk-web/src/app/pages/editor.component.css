@@ -797,7 +797,7 @@
 .sheet-column {
     width: 100%;
     margin: 0 auto;
-    padding: var(--space-6) var(--space-5) var(--space-4);
+    padding: var(--space-6) clamp(var(--space-3), 2vw, var(--space-5)) var(--space-4);
     box-sizing: content-box;
 }
 
@@ -908,7 +908,7 @@
     border-bottom: none;
     border-radius: var(--radius-paper) var(--radius-paper) 0 0;
     box-shadow: var(--shadow-sheet);
-    padding: 30px 40px;
+    padding: var(--space-6) clamp(var(--space-5), 4vw, var(--space-10));
     font-family: var(--sheet-typeface, var(--font-serif));
     font-size: var(--sheet-font-size, var(--fs-read));
     line-height: var(--sheet-line-height, var(--lh-read));
@@ -2356,4 +2356,22 @@
     max-width: 190px;
     padding: 2px var(--space-2);
     font-size: var(--text-chrome);
+}
+
+/* ---------- A tablet in landscape (≈1000px): the same page, tighter ---------- */
+/* Not a shell rule (ADR-147): the page decides how its own two columns share a narrow width. The
+   shelf keeps its rows readable at 280px; the toolbar's fit already drops captions and re-rows. */
+@media (max-width: 1180px) {
+    .main { gap: var(--space-3); }
+    .inspector { width: 280px; }
+}
+
+/* On a touch screen the paper floor makes every button 44px (styles.scss), which turns a tag leaf
+   and the "+ Tags" control in the shelf into stacked blocks of the row's whole width. A leaf in a
+   wrapping row keeps the trim box: the hit area is the whole leaf, not a floor under its ×. */
+@media (pointer: coarse) {
+    .insp-sheet app-tag-picker app-leaf-tag[data-surface],
+    .insp-sheet app-tag-picker app-button[data-surface] {
+        --hit-surface: var(--hit-trim);
+    }
 }

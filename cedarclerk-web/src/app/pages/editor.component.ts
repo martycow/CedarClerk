@@ -31,7 +31,9 @@ import { LanguageMenuComponent } from '../shared/language-menu.component';
 import { DraftGlossaryTerm, GlossaryService, GlossaryTermInput } from '../core/glossary.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview, PreflightLanguage } from '../core/posts.service';
-import { PublishService, PublishAccount, PublishJob, ThreadPart } from '../core/publish.service';
+import { PublishService, PublishAccount, PublishCapabilities, PublishJob, ThreadPart } from '../core/publish.service';
+import { DocumentKindCounts, documentKinds } from '../core/document-kinds';
+import { PublishMatrixComponent } from '../shared/publish-matrix.component';
 import { LinksService } from '../core/links.service';
 import { BillingService } from '../core/billing.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
@@ -239,7 +241,7 @@ interface UploadItem {
     imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
         DocumentOutlineComponent, PlanLockComponent, LocationInputComponent, LanguageMenuComponent,
-        DocumentFrameComponent, EditorPreviewComponent, ButtonComponent],
+        DocumentFrameComponent, EditorPreviewComponent, ButtonComponent, PublishMatrixComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -391,6 +393,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             blog: this.currentBlog(),
             isPrivate: this.isPrivate(),
             scheduled: meta?.scheduled ?? null,
+            kinds: this.documentKindCounts(),
         };
     });
 
@@ -598,6 +601,24 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     xAccount = signal<PublishAccount | null>(null);
     discordAccount = signal<PublishAccount | null>(null);
     xCredits = signal<number | null>(null);
+
+    /** Every network's capabilities as the server describes them — what the publish matrix reads (ADR-241). */
+    networkCaps = signal<PublishCapabilities[]>([]);
+
+    readonly connectedNetworks = computed<string[]>(() => {
+        const list: string[] = [];
+        if (this.channels().length) list.push('telegram');
+        if (this.xAccount()) list.push('x');
+        if (this.blueskyAccount()) list.push('bluesky');
+        if (this.discordAccount()) list.push('discord');
+        return list;
+    });
+
+    /** What the open document holds, re-counted after every save. */
+    readonly documentKindCounts = computed<DocumentKindCounts>(() => {
+        this.savedVersion();
+        return documentKinds(this.editor ? JSON.stringify(this.editor.getJSON()) : '{}');
+    });
 
     /**
      * ADR-096 — "announcement plus a link" and "the whole post as a thread" are two different
@@ -868,6 +889,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private async loadShortPostTargets() {
         try {
             const networks = await this.publishApi.networks();
+            this.networkCaps.set(networks.map(n => n.capabilities));
             this.blueskyAccount.set(networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null);
             this.xAccount.set(networks.find(n => n.network === 'x')?.accounts[0] ?? null);
             this.discordAccount.set(networks.find(n => n.network === 'discord')?.accounts[0] ?? null);

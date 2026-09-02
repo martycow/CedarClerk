@@ -158,6 +158,28 @@ export interface DestinationRow {
             white-space: nowrap;
             clip-path: inset(50%);
         }
+
+        @media (max-width: 1180px) {
+            :host { flex-direction: row; align-items: stretch; width: 100%; }
+            .pd-caption { display: none; }
+            .pd-list { flex: 1; flex-direction: row; overflow: auto hidden; }
+            .pd-row {
+                flex: 1 0 auto;
+                width: auto;
+                align-items: center;
+                justify-content: center;
+                gap: var(--space-2);
+                padding: var(--space-2) var(--space-3);
+                border-left: 0;
+                border-bottom: 3px solid transparent;
+            }
+            .pd-row.is-on { border-bottom-color: var(--accent); }
+            .pd-text { flex: none; align-items: center; }
+            .pd-name { font-size: var(--fs-14); white-space: nowrap; }
+            .pd-detail { font-size: var(--fs-12); white-space: nowrap; }
+            .pd-thumb, .pd-spacer { display: none; }
+            .pd-manage { flex: none; padding: 0 var(--space-3); border-top: 0; border-left: 1px solid var(--paper-edge); white-space: nowrap; }
+        }
     `],
 })
 export class PreviewDestinationsComponent {

@@ -13,21 +13,26 @@
     <div class="settings-strip">
         <app-index-tabs class="settings-tabs" [items]="tabItems()" [value]="tab()"
                         [label]="t().settings.crumb" (selected)="setTab($any($event))" />
-        @if (tab() === 'profile' || tab() === 'billing') {
-        <nav class="seg section-index" [attr.aria-label]="t().settings.sections">
-            @if (tab() === 'profile') {
-            <button type="button" (click)="jump('sec-profile')">{{ t().settings.profile.nav }}</button>
-            <button type="button" (click)="jump('sec-header-slots')">{{ t().settings.headerSlots.nav }}</button>
-            <button type="button" (click)="jump('sec-cross-links')">{{ t().settings.crossLinks.nav }}</button>
-            <button type="button" (click)="jump('sec-social-links')">{{ t().settings.social.nav }}</button>
-            } @else {
-            <button type="button" (click)="jump('sec-subscription')">{{ t().settings.subscription.nav }}</button>
-            <button type="button" (click)="jump('sec-credits')">{{ t().settings.credits.nav }}</button>
+        @if (sections().length > 1) {
+        <nav class="seg section-index is-strip" [attr.aria-label]="t().settings.sections">
+            @for (s of sections(); track s.id) {
+            <button type="button" [class.is-on]="s.id === activeSection()" (click)="jump(s.id)">{{ s.label }}</button>
             }
         </nav>
         }
     </div>
 
+    <!--The index stands beside the column and follows the reader (IntersectionObserver); under
+    900px it folds back into the strip above, so one list serves both widths.-->
+    <div class="settings-body" [class.has-index]="sections().length > 1">
+        @if (sections().length > 1) {
+        <nav class="section-index is-side" [attr.aria-label]="t().settings.sections">
+            @for (s of sections(); track s.id) {
+            <button type="button" class="index-item" [class.is-on]="s.id === activeSection()"
+                    [attr.aria-current]="s.id === activeSection() ? 'true' : null" (click)="jump(s.id)">{{ s.label }}</button>
+            }
+        </nav>
+        }
     <div class="settings-stack">
             <!--T-002 — a reminder, not a wall: the account works unconfirmed, and blocking one
             would lock out every account that predates this. It disappears the moment the address
@@ -51,6 +56,7 @@
             @if (tab() === 'profile') {
             <section id="sec-profile" class="card settings-card">
                 <h2>{{ t().settings.profile.title }}</h2>
+                <p class="settings-lead">{{ t().settings.profile.lead }}</p>
                 <div class="profile-row">
                     <!--IF1: uploaded picture when set, the initial letter otherwise.-->
                     @if (auth.avatarUrl(); as url) {
@@ -164,7 +170,7 @@
             @if (tab() === 'account') {
             <section id="sec-language" class="card settings-card">
                 <h2>{{ t().settings.language.title }}</h2>
-                <p class="field-hint">{{ t().settings.language.hint }}</p>
+                <p class="settings-lead">{{ t().settings.language.hint }}</p>
                 <!--DB3.1: was a flag emoji beside the endonym; Windows ships no regional-indicator
                 glyphs, so it rendered as two letters regardless. A two-letter code says the same
                 thing on every platform, and matches the editor's content-language tabs.-->
@@ -186,7 +192,8 @@
             @if (tab() === 'profile') {
             <section id="sec-header-slots" class="card settings-card">
                 <!--T-343 — the section explainers fold behind the (i); the heading keeps the name.-->
-                <h2>{{ t().settings.headerSlots.title }} <app-hint-dot [text]="t().settings.headerSlots.hint" /></h2>
+                <h2>{{ t().settings.headerSlots.title }}</h2>
+                <p class="settings-lead">{{ t().settings.headerSlots.hint }}</p>
 
                 <div class="field-group">
                     <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>
@@ -238,7 +245,8 @@
             <!-- ============ CROSS-LINKS (I15) ============ -->
             @if (tab() === 'profile') {
             <section id="sec-cross-links" class="card settings-card">
-                <h2>{{ t().settings.crossLinks.title }} <app-hint-dot [text]="t().settings.crossLinks.hint" /></h2>
+                <h2>{{ t().settings.crossLinks.title }}</h2>
+                <p class="settings-lead">{{ t().settings.crossLinks.hint }}</p>
 
                 <!--Per language: this line is read by whoever reads that language's version of the
                 post. Switching tabs saves what is in the fields first.-->
@@ -265,7 +273,7 @@
             @if (tab() === 'profile') {
             <section id="sec-social-links" class="card settings-card">
                 <h2>{{ t().settings.social.title }}</h2>
-                <p class="field-hint">{{ t().settings.social.hint }}</p>
+                <p class="settings-lead">{{ t().settings.social.hint }}</p>
 
                 <div class="field-group">
                     <label for="cc-social-twitter"><app-brand-icon name="twitter" [size]="12"></app-brand-icon> Twitter / X</label>
@@ -336,12 +344,13 @@
             @if (tab() === 'billing') {
             <section id="sec-subscription" class="card settings-card">
                 <h2>{{ t().settings.subscription.title }}</h2>
+                <p class="settings-lead">{{ t().settings.subscription.lead }}</p>
 
                 @if (billing(); as b) {
                 <div class="plan-banner">
                     <span class="status-dot"></span>
                     <div>
-                        <div class="plan-banner-title">{{ b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
+                        <div class="plan-banner-title">{{ b.planTier === 'ProPlus' ? 'Pro+' : b.planTier }} {{ t().settings.subscription.planSuffix }}</div>
                         @if (auth.planExpiresAt(); as until) {
                         <div class="plan-banner-meta">{{ t().settings.subscription.renews }} {{ until | zonedDate:'MM/dd/yyyy' }}</div>
                         }
@@ -440,7 +449,8 @@
             <!-- ============ CREDITS (ADR-092) ============ -->
             @if (tab() === 'billing') {
             <section id="sec-credits" class="card settings-card">
-                <h2>{{ t().settings.credits.title }} <app-hint-dot [text]="t().settings.credits.hint" /></h2>
+                <h2>{{ t().settings.credits.title }}</h2>
+                <p class="settings-lead">{{ t().settings.credits.hint }}</p>
 
                 @if (credits(); as c) {
                 <div class="plan-banner">
@@ -554,7 +564,8 @@
             <!-- ============ INTEGRATIONS ============ -->
             @if (tab() === 'integrations') {
             <section id="sec-integrations" class="settings-group wide">
-                <h2 class="group-title">{{ t().settings.integrations.title }} <app-hint-dot [text]="t().settings.integrations.hint" /></h2>
+                <h2 class="group-title">{{ t().settings.integrations.title }}</h2>
+                <p class="settings-lead group-lead">{{ t().settings.integrations.hint }}</p>
 
                 <!--ADR-190 — one shape for every network: a card with a caption line, the state
                 stamp on the first line of its body, disconnect in the head, connect in the body.
@@ -562,21 +573,22 @@
                 <div class="integration-rack">
 
                     <div class="card net-card wide" role="region" [attr.aria-label]="t().settings.integrations.telegramAccount">
-                        <div class="net-cap"><span class="label">{{ t().settings.integrations.telegramAccount }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon telegram">
                                     <app-brand-icon name="telegram" [size]="16"></app-brand-icon>
                                 </span>
-                                @if (auth.telegramLinked()) {
-                                <app-stamp-badge tone="pine">{{ t().settings.integrations.linked }}</app-stamp-badge>
-                                <span class="integration-meta">
-                                    &#64;{{ auth.telegramUsername() }}
-                                    @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'MM/dd/yyyy' }} }
+                                <span class="net-id">
+                                    <span class="net-name">{{ t().settings.integrations.telegramAccount }}</span>
+                                    @if (auth.telegramLinked()) {
+                                    <span class="net-status is-on">
+                                        &#64;{{ auth.telegramUsername() }}
+                                        @if (auth.telegramLinkedAt(); as since) { · {{ t().settings.integrations.since }} {{ since | zonedDate:'MM/dd/yyyy' }} }
+                                    </span>
+                                    } @else {
+                                    <span class="net-status">{{ t().settings.integrations.notConnected }}</span>
+                                    }
                                 </span>
-                                } @else {
-                                <app-stamp-badge tone="ink">{{ t().settings.integrations.notConnected }}</app-stamp-badge>
-                                }
                                 <span class="spacer"></span>
                                 @if (auth.telegramLinked() && !askUnlinkTelegram()) {
                                 <app-button variant="danger" size="sm" (clicked)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</app-button>
@@ -717,22 +729,26 @@
                     <!--Bluesky: an app password, never the account password — it is revocable from Bluesky
                     itself, which is the whole reason storing one is defensible (ADR-079).-->
                     <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.bluesky">
-                        <div class="net-cap"><span class="label">{{ t().settings.integrations.bluesky }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon bluesky"><app-brand-icon name="bluesky" [size]="16"></app-brand-icon></span>
-                                @if (blueskyAccount(); as account) {
-                                <app-stamp-badge tone="pine">{{ t().settings.integrations.connected }}</app-stamp-badge>
-                                <span class="integration-meta">
-                                    &#64;{{ account.displayName }}
-                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
+                                <span class="net-id">
+                                    <span class="net-name">{{ t().settings.integrations.bluesky }}</span>
+                                    @if (blueskyAccount(); as account) {
+                                    <span class="net-status is-on">
+                                        &#64;{{ account.displayName }}
+                                        @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
+                                    </span>
+                                    @if (account.lastError; as err) { <span class="net-status is-error">{{ err }}</span> }
+                                    } @else {
+                                    <span class="net-status">{{ t().settings.integrations.notConnected }}</span>
+                                    }
                                 </span>
                                 <span class="spacer"></span>
+                                @if (blueskyAccount(); as account) {
                                 <app-button variant="danger" size="sm" (clicked)="disconnectBluesky(account.id)" [disabled]="blueskyBusy()">
                                     {{ t().settings.integrations.disconnect }}
                                 </app-button>
-                                } @else {
-                                <app-stamp-badge tone="ink">{{ t().settings.integrations.notConnected }}</app-stamp-badge>
                                 }
                             </div>
                             @if (!blueskyAccount()) {
@@ -753,22 +769,26 @@
                     <!--X: one button out to x.com and back (ADR-093). The callback returns to this section
                     with ?x=, which is the only sign the round trip finished at all.-->
                     <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.x">
-                        <div class="net-cap"><span class="label">{{ t().settings.integrations.x }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon x"><app-brand-icon name="twitter" [size]="14"></app-brand-icon></span>
-                                @if (xAccount(); as account) {
-                                <app-stamp-badge tone="pine">{{ t().settings.integrations.connected }}</app-stamp-badge>
-                                <span class="integration-meta">
-                                    {{ account.displayName }}
-                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
+                                <span class="net-id">
+                                    <span class="net-name">{{ t().settings.integrations.x }}</span>
+                                    @if (xAccount(); as account) {
+                                    <span class="net-status is-on">
+                                        {{ account.displayName }}
+                                        @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
+                                    </span>
+                                    @if (account.lastError; as err) { <span class="net-status is-error">{{ err }}</span> }
+                                    } @else {
+                                    <span class="net-status">{{ t().settings.integrations.notConnected }}</span>
+                                    }
                                 </span>
                                 <span class="spacer"></span>
+                                @if (xAccount(); as account) {
                                 <app-button variant="danger" size="sm" (clicked)="disconnectX(account.id)" [disabled]="xBusy()">
                                     {{ t().settings.integrations.disconnect }}
                                 </app-button>
-                                } @else {
-                                <app-stamp-badge tone="ink">{{ t().settings.integrations.notConnected }}</app-stamp-badge>
                                 }
                             </div>
                             @if (xNotice() === 'connected') {
@@ -797,22 +817,26 @@
                     <!--Discord: a channel webhook pasted whole (ADR-131) — the URL is the credential, so it
                     is verified against Discord before being stored encrypted, and never shown back.-->
                     <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.discord">
-                        <div class="net-cap"><span class="label">{{ t().settings.integrations.discord }}</span></div>
                         <div class="net-sheet">
                             <div class="net-head">
                                 <span class="integration-icon discord"><app-brand-icon name="discord" [size]="15"></app-brand-icon></span>
-                                @if (discordAccount(); as account) {
-                                <app-stamp-badge tone="pine">{{ t().settings.integrations.connected }}</app-stamp-badge>
-                                <span class="integration-meta">
-                                    {{ account.displayName }}
-                                    @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
+                                <span class="net-id">
+                                    <span class="net-name">{{ t().settings.integrations.discord }}</span>
+                                    @if (discordAccount(); as account) {
+                                    <span class="net-status is-on">
+                                        {{ account.displayName }}
+                                        @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
+                                    </span>
+                                    @if (account.lastError; as err) { <span class="net-status is-error">{{ err }}</span> }
+                                    } @else {
+                                    <span class="net-status">{{ t().settings.integrations.notConnected }}</span>
+                                    }
                                 </span>
                                 <span class="spacer"></span>
+                                @if (discordAccount(); as account) {
                                 <app-button variant="danger" size="sm" (clicked)="disconnectDiscord(account.id)" [disabled]="discordBusy()">
                                     {{ t().settings.integrations.disconnect }}
                                 </app-button>
-                                } @else {
-                                <app-stamp-badge tone="ink">{{ t().settings.integrations.notConnected }}</app-stamp-badge>
                                 }
                             </div>
                             @if (!discordAccount()) {
@@ -862,5 +886,6 @@
                 </div>
             </section>
             }
+    </div>
     </div>
 </div>

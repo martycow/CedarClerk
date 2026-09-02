@@ -10,7 +10,9 @@ import { LocaleService } from '../../core/i18n/locale.service';
 import { endonymOf } from '../../core/languages';
 import { PostsService, PreflightLanguage } from '../../core/posts.service';
 import { MicroNetwork, MicroPreview, PreviewService, PreviewTheme, TelegramPreview } from '../../core/preview.service';
-import { PublishAccount, PublishService } from '../../core/publish.service';
+import { PublishAccount, PublishCapabilities, PublishService } from '../../core/publish.service';
+import { DocumentKindCounts } from '../../core/document-kinds';
+import { PublishMatrixComponent } from '../../shared/publish-matrix.component';
 import { ThemeService } from '../../core/theme.service';
 import { EmptyStateComponent } from '../../shell/empty-state.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -33,6 +35,8 @@ export interface PreviewDraftFacts {
     blog: { slug: string; isPublished: boolean } | null;
     isPrivate: boolean;
     scheduled: ScheduledInfo | null;
+    /** What the document holds, for the publish matrix's lit rows. */
+    kinds: DocumentKindCounts;
 }
 
 interface PublishIssue { code: string; blocking: boolean; actual: number; limit: number; }
@@ -53,10 +57,16 @@ const MOBILE_WIDTH_PX = 390;
 @Component({
     selector: 'app-editor-preview',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [RouterLink, IconComponent, EmptyStateComponent, PreviewDestinationsComponent, PreviewPhoneComponent, PreviewPostComponent, PreviewChecksComponent],
+    imports: [RouterLink, IconComponent, EmptyStateComponent, PreviewDestinationsComponent, PreviewPhoneComponent, PreviewPostComponent, PreviewChecksComponent, PublishMatrixComponent],
     host: { 'data-surface': 'paper' },
     template: `
-        <app-preview-destinations [rows]="rows()" [selected]="destination()" (pick)="destination.set($event)" />
+        <div class="ep-side">
+            <app-preview-destinations [rows]="rows()" [selected]="destination()" (pick)="destination.set($event)" />
+            <details class="card ep-matrix">
+                <summary><app-icon name="table" size="sm" />{{ t().matrix.title }}</summary>
+                <app-publish-matrix [capabilities]="caps()" [connected]="connected()" [present]="facts().kinds" [withBlog]="true" />
+            </details>
+        </div>
 
         <section class="card ep-render">
             <div class="ep-toolbar">
@@ -149,6 +159,14 @@ const MOBILE_WIDTH_PX = 390;
             font-family: var(--font-sans);
         }
 
+        .ep-side { display: flex; flex: none; flex-direction: column; gap: var(--space-4); min-height: 0; }
+        .ep-side app-preview-destinations { flex: 1; min-height: 0; }
+
+        .ep-matrix { flex: none; padding: var(--space-3) var(--space-4); }
+        .ep-matrix summary { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: var(--fs-13); font-weight: 600; color: var(--t2); }
+        .ep-matrix summary:hover { color: var(--text); }
+        .ep-matrix[open] summary { margin-bottom: var(--space-2); }
+
         .ep-render {
             display: flex;
             flex: 1;
@@ -161,7 +179,8 @@ const MOBILE_WIDTH_PX = 390;
         .ep-toolbar {
             display: flex;
             align-items: center;
-            gap: var(--space-3);
+            flex-wrap: wrap;
+            gap: var(--space-2) var(--space-3);
             flex: none;
             padding: var(--space-3) var(--space-4);
             border-bottom: 1px solid var(--paper-edge);
@@ -169,7 +188,7 @@ const MOBILE_WIDTH_PX = 390;
 
         .ep-spacer { flex: 1; }
 
-        .ep-width { font-size: var(--fs-13); color: var(--t3); font-variant-numeric: tabular-nums; }
+        .ep-width { font-size: var(--fs-13); color: var(--t3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
         .ep-icon-btn {
             display: inline-flex;
@@ -237,6 +256,14 @@ const MOBILE_WIDTH_PX = 390;
         }
 
         app-empty-state { margin: var(--space-6); }
+
+        /* Three columns need ~1200px; under that the tab is one scrolling column — destinations
+           as a strip, the render at a working height, the checks under it. */
+        @media (max-width: 1180px) {
+            :host { flex-direction: column; overflow: auto; }
+            .ep-side, .ep-render { flex: none; }
+            .ep-render { min-height: 520px; }
+        }
     `],
 })
 export class EditorPreviewComponent implements OnDestroy {
@@ -271,6 +298,12 @@ export class EditorPreviewComponent implements OnDestroy {
     private readonly issues = signal<PublishIssue[]>([]);
     private readonly preflight = signal<PreflightLanguage | null>(null);
     private readonly accounts = signal<Partial<Record<MicroNetwork, PublishAccount | null>>>({});
+    readonly caps = signal<PublishCapabilities[]>([]);
+    readonly connected = computed<string[]>(() => {
+        const list = this.channels().length ? ['telegram'] : [];
+        for (const network of MICRO_NETWORKS) if (this.accounts()[network]) list.push(network);
+        return list;
+    });
     private readonly partCounts = signal<Partial<Record<MicroNetwork, number>>>({});
     private readonly measured = signal(0);
     private readonly reloadTick = signal(0);
@@ -394,6 +427,7 @@ export class EditorPreviewComponent implements OnDestroy {
     private async loadAccounts(id: string) {
         try {
             const networks = await this.publishApi.networks();
+            this.caps.set(networks.map(n => n.capabilities));
             const accounts: Partial<Record<MicroNetwork, PublishAccount | null>> = {};
             for (const network of MICRO_NETWORKS) accounts[network] = networks.find(n => n.network === network)?.accounts[0] ?? null;
             this.accounts.set(accounts);
@@ -578,7 +612,7 @@ export class EditorPreviewComponent implements OnDestroy {
             const images = posts[0]?.imageUrls.length ?? 0;
             rows.push(images
                 ? { id: 'media', label: words.media, detail: words.imagesAttached(images), tone: 'ok' }
-                : { id: 'media', label: words.media, detail: network === 'bluesky' ? words.mediaNone : words.mediaNotCarried, tone: 'muted' });
+                : { id: 'media', label: words.media, detail: network === 'discord' ? words.mediaNotCarried : words.mediaNone, tone: 'muted' });
         } else {
             rows.push({ id: 'length', label: words.length, detail: words.notChecked, tone: 'muted' });
         }

@@ -22,7 +22,7 @@ export interface NavItem {
 }
 
 export interface NavGroup {
-    id: 'write' | 'plan' | 'ship';
+    id: 'write' | 'plan' | 'ship' | 'library';
     label: string;
     items: readonly NavItem[];
 }
@@ -155,11 +155,17 @@ export interface SidebarUser {
             gap: 2px;
         }
 
-        .side-group + .side-group .side-label { padding-top: var(--space-4); }
+        .side-group + .side-group .side-label { padding-top: var(--space-5); }
 
-        .side-label { padding: var(--space-2) var(--space-3) 6px; }
+        .side-label { padding: var(--space-2) var(--space-3) 6px; color: var(--t3); }
 
         .side-spacer { flex: 1; min-height: var(--space-4); }
+
+        /* The foot stands apart from the screens: a hairline, then the two doors that are always there. */
+        .side-foot {
+            padding-top: var(--space-3);
+            border-top: 1px solid var(--border);
+        }
 
         .side-item {
             display: flex;
@@ -239,6 +245,8 @@ export interface SidebarUser {
         :host(.is-rail) .side-brand { justify-content: center; padding: 0; }
         :host(.is-rail) .side-nav { align-items: center; padding: var(--space-3) 0; }
         :host(.is-rail) .side-group { align-items: center; gap: var(--space-1); }
+        :host(.is-rail) .side-group + .side-group { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); }
+        :host(.is-rail) .side-foot { padding-top: var(--space-2); }
 
         :host(.is-rail) .side-item {
             flex-direction: column;

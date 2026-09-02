@@ -172,6 +172,9 @@ public static class ErrorMessages
     public static string XReconnect => Ru(
         "Подключение X недействительно — переподключите аккаунт в настройках публикации.",
         "The X connection is no longer valid — reconnect the account in publishing settings.");
+    public static string XMediaScopeMissing => Ru(
+        "Картинки не ушли в X: подключение сделано без права на медиа — переподключите аккаунт в настройках.",
+        "Pictures were left out of the X post: the connection has no media permission — reconnect the account in Settings.");
     public static string XNotConfigured => Ru(
         "Публикация в X не настроена на сервере.",
         "X publishing is not configured on the server.");

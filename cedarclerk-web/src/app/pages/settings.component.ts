@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -21,11 +21,9 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
-import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LanguageMenuComponent, LanguageMenuItem } from '../shared/language-menu.component';
 import { LocationInputComponent } from '../shared/location-input.component';
-import { HintDotComponent } from '../shared/hint-dot.component';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
 export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
@@ -35,13 +33,13 @@ export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
     imports: [
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent,
-        SpecRowComponent, StampBadgeComponent, PlanLockComponent, LocationInputComponent, HintDotComponent,
+        SpecRowComponent, PlanLockComponent, LocationInputComponent,
         LanguageMenuComponent, PageHeaderComponent, EmptyStateComponent,
     ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
     auth = inject(AuthService);
     locale = inject(LocaleService);
     t = this.locale.t;
@@ -110,6 +108,12 @@ export class SettingsComponent implements OnInit {
         { id: 'integrations', label: this.t().settings.tabs.integrations },
         { id: 'billing', label: this.t().settings.tabs.billing },
     ]);
+
+    // The index follows the reader: re-observed whenever the tab swaps its cards in.
+    private readonly sectionWatch = effect(() => {
+        this.tab();
+        untracked(() => setTimeout(() => this.observeSections()));
+    });
 
     // The header's meta line: only what the page has already fetched, never a 0 standing in for
     // "not loaded yet" (ADR-239 clause 6).
@@ -526,6 +530,51 @@ export class SettingsComponent implements OnInit {
 
     setTab(tab: SettingsTab) {
         this.tab.set(tab);
+    }
+
+    /** The sections of the open tab, in the order the cards stand — what the index lists. */
+    readonly sections = computed<{ id: string; label: string }[]>(() => {
+        const t = this.t().settings;
+        switch (this.tab()) {
+            case 'profile': return [
+                { id: 'sec-profile', label: t.profile.nav },
+                { id: 'sec-header-slots', label: t.headerSlots.nav },
+                { id: 'sec-cross-links', label: t.crossLinks.nav },
+                { id: 'sec-social-links', label: t.social.nav },
+            ];
+            case 'billing': return [
+                { id: 'sec-subscription', label: t.subscription.nav },
+                { id: 'sec-credits', label: t.credits.nav },
+            ];
+            case 'account': return [{ id: 'sec-language', label: t.language.nav }];
+            case 'integrations': return [{ id: 'sec-integrations', label: t.integrations.nav }];
+        }
+    });
+
+    /** The section the reader is on, for the index — the top-most one crossing the upper band. */
+    readonly activeSection = signal('');
+    private sectionObserver: IntersectionObserver | null = null;
+    private readonly sectionVisibility = new Map<string, number>();
+
+    private observeSections() {
+        this.sectionObserver?.disconnect();
+        this.sectionVisibility.clear();
+        if (typeof IntersectionObserver === 'undefined') return;
+        const ids = this.sections().map(s => s.id);
+        this.activeSection.set(ids[0] ?? '');
+        this.sectionObserver = new IntersectionObserver(entries => {
+            for (const e of entries) this.sectionVisibility.set((e.target as HTMLElement).id, e.isIntersecting ? e.boundingClientRect.top : Number.NaN);
+            const visible = ids.filter(id => Number.isFinite(this.sectionVisibility.get(id) ?? Number.NaN));
+            if (visible.length) this.activeSection.set(visible[0]);
+        }, { rootMargin: '-15% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] });
+        for (const id of ids) {
+            const el = document.getElementById(id);
+            if (el) this.sectionObserver.observe(el);
+        }
+    }
+
+    ngOnDestroy() {
+        this.sectionObserver?.disconnect();
     }
 
     jump(id: string) {

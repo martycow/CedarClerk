@@ -404,7 +404,10 @@ Keyword-монитор на `/api/health` — не роскошь: Cloudflare о
 
 **X/Twitter** (ADR-092/093): приложение в X Developer Portal (аккаунт Марти), OAuth 2.0 PKCE,
 callback `https://cedarclerk.mooexe.dev/api/targets/x/callback`. В drop-in:
-`Cedar__X__ClientId` + `Cedar__X__ClientSecret`. Публикация платная **для автора** — 1 кредит за
+`Cedar__X__ClientId` + `Cedar__X__ClientSecret`. Права приложения — Read and write; подключение
+запрашивает scope `tweet.read tweet.write users.read offline.access media.write` (ADR-241 —
+`media.write` нужен для картинок; аккаунт, подключённый до 02.09.2026, надо переподключить, иначе
+посты уходят без картинок и строка аккаунта об этом говорит). Публикация платная **для автора** — 1 кредит за
 пост (пакеты кредитов см. §1/Stripe и Stars ниже); у самого приложения в X — свой pay-per-use
 баланс, пополняется в портале X.
 

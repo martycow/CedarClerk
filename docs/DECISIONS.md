@@ -252,3 +252,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-237 — Signing in with somebody else's account: a second door, never a side door](adr/ADR-237.md)
 - [ADR-238 — Inspectors that can be written to, and the facts they were missing](adr/ADR-238.md)
 - [ADR-239 — Paper first: the shell after Cedar Bench](adr/ADR-239.md)
+- [ADR-240 — The sidebar carries every screen; the account menu holds the person](adr/ADR-240.md)
+- [ADR-241 — X carries pictures, and the matrix says what goes where](adr/ADR-241.md)

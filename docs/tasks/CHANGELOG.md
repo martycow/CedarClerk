@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-02 — The sidebar carries every screen
+
+An open project's sidebar no longer empties while the access answer is in flight: an own project
+draws the owner's wall at once, and the hub draws the account-wide screens instead of nothing.
+Glossary, Presets and Teams left the account menu for a fourth sidebar group, Library, and the
+menu shrank to what belongs to the person — a three-tile Display row for appearance, theme and
+fullscreen, the developer doors for an admin, the console and About as quiet rows. ADR-240.
+
+X posts now carry up to four of the document's pictures, uploaded through the v2 media endpoint;
+the connect flow asks for `media.write`, and an older connection says so on its row until it is
+reconnected. A publish matrix — one row per kind of content, one column per destination, every
+cell read off the network's capabilities, the document's own rows lit — sits under the Preview
+tab's destinations and in the Publish window's *Where to publish* step. ADR-241.
+
+Settings is a two-column paper page: a section index at the left that follows the scroll, one
+reading column of cards that open on a serif title and a lead line, field rows with a label column,
+integrations as rows with a brand mark and a status line. The editor fits a tablet in landscape:
+the Preview tab folds to one column under 1180px (destinations strip, render, checks), the document
+frame takes the page gutter, chips in the inspector stay chip-sized under a finger, the hub's
+document rows keep their titles, and the document can no longer scroll under the fixed shell — the
+iOS keyboard shift that pushed the top bar off the screen.
+
 ## 2026-09-01 — Editorial studio and readable screens
 
 Posts Manager now opens a selected post as a read-first editorial studio: publication state travels

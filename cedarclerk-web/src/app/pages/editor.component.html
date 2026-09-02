@@ -219,6 +219,15 @@
                 </div>
             </app-shelf-panel>
 
+            <!--ADR-241 — what of the document each destination takes, before anything is sent. A
+            global panel like steps 1 and 4: the table needs the whole width, not the rack column.-->
+            <app-shelf-panel class="export-step export-global dest-matrix" [title]="t().matrix.title">
+                <div class="export-step-body">
+                    <app-publish-matrix [capabilities]="networkCaps()" [connected]="connectedNetworks()"
+                                        [present]="documentKindCounts()" />
+                </div>
+            </app-shelf-panel>
+
             <!-- ============ 3 · PER-DESTINATION SETTINGS ============ -->
             @if (activeExportDestination()) {
             <app-shelf-panel class="export-step export-settings" [title]="'3 · ' + t().editor.exportModal.stepParams">

@@ -108,16 +108,16 @@ describe('app shell', () => {
     });
 
     it('lists the account-wide screens while the module is off, in their groups', () => {
-        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Metrics', 'Settings']);
-        expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship']);
+        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets', 'Settings']);
+        expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship', 'Library']);
         expect(el().querySelector('app-project-switcher')).toBeNull();
     });
 
-    it('keeps project screens out of the list until a project has been opened, and draws the hub as the card', () => {
+    it('draws the account-wide screens on the hub until a project has been opened, and the hub as the card', () => {
         TestBed.inject(AuthService).indieDev.set(true);
         fixture.detectChanges();
-        expect(labels()).toEqual(['All projects', 'Settings']);
-        expect(groupLabels()).toEqual([]);
+        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets', 'Teams', 'All projects', 'Settings']);
+        expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship', 'Library']);
         const card = el().querySelector('app-project-switcher .side-project') as HTMLAnchorElement;
         expect(card.tagName).toBe('A');
         expect(card.getAttribute('href')).toBe('/projects');
@@ -157,7 +157,11 @@ describe('app shell', () => {
         await go('/projects/p1/canvas/b1');
         expect(lit()).toBe('Canvas');
         await go('/glossary');
-        expect(lit()).toBeUndefined();
+        expect(lit()).toBe('Glossary');
+        await go('/presets');
+        expect(lit()).toBe('Presets');
+        await go('/teams');
+        expect(lit()).toBe('Teams');
     });
 
     it('adds the complete project set after a project has been opened', async () => {
@@ -170,6 +174,7 @@ describe('app shell', () => {
             'Documents', 'Assets', 'Canvas', 'Dialogues', 'Site',
             'Tasks', 'Planner', 'Calendar',
             'Builds', 'Posts', 'Metrics',
+            'Glossary', 'Presets', 'Teams',
             'All projects', 'Settings',
         ]);
         expect(items().find(a => a.textContent?.includes('Tasks'))!.getAttribute('href')).toBe('/projects/p1/tasks');
@@ -185,7 +190,7 @@ describe('app shell', () => {
             .flush({ role: 'editor', canWrite: true, archived: false });
         await fixture.whenStable();
         fixture.detectChanges();
-        expect(labels()).toEqual(['Canvas', 'Calendar', 'Posts', 'Metrics', 'All projects', 'Settings']);
+        expect(labels()).toEqual(['Canvas', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets', 'Teams', 'All projects', 'Settings']);
     });
 
     it('draws the counts the project list already holds, and never a zero', async () => {
@@ -258,12 +263,14 @@ describe('app shell', () => {
         expect(menu).toContain('Icons');
     });
 
-    it('holds the account-wide entries in the account menu, in order', () => {
+    // ADR-240 — the menu holds what belongs to the person; the library screens are the sidebar's.
+    it('holds the personal entries in the account menu, in order, and no screen', () => {
         const entries = openAccountMenu();
         const menu = entries.map(menuText);
         expect(menu.slice(0, 2)).toEqual(['Profile', 'Account']);
-        expect(menu).toContain('Glossary');
-        expect(menu).toContain('Presets');
+        expect(menu).not.toContain('Glossary');
+        expect(menu).not.toContain('Presets');
+        expect(labels()).toContain('Glossary');
         expect(menu).toContain('Appearance');
         expect(menu.some(m => m.includes('Toggle theme'))).toBe(true);
         expect(menu.some(m => m.includes('Fullscreen'))).toBe(true);

@@ -98,14 +98,16 @@ export interface DocumentTabItem {
             font-family: var(--font-sans);
         }
 
+        :host { --frame-gutter: clamp(var(--space-4), 2vw, var(--space-10)); }
+
         .frame-top {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: clamp(var(--space-2), 1vw, 14px);
             flex: none;
             box-sizing: border-box;
             min-height: var(--topbar-h);
-            padding: 0 var(--space-5);
+            padding: 0 var(--frame-gutter);
             border-bottom: 1px solid var(--border);
             background: var(--surface);
             color: var(--text);
@@ -142,6 +144,7 @@ export interface DocumentTabItem {
             gap: var(--space-2);
             font-size: var(--fs-13);
             color: var(--t2);
+            white-space: nowrap;
         }
 
         .frame-save[data-state="saved"] app-icon { color: var(--ok); }
@@ -155,6 +158,7 @@ export interface DocumentTabItem {
             gap: var(--space-2);
             font-size: var(--fs-14);
             color: var(--t2);
+            white-space: nowrap;
         }
 
         .frame-primary { display: inline-flex; align-items: center; gap: var(--space-1); }
@@ -166,7 +170,7 @@ export interface DocumentTabItem {
             justify-content: space-between;
             gap: var(--space-5);
             flex: none;
-            padding: 22px var(--space-10) 0;
+            padding: 22px var(--frame-gutter) 0;
             color: var(--wood-ink);
         }
 
@@ -187,7 +191,7 @@ export interface DocumentTabItem {
             margin: 0;
             overflow: hidden;
             font-family: var(--font-display);
-            font-size: var(--fs-30);
+            font-size: clamp(var(--fs-22), 2.4vw, var(--fs-30));
             font-weight: 700;
             line-height: 1.1;
             white-space: nowrap;
@@ -198,10 +202,10 @@ export interface DocumentTabItem {
 
         .frame-tabs {
             display: flex;
-            gap: 28px;
+            gap: clamp(var(--space-4), 2vw, 28px);
             flex: none;
             margin-top: 18px;
-            padding: 0 var(--space-10);
+            padding: 0 var(--frame-gutter);
             border-bottom: 1px solid var(--border);
         }
 
@@ -228,7 +232,7 @@ export interface DocumentTabItem {
             flex: 1;
             flex-direction: column;
             min-height: 0;
-            padding: var(--space-4) var(--space-10);
+            padding: var(--space-4) var(--frame-gutter);
         }
 
         .frame-footer {
@@ -238,7 +242,7 @@ export interface DocumentTabItem {
             flex: none;
             box-sizing: border-box;
             min-height: var(--footer-h);
-            padding: 0 var(--space-10);
+            padding: 0 var(--frame-gutter);
             border-top: 1px solid var(--border);
             background: var(--surface);
             color: var(--text);
@@ -248,9 +252,13 @@ export interface DocumentTabItem {
 
         .frame-footer-text {
             flex: 1;
+            min-width: 0;
+            overflow: hidden;
             font-size: var(--fs-13);
             color: var(--t3);
             text-align: center;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
     `],
 })

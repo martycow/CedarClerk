@@ -218,7 +218,7 @@ public static class PublishEndpoints
             var url = "https://x.com/i/oauth2/authorize?response_type=code"
                 + $"&client_id={Uri.EscapeDataString(clientId)}"
                 + $"&redirect_uri={Uri.EscapeDataString(XRedirectUri(cfg))}"
-                + $"&scope={Uri.EscapeDataString("tweet.read tweet.write users.read offline.access")}"
+                + $"&scope={Uri.EscapeDataString(XPublishTarget.Scopes)}"
                 + $"&state={state}&code_challenge={challenge}&code_challenge_method=S256";
             return Results.Ok(new { url });
         });

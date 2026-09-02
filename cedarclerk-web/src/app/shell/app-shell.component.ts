@@ -31,6 +31,9 @@ const NAV_PREFIXES: readonly (readonly [string, string])[] = [
     ['calendar', '/calendar'],
     ['posts', '/posts'],
     ['settings', '/settings'],
+    ['glossary', '/glossary'],
+    ['presets', '/presets'],
+    ['teams', '/teams'],
 ];
 
 /** Child screens the switcher carries across a project change; deeper paths fold to the child. */
@@ -208,16 +211,28 @@ export class AppShellComponent {
             id: 'metrics', label: t.metrics, icon: 'chart-bar', link: '/posts', queryParams: { tab: 'stats' },
             count: count(this.alerts()), countTitle: this.t().editor.newBadge,
         };
-        if (!this.auth.indieDev()) {
+        // An own project is one the account's own list holds; the access answer only ever
+        // narrows that (a member), so a project still in flight draws its owner's wall rather
+        // than nothing — an empty sidebar was the bug this replaces.
+        const own = !!summary || role === 'owner';
+        const library: NavItem[] = [
+            { id: 'glossary', label: this.t().glossary.crumb, icon: 'book-bookmark', link: '/glossary' },
+            { id: 'presets', label: this.t().presets.crumb, icon: 'squares-four', link: '/presets' },
+        ];
+        if (this.auth.indieDev()) library.push({ id: 'teams', label: this.t().teams.crumb, icon: 'user', link: '/teams' });
+        if (!this.auth.indieDev() || !this.projectOpen()) {
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts' });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: '/library' });
             plan.push(calendar);
             ship.push(posts, metrics);
-        } else if (this.projectOpen() && role !== null && role !== 'owner') {
+        } else if (!own && role !== null) {
             write.push({ id: 'canvas', label: t.canvas, icon: 'squares-four', link: ['/projects', open, 'canvas'] });
             plan.push(calendar);
             ship.push(posts, metrics);
-        } else if (this.projectOpen() && role === 'owner') {
+        } else if (!own) {
+            plan.push(calendar);
+            ship.push(posts, metrics);
+        } else {
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: ['/projects', open], count: count(summary?.documentCount) });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: ['/projects', open, 'assets'], count: count(summary?.assetCount) });
             write.push({ id: 'canvas', label: t.canvas, icon: 'squares-four', link: ['/projects', open, 'canvas'] });
@@ -233,6 +248,7 @@ export class AppShellComponent {
             { id: 'write', label: t.groupWrite, items: write },
             { id: 'plan', label: t.groupPlan, items: plan },
             { id: 'ship', label: t.groupShip, items: ship },
+            { id: 'library', label: t.groupLibrary, items: library },
         ];
     });
 

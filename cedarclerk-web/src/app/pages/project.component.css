@@ -500,3 +500,13 @@
 .danger-hint {
     margin-top: var(--space-2);
 }
+
+/* A narrow hub keeps the title: the search wraps under the tabs and the type column goes, the
+   date and the state staying at the row's end. Last in the file so it wins over .doc-row above. */
+@media (max-width: 1180px) {
+    .docs-head { flex-wrap: wrap; }
+    .docs-head .docs-search { flex: 1 1 160px; min-width: 0; }
+    .doc-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .doc-row > .m { display: none; }
+    .doc-end { justify-content: flex-end; }
+}

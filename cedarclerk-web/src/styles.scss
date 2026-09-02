@@ -504,6 +504,15 @@ html, body {
     overflow-x: hidden;
 }
 
+/* Under the fixed shell the document itself must never scroll: iOS shifts the visual viewport
+   when the keyboard opens, and a scrollable document lets that shift carry the whole shell —
+   sidebar and top bar — off the top of the screen. The doors outside the shell keep their own
+   page scroll. */
+html:has(app-shell), html:has(app-shell) > body {
+    height: 100%;
+    overflow: hidden;
+}
+
 /* Honour the OS "reduce motion" setting globally rather than per-component (T-082 covers the rest
    of accessibility; this one belongs with the motion tokens that just arrived). Durations go to
    near-zero instead of zero so transitionend listeners still fire — a few places wait for one. */
