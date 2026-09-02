@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CedarClerk.Tests;
@@ -243,6 +244,65 @@ public class PreviewEndpointTests
             Assert.Equal(StatusCodes.Status404NotFound,
                 Status(await DraftPreviewEndpoints.ReadLinkAsync(db, "owner-2", linked.Id, Http())));
             Assert.Equal("tok-2", db.Drafts.Single(d => d.Id == linked.Id).PreviewToken);
+        }
+    }
+
+    private static readonly PublishCapabilities X = new()
+    {
+        Network = PublishNetworks.X, MaxCharacters = XPostBuilder.MaxWeightedChars, MaxMediaItems = 0,
+        SupportsThreads = true, DerivesShortPost = true,
+    };
+
+    private static readonly IConfiguration EmptyConfig = new ConfigurationBuilder().Build();
+
+    [Fact]
+    public async Task Micro_preview_answers_the_owner_with_the_teaser_and_the_translation_when_asked()
+    {
+        var (db, connection) = Build();
+        using (connection)
+        {
+            var draft = Seed(db);
+
+            var ru = Assert.IsType<Ok<MicroPreview>>(await PreviewEndpoints.MicroAsync(db, EmptyConfig, "owner-1", draft.Id, PublishNetworks.X, null, X)).Value!;
+            var en = Assert.IsType<Ok<MicroPreview>>(await PreviewEndpoints.MicroAsync(db, EmptyConfig, "owner-1", draft.Id, PublishNetworks.X, Languages.English, X)).Value!;
+
+            Assert.Equal("Русский текст.", ru.Single.Text);
+            Assert.Equal("English text.", en.Single.Text);
+            Assert.Null(ru.BlogUrl);
+            Assert.False(ru.HasAuthorText);
+        }
+    }
+
+    [Fact]
+    public async Task Micro_preview_carries_the_authors_own_text_for_that_network_and_language()
+    {
+        var (db, connection) = Build();
+        using (connection)
+        {
+            var draft = Seed(db);
+            db.DraftTargetTexts.Add(new DraftTargetText { OwnerId = "owner-1", DraftId = draft.Id, Network = PublishNetworks.X, Language = Languages.Russian, Text = "Своими словами." });
+            db.DraftTargetTexts.Add(new DraftTargetText { OwnerId = "owner-1", DraftId = draft.Id, Network = PublishNetworks.Bluesky, Language = Languages.Russian, Text = "Not for X." });
+            db.SaveChanges();
+
+            var preview = Assert.IsType<Ok<MicroPreview>>(await PreviewEndpoints.MicroAsync(db, EmptyConfig, "owner-1", draft.Id, PublishNetworks.X, null, X)).Value!;
+
+            Assert.Equal("Своими словами.", preview.Single.Text);
+            Assert.True(preview.HasAuthorText);
+        }
+    }
+
+    [Fact]
+    public async Task Micro_preview_is_404_for_another_owners_draft_and_a_missing_language()
+    {
+        var (db, connection) = Build();
+        using (connection)
+        {
+            var draft = Seed(db, withTranslation: false);
+
+            Assert.Equal(StatusCodes.Status404NotFound,
+                Status(await PreviewEndpoints.MicroAsync(db, EmptyConfig, "owner-2", draft.Id, PublishNetworks.X, null, X)));
+            Assert.Equal(StatusCodes.Status404NotFound,
+                Status(await PreviewEndpoints.MicroAsync(db, EmptyConfig, "owner-1", draft.Id, PublishNetworks.X, Languages.English, X)));
         }
     }
 }

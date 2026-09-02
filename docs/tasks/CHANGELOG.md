@@ -7,6 +7,12 @@ from Draft through Blog, Telegram, X and Bluesky, the current view total sits be
 trend, and the latest destination activity is visible before any settings. The existing metadata
 controls stay in their disclosure groups, and outbound links stay in the inspector.
 
+The editor's Preview tab renders X, Bluesky and Discord: the announcement with the blog link, or the
+thread as its parts, projected on the server by the same builders and splitter the targets run
+(`GET /api/drafts/{id}/preview/micro`). The checks column names the account, the length in the
+network's own units, whether the text is the author's own or a teaser, the blog link and the
+pictures the network would attach. Closes `T-367` from ADR-239.
+
 The six supplied ultrawide surfaces now share a bounded working measure. Metrics gives its audience
 rail and readouts more room; Projects uses a bounded card grid and a two-column New Project matrix;
 the editor and Publish window have wider inspectors and destination settings; Settings is centred

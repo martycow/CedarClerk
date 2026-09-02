@@ -24,11 +24,17 @@ Reference: `.e2e-audit/editorial-studio-hybrid-target.png`.
 
 ## Visual comparison
 
-Both available browser-control paths reject `localhost` with `ERR_BLOCKED_BY_CLIENT` before the app
-renders. The Windows fallback was stopped when active user input was detected in the browser window.
-No implementation screenshot was captured, so the reference-versus-build comparison is not claimed.
+Captured with Playwright against the isolated E2E stack (`Scripts/e2e.ps1 -Serve` + `ng serve`),
+1440×900 in both themes and 2560×900 by day: Posts Manager (post selected), Metrics, Projects, the
+editor's Write and Preview tabs (Blog, X single and thread, Bluesky thread), Settings. Against the
+reference: the studio card, the publication journey, the performance readout and the activity list
+stand where the reference puts them; the working measure stays bounded at 2560. Two things the
+reference draws that the data cannot answer are not drawn (view history on a fresh database, a
+destinations table per post). Fixed from the pass: the post list's *Not published* chip truncated
+every title beside it (now *Draft*), the journey's *not published* wrapped under its icon, and the
+inspector lacked the reference's created / last-edited dates.
 
 ## Result
 
-**BLOCKED for visual acceptance.** Implementation and mechanical checks pass; a human viewport pass
-is still required for cropping, spacing and hierarchy at the supplied ultrawide size.
+Mechanical checks and a screenshot pass done; the by-eye pass at the maintainer's own ultrawide size
+is still theirs to make (`docs/tasks/TASKS.md` §Live verification).

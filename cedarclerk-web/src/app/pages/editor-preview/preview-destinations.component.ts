@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { IconComponent } from '../../shared/icon.component';
 
-export type PreviewDestination = 'blog' | 'telegram' | 'x' | 'bluesky';
+export type PreviewDestination = 'blog' | 'telegram' | 'x' | 'bluesky' | 'discord';
 export type Readiness = 'ready' | 'off' | 'warn';
 
 /** One row of the destinations card. Readiness is composed by the tab, never fetched. */
@@ -42,7 +42,7 @@ export interface DestinationRow {
                         @switch (row.id) {
                             @case ('blog') { <i class="th th-title"></i><i class="th th-hero"></i><i class="th th-line"></i><i class="th th-line"></i><i class="th th-line th-short"></i> }
                             @case ('telegram') { <i class="th th-bubble"></i><i class="th th-line"></i><i class="th th-line"></i><i class="th th-bubble th-small"></i><i class="th th-line"></i> }
-                            @default { <i class="th th-line"></i><i class="th th-line"></i><i class="th th-blank"></i> }
+                            @default { <i class="th th-avatar"></i><i class="th th-line"></i><i class="th th-line"></i><i class="th th-line th-short"></i><i class="th th-blank"></i> }
                         }
                     </span>
                 </button>
@@ -129,6 +129,7 @@ export interface DestinationRow {
         .th-bubble { height: 10px; border-radius: 2px; background: var(--border); }
         .th-small { height: 8px; margin-top: 4px; }
         .th-blank { flex: 1; background: var(--surface); }
+        .th-avatar { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
 
         .pd-spacer { flex: 1; }
 

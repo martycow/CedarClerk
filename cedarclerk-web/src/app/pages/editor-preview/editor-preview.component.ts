@@ -3,12 +3,13 @@ import {
     untracked, viewChild,
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { RouterLink } from '@angular/router';
 import { Channel } from '../../core/channels.service';
 import { ScheduledInfo } from '../../core/drafts.service';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { endonymOf } from '../../core/languages';
 import { PostsService, PreflightLanguage } from '../../core/posts.service';
-import { PreviewService, PreviewTheme, TelegramPreview } from '../../core/preview.service';
+import { MicroNetwork, MicroPreview, PreviewService, PreviewTheme, TelegramPreview } from '../../core/preview.service';
 import { PublishAccount, PublishService } from '../../core/publish.service';
 import { ThemeService } from '../../core/theme.service';
 import { EmptyStateComponent } from '../../shell/empty-state.component';
@@ -16,6 +17,7 @@ import { IconComponent } from '../../shared/icon.component';
 import { PreviewCheck, PreviewChecksComponent } from './preview-checks.component';
 import { DestinationRow, PreviewDestination, PreviewDestinationsComponent } from './preview-destinations.component';
 import { PreviewPhoneComponent } from './preview-phone.component';
+import { MicroMode, PreviewPostComponent } from './preview-post.component';
 
 /** What the editor already holds about the open draft — the tab fetches nothing it can be told. */
 export interface PreviewDraftFacts {
@@ -37,6 +39,12 @@ interface PublishIssue { code: string; blocking: boolean; actual: number; limit:
 
 type Device = 'desktop' | 'mobile';
 
+const MICRO_NETWORKS: readonly MicroNetwork[] = ['x', 'bluesky', 'discord'];
+
+function isMicro(destination: PreviewDestination): destination is MicroNetwork {
+    return (MICRO_NETWORKS as readonly string[]).includes(destination);
+}
+
 const MOBILE_WIDTH_PX = 390;
 
 // The Preview tab (ADR-239 clause 9): destinations with their readiness on the left, the render
@@ -45,7 +53,7 @@ const MOBILE_WIDTH_PX = 390;
 @Component({
     selector: 'app-editor-preview',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [IconComponent, EmptyStateComponent, PreviewDestinationsComponent, PreviewPhoneComponent, PreviewChecksComponent],
+    imports: [RouterLink, IconComponent, EmptyStateComponent, PreviewDestinationsComponent, PreviewPhoneComponent, PreviewPostComponent, PreviewChecksComponent],
     host: { 'data-surface': 'paper' },
     template: `
         <app-preview-destinations [rows]="rows()" [selected]="destination()" (pick)="destination.set($event)" />
@@ -60,6 +68,16 @@ const MOBILE_WIDTH_PX = 390;
                         <app-icon name="device-mobile" size="xs" />{{ t().editor.previewTab.mobile }}
                     </button>
                 </div>
+                @if (microNetwork() && micro()?.supportsThreads) {
+                    <div class="seg" role="group" [attr.aria-label]="t().editor.previewTab.post.modeLabel">
+                        <button type="button" [class.is-on]="microMode() === 'single'" [attr.aria-pressed]="microMode() === 'single'" (click)="microMode.set('single')">
+                            {{ t().editor.previewTab.post.single }}
+                        </button>
+                        <button type="button" [class.is-on]="microMode() === 'thread'" [attr.aria-pressed]="microMode() === 'thread'" (click)="microMode.set('thread')">
+                            {{ t().editor.previewTab.post.thread(micro()!.thread.length) }}
+                        </button>
+                    </div>
+                }
                 <span class="ep-spacer"></span>
                 <span class="ep-width" role="status">{{ t().editor.previewTab.width(paneWidth()) }}</span>
                 <span class="ep-spacer"></span>
@@ -99,7 +117,18 @@ const MOBILE_WIDTH_PX = 390;
                         }
                     }
                     @default {
-                        <app-empty-state icon="eye" [title]="t().editor.previewTab.notBuilt" [text]="t().editor.previewTab.notBuiltText" />
+                        @if (renderError()) {
+                            <app-empty-state icon="warning" [title]="t().editor.previewTab.failed">
+                                <button type="button" class="btn sm" (click)="reload()">{{ t().editor.previewTab.retry }}</button>
+                            </app-empty-state>
+                        } @else if (!microAccount()) {
+                            <app-empty-state icon="gear" [title]="t().editor.exportModal.notConnected" [text]="t().editor.previewTab.post.connectText">
+                                <a class="btn sm" routerLink="/settings" [queryParams]="{ tab: 'integrations' }">{{ t().editor.previewTab.manage }}</a>
+                            </app-empty-state>
+                        } @else {
+                            <app-preview-post [preview]="micro()" [mode]="microMode()" [accountName]="microAccount()?.displayName ?? ''"
+                                              [linkTitle]="facts().title" [wide]="device() === 'desktop'" />
+                        }
                     }
                 }
                 @if (renderLoading()) {
@@ -232,6 +261,8 @@ export class EditorPreviewComponent implements OnDestroy {
     readonly theme = signal<PreviewTheme>(inject(ThemeService).theme() === 'dark' ? 'dark' : 'light');
 
     readonly telegram = signal<TelegramPreview | null>(null);
+    readonly micro = signal<MicroPreview | null>(null);
+    readonly microMode = signal<MicroMode>('single');
     readonly blogHtml = signal<SafeHtml | null>(null);
     readonly renderLoading = signal(false);
     readonly renderError = signal(false);
@@ -239,8 +270,8 @@ export class EditorPreviewComponent implements OnDestroy {
     readonly checksLoading = signal(false);
     private readonly issues = signal<PublishIssue[]>([]);
     private readonly preflight = signal<PreflightLanguage | null>(null);
-    private readonly accounts = signal<Partial<Record<'x' | 'bluesky', PublishAccount | null>>>({});
-    private readonly partCounts = signal<Partial<Record<'x' | 'bluesky', number>>>({});
+    private readonly accounts = signal<Partial<Record<MicroNetwork, PublishAccount | null>>>({});
+    private readonly partCounts = signal<Partial<Record<MicroNetwork, number>>>({});
     private readonly measured = signal(0);
     private readonly reloadTick = signal(0);
 
@@ -261,6 +292,16 @@ export class EditorPreviewComponent implements OnDestroy {
 
     readonly destinationName = computed(() => this.rows().find(r => r.id === this.destination())?.name ?? '');
 
+    readonly microNetwork = computed<MicroNetwork | null>(() => {
+        const destination = this.destination();
+        return isMicro(destination) ? destination : null;
+    });
+
+    readonly microAccount = computed(() => {
+        const network = this.microNetwork();
+        return network ? this.accounts()[network] ?? null : null;
+    });
+
     readonly rows = computed<DestinationRow[]>(() => {
         const words = this.t().editor.previewTab;
         const notConnected = this.t().editor.exportModal.notConnected;
@@ -277,21 +318,22 @@ export class EditorPreviewComponent implements OnDestroy {
             : f.isWorkingMaterial
                 ? { id: 'telegram', name: 'Telegram', readiness: 'warn', detail: words.blogWorkingMaterial }
                 : { id: 'telegram', name: 'Telegram', readiness: 'ready', detail: tg ? words.telegramMessages(tg.messageCount) : this.channelTitle() };
-        const micro = (id: 'x' | 'bluesky', name: string): DestinationRow => {
+        const micro = (id: MicroNetwork, name: string): DestinationRow => {
             const account = this.accounts()[id];
             if (!account) return { id, name, readiness: 'off', detail: notConnected };
             if (account.lastError) return { id, name, readiness: 'warn', detail: account.lastError };
+            if (f.isWorkingMaterial) return { id, name, readiness: 'warn', detail: words.blogWorkingMaterial };
             const parts = this.partCounts()[id];
-            return { id, name, readiness: 'ready', detail: parts ? words.parts(parts) : account.displayName };
+            return { id, name, readiness: 'ready', detail: parts && parts > 1 ? words.parts(parts) : account.displayName };
         };
-        return [blog, telegram, micro('x', 'X'), micro('bluesky', 'Bluesky')];
+        return [blog, telegram, micro('x', 'X'), micro('bluesky', 'Bluesky'), micro('discord', 'Discord')];
     });
 
     readonly checks = computed<PreviewCheck[]>(() => {
         switch (this.destination()) {
             case 'blog': return this.blogChecks();
             case 'telegram': return this.telegramChecks();
-            default: return [];
+            default: return this.microChecks();
         }
     });
 
@@ -352,12 +394,12 @@ export class EditorPreviewComponent implements OnDestroy {
     private async loadAccounts(id: string) {
         try {
             const networks = await this.publishApi.networks();
-            const x = networks.find(n => n.network === 'x')?.accounts[0] ?? null;
-            const bluesky = networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null;
-            this.accounts.set({ x, bluesky });
-            // T-367 — the rows carry the part counts while the middle pane says the render is coming.
-            for (const network of ['x', 'bluesky'] as const) {
-                if (!(network === 'x' ? x : bluesky)) continue;
+            const accounts: Partial<Record<MicroNetwork, PublishAccount | null>> = {};
+            for (const network of MICRO_NETWORKS) accounts[network] = networks.find(n => n.network === network)?.accounts[0] ?? null;
+            this.accounts.set(accounts);
+            // The rows say how many posts a thread would take; Discord never threads (ADR-131).
+            for (const network of MICRO_NETWORKS) {
+                if (!accounts[network] || network === 'discord') continue;
                 this.publishApi.threadPreview(id, network)
                     .then(res => this.partCounts.update(m => ({ ...m, [network]: res.parts.length })))
                     .catch(() => { /* the row falls back to the account name */ });
@@ -368,7 +410,6 @@ export class EditorPreviewComponent implements OnDestroy {
     }
 
     private async loadRender(id: string, lang: string, theme: PreviewTheme, destination: PreviewDestination) {
-        if (destination !== 'blog' && destination !== 'telegram') { this.renderLoading.set(false); return; }
         const request = ++this.renderRequest;
         this.renderLoading.set(true);
         this.renderError.set(false);
@@ -379,10 +420,15 @@ export class EditorPreviewComponent implements OnDestroy {
                 // Nothing in the page can run: the frame is sandboxed with no permissions, so the
                 // sanitizer's bypass hands over markup, not trust.
                 this.blogHtml.set(this.sanitizer.bypassSecurityTrustHtml(html));
-            } else {
+            } else if (destination === 'telegram') {
                 const preview = await this.previewApi.telegram(id, lang);
                 if (request !== this.renderRequest) return;
                 this.telegram.set(preview);
+            } else {
+                const preview = await this.previewApi.micro(id, destination, lang);
+                if (request !== this.renderRequest) return;
+                this.micro.set(preview);
+                if (!preview.supportsThreads) this.microMode.set('single');
             }
         } catch {
             if (request !== this.renderRequest) return;
@@ -393,13 +439,12 @@ export class EditorPreviewComponent implements OnDestroy {
     }
 
     private async loadChecks(id: string, lang: string, destination: PreviewDestination) {
-        if (destination !== 'blog' && destination !== 'telegram') { this.checksLoading.set(false); return; }
         const request = ++this.checksRequest;
         this.checksLoading.set(true);
         // Both are best-effort by contract: a check that cannot run says nothing rather than warns.
         const [issues, preflight] = await Promise.all([
-            destination === 'telegram'
-                ? this.posts.validate(id, 'telegram', lang).then(r => r.issues).catch(() => [] as PublishIssue[])
+            destination !== 'blog'
+                ? this.posts.validate(id, destination, lang).then(r => r.issues).catch(() => [] as PublishIssue[])
                 : Promise.resolve([] as PublishIssue[]),
             this.posts.preflight(id, [lang]).then(r => r.perLanguage?.[0] ?? null).catch(() => null),
         ]);
@@ -490,6 +535,55 @@ export class EditorPreviewComponent implements OnDestroy {
         }
         for (const issue of this.issues()) {
             if (issue.code === 'too-long' || issue.code === 'too-many-media') continue;
+            rows.push({ id: `issue-${issue.code}`, label: words.compatibility, detail: this.issueText(issue), tone: 'warn' });
+        }
+        rows.push(f.scheduled
+            ? { id: 'schedule', label: words.schedule, detail: this.when(f.scheduled.scheduledAtUtc), tone: 'ok' }
+            : { id: 'schedule', label: words.schedule, detail: words.scheduleNone, tone: 'muted' });
+        rows.push(...this.otherLanguageRows(code => words.otherCopy(code)));
+        rows.push(this.linkRow());
+        return rows;
+    }
+
+    private microChecks(): PreviewCheck[] {
+        const words = this.t().editor.previewTab.checks;
+        const network = this.microNetwork();
+        if (!network) return [];
+        const f = this.facts();
+        const account = this.accounts()[network];
+        const p = this.micro();
+        const rows: PreviewCheck[] = [];
+        if (f.isWorkingMaterial) rows.push({ id: 'type', label: words.type, detail: words.workingMaterial(f.typeName), tone: 'warn' });
+        rows.push(account
+            ? { id: 'account', label: words.account, detail: words.channelOk(account.displayName), tone: 'ok' }
+            : { id: 'account', label: words.account, detail: words.accountMissing, tone: 'warn' });
+        if (p) {
+            const thread = this.microMode() === 'thread' && p.supportsThreads;
+            const posts = thread ? p.thread : [p.single];
+            const over = posts.some(post => post.length > p.maxLength);
+            const empty = !posts.length || !posts[0].text.trim();
+            rows.push({
+                id: 'length', label: words.length,
+                detail: empty ? words.emptyVersion : thread ? words.threadLength(posts.length, p.maxLength) : words.postLength(p.single.length, p.maxLength),
+                tone: over || empty ? 'warn' : 'ok',
+            });
+            rows.push(thread
+                ? { id: 'text', label: words.text, detail: words.textThread, tone: 'muted' }
+                : p.hasAuthorText
+                    ? { id: 'text', label: words.text, detail: words.textOwn, tone: 'ok' }
+                    : { id: 'text', label: words.text, detail: words.textTeaser, tone: 'muted' });
+            rows.push(p.blogUrl
+                ? { id: 'link', label: words.blogLink, detail: p.blogUrl.replace(/^https?:\/\//, ''), tone: 'ok' }
+                : { id: 'link', label: words.blogLink, detail: words.blogLinkMissing, tone: 'warn' });
+            const images = posts[0]?.imageUrls.length ?? 0;
+            rows.push(images
+                ? { id: 'media', label: words.media, detail: words.imagesAttached(images), tone: 'ok' }
+                : { id: 'media', label: words.media, detail: network === 'bluesky' ? words.mediaNone : words.mediaNotCarried, tone: 'muted' });
+        } else {
+            rows.push({ id: 'length', label: words.length, detail: words.notChecked, tone: 'muted' });
+        }
+        for (const issue of this.issues()) {
+            if (issue.code === 'too-long') continue;
             rows.push({ id: `issue-${issue.code}`, label: words.compatibility, detail: this.issueText(issue), tone: 'warn' });
         }
         rows.push(f.scheduled

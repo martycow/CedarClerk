@@ -209,7 +209,7 @@
 }
 
 .journey-step strong { font-size: var(--fs-ui); color: var(--t2); }
-.journey-step small { max-width: 13ch; font-size: var(--fs-caption); }
+.journey-step small { max-width: 14ch; font-size: var(--fs-caption); }
 .journey-step.is-done strong { color: var(--text); }
 
 .journey-mark {

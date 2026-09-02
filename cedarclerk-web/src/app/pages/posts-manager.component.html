@@ -574,6 +574,10 @@ so it stays addressable by the name the smoke suite binds.-->
                     <app-spec-row scope="selection" [label]="t().manager.publishedOn"
                                   [value]="d.blogPublishedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
                     }
+                    <app-spec-row scope="selection" [label]="t().manager.createdOn"
+                                  [value]="d.createdAt | zonedDate:'MM/dd/yyyy'"></app-spec-row>
+                    <app-spec-row scope="selection" [label]="t().manager.editedOn"
+                                  [value]="d.updatedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
                     @if (telegramUrl(d); as url) {
                     <app-spec-row scope="selection" [label]="t().manager.telegram">
                         <a class="insp-link" [href]="url" target="_blank" rel="noopener">

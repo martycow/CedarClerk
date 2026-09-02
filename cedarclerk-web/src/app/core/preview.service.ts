@@ -39,6 +39,33 @@ export interface TelegramPreview {
     buttons: TelegramPreviewButton[];
 }
 
+export type MicroNetwork = 'x' | 'bluesky' | 'discord';
+
+/** One post the way the network's builder would send it. Mirrors CedarClerk.Core/MicroPreviewProjection.cs. */
+export interface MicroPreviewPost {
+    index: number;
+    text: string;
+    /** In the network's own units — X's weighted characters, Bluesky's graphemes, Discord's chars. */
+    length: number;
+    /** Relative `/media/…` pictures the network attaches; empty where it takes none. */
+    imageUrls: string[];
+    /** The blog link inside `text`, when the post carries one. */
+    linkUrl: string | null;
+}
+
+export interface MicroPreview {
+    network: MicroNetwork;
+    language: string;
+    maxLength: number;
+    hasAuthorText: boolean;
+    supportsThreads: boolean;
+    blogUrl: string | null;
+    /** The announcement: the author's own text or the teaser, plus the blog link. */
+    single: MicroPreviewPost;
+    /** The whole document as parts; empty where the network never threads. */
+    thread: MicroPreviewPost[];
+}
+
 export type PreviewTheme = 'light' | 'dark';
 
 export const MEDIA_KINDS: ReadonlySet<TelegramPreviewKind> = new Set(['photo', 'video', 'audio', 'slideshow', 'collage']);
@@ -50,6 +77,11 @@ export class PreviewService {
     telegram(draftId: string, lang: string) {
         const params = new HttpParams().set('lang', lang);
         return firstValueFrom(this.http.get<TelegramPreview>(`/api/drafts/${draftId}/preview/telegram`, { params }));
+    }
+
+    micro(draftId: string, network: MicroNetwork, lang: string) {
+        const params = new HttpParams().set('network', network).set('lang', lang);
+        return firstValueFrom(this.http.get<MicroPreview>(`/api/drafts/${draftId}/preview/micro`, { params }));
     }
 
     blogUrl(draftId: string, lang: string, theme: PreviewTheme | null): string {
