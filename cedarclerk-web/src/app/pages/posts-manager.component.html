@@ -106,11 +106,120 @@ so it stays addressable by the name the smoke suite binds.-->
 
             <section class="card sheet" [attr.aria-label]="sheetLabel()">
                 <div class="card-head">
-                    <span class="card-title">{{ sheetLabel() }}</span>
+                    <span class="card-title">{{ t().manager.studio.workbench }}</span>
                     @if (sheetMeta()) { <span class="card-meta">{{ sheetMeta() }}</span> }
                 </div>
                 <div class="sheet-body">
                 @if (selected(); as d) {
+                <section class="studio-overview" [attr.aria-label]="t().manager.studio.overview">
+                    <div class="studio-hero">
+                        <div class="studio-title-block">
+                            <span class="label">{{ t().manager.studio.selectedPost }}</span>
+                            <h2>{{ d.title || t().drafts.untitled }}</h2>
+                            <div class="studio-meta">
+                                <span class="tag" [class.ok]="stateTone(d) === 'ok'"
+                                      [class.warn]="stateTone(d) === 'warn'"
+                                      [class.muted]="stateTone(d) === 'muted'">
+                                    <app-icon [name]="stateTone(d) === 'ok' ? 'check' : 'file-text'" size="xs"></app-icon>
+                                    {{ publishStateLabel(d) }}
+                                </span>
+                                @for (l of visibleLanguages(d); track l) {
+                                <span class="post-card-lang">{{ l.toUpperCase() }}</span>
+                                }
+                                <span class="studio-visibility">
+                                    <app-icon [name]="d.isPrivate ? 'lock' : 'globe'" size="xs"></app-icon>
+                                    {{ d.isPrivate ? t().manager.inspector.private : t().manager.inspector.public }}
+                                </span>
+                            </div>
+                        </div>
+                        <app-button variant="pine" link="/editor" [queryParams]="{ draft: d.id }">
+                            <app-icon name="pen" size="sm" /> {{ t().manager.openInEditor }}
+                        </app-button>
+                    </div>
+
+                    <div class="studio-section studio-publishing">
+                        <div class="studio-section-head">
+                            <h3>{{ t().manager.studio.publishedEverywhere }}</h3>
+                            <span>{{ t().manager.studio.destinationCount((d.isBlogPublished ? 1 : 0) + (telegramUrl(d) ? 1 : 0) + publishedElsewhere(d).length) }}</span>
+                        </div>
+                        <div class="publish-journey">
+                            <div class="journey-step is-done">
+                                <span class="journey-mark"><app-icon name="file-text" size="sm"></app-icon></span>
+                                <strong>{{ t().manager.studio.draft }}</strong>
+                                <small>{{ d.updatedAt | zonedDate:'d MMM' }}</small>
+                            </div>
+                            <div class="journey-line" [class.is-done]="d.isBlogPublished"></div>
+                            <div class="journey-step" [class.is-done]="d.isBlogPublished">
+                                <span class="journey-mark"><app-icon name="file-text" size="sm"></app-icon></span>
+                                <strong>{{ t().manager.blog }}</strong>
+                                <small>{{ d.blogPublishedAt ? (d.blogPublishedAt | zonedDate:'d MMM') : t().manager.inspector.notPublished }}</small>
+                            </div>
+                            <div class="journey-line" [class.is-done]="!!telegramUrl(d)"></div>
+                            <div class="journey-step" [class.is-done]="!!telegramUrl(d)">
+                                <span class="journey-mark"><app-brand-icon name="telegram" [size]="14"></app-brand-icon></span>
+                                <strong>{{ t().manager.telegram }}</strong>
+                                <small>{{ telegramUrl(d) ? t().manager.studio.sent : t().manager.inspector.notPublished }}</small>
+                            </div>
+                            <div class="journey-line" [class.is-done]="!!publishedNetwork(d, 'x')"></div>
+                            <div class="journey-step" [class.is-done]="!!publishedNetwork(d, 'x')">
+                                <span class="journey-mark"><app-brand-icon name="twitter" [size]="13"></app-brand-icon></span>
+                                <strong>X</strong>
+                                <small>{{ publishedNetwork(d, 'x') ? t().manager.studio.sent : t().manager.inspector.notPublished }}</small>
+                            </div>
+                            <div class="journey-line" [class.is-done]="!!publishedNetwork(d, 'bluesky')"></div>
+                            <div class="journey-step" [class.is-done]="!!publishedNetwork(d, 'bluesky')">
+                                <span class="journey-mark"><app-brand-icon name="bluesky" [size]="14"></app-brand-icon></span>
+                                <strong>Bluesky</strong>
+                                <small>{{ publishedNetwork(d, 'bluesky') ? t().manager.studio.sent : t().manager.inspector.notPublished }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="studio-insights">
+                        <div class="studio-section studio-performance">
+                            <div class="studio-section-head">
+                                <h3>{{ t().manager.studio.performance }}</h3>
+                                <span>{{ t().manager.studio.recordedNightly }}</span>
+                            </div>
+                            <div class="studio-performance-body">
+                                <div class="studio-readout">
+                                    <strong>{{ d.viewCount }}</strong>
+                                    <span>{{ t().manager.groups.views }}</span>
+                                    @if (d.newViewCount) {
+                                    <small>+{{ d.newViewCount }} · {{ t().manager.newSinceLastLook }}</small>
+                                    }
+                                </div>
+                                @if (overviewSeries(); as series) {
+                                <app-growth-chart class="studio-chart" [label]="t().manager.groups.views"
+                                                  [series]="series" [openTail]="false"
+                                                  [xLabels]="growthLabels()" [strings]="t().stats.chart" />
+                                } @else {
+                                <p class="studio-empty">{{ t().manager.groups.growthEmpty }}</p>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="studio-section studio-activity">
+                            <div class="studio-section-head">
+                                <h3>{{ t().manager.studio.recentActivity }}</h3>
+                            </div>
+                            <ol>
+                                @for (item of studioActivity(d); track item.label + item.at) {
+                                <li>
+                                    <span class="activity-dot"></span>
+                                    <span>
+                                        <strong>{{ item.label }}</strong>
+                                        @if (item.at) { <small>{{ item.at | zonedDate:'d MMM, HH:mm' }}</small> }
+                                    </span>
+                                </li>
+                                } @empty {
+                                <li class="is-empty">{{ t().manager.studio.noActivity }}</li>
+                                }
+                            </ol>
+                        </div>
+                    </div>
+                </section>
+
                 <!--8.4 — the detail pane used to render every setting a post has at once, which
                 is a wall of controls for a page whose usual job is "check where this went".
                 Native <details>, not a hand-rolled accordion: it collapses without JavaScript,

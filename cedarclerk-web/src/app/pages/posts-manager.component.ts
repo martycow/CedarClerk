@@ -40,6 +40,7 @@ import { SpecRowComponent, SpecScope } from '../bench/worktop/spec-row.component
 import { GrowthChartComponent, GrowthSeries, SeriesSlot } from '../bench/worktop/growth-chart.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
+import { BrandIconComponent } from '../shared/brand-icon.component';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
 // lives) because links to it exist in the wild — the account menu, and Marty's own bookmarks.
@@ -58,7 +59,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
         TagPickerComponent, FolderPickerComponent, FormRefComponent, ButtonComponent,
         PlanLockComponent, HintDotComponent,
         LeafTagComponent, SpecRowComponent, PageHeaderComponent, EmptyStateComponent,
-        GrowthChartComponent, LanguageMenuComponent, InputComponent,
+        GrowthChartComponent, LanguageMenuComponent, InputComponent, BrandIconComponent,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
@@ -299,9 +300,9 @@ export class PostsManagerComponent implements OnInit {
     private historyFor = signal<string | null>(null);
     private history = signal<{ viewCount: number; likeCount: number; commentCount: number; takenAt: string }[]>([]);
 
-    /** Fetched when the group is first opened, not with the post: most opens never ask for it. */
-    async loadHistory(draftId: string) {
-        if (!this.isOpen('growth') || this.historyFor() === draftId) return;
+    /** The overview needs the view line immediately; the detailed group reuses the same response. */
+    async loadHistory(draftId: string, forOverview = false) {
+        if ((!forOverview && !this.isOpen('growth')) || this.historyFor() === draftId) return;
         this.historyFor.set(draftId);
         this.historyLoading.set(true);
         try {
@@ -326,6 +327,13 @@ export class PostsManagerComponent implements OnInit {
 
     growthLabels(): string[] {
         return this.history().map(r => formatInZone(r.takenAt, 'MM/dd'));
+    }
+
+    overviewSeries(): GrowthSeries[] | null {
+        const rows = this.history();
+        return rows.length < 2
+            ? null
+            : [{ slot: 1, name: this.t().manager.groups.views, points: rows.map(r => r.viewCount) }];
     }
 
     // One publish state per post, resolved in a fixed order (Marty, 01.08.2026): an archived post
@@ -418,6 +426,7 @@ export class PostsManagerComponent implements OnInit {
         this.regForm.set(null);
         if (d.isPrivate) this.loadForm();
         this.loadTrackedLinks(d.id);
+        this.loadHistory(d.id, true);
     }
 
     // ─── Tracked links (Wave 2 item 16) — the clicks a post's short links collected ───────────
@@ -469,6 +478,28 @@ export class PostsManagerComponent implements OnInit {
      */
     publishedElsewhere(d: DraftMeta): PublishedPost[] {
         return this.published().filter(p => p.draftId === d.id && p.network !== 'telegram');
+    }
+
+    publishedNetwork(d: DraftMeta, network: string): PublishedPost | null {
+        return this.published().find(p => p.draftId === d.id && p.network === network) ?? null;
+    }
+
+    studioActivity(d: DraftMeta): { label: string; at: string | null }[] {
+        const rows: { label: string; at: string | null }[] = this.publishedElsewhere(d).map(post => ({
+            label: this.t().manager.studio.publishedTo(this.networkLabel(post.network)),
+            at: post.finishedAt,
+        }));
+        if (this.telegramUrl(d)) rows.push({
+            label: this.t().manager.studio.publishedTo(this.t().manager.telegram),
+            at: d.updatedAt,
+        });
+        if (d.isBlogPublished) rows.push({
+            label: this.t().manager.studio.publishedTo(this.t().manager.blog),
+            at: d.blogPublishedAt,
+        });
+        return rows
+            .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
+            .slice(0, 5);
     }
 
     networkLabel(network: string): string {

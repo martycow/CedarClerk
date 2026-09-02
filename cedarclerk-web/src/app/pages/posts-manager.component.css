@@ -78,7 +78,7 @@
 
 .shelf-list {
     flex: none;
-    width: var(--bench-dock-w);
+    width: 280px;
 }
 
 .sheet {
@@ -88,7 +88,7 @@
 
 .inspector {
     flex: none;
-    width: var(--bench-dock-w-wide);
+    width: 300px;
 }
 
 .card-head {
@@ -120,6 +120,170 @@
     overflow: auto;
     padding: var(--space-4);
 }
+
+/* The selected post opens as a read-first studio. Editing controls stay in the disclosure rows
+   below, so the first viewport answers status, reach and the next action instead of starting with
+   a form. */
+.studio-overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    margin-bottom: var(--space-4);
+    padding: var(--space-5);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    background-color: var(--paper-bright);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-sheet);
+}
+
+.studio-hero,
+.studio-section-head,
+.studio-performance-body {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.studio-hero { align-items: flex-start; }
+.studio-title-block { flex: 1; min-width: 0; }
+
+.studio-title-block h2 {
+    margin: var(--space-1) 0 var(--space-2);
+    font-family: var(--font-display);
+    font-size: var(--fs-27);
+    line-height: 1.1;
+}
+
+.studio-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.studio-visibility {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-1);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.studio-section {
+    min-width: 0;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--paper-edge);
+}
+
+.studio-section-head { justify-content: space-between; }
+
+.studio-section-head h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-16);
+}
+
+.studio-section-head > span {
+    color: var(--t3);
+    font-size: var(--fs-meta);
+}
+
+.publish-journey {
+    display: grid;
+    grid-template-columns: auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto minmax(16px, 1fr) auto;
+    align-items: start;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+}
+
+.journey-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 68px;
+    text-align: center;
+    color: var(--t3);
+}
+
+.journey-step strong { font-size: var(--fs-ui); color: var(--t2); }
+.journey-step small { max-width: 13ch; font-size: var(--fs-caption); }
+.journey-step.is-done strong { color: var(--text); }
+
+.journey-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--sheet);
+    color: var(--t3);
+}
+
+.journey-step.is-done .journey-mark {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--text-on-pine);
+}
+
+.journey-line {
+    height: 2px;
+    margin-top: 17px;
+    background: var(--border);
+}
+
+.journey-line.is-done { background: var(--accent); }
+
+.studio-insights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-5);
+}
+
+.studio-performance-body { margin-top: var(--space-3); align-items: stretch; }
+
+.studio-readout {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    justify-content: center;
+    width: 120px;
+}
+
+.studio-readout strong {
+    font-family: var(--font-display);
+    font-size: var(--fs-27);
+    line-height: 1;
+}
+
+.studio-readout span { color: var(--t2); font-size: var(--fs-ui); }
+.studio-readout small { margin-top: var(--space-2); color: var(--ok); font-size: var(--fs-caption); }
+
+.studio-chart { display: block; flex: 1; min-width: 0; height: 150px; }
+.studio-empty { margin: auto 0; color: var(--t2); font-size: var(--fs-ui); }
+
+.studio-activity ol { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+.studio-activity li { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2); min-height: 34px; }
+.studio-activity li > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.studio-activity strong { color: var(--text); font-size: var(--fs-ui); font-weight: 600; text-decoration: none; }
+.studio-activity small { color: var(--t3); font-size: var(--fs-caption); }
+.studio-activity .is-empty { display: block; color: var(--t2); font-size: var(--fs-ui); }
+
+.activity-dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 5px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    background: var(--paper-bright);
+}
+
+.studio-activity li:not(:last-child) .activity-dot { box-shadow: 0 20px 0 -3px var(--brass); }
 
 /* The metrics tab brings its own layout and no scroller of its own, so the page gives it one. */
 .manager > app-stats {

@@ -683,8 +683,12 @@ body {
     display: flex;
     flex: 1;
     flex-direction: column;
+    width: 100%;
+    max-width: 1920px;
     min-height: 0;
-    padding: 0 var(--space-10) var(--space-6);
+    margin-inline: auto;
+    padding: 0 clamp(var(--space-4), 2vw, var(--space-10)) var(--space-6);
+    box-sizing: border-box;
 }
 
 /* The wall carries one ink and paper another (ADR-141), and a control that paints no ground of

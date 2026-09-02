@@ -40,6 +40,9 @@
     flex-wrap: wrap;
     gap: var(--space-3);
     flex: none;
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
     margin-bottom: var(--space-4);
 }
 
@@ -57,6 +60,7 @@
     align-items: start;
     width: 100%;
     max-width: 1280px;
+    margin-inline: auto;
     min-width: 0;
     box-sizing: border-box;
 }
@@ -67,7 +71,7 @@
 
 .settings-card {
     box-sizing: border-box;
-    padding: var(--space-5);
+    padding: var(--space-6);
     min-width: 0;
 }
 
@@ -78,7 +82,7 @@
     gap: var(--space-2);
     margin: 0 0 var(--space-4);
     font-family: var(--font-sans);
-    font-size: var(--fs-11);
+    font-size: var(--fs-14);
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;

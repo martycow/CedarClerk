@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-01 — Editorial studio and readable screens
+
+Posts Manager now opens a selected post as a read-first editorial studio: publication state travels
+from Draft through Blog, Telegram, X and Bluesky, the current view total sits beside its nightly
+trend, and the latest destination activity is visible before any settings. The existing metadata
+controls stay in their disclosure groups, and outbound links stay in the inspector.
+
+The six supplied ultrawide surfaces now share a bounded working measure. Metrics gives its audience
+rail and readouts more room; Projects uses a bounded card grid and a two-column New Project matrix;
+the editor and Publish window have wider inspectors and destination settings; Settings is centred
+instead of leaving an empty half-screen. The global page gutter now contracts with the viewport.
+
 ## 2026-09-01 — Inspectors that can be written to, and the facts they were missing (S-15, ADR-238)
 
 Six board rows that were one complaint in different places: a shelf describing an object it cannot

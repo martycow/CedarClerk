@@ -9,9 +9,9 @@
         Unpublishing and scheduled-post management moved to the Posts Manager; what stays is
         sending the post out, and re-sending it (Update) when it is already live.
 
-        Priority Fixes 02 (Claude Design, 28.07.2026): 1180 -> 1150, joining the same workspace-
-        width bucket as Posts Manager/Stats/Admin instead of its own one-off number.-->
-        <app-modal [width]="1150" (closed)="exportModalOpen.set(false)">
+        The window uses the same bounded editorial measure as the studio, with enough room for a
+        readable destination rail and parallel destination settings.-->
+        <app-modal [width]="1260" (closed)="exportModalOpen.set(false)">
             <app-icon modal-icon name="paper-plane-tilt" size="sm"></app-icon>
             <span modal-title>{{ t().editor.export }}</span>
 

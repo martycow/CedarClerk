@@ -46,7 +46,7 @@
 /* ---------- The card grid ---------- */
 .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 360px));
     gap: var(--space-5);
     align-content: start;
 }
@@ -150,7 +150,8 @@
    rather than by changing the shell for every modal in the app. */
 .modal-head-row {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
+    flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
 }
@@ -160,20 +161,19 @@
 }
 
 .modal-hint {
-    font-size: var(--fs-meta);
+    font-size: var(--fs-ui);
     font-weight: 400;
     color: var(--t2);
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    max-width: 64ch;
+    line-height: 1.45;
 }
 
 .type-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    margin-bottom: var(--space-4);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
 }
 
 .type-row {
@@ -181,7 +181,8 @@
     align-items: flex-start;
     gap: var(--space-3);
     text-align: left;
-    padding: var(--space-3);
+    min-height: 112px;
+    padding: var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--sheet);
@@ -197,6 +198,7 @@
 .type-row.selected {
     background: var(--asoft);
     border-color: var(--abord);
+    box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .type-row app-icon {
@@ -212,13 +214,15 @@
 }
 
 .type-name {
-    font-size: var(--fs-ui);
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: var(--fs-16);
+    font-weight: 700;
 }
 
 .type-blurb {
-    font-size: var(--fs-meta);
+    font-size: var(--fs-ui);
     color: var(--t2);
+    line-height: 1.4;
 }
 
 .type-starter {
