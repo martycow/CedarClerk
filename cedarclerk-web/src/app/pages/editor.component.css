@@ -1047,25 +1047,27 @@
 
 .pub-select-all input { accent-color: var(--accent); }
 
-.pub-group { border-top: 1px solid var(--paper-edge); padding-top: var(--space-3); }
-
-.pub-group summary {
+/* The three disclosures — the rack's groups, the compatibility matrix, the file list — share one
+   summary face; only what the caret sits beside differs. */
+.pub-group summary, .pub-compat summary, .pub-files summary {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: var(--space-2);
     min-height: var(--hit-chrome);
     cursor: pointer;
     list-style: none;
 }
 
-.pub-group summary::-webkit-details-marker { display: none; }
-.pub-group[open] summary app-icon { transform: rotate(180deg); }
-.pub-group[open] summary { margin-bottom: var(--space-2); }
+.pub-group summary::-webkit-details-marker, .pub-compat summary::-webkit-details-marker, .pub-files summary::-webkit-details-marker { display: none; }
+.pub-group[open] summary app-icon, .pub-compat[open] .pub-compat-caret, .pub-files[open] summary app-icon { transform: rotate(180deg); }
+.pub-group[open] summary, .pub-compat[open] summary { margin-bottom: var(--space-2); }
+
+.pub-group { border-top: 1px solid var(--paper-edge); padding-top: var(--space-3); }
+.pub-group summary { justify-content: space-between; }
 
 .pub-main { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 
 .pub-section { display: flex; flex-direction: column; gap: 10px; }
-.pub-section:focus-visible, .pub-rack:focus-visible, .pub-review:focus-visible { outline-offset: 4px; }
 
 .pub-settings-title {
     margin: 0;
@@ -1081,22 +1083,8 @@
 .pub-summary { display: flex; flex-direction: column; gap: var(--space-1); }
 .pub-summary .label { margin-bottom: var(--space-2); }
 
-.pub-compat summary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: var(--hit-chrome);
-    cursor: pointer;
-    font-size: var(--fs-14);
-    font-weight: 600;
-    color: var(--text);
-    list-style: none;
-}
-
-.pub-compat summary::-webkit-details-marker { display: none; }
+.pub-compat summary { font-size: var(--fs-14); font-weight: 600; color: var(--text); }
 .pub-compat-caret { margin-left: auto; }
-.pub-compat[open] .pub-compat-caret { transform: rotate(180deg); }
-.pub-compat[open] summary { margin-bottom: var(--space-3); }
 
 .pub-utility { display: flex; flex-direction: column; gap: var(--space-3); }
 
@@ -1108,16 +1096,6 @@
 
 .pub-utility-cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 
-.pub-files summary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    cursor: pointer;
-    list-style: none;
-}
-
-.pub-files summary::-webkit-details-marker { display: none; }
-.pub-files[open] summary app-icon { transform: rotate(180deg); }
 .pub-files-body { display: flex; flex-direction: column; gap: 8px; }
 
 /* Between a tablet and a desktop the rack is a strip and the review follows the settings; on a
@@ -2040,39 +2018,6 @@
     letter-spacing: .03em;
 }
 
-/* T-086 — what the network will do to this post, shown beside the destination. Blocking issues are
-   what it would refuse; the rest are what it accepts and quietly changes. */
-.publish-issues {
-    list-style: none;
-    margin: 0 0 var(--space-2);
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-}
-
-.publish-issues li {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-2);
-    font-size: var(--fs-caption);
-    color: var(--t2);
-    line-height: 1.4;
-}
-
-.publish-issues li app-icon {
-    color: var(--warn);
-    margin-top: 1px;
-}
-
-.publish-issues li.blocking {
-    color: var(--danger);
-}
-
-.publish-issues li.blocking app-icon {
-    color: var(--danger);
-}
-
 /* The Bluesky post is a short standalone text (ADR-077), so the counter is not decoration — it is
    the difference between a post and a rejection. */
 .field-hint-inline.over-limit {
@@ -2409,10 +2354,9 @@
     width: 260px;
 }
 
-/* Wave 2 items 14 and 17 — the checks panel and the CTA editor ride the shelf's own classes
-   (.export-section-title, .invite-add-row, .publish-issues, .channel-error): restating them cost
-   real bytes against the component-style budget. .check-group, .check-group-name, .cta-row,
-   .cta-actions and .cta-invalid on the same elements are locator classes only. */
+/* Wave 2 item 17 — the CTA editor rides the panel's own classes (.export-section-title,
+   .invite-add-row, .channel-error): restating them cost real bytes against the component-style
+   budget. .cta-row, .cta-actions and .cta-invalid on the same elements are locator classes only. */
 .cta-row,
 .cta-actions { margin-top: 6px; }
 

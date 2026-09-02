@@ -1526,7 +1526,6 @@ export const ru: Dict = {
             cancelScheduled: 'Отменить',
             removeFromList: 'Убрать из списка',
             otherPlatformsSummary: 'Также в планах: Facebook, Threads, Medium, Patreon, Notion, Google Docs',
-            fileExports: 'Экспорт файлов',
             downloadCedar: 'Скачать .cedar',
             preparing: 'Собираем файл…',
             splitIntoThread: 'Опубликовать тредом',
@@ -1580,7 +1579,6 @@ export const ru: Dict = {
             open: 'Открыть →',
             // ADR-096 — окно читается как три вопроса: какая версия, куда, с чем.
             stepVersion: 'Версия поста',
-            stepWhere: 'Куда публикуем',
             applyPreset: 'Применить пресет экспорта',
             stepParams: 'Параметры площадок',
             versionHint: 'Каждая отмеченная версия уходит отдельным постом. Блог публикует все версии сразу — на его странице свой переключатель языка.',
@@ -1594,8 +1592,6 @@ export const ru: Dict = {
             destinationTelegram: 'Telegram',
             privateAccess: 'Приватный доступ',
             privateAccessHint: 'Кто может открыть этот пост и как выглядит открытая им страница. От того, куда вы публикуете, не зависит.',
-            filesPanel: 'Файлы',
-            filesPanelHint: 'Отсюда ничего не публикуется — файлы скачиваются к вам на компьютер.',
             modeLabel: 'Что уходит в сеть',
             modeLink: 'Анонс со ссылкой',
             modeLinkHint: 'Один короткий пост: ваш текст (или тизер из первых абзацев) плюс ссылка на версию в блоге.',
@@ -1630,14 +1626,11 @@ export const ru: Dict = {
             notifySubscribersHint: 'Каждый подтверждённый подписчик получит одно письмо со ссылкой на пост — сразу после публикации.',
             notifySubscribersRepublish: 'Пост уже опубликован — подписчики получают письмо только о первой публикации.',
             // Wave 2 item 14 — общий чек-лист перед публикацией. Предупреждения, не блокировки.
-            checksPanel: 'Проверки перед публикацией',
-            checksRunning: 'Проверяем документ…',
             checksLanguage: (lang: string) => `Версия ${lang}`,
             checkEmptyVersion: 'Эта версия пустая — уйдёт пустой пост.',
             checkDeadLink: (url: string, status: string) => `Ссылка не ответила (${status}): ${url}`,
             checkWorkingMaterial: (typeName: string) =>
                 `«${typeName}» — рабочий материал, он не публикуется. Если публикация нужна, смените тип в строке «Тип» инспектора.`,
-            checksNeverBlock: 'Только предупреждения — публикацию здесь ничто не останавливает.',
             // Wave 2 item 11 — как приходит сообщение в Telegram.
             sendOptions: 'Отправка',
             silentSend: 'Тихо — подписчики не получат уведомление',
@@ -1693,9 +1686,6 @@ export const ru: Dict = {
         tabsLabel: 'Режимы документа',
         tabs: { write: 'Текст', preview: 'Предпросмотр', publish: 'Публикация / Экспорт' },
         frame: {
-            publishMenu: 'Ещё варианты публикации',
-            previewFirst: 'Сначала предпросмотр',
-            schedule: 'Запланировать…',
             moreActions: 'Ещё действия',
             details: 'Детали',
             hideDetails: 'Скрыть детали',

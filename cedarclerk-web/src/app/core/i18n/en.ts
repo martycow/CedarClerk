@@ -1602,7 +1602,6 @@ export const en = {
             cancelScheduled: 'Cancel',
             removeFromList: 'Remove from list',
             otherPlatformsSummary: 'Also planned: Facebook, Threads, Medium, Patreon, Notion, Google Docs',
-            fileExports: 'File exports',
             downloadCedar: 'Download .cedar',
             preparing: 'Packaging the file…',
             splitIntoThread: 'Publish as a thread',
@@ -1658,7 +1657,6 @@ export const en = {
             open: 'Open →',
             // ADR-096 — the window reads as three questions: which version, where, with what.
             stepVersion: 'Version',
-            stepWhere: 'Where to publish',
             applyPreset: 'Apply an export preset',
             stepParams: 'Settings for each destination',
             versionHint: 'Each ticked version goes out as its own post. The blog publishes every version at once — its page has a language switcher.',
@@ -1672,8 +1670,6 @@ export const en = {
             destinationTelegram: 'Telegram',
             privateAccess: 'Private access',
             privateAccessHint: 'Who can open this post, and what the page they open looks like. Independent of where it is being published.',
-            filesPanel: 'Files',
-            filesPanelHint: 'Nothing is published here — these download to your computer.',
             modeLabel: 'What goes out',
             modeLink: 'Announcement + link',
             modeLinkHint: 'One short post: your text (or a teaser built from the opening paragraphs) plus a link to the blog version.',
@@ -1710,14 +1706,11 @@ export const en = {
             notifySubscribersHint: 'Every confirmed subscriber gets one email with a link to this post, right after it goes live.',
             notifySubscribersRepublish: 'Already live — subscribers are only notified when a post first appears.',
             // Wave 2 item 14 — the modal-wide pre-publish checklist. Warnings, never blocks.
-            checksPanel: 'Pre-publish checks',
-            checksRunning: 'Checking the document…',
             checksLanguage: (lang: string) => `Version ${lang}`,
             checkEmptyVersion: 'This version is empty — it would publish a blank post.',
             checkDeadLink: (url: string, status: string) => `Link did not answer (${status}): ${url}`,
             checkWorkingMaterial: (typeName: string) =>
                 `“${typeName}” is working material and will not publish. Change the type in the inspector's Type row if publishing is what you mean.`,
-            checksNeverBlock: 'Warnings only — nothing here stops the publish.',
             // Wave 2 item 11 — how the Telegram message arrives.
             sendOptions: 'Sending',
             silentSend: 'Silent — subscribers get no notification',
@@ -1775,9 +1768,6 @@ export const en = {
         tabsLabel: 'Document views',
         tabs: { write: 'Write', preview: 'Preview', publish: 'Publish / Export' },
         frame: {
-            publishMenu: 'More publish options',
-            previewFirst: 'Preview first',
-            schedule: 'Schedule…',
             moreActions: 'More actions',
             details: 'Details',
             hideDetails: 'Hide details',
