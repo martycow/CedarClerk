@@ -18,19 +18,27 @@
 .cal-controls {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: var(--space-2);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .cal-layout {
     display: grid;
+    gap: var(--pane-gap);
     flex: 1;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-    align-items: stretch;
+    min-width: 0;
     min-height: 0;
+    overflow: hidden;
 }
 
-.cal-layout.with-queue { grid-template-columns: minmax(0, 1fr) 300px; }
+.cal-layout:not(.split-workspace) { grid-template-columns: minmax(0, 1fr); }
+
+.cal-layout.split-workspace {
+    align-items: stretch;
+}
 
 .cal-card {
     display: flex;
@@ -56,6 +64,7 @@
 }
 
 .cal-weeks {
+    position: relative;
     display: grid;
     flex: 1;
     grid-auto-rows: minmax(0, 1fr);
@@ -134,6 +143,11 @@
     flex: none;
     width: 100%;
     text-align: left;
+}
+
+button.chip { cursor: pointer; }
+
+button.chip[draggable="true"] {
     cursor: grab;
 }
 
@@ -172,8 +186,11 @@
 }
 
 .cal-empty {
-    flex: none;
-    margin-top: var(--space-4);
+    position: absolute;
+    z-index: 1;
+    inset: var(--space-4);
+    max-height: max-content;
+    margin: auto;
 }
 
 /* ── Queue card ── */
@@ -273,6 +290,13 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+}
+
+.reschedule-post {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-weight: 600;
 }
 
 .form-field {

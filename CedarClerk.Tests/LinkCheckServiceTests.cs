@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using CedarClerk.Server;
@@ -70,20 +71,29 @@ public class LinkCheckServiceTests
     [Fact]
     public async Task A_hanging_link_times_out_within_the_cap_and_reports_unreachable()
     {
-        var handler = new StubHandler(async (_, ct) =>
+        var watch = Stopwatch.StartNew();
+        var cancelledAt = new ConcurrentBag<TimeSpan>();
+        var handler = new StubHandler((_, ct) =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(60), ct);
-            return new HttpResponseMessage(HttpStatusCode.OK);
+            var completion = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            ct.Register(() =>
+            {
+                cancelledAt.Add(watch.Elapsed);
+                completion.TrySetCanceled(ct);
+            });
+            return completion.Task;
         });
 
-        var watch = Stopwatch.StartNew();
-        var dead = await Service(handler).CheckAsync(["https://tarpit.example/a", "https://tarpit.example/b"]);
-        watch.Stop();
+        var dead = await Service(handler)
+            .CheckAsync(["https://tarpit.example/a", "https://tarpit.example/b"])
+            .WaitAsync(TimeSpan.FromSeconds(20));
 
         Assert.Equal(2, dead.Count);
         Assert.All(dead, d => Assert.Equal(LinkCheckService.Unreachable, d.Status));
-        // Parallel probes under one per-link cap: well inside the endpoint's ~6s promise.
-        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(8), $"took {watch.Elapsed}");
+        Assert.Equal(2, cancelledAt.Count);
+        // Measure the timer callback, not a continuation that a loaded test runner may schedule late.
+        Assert.All(cancelledAt, elapsed =>
+            Assert.True(elapsed < TimeSpan.FromSeconds(8), $"cancelled after {elapsed}"));
     }
 
     [Fact]

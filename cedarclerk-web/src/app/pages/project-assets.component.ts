@@ -390,6 +390,12 @@ export class ProjectAssetsComponent implements OnDestroy {
         }
     }
 
+    onAssetKeydown(event: KeyboardEvent, asset: AssetEntry): void {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        void this.open(asset);
+    }
+
     async addLink(draftId: string) {
         const id = this.projectId();
         const asset = this.selected();

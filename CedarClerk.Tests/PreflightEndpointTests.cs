@@ -75,6 +75,16 @@ public class PreflightEndpointTests
     private static StubHandler Ok() => new(_ => new HttpResponseMessage(HttpStatusCode.OK));
 
     [Fact]
+    public void Registered_link_checker_can_be_resolved()
+    {
+        var services = new ServiceCollection();
+        services.AddPreflightServices();
+        using var provider = services.BuildServiceProvider();
+
+        Assert.IsType<LinkCheckService>(provider.GetRequiredService<LinkCheckService>());
+    }
+
+    [Fact]
     public async Task An_empty_ticked_language_version_warns()
     {
         var (provider, connection) = Build();

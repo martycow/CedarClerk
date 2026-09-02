@@ -9,6 +9,7 @@ import { ModalComponent } from '../shared/modal.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
+import { CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 
 /** Node card footprint on the graph — fixed, so edge anchors need no measuring. */
 const NODE_W = 220;
@@ -59,6 +60,8 @@ export class ProjectDialogueComponent implements OnDestroy {
 
     readonly nodeW = NODE_W;
     readonly nodeH = NODE_H;
+    readonly contentLanguages = CONTENT_LANGUAGES;
+    readonly endonym = endonymOf;
 
     private stageRef = viewChild<ElementRef<HTMLElement>>('stage');
 
@@ -80,7 +83,7 @@ export class ProjectDialogueComponent implements OnDestroy {
     importing = signal(false);
     importReport = signal<string | null>(null);
     importError = signal<string | null>(null);
-    sheetLanguages = signal('');
+    sheetLanguages = signal<readonly string[]>([]);
     confirmDeleteNode = signal<DialogueNode | null>(null);
 
     private gesture: Gesture | null = null;
@@ -369,6 +372,18 @@ export class ProjectDialogueComponent implements OnDestroy {
 
     // ---- export / import ----
 
+    toggleSheetLanguage(code: string, checked: boolean) {
+        if (!CONTENT_LANGUAGES.includes(code)) return;
+        const selected = new Set(this.sheetLanguages());
+        if (checked) selected.add(code);
+        else selected.delete(code);
+        this.sheetLanguages.set(CONTENT_LANGUAGES.filter(language => selected.has(language)));
+    }
+
+    sheetLanguageQuery(): string {
+        return this.sheetLanguages().join(',');
+    }
+
     async download(kind: 'yarn' | 'xlsx') {
         if (this.downloading()) return;
         // The graph on the wire is what the file is built from — flush the editor first.
@@ -378,7 +393,7 @@ export class ProjectDialogueComponent implements OnDestroy {
         try {
             const url = kind === 'yarn'
                 ? this.api.yarnUrl(this.scriptId())
-                : this.api.xlsxUrl(this.scriptId(), this.sheetLanguages());
+                : this.api.xlsxUrl(this.scriptId(), this.sheetLanguageQuery());
             const response = await fetch(url);
             if (!response.ok) throw new Error(String(response.status));
             const blob = await response.blob();

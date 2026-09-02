@@ -1,9 +1,9 @@
 <!--The manager: a page header, a segmented strip, and one body per tab. The strip keeps its class
 so it stays addressable by the name the smoke suite binds.-->
-<div class="page manager">
+<div class="page manager" data-layout="operational">
     <app-page-header [title]="t().manager.crumb" [meta]="headerMeta()">
         <ng-container ngProjectAs="[primary]">
-            @if (tab() === 'forms') {
+            @if (tab() === 'forms' && presets().length > 0) {
             <app-button variant="pine" (clicked)="newPreset()">
                 <app-icon name="plus" weight="bold" size="sm" /> {{ t().manager.forms.newPreset }}
             </app-button>
@@ -44,23 +44,24 @@ so it stays addressable by the name the smoke suite binds.-->
         @if (loading()) {
         <p class="hint">{{ t().common.loading }}</p>
         } @else {
-        <div class="mg-grid">
-            <section class="card shelf-list" [attr.aria-label]="t().manager.tabs.posts">
+        <div class="mg-grid split-workspace">
+            <section class="card shelf-list split-pane" [attr.aria-label]="t().manager.tabs.posts">
                 <div class="card-head">
                     <span class="label">{{ t().manager.tabs.posts }}</span>
                     <span class="card-count">{{ visiblePosts().length }}</span>
                 </div>
                 <!--FI3.10: the list is publish-date ordered, so finding a specific post meant
                 scrolling. Search covers title and tags.-->
-                <app-input class="post-search" type="search" [(ngModel)]="search"
-                           [placeholder]="t().manager.searchPlaceholder" />
+                <app-input class="post-search" type="search" [label]="t().manager.searchPlaceholder"
+                           [(ngModel)]="search" />
                 <div class="row-list post-list">
                 @for (d of visiblePosts(); track d.id) {
                 <!--One row: the type plate, the title over its languages, the feedback tally, and
                 exactly one publish state — archived wins over live, live over unpublished. The
                 title column is the only one that shrinks, so a long title gives way to the tag
                 and never the reverse (T-271).-->
-                <button class="row post-card" [class.is-on]="selectedId() === d.id" (click)="select(d)">
+                <button class="row post-card" [class.is-on]="selectedId() === d.id"
+                        [attr.aria-current]="selectedId() === d.id ? 'true' : null" (click)="select(d)">
                     @if (d.coverImagePath; as cover) {
                     <span class="post-card-type has-thumb">
                         <img [src]="'/media/' + cover" alt="" loading="lazy">
@@ -74,7 +75,7 @@ so it stays addressable by the name the smoke suite binds.-->
                         <span class="post-card-title">
                             @if (d.isPrivate) { <app-icon name="lock" size="xs"></app-icon> }
                             @if (hasPendingSchedule(d.id)) { <app-icon name="clock" size="xs"></app-icon> }
-                            <span class="t post-card-title-text">{{ d.title || t().drafts.untitled }}</span>
+                            <span class="t post-card-title-text" [title]="d.title || t().drafts.untitled">{{ d.title || t().drafts.untitled }}</span>
                         </span>
                         <span class="m post-card-langs">
                             @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
@@ -90,21 +91,11 @@ so it stays addressable by the name the smoke suite binds.-->
                     <span class="tag post-card-state" [class.ok]="stateTone(d) === 'ok'"
                           [class.warn]="stateTone(d) === 'warn'" [class.muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
                 </button>
-                } @empty {
-                    @if (search.trim()) {
-                    <app-empty-state icon="magnifying-glass" [title]="t().manager.noMatches(search.trim())">
-                        <app-button variant="paper" size="sm" (clicked)="search = ''">{{ t().manager.clearSearch }}</app-button>
-                    </app-empty-state>
-                    } @else {
-                    <app-empty-state icon="paper-plane-tilt" [title]="t().manager.noPosts" [text]="t().manager.noPostsHint">
-                        <app-button variant="pine" link="/drafts">{{ t().manager.writeFirst }}</app-button>
-                    </app-empty-state>
-                    }
                 }
                 </div>
             </section>
 
-            <section class="card sheet" [attr.aria-label]="sheetLabel()">
+            <section class="card sheet split-pane" [attr.aria-label]="sheetLabel()">
                 <div class="card-head">
                     <span class="card-title">{{ t().manager.studio.workbench }}</span>
                     @if (sheetMeta()) { <span class="card-meta">{{ sheetMeta() }}</span> }
@@ -132,9 +123,6 @@ so it stays addressable by the name the smoke suite binds.-->
                                 </span>
                             </div>
                         </div>
-                        <app-button variant="pine" link="/editor" [queryParams]="{ draft: d.id }">
-                            <app-icon name="pen" size="sm" /> {{ t().manager.openInEditor }}
-                        </app-button>
                     </div>
 
                     <div class="studio-section studio-publishing">
@@ -434,6 +422,14 @@ so it stays addressable by the name the smoke suite binds.-->
                     pointing back to Forms. Behavior (DB1's "form attached but library empty"
                     distinction, FI3.7's explicit-clear dropdown, FI4.1's language list) lives
                     in the component; wording stays this page's own t() strings.-->
+                    @if (presetsLoading()) {
+                    <p class="field-hint-inline" role="status">{{ t().common.loading }}</p>
+                    } @else if (presetLoadError()) {
+                    <div role="alert">
+                        <p class="channel-error">{{ presetLoadError() }}</p>
+                        <app-button variant="paper" size="sm" (clicked)="loadPresets()">{{ t().projects.canvas.retry }}</app-button>
+                    </div>
+                    } @else {
                     <app-form-ref
                         [regForm]="regForm()" [presets]="presets()" [languages]="postFormLanguages()"
                         [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
@@ -444,6 +440,7 @@ so it stays addressable by the name the smoke suite binds.-->
                         [createLabel]="t().manager.forms.createOne" [manageLabel]="t().manager.tabs.forms"
                         (pick)="pickPreset($event)" (manage)="setTab('forms')">
                     </app-form-ref>
+                    }
                 </div>
                 </details>
                 }
@@ -529,14 +526,26 @@ so it stays addressable by the name the smoke suite binds.-->
                 </details>
                 }
                 } @else {
-                <app-empty-state icon="file-text" [title]="t().manager.pickPost" [text]="t().manager.pickPostHint" />
+                    @if (visiblePosts().length) {
+                    <app-empty-state icon="file-text" [title]="t().manager.pickPost" [text]="t().manager.pickPostHint">
+                        <app-button variant="paper" (clicked)="selectFirstPost()">{{ t().manager.selectFirstPost }}</app-button>
+                    </app-empty-state>
+                    } @else if (search.trim()) {
+                    <app-empty-state icon="magnifying-glass" [title]="t().manager.noMatches(search.trim())">
+                        <app-button variant="paper" (clicked)="search = ''">{{ t().manager.clearSearch }}</app-button>
+                    </app-empty-state>
+                    } @else {
+                    <app-empty-state icon="paper-plane-tilt" [title]="t().manager.noPosts" [text]="t().manager.noPostsHint">
+                        <app-button variant="pine" link="/drafts">{{ t().manager.writeFirst }}</app-button>
+                    </app-empty-state>
+                    }
                 }
                 </div>
             </section>
 
             <!--The inspector states what the post IS; the sheet holds what is done to it (ADR-167
             clauses 3 and 4). With nothing picked it describes the library, never both at once.-->
-            <aside class="card inspector" [attr.aria-label]="inspectorTitle()">
+            <aside class="card inspector split-pane" [attr.aria-label]="inspectorTitle()">
                 <div class="card-head">
                     <span class="label">{{ inspectorTitle() }}</span>
                     @if (inspectorScopeWord()) { <span class="card-count">{{ inspectorScopeWord() }}</span> }
@@ -637,8 +646,19 @@ so it stays addressable by the name the smoke suite binds.-->
     edited that post's form, which made a form look like a property of a post. Forms are
     authored here as presets; a post picks one on the Posts tab.-->
     @if (tab() === 'forms') {
-        <div class="mg-grid is-forms">
-            <section class="card shelf-list" [attr.aria-label]="t().manager.tabs.forms">
+        @if (presetsLoading()) {
+        <p class="hint" role="status">{{ t().common.loading }}</p>
+        } @else if (presetLoadError()) {
+        <app-empty-state role="alert" icon="warning" [title]="presetLoadError()">
+            <app-button variant="paper" (clicked)="loadPresets()">{{ t().projects.canvas.retry }}</app-button>
+        </app-empty-state>
+        } @else if (!presets().length) {
+        <app-empty-state icon="clipboard-text" [title]="t().manager.forms.noPresetsTitle" [text]="t().manager.forms.presetsIntro">
+            <app-button variant="pine" (clicked)="newPreset()">{{ t().manager.forms.newPreset }}</app-button>
+        </app-empty-state>
+        } @else {
+        <div class="mg-grid split-workspace is-two is-forms">
+            <section class="card shelf-list split-pane" [attr.aria-label]="t().manager.tabs.forms">
                 <div class="card-head">
                     <span class="label">{{ t().manager.tabs.forms }}</span>
                     <span class="card-count">{{ presets().length }}</span>
@@ -647,30 +667,28 @@ so it stays addressable by the name the smoke suite binds.-->
                 @for (p of presets(); track p.id) {
                 <!--Same row as the posts list: two lists on one screen that behaved and looked
                 differently was a difference with no meaning behind it.-->
-                <button class="row post-card is-preset" [class.is-on]="selectedPresetId() === p.id" (click)="selectPreset(p)">
+                <button class="row post-card is-preset" [class.is-on]="selectedPresetId() === p.id"
+                        [attr.aria-current]="selectedPresetId() === p.id ? 'true' : null" (click)="selectPreset(p)">
                     <span class="post-card-main">
-                        <span class="post-card-title"><span class="t post-card-title-text">{{ p.name }}</span></span>
+                        <span class="post-card-title"><span class="t post-card-title-text" [title]="p.name">{{ p.name }}</span></span>
                         <!--ADR-060: every language the preset carries text for, first = primary.-->
                         <span class="m post-card-langs">
                             @for (l of presetLanguagesOf(p); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                         </span>
                     </span>
                 </button>
-                } @empty {
-                <app-empty-state icon="clipboard-text" [title]="t().manager.forms.noPresetsTitle" [text]="t().manager.forms.presetsIntro">
-                    <app-button variant="pine" size="sm" (clicked)="newPreset()">{{ t().manager.forms.newPreset }}</app-button>
-                </app-empty-state>
                 }
                 </div>
             </section>
 
-            <section class="card sheet" [attr.aria-label]="presetSheetLabel()">
+            <section class="card sheet split-pane" [attr.aria-label]="presetSheetLabel()">
                 <div class="card-head">
                     <span class="card-title">{{ presetSheetLabel() }}</span>
                     @if (presetSheetMeta()) { <span class="card-meta">{{ presetSheetMeta() }}</span> }
                 </div>
-                <div class="sheet-body">
+                <div class="sheet-body" #presetSheetBody>
                 @if (presetForm(); as form) {
+                <div class="form-editor">
                 <!--FI4.2: the editor used to be one flat stack of inputs, checkboxes and
                 outlined rows with nothing saying what belonged to what. It is three labelled
                 blocks now - identity, the built-in fields, the questions - and each question
@@ -693,7 +711,8 @@ so it stays addressable by the name the smoke suite binds.-->
                                 @if (!first) {
                                 <button class="lang-chip-act" (click)="translatePresetLanguage(l)"
                                         [disabled]="presetTranslating() !== null || !auth.hasAiPlan()"
-                                        [title]="auth.hasAiPlan() ? t().manager.forms.translateLang : t().planLock.pro">
+                                        [title]="auth.hasAiPlan() ? t().manager.forms.translateLang : t().planLock.pro"
+                                        [attr.aria-label]="auth.hasAiPlan() ? t().manager.forms.translateLang : t().planLock.pro">
                                     @if (presetTranslating() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                                     @else if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
                                     @else { <app-icon name="arrow-clockwise" size="sm"></app-icon> }
@@ -772,8 +791,11 @@ so it stays addressable by the name the smoke suite binds.-->
                             keep "Да" and "Yes" the same answer in the charts.-->
                             <div class="q-label-stack">
                                 @for (l of presetLangs(); track l) {
-                                <div class="q-label-row">
-                                    @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                                <label class="q-label-row">
+                                    <span class="form-field-label">
+                                        {{ t().manager.forms.questionPlaceholder }}
+                                        @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                                    </span>
                                     @if (q.type === 'consent' || q.type === 'static') {
                                     <textarea class="chat-input" rows="2" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
                                               [placeholder]="q.type === 'static' ? t().manager.forms.staticPlaceholder : t().manager.forms.consentPlaceholder"
@@ -782,7 +804,7 @@ so it stays addressable by the name the smoke suite binds.-->
                                     <input class="chat-input" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
                                            [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
                                     }
-                                </div>
+                                </label>
                                 }
                             </div>
                             <button class="mini-remove" (click)="removeQuestion(q.id)" [title]="t().manager.forms.removeQuestion" [attr.aria-label]="t().manager.forms.removeQuestion">
@@ -791,12 +813,12 @@ so it stays addressable by the name the smoke suite binds.-->
                         </div>
                         <div class="question-card-body">
                             <div class="pill-row">
-                                <button class="pill" [class.on]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')">{{ t().manager.forms.typeText }}</button>
-                                <button class="pill" [class.on]="q.type === 'longtext'" (click)="setQuestionType(q.id, 'longtext')">{{ t().manager.forms.typeLongText }}</button>
-                                <button class="pill" [class.on]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')">{{ t().manager.forms.typeChoice }}</button>
-                                <button class="pill" [class.on]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')">{{ t().manager.forms.typeMulti }}</button>
-                                <button class="pill" [class.on]="q.type === 'consent'" (click)="setQuestionType(q.id, 'consent')">{{ t().manager.forms.typeConsent }}</button>
-                                <button class="pill" [class.on]="q.type === 'static'" (click)="setQuestionType(q.id, 'static')">{{ t().manager.forms.typeStatic }}</button>
+                                <button class="pill" [class.on]="q.type === 'text'" [attr.aria-pressed]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'text'" name="check" size="xs" />{{ t().manager.forms.typeText }}</button>
+                                <button class="pill" [class.on]="q.type === 'longtext'" [attr.aria-pressed]="q.type === 'longtext'" (click)="setQuestionType(q.id, 'longtext')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'longtext'" name="check" size="xs" />{{ t().manager.forms.typeLongText }}</button>
+                                <button class="pill" [class.on]="q.type === 'choice'" [attr.aria-pressed]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'choice'" name="check" size="xs" />{{ t().manager.forms.typeChoice }}</button>
+                                <button class="pill" [class.on]="q.type === 'multi'" [attr.aria-pressed]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'multi'" name="check" size="xs" />{{ t().manager.forms.typeMulti }}</button>
+                                <button class="pill" [class.on]="q.type === 'consent'" [attr.aria-pressed]="q.type === 'consent'" (click)="setQuestionType(q.id, 'consent')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'consent'" name="check" size="xs" />{{ t().manager.forms.typeConsent }}</button>
+                                <button class="pill" [class.on]="q.type === 'static'" [attr.aria-pressed]="q.type === 'static'" (click)="setQuestionType(q.id, 'static')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'static'" name="check" size="xs" />{{ t().manager.forms.typeStatic }}</button>
                                 <span class="spacer"></span>
                                 <label class="form-check">
                                     <input type="checkbox" [checked]="!!q.required" [disabled]="q.type === 'consent' || q.type === 'static'"
@@ -805,13 +827,18 @@ so it stays addressable by the name the smoke suite binds.-->
                             </div>
                             @if (q.type === 'choice' || q.type === 'multi') {
                             <div class="option-rows">
-                                @for (o of q.options; track o.id) {
+                                @for (o of q.options; track o.id; let optionIndex = $index) {
                                 <div class="option-row" [class.multi-lang]="presetLangs().length > 1">
                                     @for (l of presetLangs(); track l) {
-                                    <input class="chat-input option-input" [value]="o.label[l] || ''"
-                                           (change)="setOptionLabel(q.id, o.id, l, $any($event.target).value)"
-                                           [placeholder]="presetLangs().length > 1 ? l.toUpperCase() : t().manager.forms.optionPlaceholder"
-                                           maxlength="200">
+                                    <label class="option-field">
+                                        <span class="form-field-label">
+                                            {{ t().manager.forms.optionPlaceholder }} {{ optionIndex + 1 }}
+                                            @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                                        </span>
+                                        <input class="chat-input option-input" [value]="o.label[l] || ''"
+                                               (change)="setOptionLabel(q.id, o.id, l, $any($event.target).value)"
+                                               [placeholder]="t().manager.forms.optionPlaceholder" maxlength="200">
+                                    </label>
                                     }
                                     <button class="mini-remove" (click)="removeOption(q.id, o.id)" [title]="t().manager.forms.removeOption" [attr.aria-label]="t().manager.forms.removeOption">
                                         <app-icon name="x" size="sm"></app-icon>
@@ -829,9 +856,12 @@ so it stays addressable by the name the smoke suite binds.-->
                             @if (q.type === 'static') {
                             <div class="static-media">
                                 @if (q.imageUrl) { <img class="static-preview" [src]="q.imageUrl" alt=""> }
-                                <input class="chat-input" [value]="q.imageUrl || ''"
-                                       (change)="setQuestionImage(q.id, $any($event.target).value)"
-                                       [placeholder]="t().manager.forms.staticImagePlaceholder" maxlength="500">
+                                <label class="form-field">
+                                    <span class="form-field-label">{{ t().manager.forms.staticImagePlaceholder }}</span>
+                                    <input class="chat-input" [value]="q.imageUrl || ''"
+                                           (change)="setQuestionImage(q.id, $any($event.target).value)"
+                                           [placeholder]="t().manager.forms.staticImagePlaceholder" maxlength="500">
+                                </label>
                             </div>
                             <p class="field-hint-inline">{{ t().manager.forms.staticHint }}</p>
                             }
@@ -847,7 +877,6 @@ so it stays addressable by the name the smoke suite binds.-->
                     }
                 </div>
 
-                <div class="form-editor">
                     <div class="detail-actions">
                         <button class="btn-ghost danger" (click)="deletePresetId.set(selectedPresetId())">{{ t().manager.forms.deletePreset }}</button>
                     </div>
@@ -867,13 +896,12 @@ so it stays addressable by the name the smoke suite binds.-->
                     </div>
                 </div>
                 } @else {
-                <app-empty-state icon="clipboard-text" [title]="t().manager.forms.pickPreset">
-                    <app-button variant="pine" size="sm" (clicked)="newPreset()">{{ t().manager.forms.newPreset }}</app-button>
-                </app-empty-state>
+                <app-empty-state icon="clipboard-text" [title]="t().manager.forms.pickPreset" />
                 }
                 </div>
             </section>
         </div>
+        }
     }
 
     @if (deleteConfirmId()) {

@@ -2,7 +2,6 @@ import { Component, HostListener, computed, inject, input, output, signal, viewC
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { CreditBalanceService } from '../core/credit-balance.service';
-import { DebugLogService } from '../core/debug-log.service';
 import { FeedbackFormService } from '../core/feedback-form.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { ThemeService } from '../core/theme.service';
@@ -10,6 +9,7 @@ import { VersionService } from '../core/version.service';
 import { PopoverComponent } from './popover.component';
 import { IconComponent } from './icon.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
+import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 
 // The account menu holds what belongs to the person, not to a screen (ADR-240): the profile pair
 // and feedback, the display row (appearance, theme, the window), the developer doors for an admin,
@@ -112,11 +112,11 @@ export class AccountMenuComponent {
 
     auth = inject(AuthService);
     theme = inject(ThemeService);
-    log = inject(DebugLogService);
     feedbackForm = inject(FeedbackFormService);
     t = inject(LocaleService).t;
     private readonly version = inject(VersionService);
     private readonly creditBalance = inject(CreditBalanceService);
+    private readonly overlays = inject(OverlayCoordinatorService);
 
     protected readonly isFullscreen = signal(!!document.fullscreenElement);
 
@@ -161,7 +161,7 @@ export class AccountMenuComponent {
 
     protected openFeedback(): void {
         this.popover().close();
-        this.feedbackForm.open.set(true);
+        this.feedbackForm.openForm();
     }
 
     protected openAppearancePanel(): void {
@@ -176,7 +176,7 @@ export class AccountMenuComponent {
 
     protected toggleConsole(): void {
         this.popover().close();
-        this.log.open.update(v => !v);
+        this.overlays.toggle('debug');
     }
 
     protected logout(): void {

@@ -44,10 +44,6 @@
     font-size: var(--fs-body);
 }
 
-.so-input:focus {
-    outline: none;
-}
-
 .so-kbd {
     flex: none;
     padding: 2px 6px;

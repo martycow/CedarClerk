@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CdkDropList, CdkDrag, CdkDropListGroup, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
-import { formatInZone } from '../core/display-time';
+import { dayInZone, formatInZone, wallClockToInstant } from '../core/display-time';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ProjectDetail, ProjectsService, DOCUMENT_TYPE_ICONS } from '../core/projects.service';
@@ -16,7 +16,6 @@ import {
     TaskPriority,
     TaskStatus,
     TasksService,
-    isOverdue,
 } from '../core/tasks.service';
 import { Sprint, SprintsService } from '../core/sprints.service';
 import { Build, BuildsService } from '../core/builds.service';
@@ -30,6 +29,11 @@ import { AssetsService } from '../core/assets.service';
 
 const VIEW_KEY = 'cedar.taskView';
 const MS_PER_DAY = 86_400_000;
+
+function civilDayNumber(day: string): number {
+    const [year, month, date] = day.split('-').map(Number);
+    return Date.UTC(year, month - 1, date);
+}
 
 type Filter = 'all' | 'open' | 'overdue';
 type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
@@ -69,8 +73,6 @@ export class ProjectTasksComponent {
     readonly priorities = TASK_PRIORITIES;
     readonly linkIcons = LINK_TARGET_ICONS;
     readonly docIcons = DOCUMENT_TYPE_ICONS;
-    readonly overdue = isOverdue;
-
     projectId = signal('');
     project = signal<ProjectDetail | null>(null);
     tasks = signal<GameTask[]>([]);
@@ -104,13 +106,18 @@ export class ProjectTasksComponent {
     draftDescription = signal('');
     draftAssignee = signal('');
     draftDue = signal('');
+    draftStatus = signal<TaskStatus>('backlog');
+    draftPriority = signal<TaskPriority>(2);
+    draftSprintId = signal('');
+    draftBuildId = signal('');
+    draftPublicRoadmap = signal(false);
     linking = signal(false);
 
     openTask = computed(() => this.tasks().find(t => t.id === this.openTaskId()) ?? null);
 
     openCount = computed(() => this.tasks().filter(t => t.status !== 'done').length);
 
-    overdueCount = computed(() => this.tasks().filter(t => isOverdue(t)).length);
+    overdueCount = computed(() => this.tasks().filter(t => this.overdue(t)).length);
 
     /** The sprint covering today — the header's second readout, and the "Planned" column's hint. */
     currentSprint = computed<Sprint | null>(() => this.project()?.currentSprint ?? null);
@@ -119,10 +126,8 @@ export class ProjectTasksComponent {
     sprintDaysLeft = computed(() => {
         const sprint = this.currentSprint();
         if (!sprint) return 0;
-        const end = new Date(sprint.endsAt);
-        const endDay = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-        const now = new Date();
-        const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+        const endDay = civilDayNumber(dayInZone(sprint.endsAt));
+        const today = civilDayNumber(dayInZone(new Date()));
         return Math.max(0, Math.round((endDay - today) / MS_PER_DAY));
     });
 
@@ -153,7 +158,7 @@ export class ProjectTasksComponent {
         const sprint = this.sprintFilter();
         return this.tasks().filter(t => {
             if (filter === 'open' && t.status === 'done') return false;
-            if (filter === 'overdue' && !isOverdue(t)) return false;
+            if (filter === 'overdue' && !this.overdue(t)) return false;
             // '' is a filter in its own right — "planned into nothing" is a real question, and the
             // planner's own "No sprint" group asks it too.
             if (sprint !== null && (t.sprintId ?? '') !== sprint) return false;
@@ -259,7 +264,14 @@ export class ProjectTasksComponent {
     dueLabel(task: GameTask): string {
         if (!task.dueAt) return '';
         const date = formatInZone(task.dueAt, 'd MMM');
-        return isOverdue(task) ? `${date} · ${this.t().projects.tasks.overdue}` : date;
+        return this.overdue(task) ? `${date} · ${this.t().projects.tasks.overdue}` : date;
+    }
+
+    /** A deadline is a civil date in the account zone, never a browser-local instant. */
+    overdue(task: Pick<GameTask, 'dueAt' | 'status'>, now = new Date()): boolean {
+        if (!task.dueAt || task.status === 'done') return false;
+        const dueDay = dayInZone(task.dueAt);
+        return dueDay.length > 0 && dueDay < dayInZone(now);
     }
 
     statusTone(status: TaskStatus): Tone {
@@ -299,35 +311,51 @@ export class ProjectTasksComponent {
         this.draftTitle.set(task.title);
         this.draftDescription.set(task.description);
         this.draftAssignee.set(task.assignee);
-        this.draftDue.set(task.dueAt ? task.dueAt.slice(0, 10) : '');
+        this.draftDue.set(task.dueAt ? dayInZone(task.dueAt) : '');
+        this.draftStatus.set(task.status);
+        this.draftPriority.set(task.priority);
+        this.draftSprintId.set(task.sprintId ?? '');
+        this.draftBuildId.set(task.buildId ?? '');
+        this.draftPublicRoadmap.set(task.isPublicRoadmap);
     }
 
-    async saveEdits(task: GameTask) {
+    async saveEdits(task: GameTask, statusOverride?: TaskStatus): Promise<boolean> {
         const title = this.draftTitle().trim();
-        if (!title) { this.actionError.set(this.t().projects.tasks.titleRequired); return; }
+        if (!title) { this.actionError.set(this.t().projects.tasks.titleRequired); return false; }
 
         const due = this.draftDue().trim();
-        await this.run(() => this.api.update(task.id, {
+        const dueInstant = due ? wallClockToInstant(due, '00:00') : null;
+        if (due && !dueInstant) {
+            this.actionError.set(this.t().projects.tasks.dueInvalid);
+            return false;
+        }
+        const sprintId = this.draftSprintId();
+        const buildId = this.draftBuildId();
+        const status = statusOverride ?? this.draftStatus();
+        const saved = await this.run(() => this.api.update(task.id, {
             title,
             description: this.draftDescription(),
             assignee: this.draftAssignee(),
+            status,
+            priority: this.draftPriority(),
+            isPublicRoadmap: this.draftPublicRoadmap(),
             // An emptied date field is a request to clear it — which is a different request from
             // not touching it, and the API needs to be told which one this is.
-            ...(due ? { dueAt: new Date(due).toISOString() } : { clearDueAt: true }),
+            ...(dueInstant ? { dueAt: dueInstant.toISOString() } : { clearDueAt: true }),
+            ...(sprintId ? { sprintId } : { clearSprint: true }),
+            ...(buildId ? { buildId } : { clearBuild: true }),
         }));
+        if (saved && statusOverride) this.draftStatus.set(statusOverride);
+        return saved !== null;
     }
 
     setStatus(task: GameTask, status: TaskStatus) {
         return this.run(() => this.api.update(task.id, { status }));
     }
 
-    setPriority(task: GameTask, priority: TaskPriority) {
-        return this.run(() => this.api.update(task.id, { priority }));
-    }
-
     toggleDone(task: GameTask) {
         // Reopening puts the task back where work happens, not back at the start of the queue.
-        return this.setStatus(task, task.status === 'done' ? 'in_progress' : 'done');
+        return this.saveEdits(task, this.draftStatus() === 'done' ? 'in_progress' : 'done');
     }
 
     toggleArchived(task: GameTask) {
@@ -444,21 +472,6 @@ export class ProjectTasksComponent {
 
     sprintTaskCount(sprintId: string): number {
         return this.tasks().filter(t => (t.sprintId ?? '') === sprintId).length;
-    }
-
-    setSprint(task: GameTask, sprintId: string) {
-        return this.run(() => this.api.update(task.id, sprintId
-            ? { sprintId }
-            : { clearSprint: true }));
-    }
-
-    setBuild(task: GameTask, buildId: string) {
-        return this.run(() => this.api.update(task.id, buildId ? { buildId } : { clearBuild: true }));
-    }
-
-    /** T-159 (ADR-134) — onto (or off) the project's public showcase roadmap; title and status only. */
-    setPublicRoadmap(task: GameTask, isPublicRoadmap: boolean) {
-        return this.run(() => this.api.update(task.id, { isPublicRoadmap }));
     }
 
     linkCounts(task: GameTask) {

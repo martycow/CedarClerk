@@ -1,4 +1,5 @@
-<div class="page" [class.embedded]="embedded()" data-density="compact">
+<div class="page" [class.embedded]="embedded()"
+     [attr.data-layout]="embedded() ? null : 'operational'" data-density="compact">
     @if (!embedded()) {
     <app-page-header [title]="t().media.open" [meta]="headerMeta()">
         <app-button primary variant="pine" [disabled]="uploading()" [title]="t().media.uploadNew"
@@ -40,7 +41,8 @@
                         @if (rangeLabel()) { <span class="card-count">{{ rangeLabel() }}</span> }
                     </span>
                     <span class="spacer"></span>
-                    <app-input class="search" [dense]="true" type="search" [value]="search()"
+                    <app-input class="search" inputId="media-search" [dense]="true" type="search"
+                               [label]="t().media.searchLabel" [value]="search()"
                                [placeholder]="t().media.searchPlaceholder"
                                (valueChange)="onSearch($any($event) ?? '')" />
                     <app-index-tabs [items]="viewTabs()" [value]="view()"
@@ -64,6 +66,7 @@
                     <div class="asset-grid">
                         @for (a of p.items; track a.id) {
                             <button type="button" class="tile" [class.is-on]="selected()?.id === a.id"
+                                    [attr.aria-pressed]="selected()?.id === a.id"
                                     (click)="open(a)">
                                 <span class="preview">
                                     @if (showsThumbnail(a)) {
@@ -83,10 +86,24 @@
                     </div>
                 } @else {
                     <div class="asset-list">
+                        <div class="list-row list-head">
+                            <span aria-hidden="true"></span>
+                            <span>{{ t().media.fileColumn }}</span>
+                            <span class="list-type">{{ t().media.fileType }}</span>
+                            <span class="list-size">{{ t().media.fileSize }}</span>
+                            <span class="list-date">{{ t().media.added }}</span>
+                        </div>
                         @for (a of p.items; track a.id) {
                             <button type="button" class="row list-row" [class.is-on]="selected()?.id === a.id"
+                                    [attr.aria-pressed]="selected()?.id === a.id"
                                     (click)="open(a)">
-                                <app-icon [name]="kindIcons[kindOf(a)]" size="sm"></app-icon>
+                                <span class="list-thumbnail" aria-hidden="true">
+                                    @if (showsThumbnail(a)) {
+                                        <img [src]="url(a)" alt="" loading="lazy" (error)="onThumbError(a)">
+                                    } @else {
+                                        <app-icon [name]="kindIcons[kindOf(a)]" size="sm"></app-icon>
+                                    }
+                                </span>
                                 <span class="t tile-name" [title]="a.fileName">{{ a.fileName }}</span>
                                 <span class="m list-type">{{ a.contentType }}</span>
                                 <span class="m list-size">{{ bytes(a.sizeBytes) }}</span>

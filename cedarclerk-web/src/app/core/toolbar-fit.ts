@@ -18,7 +18,7 @@ export interface ToolbarMeasurements {
     available: number;
     /** Flex gap between two items on a row. */
     gap: number;
-    /** Block type, undo and redo — pinned to the head of row 1. */
+    /** Block type — pinned to the head of row 1; history lives in the always-present top bar. */
     lead: number;
     /** The AI chip and the view controls — pinned to the tail of row 1. */
     trail: number;

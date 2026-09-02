@@ -11,7 +11,7 @@ import {
     DOCUMENT_TYPES, DOCUMENT_TYPE_ICONS, DocumentType, PROJECT_TYPES, PROJECT_TYPE_ICONS, ProjectType,
     STARTER_DOCUMENT_TYPE,
 } from '../core/projects.service';
-import { CONTENT_LANGUAGES } from '../core/languages';
+import { CONTENT_LANGUAGES, endonymOf } from '../core/languages';
 import { EXPORT_DESTINATIONS, EXPORT_DESTINATION_BRANDS, ExportDestinationId } from '../core/export-destinations';
 import { IconName } from '../shared/icon-data.generated';
 import { IconComponent } from '../shared/icon.component';
@@ -248,7 +248,7 @@ export class PresetsComponent {
         const c = parseExportConfig(p.configJson);
         if (!c.destinations.length) return null;
         const names = c.destinations.map(d => this.destinationName(d)).join(' · ');
-        return c.languages.length ? `${names} — ${c.languages.map(l => l.toUpperCase()).join(' ')}` : names;
+        return c.languages.length ? `${names} — ${c.languages.map(l => this.languageLabel(l)).join(' · ')}` : names;
     }
 
     baseTypeName(type: string): string {
@@ -263,5 +263,13 @@ export class PresetsComponent {
 
     destinationName(id: string): string {
         return (this.t().presets.export.destinations as Record<string, string>)[id] ?? id;
+    }
+
+    defaultProjectDocumentTypeName(): string {
+        return this.baseTypeName(STARTER_DOCUMENT_TYPE[this.form().projectType]);
+    }
+
+    languageLabel(code: string): string {
+        return `${code.toUpperCase()} · ${endonymOf(code)}`;
     }
 }

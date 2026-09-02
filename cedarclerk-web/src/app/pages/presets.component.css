@@ -122,7 +122,7 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    min-height: var(--hit-chrome);
+    min-height: var(--hit-surface, var(--hit-target));
     padding: var(--space-1) var(--space-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -132,8 +132,13 @@
     font-size: var(--fs-ui);
     cursor: pointer;
 }
-.pr-type-btn.on { border-color: var(--accent); color: var(--accent); }
+.pr-type-btn.on {
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
+}
 .pr-type-btn app-icon { color: inherit; }
+.pr-choice-check { margin-left: auto; }
 
 .pr-form-actions {
     display: flex;

@@ -59,4 +59,13 @@ describe('PageHeaderComponent', () => {
         expect([...actions.querySelectorAll('app-button')].map(b => b.textContent?.trim())).toEqual(['Settings', 'New document']);
         expect(el.querySelector('.page-title-row .tag')!.textContent!.trim()).toBe('Live');
     });
+
+    it('lets the header and its projected actions wrap instead of widening the page', () => {
+        const { el } = mount();
+        const header = el.querySelector('.page-header') as HTMLElement;
+        const actions = el.querySelector('.page-actions') as HTMLElement;
+        expect(getComputedStyle(header).flexWrap).toBe('wrap');
+        expect(getComputedStyle(actions).flexWrap).toBe('wrap');
+        expect(getComputedStyle(actions).maxWidth).toBe('100%');
+    });
 });

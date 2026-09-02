@@ -26,13 +26,8 @@
 }
 
 /* ---------- The two columns ---------- */
-.grid {
-    display: grid;
-    flex: 1;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: var(--space-5);
+.grid.split-workspace {
     align-items: stretch;
-    min-height: 0;
 }
 
 .main {
@@ -50,6 +45,7 @@
     gap: var(--space-1);
     align-self: start;
     padding: var(--space-4) 18px;
+    overflow: auto;
 }
 
 .side-head {
@@ -216,57 +212,13 @@
 .modal-foot-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--space-2);
     width: 100%;
 }
 
-.btn-accent {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-accent:hover:not(:disabled) {
-    filter: brightness(1.08);
-}
-
-.btn-accent:disabled,
-.btn-ghost:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
-.btn-ghost {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-ghost:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--border-strong);
-}
-
-.btn-ghost.danger:hover:not(:disabled) {
-    color: var(--danger);
-    border-color: var(--danger);
+@media (max-width: 520px) {
+    .field-grid { grid-template-columns: minmax(0, 1fr); }
+    .modal-foot-row .spacer { display: none; }
+    .modal-foot-row { justify-content: flex-end; }
 }

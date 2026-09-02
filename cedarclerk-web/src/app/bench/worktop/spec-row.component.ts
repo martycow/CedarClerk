@@ -20,12 +20,13 @@ export type SpecScope = 'selection' | 'document';
         '[attr.data-scope]': 'scope()',
         '[class.field]': 'field()',
         '[class.warn]': 'warn()',
+        '[class.wrap]': 'wrap()',
         '[style.--spec-label-w]': 'labelWidth() || null',
     },
     template: `
         <span class="label">{{ label() }}</span>
         <span class="value">
-            <ng-content><span class="text">{{ value() }}</span></ng-content>
+            <ng-content><span class="text" [attr.title]="wrap() ? null : value() || null">{{ value() }}</span></ng-content>
         </span>
     `,
     styles: [`
@@ -62,6 +63,15 @@ export type SpecScope = 'selection' | 'document';
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        :host(.wrap) { align-items: flex-start; }
+
+        :host(.wrap) .text {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            overflow-wrap: anywhere;
         }
 
         /* The surface owns the sizes, so the lint can score them (ADR-138). */
@@ -101,6 +111,8 @@ export class SpecRowComponent {
     readonly field = input(false, { transform: booleanAttribute });
     /** Something is missing or wrong — rust ink, dashed field edge. */
     readonly warn = input(false, { transform: booleanAttribute });
+    /** Long inspector values may wrap when the consumer opts into a multi-line row. */
+    readonly wrap = input(false, { transform: booleanAttribute });
     /** A CSS length for the label column; pass a token, not a measured pixel. */
     readonly labelWidth = input('');
     readonly scope = input<SpecScope>('document');

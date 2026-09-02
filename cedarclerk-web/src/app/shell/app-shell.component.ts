@@ -4,8 +4,8 @@ import { AuthService } from '../core/auth.service';
 import { CommentsService } from '../core/comments.service';
 import { CreditBalanceService } from '../core/credit-balance.service';
 import { CurrentProjectService } from '../core/current-project.service';
-import { DebugLogService } from '../core/debug-log.service';
 import { LocaleService } from '../core/i18n/locale.service';
+import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 import { ProjectAccessService } from '../core/project-access.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { AppearancePanelComponent } from '../shared/appearance-panel.component';
@@ -80,7 +80,7 @@ function matches(path: string, pattern: string): boolean {
                          [brand]="t().shell.brand" [brandLabel]="t().shell.logoHome"
                          [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts"
                          [collapseLabel]="t().shell.collapseSidebar" [expandLabel]="t().shell.expandSidebar"
-                         (modeChange)="setMode($event)" (openAppearance)="appearance().open.set(true)" />
+                         (modeChange)="setMode($event)" (openAppearance)="openAppearance()" />
             <main class="body" data-surface="paper">
                 <router-outlet />
             </main>
@@ -126,12 +126,13 @@ export class AppShellComponent {
     private readonly feedback = inject(CommentsService);
     private readonly access = inject(ProjectAccessService);
     private readonly creditBalance = inject(CreditBalanceService);
+    private readonly overlays = inject(OverlayCoordinatorService);
 
     protected readonly auth = inject(AuthService);
-    protected readonly log = inject(DebugLogService);
     protected readonly t = inject(LocaleService).t;
 
     protected readonly appearance = viewChild.required(AppearancePanelComponent);
+    protected readonly search = viewChild.required(SearchOverlayComponent);
 
     private readonly url = signal(this.router.url);
     private readonly path = computed(() => this.url().split('?')[0].split('#')[0]);
@@ -144,6 +145,8 @@ export class AppShellComponent {
         same value and mean opposite things. */
     private readonly namesLoaded = signal(false);
     private namesRequested = false;
+    /** A project created while this shell is mounted is absent from the list fetched at login. */
+    private nameRefreshId = '';
 
     protected readonly projectId = computed(() => {
         const seg = this.path().split('/').filter(Boolean);
@@ -307,22 +310,61 @@ export class AppShellComponent {
                 .catch(() => { this.namesRequested = false; });
         });
 
-        // One writer for the session's project, and this is it: the resolved route. An id the
-        // loaded list does not hold is a project shared with this account, not its own.
+        // One writer for the session's project, and this is it: the resolved route. The project
+        // list can predate a newly created row, so an unknown route id gets one fresh lookup.
         effect(() => {
             const id = this.projectId();
             const name = this.summaries().find(p => p.id === id)?.name;
             if (!id) return;
-            if (!name && this.namesLoaded()) return;
-            untracked(() => this.current.remember(id, name ?? ''));
+            if (name) {
+                untracked(() => this.current.remember(id, name));
+                return;
+            }
+            if (!this.namesLoaded()) {
+                untracked(() => this.current.remember(id, ''));
+                return;
+            }
+            if (this.nameRefreshId === id) return;
+            this.nameRefreshId = id;
+            untracked(() => void this.refreshProjectName(id));
         });
     }
 
+    private async refreshProjectName(id: string): Promise<void> {
+        try {
+            const list = await this.projects.list(true);
+            this.summaries.set(list);
+            const found = list.find(project => project.id === id);
+            if (found) {
+                this.current.remember(found.id, found.name);
+                return;
+            }
+        } catch {
+            // A route the account can open still has a detail response even if the list failed.
+        }
+
+        try {
+            const detail = await this.projects.get(id);
+            this.current.remember(detail.id, detail.name);
+        } catch {
+            // The page owns its not-found state; the shell keeps the neutral placeholder.
+        }
+    }
+
     onKeydown(event: KeyboardEvent): void {
+        if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+            event.preventDefault();
+            this.search().toggleOverlay();
+            return;
+        }
         if ((event.ctrlKey || event.metaKey) && !event.altKey && (event.key === '`' || event.code === 'Backquote')) {
             event.preventDefault();
-            this.log.open.update(v => !v);
+            this.overlays.toggle('debug');
         }
+    }
+
+    openAppearance(): void {
+        this.appearance().openPanel();
     }
 
     setMode(mode: 'full' | 'rail'): void {

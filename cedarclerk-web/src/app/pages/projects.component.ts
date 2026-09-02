@@ -76,6 +76,8 @@ export class ProjectsComponent {
 
     activeCount = computed(() => this.projects().filter(p => !p.archivedAt).length);
     archivedCount = computed(() => this.projects().filter(p => p.archivedAt).length);
+    /** A shared project is still page data: when any card exists, creation belongs in the header. */
+    hasProjectData = computed(() => this.projects().length > 0 || this.shared().length > 0);
 
     /** The header's meta line: the two state counts, from the rows already fetched. */
     headerMeta = computed<HeaderMeta[]>(() => {

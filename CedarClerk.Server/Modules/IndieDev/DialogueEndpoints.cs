@@ -161,10 +161,8 @@ public static class DialogueEndpoints
             var translations = await db.DialogueLineTranslations
                 .Where(t => t.DialogueScriptId == id && t.OwnerId == uid)
                 .ToListAsync();
-            var langs = translations.Select(t => t.Language)
-                .Concat((languages ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                .Select(l => l.ToLowerInvariant())
-                .Distinct().OrderBy(l => l).ToList();
+            var langs = NormalizeSheetLanguages(translations.Select(t => t.Language)
+                .Concat((languages ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)));
             var byKey = translations.ToDictionary(t => (t.LineId, t.Language), t => t.Text);
 
             using var wb = new XLWorkbook();
@@ -293,13 +291,14 @@ public static class DialogueEndpoints
 
         int idColumn = 0;
         var languageColumns = new List<(int Column, string Language)>();
+        var seenLanguages = new HashSet<string>(StringComparer.Ordinal);
         string[] fixedHeaders = ["id", "node", "character", "text"];
         for (var c = 1; c <= lastColumn; c++)
         {
             var name = header.Cell(c).GetString().Trim().ToLowerInvariant();
             if (name.Length == 0) continue;
             if (name == "id") { idColumn = c; continue; }
-            if (!fixedHeaders.Contains(name) && name.Length <= 8)
+            if (!fixedHeaders.Contains(name) && Languages.IsContentLanguage(name) && seenLanguages.Add(name))
                 languageColumns.Add((c, name));
         }
         noIdColumn = idColumn == 0;
@@ -324,5 +323,15 @@ public static class DialogueEndpoints
         var invalid = Path.GetInvalidFileNameChars();
         var safe = new string(name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
         return safe.Length == 0 ? "dialogue" : safe;
+    }
+
+    // Export and import share this list so a translation sheet cannot invent an unsupported locale.
+    public static IReadOnlyList<string> NormalizeSheetLanguages(IEnumerable<string?> languages)
+    {
+        var requested = languages
+            .Select(language => language?.Trim().ToLowerInvariant() ?? "")
+            .Where(language => language.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
+        return Languages.ContentLanguages.Where(requested.Contains).ToList();
     }
 }

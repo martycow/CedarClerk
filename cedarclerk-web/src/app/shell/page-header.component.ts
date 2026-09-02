@@ -53,8 +53,11 @@ export interface HeaderMeta {
     styles: [`
         :host { display: block; flex: none; }
 
+        .page-header { flex-wrap: wrap; }
+
         .page-heading {
             display: flex;
+            flex: 1 1 auto;
             flex-direction: column;
             gap: 6px;
             min-width: 0;
@@ -82,8 +85,12 @@ export interface HeaderMeta {
         .page-actions {
             display: flex;
             align-items: center;
+            justify-content: flex-end;
+            flex: 0 1 auto;
+            flex-wrap: wrap;
             gap: var(--space-2);
-            flex: none;
+            min-width: 0;
+            max-width: 100%;
         }
     `],
 })

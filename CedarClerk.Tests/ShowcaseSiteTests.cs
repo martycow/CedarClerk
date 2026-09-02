@@ -105,6 +105,44 @@ public class ShowcaseSiteTests
     }
 
     [Fact]
+    public async Task Showcase_uses_a_scoped_wide_hero_without_widening_the_blog_index()
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        Seed(db, project => project.CoverUrl = "/media/cover.png");
+
+        var showcase = BlogTestHost.Body(await Send(db, "GET", "/showcase/cedar-station", "?lang=en"));
+        var index = BlogTestHost.Body(await Send(db, "GET", "/", "?lang=en"));
+
+        Assert.Contains("<main class=\"site-main site-main--showcase\">", showcase);
+        Assert.Contains("<article class=\"showcase-page\">", showcase);
+        Assert.Contains("<header class=\"showcase-head showcase-head--with-cover\">", showcase);
+        Assert.Contains("fetchpriority=\"high\"", showcase);
+        Assert.Contains("<dt>Devlog entries</dt><dd class=\"num\">1</dd>", showcase);
+        Assert.Contains(".site-main--showcase { max-width: 1440px; }", showcase);
+        Assert.Contains(".showcase-cover { display: block; width: 100%; height: 100%; min-height: 440px; padding: var(--space-5); object-fit: contain; }", showcase);
+        Assert.Contains("@media (max-width: 900px)", showcase);
+        Assert.Contains(".showcase-visual { min-height: 0; aspect-ratio: 16 / 9;", showcase);
+        Assert.DoesNotContain("<main class=\"site-main site-main--showcase\">", index);
+    }
+
+    [Fact]
+    public async Task A_bare_showcase_renders_intentional_hero_and_devlog_empty_states()
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        Seed(db, project => project.Description = "", withPost: false);
+
+        var body = BlogTestHost.Body(await Send(db, "GET", "/showcase/cedar-station", "?lang=en"));
+
+        Assert.Contains("showcase-head--plain", body);
+        Assert.Contains("<span class=\"showcase-monogram\">C</span>", body);
+        Assert.Contains("No project description has been added yet.", body);
+        Assert.Contains("<div class=\"showcase-empty\">", body);
+        Assert.Contains("Nothing published yet.", body);
+        Assert.Contains("Public project updates will appear here.", body);
+        Assert.DoesNotContain("<dl class=\"showcase-facts\"", body);
+    }
+
+    [Fact]
     public async Task Layout_order_and_visibility_drive_the_public_page()
     {
         using var db = BlogTestHost.EmptyDatabase();
@@ -120,6 +158,7 @@ public class ShowcaseSiteTests
         Assert.Contains("Why it exists", body);
         Assert.Contains("A calm authored section.", body);
         Assert.DoesNotContain("Devlog", body);
+        Assert.DoesNotContain("Записи девлога", body);
         Assert.True(body.IndexOf("Cedar Station", StringComparison.Ordinal) < body.IndexOf("Why it exists", StringComparison.Ordinal));
     }
 

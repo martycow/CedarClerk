@@ -73,8 +73,7 @@
     gap: var(--space-3);
     flex: none;
     width: 100%;
-    max-width: 1120px;
-    margin-inline: auto;
+    margin-inline: 0 auto;
     margin-bottom: var(--space-5);
 }
 
@@ -88,19 +87,21 @@
    a bounded measure. */
 .settings-body {
     display: grid;
-    grid-template-columns: minmax(0, 760px);
+    grid-template-columns: minmax(0, var(--measure-form));
     justify-content: start;
     gap: var(--space-6);
     align-items: start;
     width: 100%;
-    max-width: 1120px;
-    margin-inline: auto;
+    margin-inline: 0 auto;
     min-width: 0;
     box-sizing: border-box;
 }
 
 .settings-body.has-index {
-    grid-template-columns: 200px minmax(0, 760px);
+    grid-template-columns:
+        minmax(var(--pane-list-min), var(--pane-list-max))
+        minmax(0, var(--measure-form));
+    gap: var(--pane-gap);
 }
 
 .section-index.is-side {
@@ -310,6 +311,8 @@
     color: var(--ok);
     font-weight: 500;
 }
+
+.language-status { margin: var(--space-2) 0 0; }
 
 /* ---------- Subscription ---------- */
 .status-dot {
@@ -665,8 +668,8 @@
     background: #5865F2;
 }
 
-/* Bounded like the drafts folder list (260px): an account in a hundred chats must not push the
-   rest of the page below the fold. */
+/* The shell owns normal-page vertical scrolling. Keeping the channel lists in document flow
+   avoids a second wheel region inside the settings column. */
 .target-list {
     list-style: none;
     margin: 0;
@@ -674,8 +677,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    max-height: 260px;
-    overflow-y: auto;
     width: 100%;
     box-sizing: border-box;
 }
@@ -745,10 +746,27 @@
     flex-wrap: wrap;
 }
 
-.connect-row input {
-    flex: 1;
-    min-width: 160px;
+.field-control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
 }
+
+.field-control > label {
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+}
+
+.field-control > input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.connect-row .field-control { flex: 1 1 var(--pane-list-min); }
+.labelled-connect-row > app-button { align-self: flex-end; }
 
 .planned-row {
     display: flex;

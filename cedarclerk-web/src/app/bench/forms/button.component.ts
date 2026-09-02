@@ -71,7 +71,10 @@ export type ButtonSurface = 'paper' | 'chrome';
         .btn:disabled { opacity: .6; cursor: default; }
         .btn[aria-disabled="true"] { opacity: .6; cursor: default; pointer-events: none; }
 
-        :host([data-surface="paper"]) .btn { min-height: var(--hit-target); font-size: var(--fs-ui); }
+        :host([data-surface="paper"]) .btn {
+            min-height: var(--hit-surface, var(--hit-target));
+            font-size: var(--fs-ui);
+        }
         :host([data-surface="paper"]) .btn.md { padding: 0 14px; }
         /* The floor is read, not fought: a component rule out-specifies the global coarse-pointer
            one whatever that one says, so a control that names its own box has to name it as the

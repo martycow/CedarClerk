@@ -8,6 +8,7 @@ import { Sprint, SprintsService } from '../core/sprints.service';
 import { BuildsService } from '../core/builds.service';
 import { en } from '../core/i18n/en';
 import { AssetsService } from '../core/assets.service';
+import { setDisplayTimeZone } from '../core/display-time';
 
 const SPRINT: Sprint = {
     id: 's1', projectId: 'p1', number: 4, name: 'Autumn build',
@@ -40,11 +41,16 @@ const TASKS: GameTask[] = [
 
 class FakeTasks {
     created: unknown[] = [];
+    updated: { id: string; input: Record<string, unknown> }[] = [];
     links: unknown[] = [];
     async list() { return structuredClone(TASKS); }
     async create(_projectId: string, input: unknown) {
         this.created.push(input);
         return task({ id: 'created', ...(input as Partial<GameTask>) });
+    }
+    async update(id: string, input: Record<string, unknown>) {
+        this.updated.push({ id, input });
+        return { ...(TASKS.find(item => item.id === id) ?? task({ id })), ...input };
     }
     async link(taskId: string, type: string, id: string) { this.links.push({ taskId, type, id }); }
 }
@@ -74,6 +80,7 @@ describe('project tasks', () => {
 
     async function create() {
         localStorage.removeItem('cedar.taskView');
+        setDisplayTimeZone('America/Los_Angeles');
         tasksApi = new FakeTasks();
         assetsApi = new FakeAssets();
         TestBed.configureTestingModule({
@@ -161,7 +168,7 @@ describe('project tasks', () => {
     });
 
     // ADR-239 clause 8 — an empty column names what lands in it, never "nothing here".
-    it('names the next action in every empty column', () => {
+    it('keeps one primary zero-state action and four contextual column placements', () => {
         fixture.componentInstance.tasks.set([]);
         fixture.detectChanges();
 
@@ -170,9 +177,38 @@ describe('project tasks', () => {
         expect(column(t.status.in_progress).querySelector('app-empty-state')?.textContent).toContain(t.emptyInProgress);
         expect(column(t.status.done).querySelector('app-empty-state')?.textContent).toContain(t.emptyDone);
 
-        const createButtons = [...el().querySelectorAll('app-page-header app-button')]
+        const headerCreateButtons = [...el().querySelectorAll('app-page-header app-button')]
             .filter(button => button.textContent?.trim() === t.newTask);
-        expect(createButtons.length).toBe(1);
+        expect(headerCreateButtons).toEqual([]);
+
+        const zeroCreate = column(t.status.backlog).querySelector<HTMLButtonElement>('app-empty-state app-button button')!;
+        expect(zeroCreate.textContent?.trim()).toBe(t.newTask);
+        expect(el().querySelectorAll('.column-head app-button').length).toBe(4);
+
+        zeroCreate.click();
+        fixture.detectChanges();
+        expect(fixture.componentInstance.creating()).toBe(true);
+        expect(fixture.componentInstance.newStatus()).toBe('backlog');
+
+        fixture.componentInstance.creating.set(false);
+        fixture.detectChanges();
+        const plannedPlacement = column(t.status.planned).querySelector<HTMLButtonElement>('.column-head app-button button')!;
+        plannedPlacement.click();
+        fixture.detectChanges();
+        expect(fixture.componentInstance.creating()).toBe(true);
+        expect(fixture.componentInstance.newStatus()).toBe('planned');
+
+        fixture.componentInstance.creating.set(false);
+        fixture.componentInstance.setView('list');
+        fixture.detectChanges();
+        expect(el().querySelector('app-empty-state.list-empty app-button')?.textContent?.trim()).toBe(t.newTask);
+    });
+
+    it('shows a compact visible label on the toolbar search', () => {
+        const search = el().querySelector('app-input.search-input')!;
+        expect(search.getAttribute('data-surface')).toBe('chrome');
+        expect(search.querySelector('label')?.textContent?.trim()).toBe(t.search);
+        expect(search.querySelector('label')?.getAttribute('for')).toBe('tasks-search');
     });
 
     it('creates a named, described task and links every uploaded file', async () => {
@@ -202,5 +238,86 @@ describe('project tasks', () => {
             { taskId: 'created', type: 'attachment', id: 'asset-2' },
         ]);
         expect(component.creating()).toBe(false);
+    });
+
+    it('names the edit card and gives the public-roadmap choice the full field grid', () => {
+        const component = fixture.componentInstance;
+        component.openTaskId.set('t1');
+        component.beginEdit(TASKS[0]);
+        fixture.detectChanges();
+
+        const modal = el().querySelector('app-modal')!;
+        expect(modal.querySelector('[modal-title]')?.textContent).toContain(t.editTask);
+        expect(modal.querySelector('app-input.task-title-input label')?.textContent?.trim()).toBe(t.fieldName);
+        expect(modal.querySelector('.roadmap-field')).not.toBeNull();
+        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+    });
+
+    it('keeps every editable value local until one Save payload, including the free-text assignee', async () => {
+        const component = fixture.componentInstance;
+        const opened = TASKS[0];
+        component.beginEdit(opened);
+        component.draftTitle.set('Release trailer');
+        component.draftDescription.set('Capture the final build.');
+        component.draftAssignee.set('Freelance capture artist');
+        component.draftDue.set('2026-08-11');
+        component.draftStatus.set('planned');
+        component.draftPriority.set(3);
+        component.draftSprintId.set('s1');
+        component.draftBuildId.set('b1');
+        component.draftPublicRoadmap.set(true);
+
+        expect(tasksApi.updated).toEqual([]);
+        await component.saveEdits(opened);
+
+        expect(tasksApi.updated).toEqual([{
+            id: 't1',
+            input: {
+                title: 'Release trailer',
+                description: 'Capture the final build.',
+                assignee: 'Freelance capture artist',
+                status: 'planned',
+                priority: 3,
+                isPublicRoadmap: true,
+                dueAt: '2026-08-11T07:00:00.000Z',
+                sprintId: 's1',
+                buildId: 'b1',
+            },
+        }]);
+    });
+
+    it('round-trips a due civil date in the account timezone and does not mark its last hour overdue', async () => {
+        const component = fixture.componentInstance;
+        const opened = task({ id: 'tz', dueAt: '2026-08-10T15:00:00.000Z' });
+        setDisplayTimeZone('Asia/Tokyo');
+
+        component.beginEdit(opened);
+        expect(component.draftDue()).toBe('2026-08-11');
+        await component.saveEdits(opened);
+        expect(tasksApi.updated.at(-1)?.input['dueAt']).toBe('2026-08-10T15:00:00.000Z');
+
+        setDisplayTimeZone('America/Los_Angeles');
+        const pacificDue = task({ dueAt: '2026-08-11T07:00:00.000Z' });
+        expect(component.overdue(pacificDue, new Date('2026-08-12T06:59:00.000Z'))).toBe(false);
+        expect(component.overdue(pacificDue, new Date('2026-08-12T07:00:00.000Z'))).toBe(true);
+    });
+
+    it('marks done through the same Save payload without losing typed fields', async () => {
+        const component = fixture.componentInstance;
+        const opened = TASKS[1];
+        component.beginEdit(opened);
+        component.draftTitle.set('Cave lighting pass');
+        component.draftAssignee.set('Alex — external');
+
+        await component.toggleDone(opened);
+
+        expect(tasksApi.updated.at(-1)).toEqual(expect.objectContaining({
+            id: 't2',
+            input: expect.objectContaining({
+                title: 'Cave lighting pass',
+                assignee: 'Alex — external',
+                status: 'done',
+            }),
+        }));
     });
 });

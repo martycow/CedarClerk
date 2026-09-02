@@ -26,10 +26,6 @@ export class DebugLogService {
     inFlightCount = computed(() => this.entries().filter(e => e.inFlight).length);
     errorCount = computed(() => this.entries().filter(e => e.isError && !e.inFlight).length);
 
-    // Open state lives here rather than in the component: the drawer is a controlled component,
-    // so the one thing it cannot own is whether it is open.
-    open = signal(false);
-
     start(method: string, url: string, requestBody: unknown): DebugLogEntry {
         const entry: DebugLogEntry = {
             id: ++this.seq,

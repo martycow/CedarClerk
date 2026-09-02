@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-09-02 — One UI across the eighteen-screen set (ADR-246)
+
+The supplied 3440×1392 screenshots are now one acceptance set rather than a list of local CSS
+patches. The sidebar has one persisted expanded/rail choice on every route, retains the same grouped
+navigation and Project context in both modes, and no longer changes shape when the Editor opens.
+Pages declare a shared focus, form, operational or showcase measure; bounded list and inspector
+tracks give the working surface the remaining width, and the common responsive flow stacks them
+before content clips. The Editor sheet includes its gutters in that width, and its Details inspector
+keeps the shared two-column contract.
+
+Lists, selected rows, pick-one controls and empty states now share visible and programmatic state.
+Forms, Presets and Teams expose one creation path instead of duplicating a header action beside an
+empty card. Calendar, Planner, Tasks, Dialogues, Assets, Settings and Posts use one vertical scroll
+owner, wrap long metadata, and keep their actions inside their panels. Appearance, payment and
+export choices expose `aria-pressed`, `aria-checked` or `aria-current` as appropriate. Modal,
+popover, search, console, feedback and Project-switcher surfaces coordinate through one overlay
+stack with focus trapping, focus restoration, an inert background and topmost-first Escape.
+
+Discovery keeps its privacy and eligibility rules but presents a compact editorial stage: search,
+lenses and Shuffle form one band; only sections with real material render; the honest zero state
+explains how to publish into the commons instead of repeating empty feeds and zero-count categories.
+Its short state now holds the footer at the viewport edge. The public Showcase has its own bounded
+1440px Project composition: a cover-or-monogram hero, positive-only real-content facts, paper
+section cards and deliberate About/Devlog empty states, with uncropped key art at every breakpoint.
+The public Showcase and all authenticated screenshot surfaces were rendered at the source size;
+the responsive pass also covered 1440×900 and 900×900, both sidebar modes, populated and empty
+states, Editor history and Feedback. No visible document-level horizontal overflow remained.
+
+Validation: `cedar test --smoke` is green with 2,591 results (1,947 backend, 568 frontend and 76
+Playwright; 17 conditional skips), including icon, contrast and density contracts. `cedar build
+--no-desktop` produced the Angular and portable server release. Nothing was deployed.
+
 ## 2026-09-02 — Project pages and account time (T-357, T-323, T-322)
 
 Showcase is now an ordered, versioned page rather than a fixed game template. Its editor has a

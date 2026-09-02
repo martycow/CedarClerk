@@ -111,6 +111,12 @@ working centre is `minmax(--pane-working-min, 1fr)`. A pane owns its contents an
 must not copy a 280/300/320/340px dock width into component CSS. One visual axis has one scroll owner,
 and every grid child that may shrink declares `min-width: 0` and `min-height: 0`.
 
+The modifiers name the actual topology: `.is-two` is list + working pane and `.is-main-inspector` is
+working pane + inspector. A generic three-pane workspace becomes one natural-height column below
+1320px; main + inspector follows at 1100px, and two-pane workspaces at 900px. The stacked workspace
+owns vertical scrolling, while its `.split-pane` children release their internal overflow. A page may
+switch the shared split off entirely when an optional pane is closed; it must not leave an empty track.
+
 ### Density (tokens v2, ADR-071)
 Comfortable is the default, declared in `:root`; `[data-density="compact"]` overrides it on a page root. **Not one colour differs between the two** — density is spacing, size, radius and separation only.
 ```

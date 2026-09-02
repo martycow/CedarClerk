@@ -75,6 +75,8 @@ public static partial class BlogEndpoints
         var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
         var mainBase = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
         var layout = ShowcaseLayouts.Parse(project.ShowcaseBlocksJson);
+        var visibleBlocks = layout.Blocks.Where(b => b.Visible).ToList();
+        var visibleKinds = visibleBlocks.Select(b => b.Kind).ToHashSet(StringComparer.Ordinal);
         var links = ParseShowcaseLinks(project.ShowcaseLinks);
         var gallery = ShowcaseGallery.Parse(project.ShowcaseGallery);
         var sb = new StringBuilder();
@@ -85,46 +87,102 @@ public static partial class BlogEndpoints
                 sb.Append("<p class=\"showcase-desc\">").Append(Html(body)).Append("</p>");
         }
 
-        foreach (var block in layout.Blocks.Where(b => b.Visible))
+        void EmptyState(string title, string? detail = null)
+        {
+            sb.Append("<div class=\"showcase-empty\"><span class=\"showcase-empty-mark\" aria-hidden=\"true\"></span><div class=\"showcase-empty-copy\"><strong>")
+              .Append(Html(title)).Append("</strong>");
+            if (detail is { Length: > 0 })
+                sb.Append("<span>").Append(Html(detail)).Append("</span>");
+            sb.Append("</div></div>");
+        }
+
+        void HeroFact(int count, string label)
+        {
+            sb.Append("<div class=\"showcase-fact\"><dt>").Append(Html(label))
+              .Append("</dt><dd class=\"num\">").Append(count).Append("</dd></div>");
+        }
+
+        sb.Append("<article class=\"showcase-page\">");
+        foreach (var block in visibleBlocks)
         {
             switch (block.Kind)
             {
                 case ShowcaseBlockKinds.Hero:
-                    sb.Append("<div class=\"showcase-head\">");
+                    var hasCover = project.CoverUrl is { Length: > 0 };
+                    sb.Append("<header class=\"showcase-head ")
+                      .Append(hasCover ? "showcase-head--with-cover" : "showcase-head--plain")
+                      .Append("\"><div class=\"showcase-visual\">");
                     if (project.CoverUrl is { Length: > 0 } cover)
-                        sb.Append("<img class=\"showcase-cover\" src=\"").Append(MediaSrc(cover, mainBase)).Append("\" alt=\"\">");
+                        sb.Append("<img class=\"showcase-cover\" src=\"").Append(MediaSrc(cover, mainBase))
+                          .Append("\" alt=\"\" decoding=\"async\" fetchpriority=\"high\">");
+                    else
+                    {
+                        var trimmedName = project.Name.Trim();
+                        var initial = trimmedName.Length == 0 ? "" : StringInfo.GetNextTextElement(trimmedName).ToUpperInvariant();
+                        sb.Append("<div class=\"showcase-cover-placeholder\" aria-hidden=\"true\"><span class=\"showcase-monogram\">")
+                          .Append(Html(initial)).Append("</span></div>");
+                    }
+                    sb.Append("</div>");
                     sb.Append("<div class=\"showcase-head-text\">");
-                    if (block.Title is { Length: > 0 } kicker)
-                        sb.Append("<span class=\"label\">").Append(Html(kicker)).Append("</span>");
+                    sb.Append("<span class=\"showcase-kicker\">")
+                      .Append(Html(block.Title ?? (en ? "Project showcase" : "Страница проекта")))
+                      .Append("</span>");
                     sb.Append("<h1>").Append(Html(project.Name)).Append("</h1>");
                     var heroBody = block.Body ?? project.Description;
                     if (heroBody.Length > 0)
                         sb.Append("<p class=\"showcase-desc\">").Append(Html(heroBody)).Append("</p>");
-                    sb.Append("<p class=\"post-game\"><a href=\"").Append(ShowcasePath(ctx, project, "/press")).Append("\">")
-                      .Append(en ? "Press kit" : "Пресс-кит").Append("</a></p></div></div>");
+                    else
+                        sb.Append("<p class=\"showcase-hero-empty\">")
+                          .Append(en ? "No project description has been added yet." : "Описание проекта пока не добавлено.")
+                          .Append("</p>");
+                    sb.Append("<div class=\"showcase-hero-actions\"><a class=\"showcase-press-link\" href=\"")
+                      .Append(ShowcasePath(ctx, project, "/press")).Append("\">")
+                      .Append(en ? "Press kit" : "Пресс-кит").Append("</a></div>");
+
+                    var hasPostFact = visibleKinds.Contains(ShowcaseBlockKinds.Devlog) && posts.Count > 0;
+                    var hasGalleryFact = visibleKinds.Contains(ShowcaseBlockKinds.Gallery) && gallery.Count > 0;
+                    var hasDownloadFact = visibleKinds.Contains(ShowcaseBlockKinds.Downloads) && downloads.Count > 0;
+                    if (hasPostFact || hasGalleryFact || hasDownloadFact)
+                    {
+                        sb.Append("<dl class=\"showcase-facts\" aria-label=\"")
+                          .Append(en ? "Project highlights" : "О проекте в цифрах").Append("\">");
+                        if (hasPostFact) HeroFact(posts.Count, en ? "Devlog entries" : "Записи девлога");
+                        if (hasGalleryFact) HeroFact(gallery.Count, en ? "Screenshots" : "Скриншоты");
+                        if (hasDownloadFact) HeroFact(downloads.Count, en ? "Public builds" : "Публичные сборки");
+                        sb.Append("</dl>");
+                    }
+                    sb.Append("</div></header>");
                     break;
 
                 case ShowcaseBlockKinds.About:
+                    sb.Append("<section class=\"showcase-block showcase-block--about\">");
                     SectionIntro(block, en ? "About" : "О проекте");
+                    if (block.Body is not { Length: > 0 })
+                        EmptyState(en ? "No description has been added." : "Описание пока не добавлено.");
+                    sb.Append("</section>");
                     break;
 
                 case ShowcaseBlockKinds.Links when links.Count > 0:
-                    if (block.Title is { Length: > 0 }) SectionIntro(block, "");
+                    sb.Append("<section class=\"showcase-block showcase-block--links\">");
+                    SectionIntro(block, en ? "Find the project" : "Где найти проект");
                     sb.Append("<div class=\"showcase-links\">");
                     for (var i = 0; i < links.Count; i++)
                         sb.Append("<a class=\"showcase-link\" rel=\"noopener\" target=\"_blank\" href=\"")
                           .Append(ShowcasePath(ctx, project, $"/go/{i}")).Append("\">")
                           .Append(Html(links[i].Label)).Append("</a>");
-                    sb.Append("</div>");
+                    sb.Append("</div></section>");
                     break;
 
                 case ShowcaseBlockKinds.Trailer when YouTubeLink.EmbedUrl(project.ShowcaseTrailerUrl) is { } embed:
-                    if (block.Title is { Length: > 0 }) SectionIntro(block, "");
+                    sb.Append("<section class=\"showcase-block showcase-block--trailer\">");
+                    SectionIntro(block, en ? "Trailer" : "Трейлер");
                     sb.Append("<div class=\"showcase-trailer\"><iframe src=\"").Append(Html(embed))
-                      .Append("\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div>");
+                      .Append("\" loading=\"lazy\" title=\"").Append(en ? "Project trailer" : "Трейлер проекта")
+                      .Append("\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div></section>");
                     break;
 
                 case ShowcaseBlockKinds.Gallery when gallery.Count > 0:
+                    sb.Append("<section class=\"showcase-block showcase-block--gallery\">");
                     SectionIntro(block, en ? "Gallery" : "Галерея");
                     sb.Append("<div class=\"showcase-gallery\">");
                     foreach (var image in gallery)
@@ -134,10 +192,11 @@ public static partial class BlogEndpoints
                           .Append("\" target=\"_blank\" rel=\"noopener\"><img src=\"").Append(src)
                           .Append("\" loading=\"lazy\" alt=\"\"></a>");
                     }
-                    sb.Append("</div>");
+                    sb.Append("</div></section>");
                     break;
 
                 case ShowcaseBlockKinds.Downloads when downloads.Count > 0:
+                    sb.Append("<section class=\"showcase-block showcase-block--downloads\">");
                     SectionIntro(block, en ? "Downloads" : "Скачать");
                     sb.Append("<div class=\"download-list\">");
                     foreach (var build in downloads)
@@ -151,13 +210,15 @@ public static partial class BlogEndpoints
                             sb.Append("<span class=\"download-notes\">").Append(Html(Shorten(notes))).Append("</span>");
                         sb.Append("</a>");
                     }
-                    sb.Append("</div>");
+                    sb.Append("</div></section>");
                     break;
 
                 case ShowcaseBlockKinds.Devlog:
+                    sb.Append("<section class=\"showcase-block showcase-block--devlog\">");
                     SectionIntro(block, en ? "Devlog" : "Девлог");
                     if (posts.Count == 0)
-                        sb.Append(en ? "<p class=\"empty\">Nothing published yet.</p>" : "<p class=\"empty\">Пока ничего не опубликовано.</p>");
+                        EmptyState(en ? "Nothing published yet." : "Пока ничего не опубликовано.",
+                            en ? "Public project updates will appear here." : "Здесь появятся публичные новости проекта.");
                     else
                     {
                         sb.Append("<div class=\"post-list\">");
@@ -173,15 +234,19 @@ public static partial class BlogEndpoints
                         }
                         sb.Append("</div>");
                     }
+                    sb.Append("</section>");
                     break;
 
                 case ShowcaseBlockKinds.Follow:
+                    sb.Append("<aside class=\"showcase-block showcase-block--follow\">");
                     if (block.Title is { Length: > 0 } || block.Body is { Length: > 0 })
                         SectionIntro(block, en ? "Follow" : "Следить за проектом");
                     sb.Append(RenderFollowForm(ctx, project, en));
+                    sb.Append("</aside>");
                     break;
 
                 case ShowcaseBlockKinds.Roadmap when roadmap.Count > 0:
+                    sb.Append("<section class=\"showcase-block showcase-block--roadmap\">");
                     SectionIntro(block, en ? "Roadmap" : "Роадмап");
                     sb.Append("<div class=\"roadmap-list\">");
                     foreach (var task in roadmap)
@@ -196,10 +261,11 @@ public static partial class BlogEndpoints
                         sb.Append("<div class=\"roadmap-row\"><span class=\"roadmap-status ").Append(tone).Append("\">")
                           .Append(label).Append("</span><span class=\"roadmap-title\">").Append(Html(task.Title)).Append("</span></div>");
                     }
-                    sb.Append("</div>");
+                    sb.Append("</div></section>");
                     break;
             }
         }
+        sb.Append("</article>");
 
         // A showcase on its own domain has no blog around it to go back to.
         var backLink = ctx.RequestServices.GetService<TenantContext>()?.ShowcaseSlug is not null
@@ -218,7 +284,8 @@ public static partial class BlogEndpoints
         meta += $"<link rel=\"alternate\" type=\"application/rss+xml\" title=\"{Html(project.Name)}\" href=\"{ShowcasePath(ctx, project, "/rss.xml")}\">";
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta));
+        await ctx.Response.WriteAsync(PageShell(project.Name, body, pageLang, RenderHeader(channel, pageLang), meta,
+            mainClass: "site-main--showcase"));
     }
 
     /// <summary>

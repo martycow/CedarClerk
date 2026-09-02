@@ -1,4 +1,4 @@
-<div class="page cal-page">
+<div class="page cal-page" data-layout="operational">
     <app-page-header [title]="periodLabel()" [meta]="headerMeta()">
         <div secondary class="cal-controls">
             <div class="seg" role="group" [attr.aria-label]="t().calendar.views">
@@ -21,9 +21,11 @@
                 <app-icon name="caret-right" size="sm" [label]="periodForwardTitle()"></app-icon>
             </app-button>
         </div>
+        @if (!isVisiblePeriodEmpty()) {
         <app-button primary variant="pine" (clicked)="openScheduleDialog()">
             <app-icon name="plus" weight="bold" size="sm"></app-icon>{{ t().calendar.scheduleAction }}
         </app-button>
+        }
     </app-page-header>
 
     @if (loading()) {
@@ -31,8 +33,9 @@
     } @else {
         @if (error()) { <p class="error-box"><app-icon name="warning" size="sm"></app-icon>{{ error() }}</p> }
 
-        <div class="cal-layout" [class.with-queue]="queueOpen()">
-            <div class="card cal-card" [class.is-week]="view() === 'week'">
+        <div class="cal-layout" [class.split-workspace]="queueOpen()"
+             [class.is-main-inspector]="queueOpen()" [class.with-queue]="queueOpen()">
+            <div class="card cal-card split-pane" [class.is-week]="view() === 'week'">
                 <div class="cal-dows">
                     @for (dow of dowLabels(); track $index) { <div class="label cal-dow">{{ dow }}</div> }
                 </div>
@@ -47,33 +50,46 @@
                                     <span class="cal-d" [class.is-today]="cell.isToday"
                                           [attr.title]="cell.isToday ? t().calendar.today : null">{{ cell.date }}</span>
                                     @for (ticket of cell.tickets; track ticket.kind + ticket.id + ticket.sortKey) {
-                                        <button type="button" class="chip"
-                                                [class.is-sent]="ticket.status === 'Sent'"
-                                                [class.is-failed]="ticket.status === 'Failed'"
-                                                [class.is-slot]="ticket.kind === 'slot'"
-                                                [class.is-dashed]="ticket.kind === 'slot'"
-                                                [class.is-dragging]="draggingId() === ticket.id"
-                                                [draggable]="ticket.kind === 'post' && ticket.status === 'Pending'"
-                                                (dragstart)="onDragStart(ticket, $event)" (dragend)="onDragEnd()"
-                                                (click)="openTicket(ticket)"
-                                                [title]="ticket.kind === 'slot' ? t().calendar.slotTicketTitle(ticket.title) : networkLabel(ticket.network) + ' · ' + ticket.title + ' · ' + ticket.time">
-                                            <app-icon [name]="ticket.kind === 'slot' ? 'clock' : networkIcon(ticket.network)" size="xs"></app-icon>
-                                            <span class="chip-text">
-                                                @if (ticket.kind === 'slot') { {{ t().calendar.weeklySlot(ticket.time) }} }
-                                                @else { {{ ticket.time }} {{ ticket.title }} }
-                                            </span>
-                                        </button>
+                                        @if (ticket.kind === 'slot') {
+                                            <div class="chip is-slot is-dashed"
+                                                 [title]="t().calendar.slotTicketTitle(ticket.title)">
+                                                <app-icon name="clock" size="xs"></app-icon>
+                                                <span class="chip-text">{{ t().calendar.weeklySlot(ticket.time) }}</span>
+                                            </div>
+                                        } @else {
+                                            <button type="button" class="chip"
+                                                    [class.is-sent]="ticket.status === 'Sent'"
+                                                    [class.is-failed]="ticket.status === 'Failed'"
+                                                    [class.is-dragging]="draggingId() === ticket.id"
+                                                    [draggable]="ticket.status === 'Pending'"
+                                                    (dragstart)="onDragStart(ticket, $event)" (dragend)="onDragEnd()"
+                                                    (click)="openTicket(ticket)"
+                                                    [attr.aria-label]="ticket.status === 'Pending' ? t().calendar.rescheduleTicketTitle(ticket.title, ticket.time) : null"
+                                                    [title]="ticket.status === 'Pending' ? t().calendar.rescheduleTicketTitle(ticket.title, ticket.time) : networkLabel(ticket.network) + ' · ' + ticket.title + ' · ' + ticket.time">
+                                                <app-icon [name]="networkIcon(ticket.network)" size="xs"></app-icon>
+                                                <span class="chip-text">{{ ticket.time }} {{ ticket.title }}</span>
+                                            </button>
+                                        }
                                     }
                                 </div>
                             }
                         </div>
+                    }
+                    @if (isVisiblePeriodEmpty()) {
+                    <app-empty-state class="cal-empty" icon="calendar-blank"
+                                     [title]="isEmptyBoard() ? t().calendar.emptyTitle : t().calendar.emptyPeriodTitle"
+                                     [text]="isEmptyBoard() ? t().calendar.emptyText : t().calendar.emptyPeriodText">
+                        <app-button variant="paper" size="sm" (clicked)="openScheduleDialog()">
+                            {{ t().calendar.scheduleAction }}
+                        </app-button>
+                    </app-empty-state>
                     }
                 </div>
             </div>
 
             @if (queueOpen()) {
                 <!--Item 10 — slot CRUD lives on the calendar, where the dashed chips it produces are.-->
-                <aside class="card queue-card" [attr.aria-label]="t().calendar.queue.title">
+                <aside class="card queue-card split-pane" [attr.aria-label]="t().calendar.queue.title">
                     <div class="queue-head">
                         <span class="label">{{ t().calendar.queue.title }}</span>
                         <span class="queue-count">{{ slots().length }}</span>
@@ -102,21 +118,36 @@
                         }
 
                         <div class="queue-form">
-                            <input class="chat-input" [(ngModel)]="slotName" [placeholder]="t().calendar.queue.namePlaceholder">
-                            <select [(ngModel)]="slotTargetId" [attr.aria-label]="t().calendar.queue.destination">
-                                @for (target of slotTargets(); track target.id) {
-                                    <option [value]="target.id">{{ networkLabel(target.network) }} · {{ target.name }}</option>
-                                }
-                            </select>
-                            <div class="queue-form-row">
-                                <select [(ngModel)]="slotDay" [attr.aria-label]="t().calendar.queue.weekday">
-                                    @for (choice of weekdayChoices(); track choice.value) {
-                                        <option [ngValue]="choice.value">{{ choice.label }}</option>
+                            <label class="form-field">
+                                <span class="form-field-label">{{ t().calendar.queue.nameLabel }}</span>
+                                <input class="chat-input" [(ngModel)]="slotName" [placeholder]="t().calendar.queue.namePlaceholder">
+                            </label>
+                            <label class="form-field">
+                                <span class="form-field-label">{{ t().calendar.queue.destination }}</span>
+                                <select [(ngModel)]="slotTargetId">
+                                    @for (target of slotTargets(); track target.id) {
+                                        <option [value]="target.id">{{ networkLabel(target.network) }} · {{ target.name }}</option>
                                     }
                                 </select>
-                                <input type="time" [(ngModel)]="slotTime" [attr.aria-label]="t().calendar.queue.time">
+                            </label>
+                            <div class="queue-form-row">
+                                <label class="form-field">
+                                    <span class="form-field-label">{{ t().calendar.queue.weekday }}</span>
+                                    <select [(ngModel)]="slotDay">
+                                        @for (choice of weekdayChoices(); track choice.value) {
+                                            <option [ngValue]="choice.value">{{ choice.label }}</option>
+                                        }
+                                    </select>
+                                </label>
+                                <label class="form-field">
+                                    <span class="form-field-label">{{ t().calendar.queue.time }}</span>
+                                    <input type="time" [(ngModel)]="slotTime">
+                                </label>
                             </div>
-                            <input class="chat-input" [(ngModel)]="slotCategory" [placeholder]="t().calendar.queue.categoryPlaceholder">
+                            <label class="form-field">
+                                <span class="form-field-label">{{ t().calendar.queue.categoryLabel }}</span>
+                                <input class="chat-input" [(ngModel)]="slotCategory" [placeholder]="t().calendar.queue.categoryPlaceholder">
+                            </label>
                             <app-button variant="pine" size="sm" [disabled]="slotBusy() || !slotTargetId || !slotTime"
                                         (clicked)="createSlot()">
                                 <app-icon name="plus" weight="bold" size="xs"></app-icon>{{ t().calendar.queue.add }}
@@ -129,14 +160,32 @@
             }
         </div>
 
-        @if (isEmptyBoard()) {
-            <app-empty-state class="cal-empty" icon="calendar-blank" [title]="t().calendar.emptyTitle"
-                             [text]="t().calendar.emptyText">
-                <app-button variant="paper" size="sm" (clicked)="openScheduleDialog()">{{ t().calendar.scheduleAction }}</app-button>
-            </app-empty-state>
-        } @else {
+        @if (!isVisiblePeriodEmpty()) {
             <p class="margin-note cal-note">{{ t().calendar.dragHint }}</p>
         }
+    }
+
+    @if (rescheduleTicket(); as ticket) {
+        <app-modal [width]="440" (closed)="closeRescheduleDialog()">
+            <app-icon modal-icon name="calendar-blank" size="sm"></app-icon>
+            <span modal-title>{{ t().calendar.rescheduleTitle }}</span>
+
+            <div class="schedule-form">
+                <p class="reschedule-post">{{ ticket.title }}</p>
+                <label class="form-field">
+                    <span class="form-field-label">{{ t().calendar.rescheduleWhen }}</span>
+                    <input type="datetime-local" [(ngModel)]="rescheduleAt">
+                </label>
+                @if (rescheduleError()) { <p class="channel-error" role="alert">{{ rescheduleError() }}</p> }
+            </div>
+
+            <app-button modal-actions variant="paper" [disabled]="rescheduleBusy()"
+                        (clicked)="closeRescheduleDialog()">{{ t().common.cancel }}</app-button>
+            <app-button modal-actions variant="pine" [disabled]="!canReschedule()"
+                        (clicked)="confirmReschedule()">
+                {{ rescheduleBusy() ? t().common.loading : t().calendar.rescheduleAction }}
+            </app-button>
+        </app-modal>
     }
 
     @if (scheduleOpen()) {

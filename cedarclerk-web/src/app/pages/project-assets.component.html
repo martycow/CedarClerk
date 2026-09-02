@@ -1,7 +1,7 @@
 <!--ADR-164/ADR-239 — the kind chips are an index strip, the list is a scrolling card, the index's
 facts are the header's meta line, and the file the author opened is a card beside the list,
 because linking it to a document means choosing from a list the modal was covering.-->
-<div class="page" data-density="compact">
+<div class="page" data-layout="operational" data-density="compact">
     <app-page-header [title]="t().projects.assets.title" [kicker]="project()?.name ?? ''" [meta]="headerMeta()">
         <!--Re-scan needs the machine that holds the folder; changing the folder only needs a
         machine with a disk, since it picks a new one. One node per block, or the slot does not
@@ -138,8 +138,8 @@ because linking it to a document means choosing from a list the modal was coveri
                         <span class="label">{{ t().projects.assets.title }}</span>
                         @if (rangeLabel(); as range) { <span class="index-count">{{ range }}</span> }
                         <span class="spacer"></span>
-                        <label class="named-elsewhere" for="assets-search">{{ t().projects.assets.search }}</label>
-                        <app-input class="search" inputId="assets-search" [dense]="true" type="search" [value]="search()"
+                        <app-input class="search" inputId="assets-search" [dense]="true" type="search"
+                                   [label]="t().media.searchLabel" [value]="search()"
                                    [placeholder]="t().projects.assets.search"
                                    (valueChange)="onSearch($any($event) ?? '')" />
                         <app-index-tabs [items]="viewTabs()" [value]="view()"
@@ -163,7 +163,8 @@ because linking it to a document means choosing from a list the modal was coveri
                             <div class="asset-grid">
                                 @for (a of p.items; track a.id) {
                                     <button type="button" class="tile" [class.missing]="!!a.missingSince"
-                                            [class.is-on]="selected()?.id === a.id" (click)="open(a)">
+                                            [class.is-on]="selected()?.id === a.id"
+                                            [attr.aria-pressed]="selected()?.id === a.id" (click)="open(a)">
                                         <span class="preview">
                                             @if (a.missingSince) {
                                                 <app-icon name="warning" size="lg"></app-icon>
@@ -195,25 +196,26 @@ because linking it to a document means choosing from a list the modal was coveri
                                 }
                             </div>
                         } @else {
-                            <div class="asset-table">
-                                <div class="asset-row head-row">
-                                    <div>{{ t().projects.assets.colFile }}</div>
-                                    <div>{{ t().projects.assets.colType }}</div>
-                                    <div class="right">{{ t().projects.assets.colDetails }}</div>
-                                    <div>{{ t().projects.assets.colStatus }}</div>
+                            <div class="asset-table" role="grid" [attr.aria-label]="t().projects.assets.title">
+                                <div class="asset-row head-row" role="row">
+                                    <div role="columnheader">{{ t().projects.assets.colFile }}</div>
+                                    <div role="columnheader">{{ t().projects.assets.colType }}</div>
+                                    <div role="columnheader" class="right">{{ t().projects.assets.colDetails }}</div>
+                                    <div role="columnheader">{{ t().projects.assets.colStatus }}</div>
                                 </div>
                                 @for (a of p.items; track a.id) {
-                                    <div class="asset-row" [class.is-on]="selected()?.id === a.id"
-                                         (click)="open(a)" tabindex="0" (keydown.enter)="open(a)">
-                                        <div class="file-cell">
+                                    <div class="asset-row" role="row" [class.is-on]="selected()?.id === a.id"
+                                         [attr.aria-selected]="selected()?.id === a.id"
+                                         (click)="open(a)" tabindex="0" (keydown)="onAssetKeydown($event, a)">
+                                        <div class="file-cell" role="gridcell">
                                             <app-icon [name]="kindIcons[a.kind]" size="sm"></app-icon>
                                             <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
                                         </div>
-                                        <div>{{ t().projects.assets.kindOne[a.kind] }}</div>
-                                        <div class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM yyyy, HH:mm' }}</div>
+                                        <div role="gridcell">{{ t().projects.assets.kindOne[a.kind] }}</div>
+                                        <div role="gridcell" class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM yyyy, HH:mm' }}</div>
                                         <!-- "On disk" is a claim about *this* disk, and from a browser it would be
                                              false. Three states, not two. -->
-                                        <div [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
+                                        <div role="gridcell" [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
                                             @if (a.missingSince) {
                                                 {{ t().projects.assets.notFoundAtPath }}
                                             } @else if (isLocal()) {

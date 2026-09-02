@@ -1,5 +1,5 @@
 @if (open()) {
-<app-modal [width]="440" (closed)="close()">
+<app-modal [width]="440" overlayOwner="appearance" (closed)="close()">
     <app-icon modal-icon name="palette" size="sm"></app-icon>
     <span modal-title>{{ t().settings.appearance.title }}</span>
 
@@ -15,12 +15,21 @@
             </div>
         </div>
 
-        <div class="ap-accents">
-            @for (preset of accentPresets; track preset.name) {
-            <button class="ap-accent" [class.on]="isActivePreset(preset.hex)" (click)="pickAccentPreset(preset.hex)" [title]="preset.name">
-                <span class="ap-swatch" [style.background]="swatchHex(preset)"></span>
-            </button>
-            }
+        <div class="ap-field ap-accent-field">
+            <span class="ap-field-label">{{ t().settings.appearance.accentHint }}</span>
+            <div class="ap-accents" role="group" [attr.aria-label]="t().settings.appearance.accentHint">
+                @for (preset of accentPresets; track preset.name) {
+                <button type="button" class="ap-accent" [class.on]="isActivePreset(preset.hex)"
+                        [attr.aria-pressed]="isActivePreset(preset.hex)"
+                        [attr.aria-label]="t().settings.appearance.accentHint + ' — ' + preset.name"
+                        (click)="pickAccentPreset(preset.hex)" [title]="preset.name">
+                    <span class="ap-swatch" [style.background]="swatchHex(preset)"></span>
+                    @if (isActivePreset(preset.hex)) {
+                    <app-icon class="ap-accent-check" name="check" weight="bold" size="xs" />
+                    }
+                </button>
+                }
+            </div>
         </div>
         @if (appearanceError()) { <p class="ap-error">{{ appearanceError() }}</p> }
 

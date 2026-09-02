@@ -135,7 +135,7 @@
     gap: var(--space-1);
 }
 
-/* The last cell: the same box the cards stand in, so the grid stays one grid. */
+/* The zero/filter note uses the same footprint as a project card, so the grid does not jump. */
 .new-card {
     min-height: 262px;
 }

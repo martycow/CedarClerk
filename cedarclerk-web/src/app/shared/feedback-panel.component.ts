@@ -15,7 +15,7 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
     imports: [FormsModule, ModalComponent, IconComponent, ButtonComponent, LeafTagComponent],
     template: `
         @if (feedback.open()) {
-        <app-modal [width]="460" (closed)="close()">
+        <app-modal [width]="460" overlayOwner="feedback" (closed)="close()">
             <app-icon modal-icon name="chat-teardrop-dots" size="sm" />
             <span modal-title>{{ t().feedbackForm.title }}</span>
             <p class="fb-hint">{{ t().feedbackForm.hint }}</p>
@@ -73,7 +73,7 @@ export class FeedbackPanelComponent {
     protected readonly done = signal(false);
 
     close() {
-        this.feedback.open.set(false);
+        this.feedback.closeForm();
         this.message = '';
         this.error.set(null);
         this.done.set(false);

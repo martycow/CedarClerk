@@ -1,7 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, computed, inject, input, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { avatarFill } from '../core/avatar-color.util';
+import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 import { IconComponent } from '../shared/icon.component';
 
 export interface SidebarProject {
@@ -175,7 +176,7 @@ export interface SidebarProject {
         .side-project-item.is-on { font-weight: 700; background: var(--hover); }
     `],
 })
-export class ProjectSwitcherComponent {
+export class ProjectSwitcherComponent implements OnDestroy {
     readonly project = input<SidebarProject | null>(null);
     readonly projects = input<readonly SidebarProject[]>([]);
     readonly hint = input('');
@@ -184,9 +185,17 @@ export class ProjectSwitcherComponent {
     readonly fallbackLink = input<string | readonly unknown[]>('/projects');
 
     private readonly el = inject(ElementRef<HTMLElement>);
+    private readonly overlays = inject(OverlayCoordinatorService);
     private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
 
     protected readonly open = signal(false);
+    private readonly unregisterPeer = this.overlays.registerDismissablePeer(activeElement => {
+        const returnFocus = activeElement && this.el.nativeElement.contains(activeElement)
+            ? this.trigger()?.nativeElement ?? null
+            : null;
+        if (this.open()) this.open.set(false);
+        return returnFocus;
+    });
 
     protected readonly fill = computed(() => avatarFill(this.project()?.id ?? null));
     /** A project whose name the list has not answered yet says so rather than borrowing a word. */
@@ -204,6 +213,10 @@ export class ProjectSwitcherComponent {
     });
 
     toggle(): void { this.open.set(!this.open()); }
+
+    ngOnDestroy(): void {
+        this.unregisterPeer();
+    }
 
     onEscape(): void {
         if (!this.open()) return;

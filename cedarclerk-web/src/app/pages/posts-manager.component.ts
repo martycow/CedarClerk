@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -80,6 +80,8 @@ export class PostsManagerComponent implements OnInit {
     readonly docIcons = DOCUMENT_TYPE_ICONS;
     t = this.locale.t;
 
+    @ViewChild('presetSheetBody') private presetSheetBody?: ElementRef<HTMLElement>;
+
     tab = signal<ManagerTab>('posts');
     loading = signal(true);
     error = signal('');
@@ -133,6 +135,10 @@ export class PostsManagerComponent implements OnInit {
     // form, which made presets look like a property of a post; they aren't. Forms are authored
     // here as presets and chosen per post elsewhere.
     presets = signal<FormPreset[]>([]);
+    presetsLoading = signal(false);
+    presetsLoaded = signal(false);
+    presetLoadError = signal('');
+    private presetsLoadPromise: Promise<void> | null = null;
     selectedPresetId = signal<string | null>(null);
     presetName = '';
     readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
@@ -154,7 +160,7 @@ export class PostsManagerComponent implements OnInit {
         // The default tab is 'posts' and setTab() only runs for a ?tab= deep link, so without
         // this eager load a plain landing here never fetched the presets at all — the form
         // dropdown then claimed "no saved presets yet" over a non-empty library.
-        this.loadPresets();
+        void this.loadPresets();
         this.loadProjects();
         try {
             this.drafts.set(await this.draftsApi.list());
@@ -200,13 +206,19 @@ export class PostsManagerComponent implements OnInit {
         // Leaving the forms tab with unsaved preset edits commits them rather than dropping them.
         if (this.tab() === 'forms' && tab !== 'forms') this.flushPreset();
         this.tab.set(tab);
+        if (tab === 'forms') this.resetPresetScroll();
         // Presets are needed by both tabs now: authored on forms, applied to a post on posts.
-        if ((tab === 'forms' || tab === 'posts') && !this.presets().length) this.loadPresets();
+        if ((tab === 'forms' || tab === 'posts') && !this.presetsLoaded()) void this.loadPresets();
     }
 
     selected(): DraftMeta | null {
         const id = this.selectedId();
         return id ? this.drafts().find(d => d.id === id) ?? null : null;
+    }
+
+    selectFirstPost() {
+        const first = this.visiblePosts()[0];
+        if (first) void this.select(first);
     }
 
     // FI3.10 — newest published first, then everything unpublished. Search covers title and tags,
@@ -773,11 +785,34 @@ export class PostsManagerComponent implements OnInit {
 
     // ---------- Preset authoring (Forms tab) ----------
 
-    async loadPresets() {
+    loadPresets(): Promise<void> {
+        if (this.presetsLoaded()) return Promise.resolve();
+        if (!this.presetsLoadPromise) {
+            this.presetsLoadPromise = this.fetchPresets().finally(() => {
+                this.presetsLoadPromise = null;
+            });
+        }
+        return this.presetsLoadPromise;
+    }
+
+    private async fetchPresets() {
+        this.presetsLoading.set(true);
+        this.presetLoadError.set('');
         try {
-            this.presets.set(await this.presetsApi.list());
+            const remote = await this.presetsApi.list();
+            this.presets.update(current => {
+                const currentById = new Map(current.map(p => [p.id, p]));
+                const remoteIds = new Set(remote.map(p => p.id));
+                return [
+                    ...remote.map(p => currentById.get(p.id) ?? p),
+                    ...current.filter(p => !remoteIds.has(p.id)),
+                ];
+            });
+            this.presetsLoaded.set(true);
         } catch (e) {
-            this.error.set(httpErrorMessage(e, this.t().manager.errors.loadPresets));
+            this.presetLoadError.set(httpErrorMessage(e, this.t().manager.errors.loadPresets));
+        } finally {
+            this.presetsLoading.set(false);
         }
     }
 
@@ -805,6 +840,7 @@ export class PostsManagerComponent implements OnInit {
         this.presetForm.set(normalizeFormForEdit(p.formJson, p.language || DEFAULT_PRIMARY_LANGUAGE));
         this.presetState.set('saved');
         this.presetTranslateError.set('');
+        this.resetPresetScroll();
     }
 
     // Created immediately rather than held as a local draft: a preset with no id has nowhere to
@@ -816,14 +852,21 @@ export class PostsManagerComponent implements OnInit {
             const created = await this.presetsApi.create(
                 this.t().manager.forms.untitledPreset, JSON.stringify(blank), DEFAULT_PRIMARY_LANGUAGE);
             this.presets.update(list => [...list, created]);
+            this.presetsLoaded.set(true);
             this.selectedPresetId.set(created.id);
             this.presetName = created.name;
             this.presetForm.set(blank);
             this.presetState.set('saved');
             this.presetTranslateError.set('');
+            this.resetPresetScroll();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.savePreset));
         }
+    }
+
+    private resetPresetScroll() {
+        const body = this.presetSheetBody?.nativeElement;
+        if (body) body.scrollTop = 0;
     }
 
     private editPreset(next: RegistrationFormEdit) {

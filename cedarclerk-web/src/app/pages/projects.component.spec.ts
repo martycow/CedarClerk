@@ -103,16 +103,19 @@ describe('project index', () => {
         expect(stats).toContain(t.edited);
     });
 
-    // ADR-239 clause 8 — the last cell is the invitation to start the next project, and it is the
-    // whole screen when there is no project at all.
-    it('ends the grid with the start-a-project cell, and offers creation there when the list is empty', () => {
-        expect(el().querySelector('.cards app-empty-state.new-card')?.textContent).toContain(t.startNew);
+    it('declares the operational measure and keeps creation in one place for each data state', () => {
+        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+        expect(el().querySelectorAll('app-button').length).toBe(1);
+        expect(el().querySelector('app-page-header app-button')?.textContent).toContain(t.newProject);
+        expect(el().querySelector('.cards app-empty-state.new-card')).toBeNull();
 
         fixture.componentInstance.projects.set([]);
         fixture.detectChanges();
         expect(rows().length).toBe(0);
-        const buttons = [...el().querySelectorAll('.cards app-empty-state app-button')].map(b => b.textContent?.trim());
+        expect(el().querySelector('app-page-header app-button')).toBeNull();
+        const buttons = [...el().querySelectorAll('app-button')].map(b => b.textContent?.trim());
         expect(buttons).toEqual([t.newProject]);
+        expect(el().querySelector('.cards app-empty-state.new-card')?.textContent).toContain(t.startNew);
     });
 
     it('offers Blog with a post starter and an explicit name hint', () => {

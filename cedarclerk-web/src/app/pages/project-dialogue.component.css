@@ -10,8 +10,10 @@
 .d-grid {
     display: grid;
     flex: 1;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: var(--space-5);
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(var(--pane-inspector-min), var(--pane-inspector-max));
+    gap: var(--pane-gap);
     align-items: stretch;
     min-height: 0;
 }
@@ -164,7 +166,7 @@
     flex: none;
     flex-direction: column;
     gap: var(--space-2);
-    padding: var(--space-4) 18px;
+    padding: var(--space-4);
 }
 
 .dock-head {
@@ -224,6 +226,71 @@
     font-size: var(--fs-12);
 }
 
+.line-id-warning {
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-left: 3px solid var(--warn);
+    border-radius: var(--radius-sm);
+    background: var(--warn-soft);
+    color: var(--warn);
+    font-size: var(--fs-meta);
+}
+
+.language-picker {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.language-picker legend { margin-bottom: var(--space-1); }
+
+.language-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-1);
+}
+
+.language-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    min-height: var(--hit-target);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+    color: var(--text);
+    font-size: var(--fs-meta);
+    cursor: pointer;
+}
+
+.language-option:has(input:checked) {
+    border-color: var(--abord);
+    background: var(--asoft);
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.language-option input {
+    flex: none;
+    accent-color: var(--accent);
+}
+
+.language-code {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+}
+
+.language-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .error-line {
     margin: 0;
     color: var(--danger);
@@ -240,4 +307,19 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .d-grid {
+        flex: none;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .d-frame { min-height: var(--pane-working-min); }
+
+    .dock {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        overflow: visible;
+    }
 }

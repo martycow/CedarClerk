@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CedarClerk.Server;
 
@@ -18,6 +19,7 @@ public sealed record DeadLink(string Url, string Status);
 /// </summary>
 public class LinkCheckService(HttpClient http, Func<string, CancellationToken, Task<IPAddress[]>> resolveHost)
 {
+    [ActivatorUtilitiesConstructor]
     public LinkCheckService(HttpClient http) : this(http, Dns.GetHostAddressesAsync) { }
 
     public const int MaxLinks = 10;

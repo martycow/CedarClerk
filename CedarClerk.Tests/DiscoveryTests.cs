@@ -97,6 +97,14 @@ public class DiscoveryTests
         Assert.DoesNotContain("/og-default.png", body);
         Assert.Contains("for=\"discovery-search\"", body);
         Assert.Contains("Publish the first project", body);
+        Assert.Equal(1, Count(body, "href=\"/welcome#waitlist\""));
+        Assert.Contains("publicly published work", body);
+        Assert.Contains("explicitly opt in to Discovery", body);
+
+        var russian = Body(DiscoveryEndpoints.Render(true, snapshot, "all", null, ""));
+        Assert.Equal(1, Count(russian, "href=\"/welcome#waitlist\""));
+        Assert.Contains("публично опубликованные работы", russian);
+        Assert.Contains("сами включили показ в Discovery", russian);
     }
 
     [Fact]
@@ -147,6 +155,61 @@ public class DiscoveryTests
         Assert.Contains("category=games", body);
         Assert.DoesNotContain("category=hardware", body);
         Assert.DoesNotContain("category=other", body);
+    }
+
+    [Fact]
+    public void Search_lenses_and_shuffle_share_one_stateful_control_band()
+    {
+        var snapshot = Snapshot(
+            [
+                Item("project", "Mosslight One", DiscoveryCategories.Games),
+                Item("project", "Mosslight Two", DiscoveryCategories.Games),
+            ],
+            [],
+            eligible: 2,
+            screenshotSaturday: false);
+
+        var body = Body(DiscoveryEndpoints.Render(
+            false, snapshot, "projects", DiscoveryCategories.Games, "Mosslight"));
+        var controlsStart = body.IndexOf("<div class=\"stage-controls\">", StringComparison.Ordinal);
+
+        Assert.True(controlsStart >= 0);
+        var controlsEnd = body.IndexOf("</div>", controlsStart, StringComparison.Ordinal);
+        Assert.True(controlsEnd > controlsStart);
+        var controls = body[controlsStart..(controlsEnd + "</div>".Length)];
+        Assert.Equal(1, Count(body, "class=\"stage-controls\""));
+        Assert.Equal(1, Count(body, "class=\"search\""));
+        Assert.Contains("<form class=\"search\" method=\"get\" action=\"/discovery\">", controls);
+        Assert.Contains("<label for=\"discovery-search\">Search Discovery</label>", controls);
+        Assert.Contains("name=\"q\" value=\"Mosslight\"", controls);
+        Assert.Contains("name=\"lang\" value=\"en\"", controls);
+        Assert.Contains("name=\"type\" value=\"projects\"", controls);
+        Assert.Contains("name=\"category\" value=\"games\"", controls);
+        Assert.Contains("type=projects&lang=en&q=Mosslight\" aria-current=\"page\"", controls);
+        Assert.Contains("class=\"shuffle\"", controls);
+        Assert.Contains("&lang=en&type=projects&category=games&q=Mosslight", controls);
+        Assert.True(controls.IndexOf("class=\"search\"", StringComparison.Ordinal)
+            < controls.IndexOf("class=\"segments\"", StringComparison.Ordinal));
+        Assert.True(controls.IndexOf("class=\"segments\"", StringComparison.Ordinal)
+            < controls.IndexOf("class=\"shuffle\"", StringComparison.Ordinal));
+
+        var headerEnd = body.IndexOf("</header>", StringComparison.Ordinal);
+        Assert.InRange(headerEnd, 0, controlsStart - 1);
+        Assert.DoesNotContain("class=\"search\"", body[..headerEnd]);
+        Assert.Contains("/discovery?lang=ru&type=projects&category=games&q=Mosslight", body[..headerEnd]);
+    }
+
+    [Fact]
+    public void Discovery_declares_the_editorial_measure_contract()
+    {
+        var html = DiscoveryEndpoints.Render(false, Snapshot([], [], eligible: 0), "all", null, "");
+
+        Assert.Contains("<main data-layout=\"editorial\">", html);
+        Assert.Contains("body { min-height:100vh;", html);
+        Assert.Contains("main[data-layout=\"editorial\"] { flex:1 0 auto; }", html);
+        Assert.Contains(".wrap { width:min(1380px, calc(100% - 40px));", html);
+        Assert.Contains("calc((100vw - 1380px)/2)", html);
+        Assert.DoesNotContain("1180px", html);
     }
 
     private static DiscoveryEndpoints.Snapshot Snapshot(

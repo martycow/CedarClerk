@@ -89,6 +89,18 @@ describe('content calendar', () => {
         const cells = page().cells();
         expect(cells.length % 7).toBe(0);
         expect(cells.some(c => c.isToday)).toBe(true);
+        const root = fixture.nativeElement as HTMLElement;
+        expect(root.querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+        expect(root.querySelector('.cal-layout')?.classList.contains('split-workspace')).toBe(false);
+    });
+
+    it('adds the shared main-inspector split only while the queue is open', () => {
+        page().queueOpen.set(true);
+        fixture.detectChanges();
+
+        const layout = (fixture.nativeElement as HTMLElement).querySelector('.cal-layout')!;
+        expect(layout.classList.contains('split-workspace')).toBe(true);
+        expect(layout.classList.contains('is-main-inspector')).toBe(true);
     });
 
     it('a drop keeps the local time-of-day and writes the recomputed UTC back', async () => {
@@ -102,6 +114,29 @@ describe('content calendar', () => {
         expect(timeInZone(moved)).toBe('18:00');
         const movedPost = page().scheduled().find(p => p.id === 'p1')!;
         expect(movedPost.scheduledAtUtc).toBe(calendarApi.calls[0].at);
+    });
+
+    it('opens rescheduling from a pending ticket full hit area and writes the chosen account time', async () => {
+        const root = fixture.nativeElement as HTMLElement;
+        const ticket = [...root.querySelectorAll<HTMLButtonElement>('button.chip')]
+            .find(button => !button.classList.contains('is-sent') && button.textContent?.includes('Devlog #43'))!;
+        expect(ticket.getAttribute('aria-label')).toContain(page().t().calendar.rescheduleAction);
+
+        ticket.click();
+        fixture.detectChanges();
+        expect(page().rescheduleTicket()?.id).toBe('p1');
+        expect(root.querySelector('app-modal')?.textContent).toContain(page().t().calendar.rescheduleTitle);
+
+        const target = page().cells().find(c => c.inMonth && c.day > PENDING.day)!;
+        page().rescheduleAt = `${target.day}T09:30`;
+        await page().confirmReschedule();
+        fixture.detectChanges();
+
+        expect(calendarApi.calls.at(-1)?.id).toBe('p1');
+        expect(dayInZone(new Date(calendarApi.calls.at(-1)!.at))).toBe(target.day);
+        expect(timeInZone(new Date(calendarApi.calls.at(-1)!.at))).toBe('09:30');
+        expect(page().rescheduleTicket()).toBeNull();
+        expect(root.querySelector('app-modal')).toBeNull();
     });
 
     it('never lets a sent ticket start a drag', () => {
@@ -131,6 +166,53 @@ describe('content calendar', () => {
         expect(page().cells().some(c => c.tickets.some(t => t.kind === 'slot'))).toBe(true);
     });
 
+    it('counts only slot occurrences that land in visible cells', async () => {
+        page().stepPeriod(2);
+        await settle();
+        const firstDay = page().cells()[0].day;
+        const probe = new Date(`${firstDay}T00:00:00Z`);
+        probe.setUTCDate(probe.getUTCDate() - 1);
+        page().slots.set([{
+            id: 'edge-slot', targetId: 't1', targetName: 'Devlog', network: 'telegram',
+            name: 'Boundary slot', category: '', dayOfWeek: probe.getUTCDay(),
+            timeUtcMinutes: 0, isActive: true,
+        }]);
+        await settle();
+
+        const visible = page().cells().flatMap(cell => cell.tickets)
+            .filter(ticket => ticket.kind === 'slot').length;
+        expect(visible).toBeGreaterThan(0);
+        expect(page().openSlotCount()).toBe(visible);
+        expect(page().headerMeta().map(item => item.text)).toContain(page().t().calendar.openSlots(visible));
+    });
+
+    it('renders queue slots as information and gives the free-text fields visible labels', async () => {
+        const at = new Date(PENDING.iso);
+        page().slots.set([{
+            id: 's1', targetId: 't1', targetName: 'Devlog', network: 'telegram',
+            name: 'Evening slot', category: 'devlog', dayOfWeek: at.getUTCDay(),
+            timeUtcMinutes: at.getUTCHours() * 60 + at.getUTCMinutes(), isActive: true,
+        }]);
+        page().queueOpen.set(true);
+        await settle();
+
+        const root = fixture.nativeElement as HTMLElement;
+        const slotChip = root.querySelector('.chip.is-slot')!;
+        expect(slotChip.tagName).toBe('DIV');
+        expect(slotChip.closest('button')).toBeNull();
+        expect(slotChip.getAttribute('tabindex')).toBeNull();
+
+        const labels = [...root.querySelectorAll('.queue-form label.form-field')];
+        expect(labels.map(label => label.querySelector('.form-field-label')?.textContent?.trim())).toEqual([
+            page().t().calendar.queue.nameLabel,
+            page().t().calendar.queue.destination,
+            page().t().calendar.queue.weekday,
+            page().t().calendar.queue.time,
+            page().t().calendar.queue.categoryLabel,
+        ]);
+        expect(labels.every(label => !!label.querySelector('input, select'))).toBe(true);
+    });
+
     it('switches to a seven-day week over the same tickets', async () => {
         page().anchor.set(new Date(`${PENDING.day}T00:00:00Z`));
         page().setView('week');
@@ -138,6 +220,43 @@ describe('content calendar', () => {
 
         expect(page().cells()).toHaveLength(7);
         expect(page().cells().flatMap(c => c.tickets).map(t => t.id)).toContain('p1');
+    });
+
+    it('derives the empty state, legend and count from the visible period', async () => {
+        page().stepPeriod(2);
+        await settle();
+
+        expect(page().isEmptyBoard()).toBe(false);
+        expect(page().isVisiblePeriodEmpty()).toBe(true);
+        expect(page().pendingCount()).toBe(0);
+        expect(page().legendNetworks()).toEqual([]);
+
+        const root = fixture.nativeElement as HTMLElement;
+        const empty = root.querySelector('.cal-card .cal-weeks app-empty-state.cal-empty')!;
+        expect(empty.textContent).toContain(page().t().calendar.emptyPeriodTitle);
+        expect(root.querySelector('app-page-header app-button[primary]')).toBeNull();
+        const scheduleActions = [...root.querySelectorAll('app-button')]
+            .filter(button => button.textContent?.trim() === page().t().calendar.scheduleAction);
+        expect(scheduleActions).toHaveLength(1);
+
+        page().goToday();
+        await settle();
+        expect(page().isVisiblePeriodEmpty()).toBe(false);
+        expect(page().pendingCount()).toBe(1);
+        expect(page().legendNetworks()).toEqual(['telegram', 'bluesky']);
+        expect(root.querySelector('.cal-card app-empty-state')).toBeNull();
+        expect(root.querySelector('app-page-header app-button[primary]')).not.toBeNull();
+    });
+
+    it('uses the global zero-state copy only when the whole calendar is empty', async () => {
+        page().scheduled.set([]);
+        page().slots.set([]);
+        await settle();
+
+        const empty = (fixture.nativeElement as HTMLElement).querySelector('.cal-card app-empty-state')!;
+        expect(page().isEmptyBoard()).toBe(true);
+        expect(empty.textContent).toContain(page().t().calendar.emptyTitle);
+        expect(empty.textContent).not.toContain(page().t().calendar.emptyPeriodTitle);
     });
 
     it('paints a network by its fixed slot token, never a literal', () => {

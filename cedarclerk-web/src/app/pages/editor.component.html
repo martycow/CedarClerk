@@ -1,4 +1,4 @@
-<div class="app">
+<div class="app" data-layout="operational">
 
 
     <!--The publish checklist — a publication runs like a test suite: one row per phase, a thread
@@ -67,12 +67,12 @@
     <ng-template #tplText>
         <div class="tb-group" data-tb-group="text">
             <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><app-icon name="text-b" size="xs"></app-icon></button>
-                 <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><app-icon name="text-italic" size="xs"></app-icon></button>
-                 <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><app-icon name="text-underline" size="xs"></app-icon></button>
-                 <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><app-icon name="text-strikethrough" size="xs"></app-icon></button>
-                 <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="xs"></app-icon></button>
-                 <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><app-icon name="code" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [attr.aria-pressed]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')" [attr.aria-label]="t().editor.tb.bold"><app-icon name="text-b" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [attr.aria-pressed]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')" [attr.aria-label]="t().editor.tb.italic"><app-icon name="text-italic" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [attr.aria-pressed]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')" [attr.aria-label]="t().editor.tb.underline"><app-icon name="text-underline" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [attr.aria-pressed]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')" [attr.aria-label]="t().editor.tb.strike"><app-icon name="text-strikethrough" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [attr.aria-pressed]="isActive('spoiler')" [title]="t().editor.tb.spoiler" [attr.aria-label]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [attr.aria-pressed]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')" [attr.aria-label]="t().editor.tb.inlineCode"><app-icon name="code" size="xs"></app-icon></button>
             </div>
             <span class="tb-caption">{{ t().editor.groups.text }}</span>
         </div>
@@ -82,7 +82,7 @@
         <div class="tb-group" data-tb-group="insert">
             <div class="tb-row">
 
-                <button (click)="openInsertModal()" [class.on]="isActive('link')" [title]="t().editor.tb.insert" [attr.aria-label]="t().editor.tb.insert">
+                <button (click)="openInsertModal()" [class.on]="isActive('link')" [attr.aria-pressed]="isActive('link')" [title]="t().editor.tb.insert" [attr.aria-label]="t().editor.tb.insert">
                     <app-icon name="link" size="xs"></app-icon>
                 </button>
 
@@ -106,9 +106,9 @@
     <ng-template #tplLists>
         <div class="tb-group" data-tb-group="lists">
             <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="xs"></app-icon></button>
-                 <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="xs"></app-icon></button>
-                 <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [attr.aria-pressed]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')" [attr.aria-label]="t().editor.tb.bulletList"><app-icon name="list" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [attr.aria-pressed]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')" [attr.aria-label]="t().editor.tb.orderedList"><app-icon name="list-numbers" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [attr.aria-pressed]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')" [attr.aria-label]="t().editor.tb.taskList"><app-icon name="list-checks" size="xs"></app-icon></button>
                  <button (click)="indent()" [disabled]="!canIndent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="xs"></app-icon></button>
                  <button (click)="outdent()" [disabled]="!canOutdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="xs"></app-icon></button>
             </div>
@@ -184,13 +184,13 @@
 
 
 
-                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [attr.aria-pressed]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')" [attr.aria-label]="t().editor.tb.blockquote"><app-icon name="quotes" size="xs"></app-icon></button>
                 <!--Wave 2 item 17 — only over a quote: marks it expandable (Telegram folds it
                 natively; the blog renders a plain quote either way).-->
                 @if (isActive('blockquote')) {
-                <button (click)="toggleExpandableQuote()" [class.on]="isActive('blockquote', {expandable: true})" [title]="t().editor.tb.expandableQuote" [attr.aria-label]="t().editor.tb.expandableQuote"><app-icon name="caret-down" size="xs"></app-icon></button>
+                <button (click)="toggleExpandableQuote()" [class.on]="isActive('blockquote', {expandable: true})" [attr.aria-pressed]="isActive('blockquote', {expandable: true})" [title]="t().editor.tb.expandableQuote" [attr.aria-label]="t().editor.tb.expandableQuote"><app-icon name="caret-down" size="xs"></app-icon></button>
                 }
-                 <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><app-icon name="code-block" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [attr.aria-pressed]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')" [attr.aria-label]="t().editor.tb.codeBlock"><app-icon name="code-block" size="xs"></app-icon></button>
                  <button (click)="insertDivider()" [title]="t().editor.tb.divider" [attr.aria-label]="t().editor.tb.divider"><app-icon name="rows" size="xs"></app-icon></button>
             </div>
             <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
@@ -206,10 +206,10 @@
                 <app-popover>
                     <button trigger [title]="t().editor.groups.more" [attr.aria-label]="t().editor.groups.more"><app-icon name="dots-three" size="xs"></app-icon></button>
                     <div panel class="block-menu tb-more-menu">
-                        <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})"><app-icon name="text-align-left" size="xs"></app-icon> {{ t().editor.tb.alignLeft }}</button>
-                        <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})"><app-icon name="text-align-center" size="xs"></app-icon> {{ t().editor.tb.alignCenter }}</button>
-                        <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})"><app-icon name="text-align-right" size="xs"></app-icon> {{ t().editor.tb.alignRight }}</button>
-                        <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})"><app-icon name="text-align-justify" size="xs"></app-icon> {{ t().editor.tb.alignJustify }}</button>
+                        <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [attr.aria-pressed]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})"><app-icon name="text-align-left" size="xs"></app-icon> {{ t().editor.tb.alignLeft }}</button>
+                        <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [attr.aria-pressed]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})"><app-icon name="text-align-center" size="xs"></app-icon> {{ t().editor.tb.alignCenter }}</button>
+                        <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [attr.aria-pressed]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})"><app-icon name="text-align-right" size="xs"></app-icon> {{ t().editor.tb.alignRight }}</button>
+                        <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [attr.aria-pressed]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})"><app-icon name="text-align-justify" size="xs"></app-icon> {{ t().editor.tb.alignJustify }}</button>
                         <div class="popover-divider"></div>
                         <button (click)="openFormulaModal()"><app-icon name="sigma" size="xs"></app-icon> {{ t().editor.tb.formula }}</button>
                         <button (click)="insertToggle()"><app-icon name="list-dashes" size="xs"></app-icon> {{ t().editor.tb.toggleBlock }}</button>
@@ -376,12 +376,12 @@
         <span modal-title>{{ t().editor.groups.insert }}</span>
 
         <div class="format-toggle insert-type-rail">
-            <button [class.on]="insertType === 'auto'" (click)="insertType = 'auto'">{{ t().editor.groups.auto }}</button>
-            <button [class.on]="insertType === 'url'" (click)="insertType = 'url'">{{ t().editor.groups.link }}</button>
-            <button [class.on]="insertType === 'youtube'" (click)="insertType = 'youtube'">YouTube</button>
-            <button [class.on]="insertType === 'email'" (click)="insertType = 'email'">{{ t().editor.groups.email }}</button>
-            <button [class.on]="insertType === 'phone'" (click)="insertType = 'phone'">{{ t().editor.groups.phone }}</button>
-            <button [class.on]="insertType === 'mention'" (click)="insertType = 'mention'">{{ t().editor.groups.mention }}</button>
+            <button [class.on]="insertType === 'auto'" [attr.aria-pressed]="insertType === 'auto'" (click)="insertType = 'auto'">{{ t().editor.groups.auto }}</button>
+            <button [class.on]="insertType === 'url'" [attr.aria-pressed]="insertType === 'url'" (click)="insertType = 'url'">{{ t().editor.groups.link }}</button>
+            <button [class.on]="insertType === 'youtube'" [attr.aria-pressed]="insertType === 'youtube'" (click)="insertType = 'youtube'">YouTube</button>
+            <button [class.on]="insertType === 'email'" [attr.aria-pressed]="insertType === 'email'" (click)="insertType = 'email'">{{ t().editor.groups.email }}</button>
+            <button [class.on]="insertType === 'phone'" [attr.aria-pressed]="insertType === 'phone'" (click)="insertType = 'phone'">{{ t().editor.groups.phone }}</button>
+            <button [class.on]="insertType === 'mention'" [attr.aria-pressed]="insertType === 'mention'" (click)="insertType = 'mention'">{{ t().editor.groups.mention }}</button>
         </div>
 
         <input class="chat-input" style="margin-top:10px"
@@ -791,7 +791,7 @@
                         } @else {
                         <div class="channel-pick-row">
                             @for (c of channels(); track c.id) {
-                            <button class="channel-pick" [class.on]="isSelectedChannel(lang, c)" (click)="selectChannel(lang, c)">
+                            <button class="channel-pick" [class.on]="isSelectedChannel(lang, c)" [attr.aria-pressed]="isSelectedChannel(lang, c)" (click)="selectChannel(lang, c)">
                                 <span class="channel-avatar" [style.background]="channelColor(c.id)">{{ channelInitial(c.title) }}</span>
                                 <span class="channel-pick-title">{{ c.title }}</span>
                             </button>
@@ -846,9 +846,9 @@
 
                     <div class="panel-label" style="margin-top:12px">{{ t().editor.exportModal.compression }} <span class="field-hint-inline">{{ t().editor.exportModal.compressionHint }}</span></div>
                     <div class="format-toggle">
-                        <button [class.on]="compressionLevel === 'small'" (click)="compressionLevel = 'small'" [title]="t().editor.exportModal.compressionSmallHint">{{ t().editor.exportModal.compressionSmall }}</button>
-                        <button [class.on]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" [title]="t().editor.exportModal.compressionStandardHint">{{ t().editor.exportModal.compressionStandard }}</button>
-                        <button [class.on]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
+                        <button [class.on]="compressionLevel === 'small'" [attr.aria-pressed]="compressionLevel === 'small'" (click)="compressionLevel = 'small'" [title]="t().editor.exportModal.compressionSmallHint">{{ t().editor.exportModal.compressionSmall }}</button>
+                        <button [class.on]="compressionLevel === 'standard'" [attr.aria-pressed]="compressionLevel === 'standard'" (click)="compressionLevel = 'standard'" [title]="t().editor.exportModal.compressionStandardHint">{{ t().editor.exportModal.compressionStandard }}</button>
+                        <button [class.on]="compressionLevel === 'high'" [attr.aria-pressed]="compressionLevel === 'high'" (click)="compressionLevel = 'high'" [title]="t().editor.exportModal.compressionHighHint">{{ t().editor.exportModal.compressionHigh }}</button>
                     </div>
 
                     <!--Wave 2 item 11 — how the message arrives: no notification, and pinned after
@@ -931,7 +931,7 @@
                         <div class="panel-label">{{ t().editor.exportModal.microLangsLabel }}</div>
                         <div class="lang-pick-row">
                             @for (l of exportLangs(); track l) {
-                            <button class="pill" [class.on]="isMicroLang(network, l)" (click)="toggleMicroLang(network, l)"
+                            <button class="pill" [class.on]="isMicroLang(network, l)" [attr.aria-pressed]="isMicroLang(network, l)" (click)="toggleMicroLang(network, l)"
                                     [title]="endonym(l)">
                                 {{ l.toUpperCase() }}
                             </button>
@@ -944,12 +944,12 @@
                         @if (microThreadable[network]) {
                         <div class="panel-label">{{ t().editor.exportModal.modeLabel }}</div>
                         <div class="mode-toggle">
-                            <button [class.on]="microMode()[network] === 'link'" (click)="setMicroMode(network, 'link')">
+                            <button [class.on]="microMode()[network] === 'link'" [attr.aria-pressed]="microMode()[network] === 'link'" (click)="setMicroMode(network, 'link')">
                                 <span class="mode-name">{{ t().editor.exportModal.modeLink }}</span>
                                 <span class="mode-desc">{{ t().editor.exportModal.modeLinkHint }}</span>
                             </button>
                             <!--ADR-099 — threads are not schedulable; disabled beats ignored.-->
-                            <button [class.on]="microMode()[network] === 'thread'" [disabled]="!!scheduledAt"
+                            <button [class.on]="microMode()[network] === 'thread'" [attr.aria-pressed]="microMode()[network] === 'thread'" [disabled]="!!scheduledAt"
                                     (click)="setMicroMode(network, 'thread')">
                                 <span class="mode-name">{{ t().editor.exportModal.modeThread }}</span>
                                 <span class="mode-desc">{{ scheduledAt ? t().editor.exportModal.threadsNotScheduled : t().editor.exportModal.modeThreadHint }}</span>
@@ -963,7 +963,7 @@
                         @if (microLangsOf(network).length > 1) {
                         <div class="lang-pick-row">
                             @for (l of microLangsOf(network); track l) {
-                            <button class="pill" [class.on]="microTextLang()[network] === l" (click)="setMicroTextLang(network, l)">
+                            <button class="pill" [class.on]="microTextLang()[network] === l" [attr.aria-pressed]="microTextLang()[network] === l" (click)="setMicroTextLang(network, l)">
                                 {{ l.toUpperCase() }}
                             </button>
                             }
@@ -1029,7 +1029,7 @@
                     @if (exportLangs().length > 1) {
                     <div class="lang-pick-row">
                         @for (l of exportLangs(); track l) {
-                        <button class="pill" [class.on]="copyLangEffective() === l" (click)="setCopyTargetLang(l)"
+                        <button class="pill" [class.on]="copyLangEffective() === l" [attr.aria-pressed]="copyLangEffective() === l" (click)="setCopyTargetLang(l)"
                                 [title]="endonym(l)">
                             {{ l.toUpperCase() }}
                         </button>
@@ -1256,13 +1256,13 @@
                     <p class="field-hint-inline">{{ t().editor.exportModal.noMedia }}</p>
                     } @else {
                     <div class="asset-sort">
-                        <button (click)="sortAssetsBy('name')" [class.on]="assetSort().key === 'name'">
+                        <button (click)="sortAssetsBy('name')" [class.on]="assetSort().key === 'name'" [attr.aria-pressed]="assetSort().key === 'name'">
                             {{ t().editor.exportModal.sortName }} {{ assetSortMark('name') }}
                         </button>
-                        <button (click)="sortAssetsBy('type')" [class.on]="assetSort().key === 'type'">
+                        <button (click)="sortAssetsBy('type')" [class.on]="assetSort().key === 'type'" [attr.aria-pressed]="assetSort().key === 'type'">
                             {{ t().editor.exportModal.sortType }} {{ assetSortMark('type') }}
                         </button>
-                        <button (click)="sortAssetsBy('size')" [class.on]="assetSort().key === 'size'">
+                        <button (click)="sortAssetsBy('size')" [class.on]="assetSort().key === 'size'" [attr.aria-pressed]="assetSort().key === 'size'">
                             {{ t().editor.exportModal.sortSize }} {{ assetSortMark('size') }}
                         </button>
                     </div>
@@ -1292,12 +1292,13 @@
 
     <!--The sheet and the shelf beside it: the shelf describes either what is selected on the sheet
     or the document itself, never both (ADR-159).-->
-    <div body class="main" [class.is-hidden]="tab() !== 'write'"
+    <div body class="main" [class.split-workspace]="inspectorOpen()"
+         [class.is-main-inspector]="inspectorOpen()" [class.is-hidden]="tab() !== 'write'"
          id="frame-panel-write" role="tabpanel" aria-labelledby="frame-tab-write">
-        <div class="mid">
+        <div class="mid split-pane">
             <!--The tool strip fits itself (ADR-150). Rows and captions are read off measured widths in
             measureToolbar(); nothing here is stored and nothing is a width breakpoint (ADR-147). The
-            pinned head and tail never wrap, so a fit only ever moves the groups between them.-->
+            pinned block selector and retry tail never wrap, so a fit only ever moves the groups between them.-->
             <div class="strip" data-surface="chrome" #toolStrip
                  [class.no-captions]="!toolbarFit().captions"
                  [class.hidden-for-focus]="focusModeActive()">
@@ -1311,23 +1312,16 @@
                                     <app-icon name="caret-down" size="xs"></app-icon>
                                 </button>
                                 <div panel class="block-menu">
-                                    <button [class.on]="currentBlockLevel() === 0" (click)="setBlockType(0)">{{ t().editor.blocks.paragraph }}</button>
-                                    <button [class.on]="currentBlockLevel() === 1" (click)="setBlockType(1)">{{ t().editor.blocks.heading(1) }}</button>
-                                    <button [class.on]="currentBlockLevel() === 2" (click)="setBlockType(2)">{{ t().editor.blocks.heading(2) }}</button>
-                                    <button [class.on]="currentBlockLevel() === 3" (click)="setBlockType(3)">{{ t().editor.blocks.heading(3) }}</button>
-                                    <button [class.on]="currentBlockLevel() === 4" (click)="setBlockType(4)">{{ t().editor.blocks.heading(4) }}</button>
-                                    <button [class.on]="currentBlockLevel() === 5" (click)="setBlockType(5)">{{ t().editor.blocks.heading(5) }}</button>
-                                    <button [class.on]="currentBlockLevel() === 6" (click)="setBlockType(6)">{{ t().editor.blocks.heading(6) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 0" [attr.aria-pressed]="currentBlockLevel() === 0" (click)="setBlockType(0)">{{ t().editor.blocks.paragraph }}</button>
+                                    <button [class.on]="currentBlockLevel() === 1" [attr.aria-pressed]="currentBlockLevel() === 1" (click)="setBlockType(1)">{{ t().editor.blocks.heading(1) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 2" [attr.aria-pressed]="currentBlockLevel() === 2" (click)="setBlockType(2)">{{ t().editor.blocks.heading(2) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 3" [attr.aria-pressed]="currentBlockLevel() === 3" (click)="setBlockType(3)">{{ t().editor.blocks.heading(3) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 4" [attr.aria-pressed]="currentBlockLevel() === 4" (click)="setBlockType(4)">{{ t().editor.blocks.heading(4) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 5" [attr.aria-pressed]="currentBlockLevel() === 5" (click)="setBlockType(5)">{{ t().editor.blocks.heading(5) }}</button>
+                                    <button [class.on]="currentBlockLevel() === 6" [attr.aria-pressed]="currentBlockLevel() === 6" (click)="setBlockType(6)">{{ t().editor.blocks.heading(6) }}</button>
                                 </div>
                             </app-popover>
                             <span class="tb-caption">{{ t().editor.groups.block }}</span>
-                        </span>
-                        <span class="tb-group">
-                            <span class="tb-row">
-                                <button (click)="cmd(c => c.undo())" [disabled]="!canUndo()" [title]="tip(t().editor.tb.undo, 'undo')"><app-icon name="arrow-u-up-left" size="xs"></app-icon></button>
-                                <button (click)="cmd(c => c.redo())" [disabled]="!canRedo()" [title]="tip(t().editor.tb.redo, 'redo')"><app-icon name="arrow-u-up-right" size="xs"></app-icon></button>
-                            </span>
-                            <span class="tb-caption">{{ t().editor.groups.history }}</span>
                         </span>
                     </span>
 
@@ -1420,7 +1414,7 @@
             </app-worktop>
         </div>
 
-        <app-shelf-panel class="inspector" id="editor-inspector" [class.is-hidden]="!inspectorOpen()"
+        <app-shelf-panel class="inspector split-pane" id="editor-inspector" [class.is-hidden]="!inspectorOpen()"
                          [title]="t().editor.inspector.title" [count]="inspectorScopeWord()">
             <!--The sheet's surface is restated on an element of this template: the shelf's own paper
             sheet carries another component's scope attribute, which the inspector's rules cannot see.-->
@@ -1703,7 +1697,7 @@
                         <div panel class="preview-share">
                             <p class="field-hint-inline">{{ t().editor.preview.hint }}</p>
                             @if (previewLinkUrl(); as url) {
-                            <p class="revision-preview preview-share-url">{{ url }}</p>
+                            <p class="revision-preview copy-preview preview-share-url">{{ url }}</p>
                             <div class="insp-actions">
                                 <button class="insp-btn" (click)="copyPreviewLink()">
                                     {{ previewLinkCopied() ? t().editor.preview.copied : t().editor.preview.copy }}
@@ -1736,15 +1730,16 @@
     @if (revisionsOpen()) {
     <app-modal [width]="620" (closed)="revisionsOpen.set(false)">
         <h2 modal-title>{{ t().editor.versions.historyTitle(lang().toUpperCase()) }}</h2>
-        <div modal-body>
+        <div modal-body class="revision-history-body">
             @if (revisionError(); as err) { <p class="error">{{ err }}</p> }
 
             <!--T-016: the list is the way in, not the whole feature — a row opens the version,
             and only then are "what changed" and "restore" on offer.-->
             @for (revision of revisions(); track revision.id) {
             <button type="button" class="revision-row" [class.selected]="selectedRevision()?.id === revision.id"
+                    [attr.aria-current]="selectedRevision()?.id === revision.id ? 'true' : null"
                     (click)="openRevision(revision.id)">
-                <span class="revision-when">{{ revision.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
+                <span class="revision-when">{{ revision.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</span>
                 <span class="revision-kind" [class.publish]="revision.kind !== 'save'">{{ revisionKindLabel(revision.kind) }}</span>
                 <span class="revision-lines">{{ t().editor.versions.blocks(revision.lines) }}</span>
             </button>
@@ -1752,19 +1747,22 @@
 
             @if (selectedRevision(); as selected) {
             <div class="revision-detail">
+                <p class="revision-detail-head"><strong id="selected-revision-target">
+                    {{ t().editor.versions.selectedVersion(selected.createdAt | zonedDate:'d MMM yyyy, HH:mm') }}
+                </strong></p>
                 @if (selected.isCurrent) { <p class="muted">{{ t().editor.versions.sameAsCurrent }}</p> }
 
-                <p class="revision-detail-head">
+                <label class="revision-detail-head" for="revision-compare">
                     <span>{{ t().editor.versions.comparedWith }}</span>
-                    <select [value]="compareWith()" (change)="compareRevisionWith($any($event.target).value)">
+                    <select id="revision-compare" [value]="compareWith()" (change)="compareRevisionWith($any($event.target).value)">
                         <option value="current">{{ t().editor.versions.currentVersion }}</option>
                         @for (other of revisions(); track other.id) {
                         @if (other.id !== selected.id) {
-                        <option [value]="other.id">{{ other.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</option>
+                        <option [value]="other.id">{{ other.createdAt | zonedDate:'d MMM yyyy, HH:mm' }}</option>
                         }
                         }
                     </select>
-                </p>
+                </label>
 
                 @if (revisionDiff(); as diff) {
                 <p class="publish-diff-head">
@@ -1790,7 +1788,8 @@
         </div>
         <button modal-actions class="btn-ghost" (click)="revisionsOpen.set(false)">{{ t().editor.versions.close }}</button>
         @if (selectedRevision(); as selected) {
-        <button modal-actions class="btn-accent" [disabled]="revisionBusy() || selected.isCurrent" (click)="restoreRevision()">
+        <button modal-actions class="btn-accent" [disabled]="revisionBusy() || selected.isCurrent"
+                aria-describedby="selected-revision-target" (click)="restoreRevision()">
             {{ t().editor.versions.restore }}
         </button>
         }

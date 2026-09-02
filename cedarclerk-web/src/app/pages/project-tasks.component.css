@@ -17,19 +17,6 @@
 .right { text-align: right; }
 .dot { opacity: .6; margin: 0 var(--space-1); }
 
-/* A field whose name is given by a label it does not draw: taken out of the flow, left in the
-   accessibility tree. */
-.named-elsewhere {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-}
-
 .error-line {
     margin: 0 0 var(--space-3);
     color: var(--danger);
@@ -229,6 +216,12 @@ a.tasks-row:hover { background: var(--alt); }
     gap: var(--space-2);
 }
 
+.modal-heading {
+    font-family: var(--font-display);
+    font-size: var(--fs-title);
+    font-weight: 700;
+}
+
 .task-modal {
     display: flex;
     flex-direction: column;
@@ -245,6 +238,8 @@ a.tasks-row:hover { background: var(--alt); }
     grid-template-columns: 1fr 1fr;
     gap: var(--space-3);
 }
+
+.roadmap-field { grid-column: 1 / -1; }
 
 .field {
     display: flex;
