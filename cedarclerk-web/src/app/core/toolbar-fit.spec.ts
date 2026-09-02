@@ -1,7 +1,6 @@
 import { ToolbarMeasurements, fitToolbar } from './toolbar-fit';
 
-// Seven groups, the count the catalogue actually ships, so a fit that only works for two does not
-// pass here.
+// Seven groups, more than the catalogue ships, so a fit that only works for two does not pass here.
 const SEVEN = [100, 100, 100, 100, 100, 100, 100];
 
 function measure(over: Partial<ToolbarMeasurements> = {}): ToolbarMeasurements {

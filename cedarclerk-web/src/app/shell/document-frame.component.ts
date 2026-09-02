@@ -74,7 +74,8 @@ export interface DocumentTabItem {
                 @for (item of tabs(); track item.id) {
                     <button type="button" class="frame-tab" role="tab" [class.is-on]="item.id === tab()"
                             [attr.aria-selected]="item.id === tab()" [attr.tabindex]="item.id === tab() ? 0 : -1"
-                            (click)="pick(item.id)">
+                            [attr.id]="'frame-tab-' + item.id" [attr.aria-controls]="'frame-panel-' + item.id"
+                            (click)="pick(item.id)" (keydown)="onTabKey($event, item.id)">
                         <app-icon [name]="item.icon" size="sm" />{{ item.label }}
                     </button>
                 }
@@ -296,5 +297,24 @@ export class DocumentFrameComponent {
 
     pick(id: DocumentTab): void {
         if (id !== this.tab()) this.tabChange.emit(id);
+    }
+
+    /** Arrow keys walk the tablist and select as they go; Home and End jump to its ends. */
+    onTabKey(event: KeyboardEvent, id: DocumentTab): void {
+        const ids = this.tabs().map(item => item.id);
+        const at = ids.indexOf(id);
+        let next: DocumentTab | undefined;
+        switch (event.key) {
+            case 'ArrowRight': next = ids[(at + 1) % ids.length]; break;
+            case 'ArrowLeft': next = ids[(at - 1 + ids.length) % ids.length]; break;
+            case 'Home': next = ids[0]; break;
+            case 'End': next = ids[ids.length - 1]; break;
+            default: return;
+        }
+        event.preventDefault();
+        const target = event.currentTarget as HTMLElement | null;
+        const list = target?.parentElement;
+        (list?.querySelector<HTMLElement>(`#frame-tab-${next}`))?.focus();
+        this.pick(next);
     }
 }

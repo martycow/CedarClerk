@@ -100,3 +100,37 @@ test('the Preview tab renders a Telegram bubble for a seeded draft', async ({ pa
     await expect(bubbles).toHaveCount(1);
     await expect(bubbles.first()).toContainText('One short paragraph for the phone.');
 });
+
+// ADR-242 — Publish / Export is the third selected state, not a door to a modal. Write stays
+// mounted behind it (TipTap owns the sheet's node), a copy target or a coming-later network never
+// carries a checkbox, inspecting a destination never includes it, and the three footers walk the
+// document forward and back.
+test('the Publish / Export tab deep-links, keeps Write mounted and walks the three steps', async ({ page, context }) => {
+    const id = await createDraft(context, 'Publish tab', ['One paragraph for the rack.']);
+    await page.goto(`/editor?draft=${id}&tab=publish`);
+    await expect(page.getByRole('tab', { name: 'Publish / Export' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('app-publish-stepper .ps-step')).toHaveCount(4);
+    await expect(page.locator('.main .tiptap')).toBeAttached();
+    await expect(page.locator('.main')).toBeHidden();
+
+    await expect(page.locator('.dest-card.copy-target input[type=checkbox]')).toHaveCount(0);
+    await expect(page.locator('.dest-card.unsupported input[type=checkbox]')).toHaveCount(0);
+
+    const blog = page.locator('.dest-card[data-destination="blog"]');
+    await blog.locator('.dest-select').click();
+    await expect(blog.locator('input[type=checkbox]')).not.toBeChecked();
+    await expect(page.getByRole('button', { name: 'Publish', exact: true })).toBeDisabled();
+    await blog.locator('input[type=checkbox]').check();
+    await expect(page.getByRole('button', { name: 'Publish to 1 destination' })).toBeEnabled();
+    // The review names the state in words as well as marks.
+    await expect(page.locator('app-preview-checks .pc-group[data-tone="blocking"] .pc-clear')).toHaveText('All clear');
+
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.getByRole('tab', { name: 'Preview' })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('button', { name: 'Continue to Publish' }).click();
+    await expect(page).toHaveURL(/tab=publish/);
+    await page.getByRole('tab', { name: 'Write' }).click();
+    await expect(page).not.toHaveURL(/tab=/);
+    await page.getByRole('button', { name: 'Continue to Preview' }).click();
+    await expect(page).toHaveURL(/tab=preview/);
+});

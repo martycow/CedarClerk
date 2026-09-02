@@ -78,7 +78,7 @@ const MOBILE_WIDTH_PX = 390;
                         <app-icon name="device-mobile" size="xs" />{{ t().editor.previewTab.mobile }}
                     </button>
                 </div>
-                @if (microNetwork() && micro()?.supportsThreads) {
+                @if (microNetwork() && microAccount() && micro()?.supportsThreads) {
                     <div class="seg" role="group" [attr.aria-label]="t().editor.previewTab.post.modeLabel">
                         <button type="button" [class.is-on]="microMode() === 'single'" [attr.aria-pressed]="microMode() === 'single'" (click)="microMode.set('single')">
                             {{ t().editor.previewTab.post.single }}
@@ -148,7 +148,7 @@ const MOBILE_WIDTH_PX = 390;
         </section>
 
         <app-preview-checks [title]="t().editor.previewTab.checks.title(destinationName())" [checks]="checks()"
-                            [loading]="checksLoading()" (details)="details.emit()" />
+                            [loading]="checksLoading()" (details)="details.emit()" (fix)="fix.emit($event)" />
     `,
     styles: [`
         :host {
@@ -236,8 +236,9 @@ const MOBILE_WIDTH_PX = 390;
             border-radius: 36px;
         }
 
-        .ep-pane app-preview-phone { flex: none; }
+        .ep-pane app-preview-phone, .ep-pane app-preview-post { flex: none; }
         .ep-pane:not(.is-mobile) app-preview-phone { padding: var(--space-5) var(--space-6); }
+        .ep-pane:not(.is-mobile) app-preview-post { padding: var(--space-4) var(--space-5); }
 
         .ep-loading {
             position: absolute;
@@ -264,6 +265,14 @@ const MOBILE_WIDTH_PX = 390;
             .ep-side, .ep-render { flex: none; }
             .ep-render { min-height: 520px; }
         }
+
+        @media (max-width: 759px) {
+            :host { gap: var(--space-3); }
+            .ep-toolbar { padding: var(--space-2) var(--space-3); }
+            .ep-render { min-height: 420px; }
+            .ep-pane.is-mobile .ep-frame { height: 560px; }
+            app-empty-state { margin: var(--space-4); }
+        }
     `],
 })
 export class EditorPreviewComponent implements OnDestroy {
@@ -273,8 +282,10 @@ export class EditorPreviewComponent implements OnDestroy {
     readonly initialLang = input('');
     /** Bumped by the editor after a save, so the render follows the stored document. */
     readonly savedVersion = input(0);
-    /** "View all details" — opens the export window's checks. */
+    /** "View all details" — the Publish tab, where the whole review lives. */
     readonly details = output<void>();
+    /** A check's fix that is the editor's own action (the inspector's Type row), by check id. */
+    readonly fix = output<string>();
 
     protected readonly t = inject(LocaleService).t;
     private readonly previewApi = inject(PreviewService);
@@ -341,21 +352,21 @@ export class EditorPreviewComponent implements OnDestroy {
         const f = this.facts();
         const tg = this.telegram();
         const blog: DestinationRow = f.isWorkingMaterial
-            ? { id: 'blog', name: words.blog, readiness: 'warn', detail: words.blogWorkingMaterial }
+            ? { id: 'blog', name: words.blog, readiness: 'blocking', detail: words.blogWorkingMaterial }
             : {
                 id: 'blog', name: words.blog, readiness: 'ready',
                 detail: `${f.typeName} · ${f.isPrivate ? this.t().editor.state.private : this.t().editor.state.public}`,
             };
         const telegram: DestinationRow = !this.channels().length
-            ? { id: 'telegram', name: 'Telegram', readiness: 'off', detail: notConnected }
+            ? { id: 'telegram', name: 'Telegram', readiness: 'setup', detail: notConnected }
             : f.isWorkingMaterial
-                ? { id: 'telegram', name: 'Telegram', readiness: 'warn', detail: words.blogWorkingMaterial }
+                ? { id: 'telegram', name: 'Telegram', readiness: 'blocking', detail: words.blogWorkingMaterial }
                 : { id: 'telegram', name: 'Telegram', readiness: 'ready', detail: tg ? words.telegramMessages(tg.messageCount) : this.channelTitle() };
         const micro = (id: MicroNetwork, name: string): DestinationRow => {
             const account = this.accounts()[id];
-            if (!account) return { id, name, readiness: 'off', detail: notConnected };
+            if (!account) return { id, name, readiness: 'setup', detail: notConnected };
+            if (f.isWorkingMaterial) return { id, name, readiness: 'blocking', detail: words.blogWorkingMaterial };
             if (account.lastError) return { id, name, readiness: 'warn', detail: account.lastError };
-            if (f.isWorkingMaterial) return { id, name, readiness: 'warn', detail: words.blogWorkingMaterial };
             const parts = this.partCounts()[id];
             return { id, name, readiness: 'ready', detail: parts && parts > 1 ? words.parts(parts) : account.displayName };
         };
@@ -488,6 +499,16 @@ export class EditorPreviewComponent implements OnDestroy {
         this.checksLoading.set(false);
     }
 
+    /** The one check the server refuses outright (ADR-102); its fix is the inspector's Type row. */
+    private typeRow(): PreviewCheck {
+        const words = this.t().editor.previewTab.checks;
+        return { id: 'type', label: words.type, detail: words.workingMaterial(this.facts().typeName), tone: 'blocking', fix: { label: words.fix } };
+    }
+
+    private settingsFix() {
+        return { label: this.t().editor.previewTab.checks.fix, route: '/settings', query: { tab: 'integrations' } };
+    }
+
     private otherLanguageRows(prefix: (code: string) => string): PreviewCheck[] {
         const words = this.t().editor.previewTab.checks;
         const f = this.facts();
@@ -514,7 +535,7 @@ export class EditorPreviewComponent implements OnDestroy {
         const words = this.t().editor.previewTab.checks;
         const f = this.facts();
         const rows: PreviewCheck[] = [];
-        if (f.isWorkingMaterial) rows.push({ id: 'type', label: words.type, detail: words.workingMaterial(f.typeName), tone: 'warn' });
+        if (f.isWorkingMaterial) rows.push(this.typeRow());
         rows.push(f.title.trim()
             ? { id: 'title', label: words.docTitle, detail: words.ok, tone: 'ok' }
             : { id: 'title', label: words.docTitle, detail: words.noTitle, tone: 'warn' });
@@ -545,10 +566,10 @@ export class EditorPreviewComponent implements OnDestroy {
         const tg = this.telegram();
         const channel = this.channels()[0];
         const rows: PreviewCheck[] = [];
-        if (f.isWorkingMaterial) rows.push({ id: 'type', label: words.type, detail: words.workingMaterial(f.typeName), tone: 'warn' });
+        if (f.isWorkingMaterial) rows.push(this.typeRow());
         rows.push(channel
             ? { id: 'channel', label: words.channel, detail: words.channelOk(channel.username ? '@' + channel.username : channel.title), tone: 'ok' }
-            : { id: 'channel', label: words.channel, detail: words.channelMissing, tone: 'warn' });
+            : { id: 'channel', label: words.channel, detail: words.channelMissing, tone: 'setup', fix: this.settingsFix() });
         if (tg) {
             const over = this.issues().some(i => i.code === 'too-long' && i.blocking);
             rows.push({
@@ -587,10 +608,10 @@ export class EditorPreviewComponent implements OnDestroy {
         const account = this.accounts()[network];
         const p = this.micro();
         const rows: PreviewCheck[] = [];
-        if (f.isWorkingMaterial) rows.push({ id: 'type', label: words.type, detail: words.workingMaterial(f.typeName), tone: 'warn' });
+        if (f.isWorkingMaterial) rows.push(this.typeRow());
         rows.push(account
             ? { id: 'account', label: words.account, detail: words.channelOk(account.displayName), tone: 'ok' }
-            : { id: 'account', label: words.account, detail: words.accountMissing, tone: 'warn' });
+            : { id: 'account', label: words.account, detail: words.accountMissing, tone: 'setup', fix: this.settingsFix() });
         if (p) {
             const thread = this.microMode() === 'thread' && p.supportsThreads;
             const posts = thread ? p.thread : [p.single];

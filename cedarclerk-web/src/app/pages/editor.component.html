@@ -1,31 +1,660 @@
 <div class="app">
 
-    @if (exportModalOpen()) {
-        <!--N13: the export window is the most-used surface after the sheet itself, so it runs
-        near the full viewport; .export-grid below turns the extra width into columns rather than
-        one very long scroll. app-modal already clamps to calc(100vw - 32px) on small screens.
 
-        FI2.6 is the rule this window is now organised around: **Export manages only export.**
-        Unpublishing and scheduled-post management moved to the Posts Manager; what stays is
-        sending the post out, and re-sending it (Update) when it is already live.
+    <!--The publish checklist — a publication runs like a test suite: one row per phase, a thread
+    unfolds into numbered part chips, an error is pinned to the step that broke (and it is the
+    FIRST failed part's error — the root cause, not the held-back cascade). A modal over the
+    Publish workspace (ADR-242 clause 8); closing it never cancels anything, the queue owns the
+    jobs (T-090).-->
+    @if (publishRun(); as run) {
+    <app-modal [width]="460" (closed)="closePublishRun()">
+        <app-icon modal-icon name="paper-plane-tilt" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.publishRun.title }}</span>
 
-        The window uses the same bounded editorial measure as the studio, with enough room for a
-        readable destination rail and parallel destination settings.-->
-        <app-modal [width]="1260" (closed)="exportModalOpen.set(false)">
-            <app-icon modal-icon name="paper-plane-tilt" size="sm"></app-icon>
-            <span modal-title>{{ t().editor.export }}</span>
+        <ul class="publish-run">
+            @for (step of run.steps; track step.id) {
+            <li class="pr-step">
+                <span class="pr-status" [class]="'pr-' + step.status">
+                    @switch (step.status) {
+                        @case ('waiting') { <span class="pr-dot"></span> }
+                        @case ('running') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        @case ('done') { <app-icon name="check" size="sm"></app-icon> }
+                        @case ('failed') { <app-icon name="x" size="sm"></app-icon> }
+                    }
+                </span>
+                <div class="pr-body">
+                    <div class="pr-row">
+                        <span class="pr-label">{{ step.label }}</span>
+                        @if (step.parts?.length) {
+                        <span class="pr-count">{{ runDoneParts(step) }}/{{ step.parts!.length }}</span>
+                        }
+                        @if (step.link; as link) {
+                        <a class="pr-link" [href]="link.url" target="_blank" rel="noopener">{{ link.label }} →</a>
+                        }
+                    </div>
+                    @if (step.parts?.length) {
+                    <div class="pr-parts">
+                        @for (part of step.parts; track part.index) {
+                        <span class="pr-part" [class]="'pr-' + part.status">{{ part.index + 1 }}</span>
+                        }
+                    </div>
+                    }
+                    @if (step.error) { <p class="pr-error">{{ step.error }}</p> }
+                </div>
+            </li>
+            }
+        </ul>
 
-            <!--ADR-096 — the window reads top to bottom as three questions: which version, where,
-            and with what. It replaces a column layout in which the language lived inside Telegram,
-            Bluesky and X each carried their own Publish button, and the big button at the bottom
-            only ever meant Blog+Telegram.-->
-            <div class="export-grid">
-            @if (currentId(); as id) {
+        @if (run.finished) {
+        <p class="pr-summary" [class.failed]="runHasFailure(run)">
+            @if (runHasFailure(run)) { <app-icon name="x" size="sm"></app-icon> {{ t().editor.publishRun.withErrors }} }
+            @else { <app-icon name="check" size="sm"></app-icon> {{ t().editor.publishRun.allDone }} }
+        </p>
+        } @else {
+        <p class="pr-summary running">
+            <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> {{ t().editor.publishRun.working }}
+        </p>
+        }
 
-            <!-- ============ 1 · VERSION ============ -->
-            <app-shelf-panel class="export-step export-global" [title]="'1 · ' + t().editor.exportModal.stepVersion"
-                             [count]="exportLangs().length">
-                <div class="export-step-body">
+        <button modal-actions [class]="run.finished ? 'btn-accent' : 'btn-ghost'" (click)="closePublishRun()">
+            {{ t().common.close }}
+        </button>
+    </app-modal>
+    }
+
+    <!--One group, one template, instantiated into whichever row the fit puts it in. The ids and
+    their order come from core/toolbar-layout.ts, which is a catalogue and no longer a setting.-->
+    <ng-template #tplText>
+        <div class="tb-group" data-tb-group="text">
+            <div class="tb-row">
+                 <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><app-icon name="text-b" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><app-icon name="text-italic" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><app-icon name="text-underline" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><app-icon name="text-strikethrough" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><app-icon name="code" size="xs"></app-icon></button>
+            </div>
+            <span class="tb-caption">{{ t().editor.groups.text }}</span>
+        </div>
+    </ng-template>
+
+    <ng-template #tplInsert>
+        <div class="tb-group" data-tb-group="insert">
+            <div class="tb-row">
+
+                <button (click)="openInsertModal()" [class.on]="isActive('link')" [title]="t().editor.tb.insert" [attr.aria-label]="t().editor.tb.insert">
+                    <app-icon name="link" size="xs"></app-icon>
+                </button>
+
+
+
+                <button (click)="openEmojiModal()" [title]="t().editor.tb.emoji" [attr.aria-label]="t().editor.tb.emoji"><app-icon name="smiley" size="xs"></app-icon></button>
+
+
+
+                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime" [attr.aria-label]="t().editor.tb.datetime"><app-icon name="clock" size="xs"></app-icon></button>
+
+
+
+                <button (click)="openFootnoteModal()" [title]="t().editor.tb.footnote" [attr.aria-label]="t().editor.tb.footnote"><app-icon name="text-superscript" size="xs"></app-icon></button>
+
+            </div>
+            <span class="tb-caption">{{ t().editor.groups.insert }}</span>
+        </div>
+    </ng-template>
+
+    <ng-template #tplLists>
+        <div class="tb-group" data-tb-group="lists">
+            <div class="tb-row">
+                 <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="xs"></app-icon></button>
+                 <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="xs"></app-icon></button>
+                 <button (click)="indent()" [disabled]="!canIndent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="xs"></app-icon></button>
+                 <button (click)="outdent()" [disabled]="!canOutdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="xs"></app-icon></button>
+            </div>
+            <span class="tb-caption">{{ t().editor.groups.lists }}</span>
+        </div>
+    </ng-template>
+
+
+
+    <ng-template #tplMedia>
+        <div class="tb-group" data-tb-group="media">
+            <div class="tb-row">
+
+                <button (click)="fileInput.click()" [title]="t().editor.tb.image" [attr.aria-label]="t().editor.tb.image"><app-icon name="image" size="xs"></app-icon></button>
+                <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onFileChosen($event)">
+
+
+
+                <button (click)="videoInput.click()" [title]="t().editor.tb.video" [attr.aria-label]="t().editor.tb.video"><app-icon name="video-camera" size="xs"></app-icon></button>
+                <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
+
+
+
+                <button class="gif-btn" (click)="gifInput.click()" [title]="t().editor.tb.gif">GIF</button>
+                <input #gifInput type="file" accept="image/gif" multiple hidden (change)="onGifChosen($event)">
+
+
+
+                <button (click)="audioInput.click()" [title]="t().editor.tb.audio" [attr.aria-label]="t().editor.tb.audio"><app-icon name="waveform" size="xs"></app-icon></button>
+                <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
+
+
+
+                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel" [attr.aria-label]="t().editor.tb.carousel"><app-icon name="images" size="xs"></app-icon></button>
+                <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
+
+
+
+                <button (click)="collageInput.click()" [title]="t().editor.tb.collage" [attr.aria-label]="t().editor.tb.collage"><app-icon name="squares-four" size="xs"></app-icon></button>
+                <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
+
+
+
+                <button (click)="libraryOpen.set(true)" [title]="t().editor.tb.library" [attr.aria-label]="t().editor.tb.library"><app-icon name="archive" size="xs"></app-icon></button>
+
+
+
+            </div>
+            <span class="tb-caption">{{ t().editor.groups.media }}</span>
+        </div>
+    </ng-template>
+
+    <ng-template #tplBlocks>
+        <div class="tb-group" data-tb-group="blocks">
+            <div class="tb-row">
+
+                <app-popover>
+                    <button trigger [title]="t().editor.tb.table" [attr.aria-label]="t().editor.tb.table"><app-icon name="table" size="xs"></app-icon></button>
+                    <div panel class="block-menu">
+                        @if (isActive('table')) {
+                        <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowAbove }}</button>
+                        <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowBelow }}</button>
+                        <button (click)="cmd(c => c.deleteRow())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteRow }}</button>
+                        <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnLeft }}</button>
+                        <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnRight }}</button>
+                        <button (click)="cmd(c => c.deleteColumn())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteColumn }}</button>
+                        <button (click)="cmd(c => c.deleteTable())"><app-icon name="trash" size="xs"></app-icon> {{ t().editor.tableMenu.deleteTable }}</button>
+                        } @else {
+                        <button (click)="openTableModal()"><app-icon name="table" size="xs"></app-icon> {{ t().editor.tableMenu.insert }}</button>
+                        }
+                    </div>
+                </app-popover>
+
+
+
+                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="xs"></app-icon></button>
+                <!--Wave 2 item 17 — only over a quote: marks it expandable (Telegram folds it
+                natively; the blog renders a plain quote either way).-->
+                @if (isActive('blockquote')) {
+                <button (click)="toggleExpandableQuote()" [class.on]="isActive('blockquote', {expandable: true})" [title]="t().editor.tb.expandableQuote" [attr.aria-label]="t().editor.tb.expandableQuote"><app-icon name="caret-down" size="xs"></app-icon></button>
+                }
+                 <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><app-icon name="code-block" size="xs"></app-icon></button>
+                 <button (click)="insertDivider()" [title]="t().editor.tb.divider" [attr.aria-label]="t().editor.tb.divider"><app-icon name="rows" size="xs"></app-icon></button>
+            </div>
+            <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
+        </div>
+    </ng-template>
+
+    <!--The commands a session reaches for least — alignment (blog only), formula, toggle, the
+    contents list, and the two reader-engagement tools (a comment anchor, a vote) — behind one
+    menu. Each entry is its command's only trigger; the strip keeps its first row for the rest.-->
+    <ng-template #tplMore>
+        <div class="tb-group" data-tb-group="more">
+            <div class="tb-row">
+                <app-popover>
+                    <button trigger [title]="t().editor.groups.more" [attr.aria-label]="t().editor.groups.more"><app-icon name="dots-three" size="xs"></app-icon></button>
+                    <div panel class="block-menu tb-more-menu">
+                        <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})"><app-icon name="text-align-left" size="xs"></app-icon> {{ t().editor.tb.alignLeft }}</button>
+                        <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})"><app-icon name="text-align-center" size="xs"></app-icon> {{ t().editor.tb.alignCenter }}</button>
+                        <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})"><app-icon name="text-align-right" size="xs"></app-icon> {{ t().editor.tb.alignRight }}</button>
+                        <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})"><app-icon name="text-align-justify" size="xs"></app-icon> {{ t().editor.tb.alignJustify }}</button>
+                        <div class="popover-divider"></div>
+                        <button (click)="openFormulaModal()"><app-icon name="sigma" size="xs"></app-icon> {{ t().editor.tb.formula }}</button>
+                        <button (click)="insertToggle()"><app-icon name="list-dashes" size="xs"></app-icon> {{ t().editor.tb.toggleBlock }}</button>
+                        <button (click)="insertTableOfContents()"><app-icon name="list-bullets" size="xs"></app-icon> {{ t().editor.tb.toc }}</button>
+                        <div class="popover-divider"></div>
+                        <button (click)="insertAnnotation()" [disabled]="!canAnnotate()"><app-icon name="chat-teardrop" size="xs"></app-icon> {{ t().editor.tb.annotation }}</button>
+                        <button (click)="insertPoll()"><app-icon name="check-square" size="xs"></app-icon> {{ t().editor.tb.poll }}</button>
+                    </div>
+                </app-popover>
+            </div>
+            <span class="tb-caption">{{ t().editor.groups.more }}</span>
+        </div>
+    </ng-template>
+
+
+    <!--One switch shared by both rows, so a group's markup exists once and the rows differ
+    only in which ids the fit puts in them.-->
+    <ng-template #tplGroup let-g>
+        @switch (g) {
+            @case ('text') { <ng-container *ngTemplateOutlet="tplText"></ng-container> }
+            @case ('insert') { <ng-container *ngTemplateOutlet="tplInsert"></ng-container> }
+            @case ('lists') { <ng-container *ngTemplateOutlet="tplLists"></ng-container> }
+            @case ('media') { <ng-container *ngTemplateOutlet="tplMedia"></ng-container> }
+            @case ('blocks') { <ng-container *ngTemplateOutlet="tplBlocks"></ng-container> }
+            @case ('more') { <ng-container *ngTemplateOutlet="tplMore"></ng-container> }
+        }
+    </ng-template>
+
+    <!--AI confirm dialog (replaces window.confirm)-->
+    @if (aiConfirmKind(); as kind) {
+    <app-modal (closed)="cancelAiConfirm()">
+        <app-icon modal-icon name="sparkle" size="sm"></app-icon>
+        <span modal-title>{{ aiConfirmTitle() }}</span>
+        <p>{{ aiConfirmBody() }}</p>
+        <button modal-actions class="btn-ghost" (click)="cancelAiConfirm()">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmAiEdit()">{{ kind === 'fix-errors' ? 'Fix errors' : 'Run it' }}</button>
+    </app-modal>
+    }
+
+    <!--Emoji modal: was a popover, and PopoverComponent closes on any document scroll, so
+    scrolling the panel closed it — the same fix ADR-057 applied to the Appearance panel.
+    The panel scrolls on one axis only: it used to be one 10-column grid holding both the captions
+    and the rows, which put every caption in a cell and drove the whole thing sideways.-->
+    @if (emojiOpen()) {
+    <app-modal [width]="360" (closed)="emojiOpen.set(false)">
+        <app-icon modal-icon name="smiley" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.tb.emoji }}</span>
+
+        <input class="emoji-search" type="search" [ngModel]="emojiQuery()"
+               (ngModelChange)="emojiQuery.set($event)"
+               [placeholder]="t().editor.emoji['search']" [attr.aria-label]="t().editor.emoji['search']">
+
+        <div class="emoji-popover">
+            @for (g of emojiGroups(); track g.key) {
+            <span class="emoji-caption">{{ t().editor.emoji[g.key] }}</span>
+            <div class="emoji-grid" [class.emoji-grid-wide]="g.wide">
+                @for (e of g.emoji; track e.ch) {
+                <button class="emoji-btn" [class.has-label]="!!e.label" (click)="insertEmoji(e.ch)"
+                        [title]="e.en">
+                    <span class="emoji-glyph">{{ e.ch }}</span>
+                    @if (e.label) { <span class="emoji-label">{{ e.label }}</span> }
+                </button>
+                }
+            </div>
+            } @empty {
+            <p class="field-hint-inline">{{ t().editor.emoji['noMatches'] }}</p>
+            }
+        </div>
+    </app-modal>
+    }
+
+    <!--Date/time modal: was app-popover, moved alongside the emoji panel for consistency.-->
+    @if (datetimeOpen()) {
+    <app-modal [width]="320" (closed)="datetimeOpen.set(false)">
+        <app-icon modal-icon name="clock" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.tb.datetime }}</span>
+
+        <input type="datetime-local" class="chat-input" [(ngModel)]="dtValue">
+        <div class="dt-flags">
+            <label><input type="checkbox" [(ngModel)]="dtWeekday"> {{ t().editor.datetimeFlags.weekday }}</label>
+            <label><input type="checkbox" [(ngModel)]="dtDate"> {{ t().editor.datetimeFlags.date }}</label>
+            <label><input type="checkbox" [(ngModel)]="dtTime"> {{ t().editor.datetimeFlags.time }}</label>
+        </div>
+
+        <button modal-actions class="btn-ghost" (click)="datetimeOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="insertDateTime()" [disabled]="!dtValue">{{ t().editor.groups.insert }}</button>
+    </app-modal>
+    }
+
+    <!--Table and formula are set up in a dialog rather than inserted blind: the size used to come
+    from a preference nobody remembered setting, and the LaTeX came from window.prompt.-->
+    @if (footnoteOpen()) {
+    <app-modal [width]="420" (closed)="footnoteOpen.set(false)">
+        <app-icon modal-icon name="text-superscript" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.tb.footnote }}</span>
+
+        <textarea rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
+
+        <button modal-actions class="btn-ghost" (click)="footnoteOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
+    </app-modal>
+    }
+
+    @if (tableOpen()) {
+    <app-modal [width]="320" (closed)="tableOpen.set(false)">
+        <app-icon modal-icon name="table" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.tableMenu.title }}</span>
+
+        <div class="dialog-grid">
+            <label class="dialog-field">
+                <span>{{ t().editor.tableMenu.rows }}</span>
+                <input type="number" min="1" [max]="maxTableSize" [(ngModel)]="tableRows">
+            </label>
+            <label class="dialog-field">
+                <span>{{ t().editor.tableMenu.cols }}</span>
+                <input type="number" min="1" [max]="maxTableSize" [(ngModel)]="tableCols">
+            </label>
+        </div>
+        <label class="dialog-check"><input type="checkbox" [(ngModel)]="tableHeaderRow"> {{ t().editor.tableMenu.headerRow }}</label>
+
+        <button modal-actions class="btn-ghost" (click)="tableOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="insertTable()">{{ t().editor.groups.insert }}</button>
+    </app-modal>
+    }
+
+    @if (formulaOpen()) {
+    <app-modal [width]="420" (closed)="formulaOpen.set(false)">
+        <app-icon modal-icon name="sigma" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.formula.title }}</span>
+
+        <label class="dialog-field">
+            <span>{{ t().editor.formula.latex }}</span>
+            <textarea rows="3" [placeholder]="t().editor.formula.placeholder" [(ngModel)]="formulaText"></textarea>
+        </label>
+        <p class="field-hint-inline">{{ t().editor.formula.hint }}</p>
+
+        <button modal-actions class="btn-ghost" (click)="formulaOpen.set(false)">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-ghost" (click)="insertFormula('inline')" [disabled]="!formulaText.trim()">{{ t().editor.formula.inline }}</button>
+        <button modal-actions class="btn-accent" (click)="insertFormula('block')" [disabled]="!formulaText.trim()">{{ t().editor.formula.block }}</button>
+    </app-modal>
+    }
+
+    @if (libraryOpen()) {
+    <app-media-picker (picked)="onLibraryPicked($event)" (closed)="libraryOpen.set(false)"></app-media-picker>
+    }
+
+    <!--ADR-128 — the `[[` suggester. mousedown+preventDefault keeps the editor selection alive
+    so the plugin's command still knows the range to replace.-->
+    @if (wikiSuggest(); as ws) {
+    <div class="wiki-suggest" [style.left.px]="ws.x" [style.top.px]="ws.y">
+        @for (item of ws.items; track item.id; let i = $index) {
+        <button class="wiki-suggest-item" [class.active]="i === ws.index"
+                (mousedown)="$event.preventDefault(); wikiPick(item)">{{ item.title || t().drafts.untitled }}</button>
+        } @empty {
+        <p class="wiki-suggest-none">{{ t().editor.wikilink.noMatches }}</p>
+        }
+    </div>
+    }
+
+    <!--Insert modal: unified link/YouTube/email/phone/mention, replaces the separate Link and YouTube popovers-->
+    @if (insertOpen()) {
+    <app-modal [width]="480" (closed)="closeInsertModal()">
+        <app-icon modal-icon name="link" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.groups.insert }}</span>
+
+        <div class="format-toggle insert-type-rail">
+            <button [class.on]="insertType === 'auto'" (click)="insertType = 'auto'">{{ t().editor.groups.auto }}</button>
+            <button [class.on]="insertType === 'url'" (click)="insertType = 'url'">{{ t().editor.groups.link }}</button>
+            <button [class.on]="insertType === 'youtube'" (click)="insertType = 'youtube'">YouTube</button>
+            <button [class.on]="insertType === 'email'" (click)="insertType = 'email'">{{ t().editor.groups.email }}</button>
+            <button [class.on]="insertType === 'phone'" (click)="insertType = 'phone'">{{ t().editor.groups.phone }}</button>
+            <button [class.on]="insertType === 'mention'" (click)="insertType = 'mention'">{{ t().editor.groups.mention }}</button>
+        </div>
+
+        <input class="chat-input" style="margin-top:10px"
+            [(ngModel)]="insertValue"
+            [placeholder]="effectiveInsertType() === 'email' ? 'name@example.com' : effectiveInsertType() === 'phone' ? '+1234567890' : effectiveInsertType() === 'mention' ? 'numeric user id' : effectiveInsertType() === 'youtube' ? 'https://www.youtube.com/watch?v=…' : 'https://…'"
+            (keyup.enter)="applyInsert()">
+
+        @if (insertType === 'auto' && insertValue.trim()) {
+        <div class="insert-detected">
+            <app-stamp-badge tone="ink" [rotate]="0">{{ effectiveInsertType() === 'youtube' ? 'YouTube' : 'Link' }}</app-stamp-badge>
+            detected
+        </div>
+        }
+
+        @if (effectiveInsertType() === 'youtube') {
+        <input class="chat-input" style="margin-top:8px" [(ngModel)]="insertCaption" [placeholder]="t().editor.groups.captionPlaceholder">
+        }
+
+        @if (insertError()) { <p class="channel-error">{{ insertError() }}</p> }
+
+        <button modal-actions class="btn-ghost" (click)="closeInsertModal()">{{ t().common.cancel }}</button>
+        @if (isActive('link')) {
+        <button modal-actions class="btn-ghost" (click)="removeLink()">{{ t().editor.groups.removeLink }}</button>
+        }
+        <button modal-actions class="btn-accent" (click)="applyInsert()">{{ t().editor.groups.insert }}</button>
+    </app-modal>
+    }
+
+    <!--T-014 — same shape as the glossary's batch translate (ADR-062): tick the targets, one
+    language after another, whatever stays ticked after a failure is what's left to do.-->
+    @if (translateAllOpen()) {
+    <app-modal [width]="460" (closed)="translateAllOpen.set(false)">
+        <h2 modal-title>{{ t().editor.lang.translateAllTitle }}</h2>
+        <div modal-body>
+            <p class="muted">{{ t().editor.lang.translateAllIntro(primaryLanguage.toUpperCase()) }}</p>
+
+            @for (l of translateAllCandidates(); track l) {
+            <label class="translate-all-row">
+                <input type="checkbox" [checked]="translateAllTargets().includes(l)"
+                       [disabled]="translateAllBusy()" (change)="toggleTranslateAllTarget(l)">
+                <span>{{ l.toUpperCase() }} · {{ endonym(l) }}</span>
+                @if (translateAllDone().includes(l)) {
+                <span class="translate-all-state done">{{ t().editor.lang.translateAllDone }}</span>
+                } @else if (translateAllCurrent() === l) {
+                <span class="translate-all-state">{{ t().editor.lang.translateAllRunning }}</span>
+                } @else if (translationOf(l)) {
+                <span class="translate-all-state warn">{{ t().editor.lang.translateAllOverwrites }}</span>
+                }
+            </label>
+            }
+
+            <p class="field-hint-inline">{{ t().editor.lang.translateAllCost(translateAllCost()) }}</p>
+            @if (translateAllError(); as err) { <p class="error">{{ err }}</p> }
+        </div>
+        <button modal-actions class="btn-ghost" [disabled]="translateAllBusy()" (click)="translateAllOpen.set(false)">
+            {{ t().common.cancel }}
+        </button>
+        <button modal-actions class="btn-accent" [disabled]="translateAllBusy() || !translateAllCost()" (click)="runTranslateAll()">
+            {{ translateAllBusy() ? t().editor.lang.translateAllRunning : t().editor.lang.translateAllStart }}
+        </button>
+    </app-modal>
+    }
+
+    <!--Re-translate confirm dialog (replaces window.confirm)-->
+    @if (translateConfirmOpen()) {
+    <app-modal (closed)="cancelTranslateConfirm()">
+        <app-icon modal-icon name="arrow-clockwise" size="sm"></app-icon>
+        <span modal-title>{{ t().editor.lang.replaceTitle(lang().toUpperCase()) }}</span>
+        <p>{{ t().editor.lang.replaceBody }}</p>
+        <button modal-actions class="btn-ghost" (click)="cancelTranslateConfirm()">{{ t().common.cancel }}</button>
+        <button modal-actions class="btn-accent" (click)="confirmTranslate()">{{ t().common.save }}</button>
+    </app-modal>
+    }
+
+    <!--AI success toast-->
+    @if (aiToast(); as toast) {
+    <div class="ai-toast">
+        <app-icon name="check" size="xs"></app-icon>
+        <span>{{ toast }}</span>
+    </div>
+    }
+
+
+    <!--Upload progress-->
+    @if (uploads().length) {
+    <div class="uploads">
+        @for (u of uploads(); track u.id) {
+        <div class="upload-item" [class.error]="u.error">
+            <span class="upload-name">{{ u.name }}</span>
+            @if (u.error) {
+                <span class="upload-error">{{ u.error }}</span>
+            } @else {
+                <div class="upload-bar"><div class="upload-fill" [style.width.%]="u.progress"></div></div>
+                <span class="upload-pct">{{ u.progress }}%</span>
+            }
+        </div>
+        }
+    </div>
+    }
+
+    <!--One document, three tabs (ADR-239 clause 9). The frame draws the top bar, the title, the
+    tabs and the footer; this page fills its slots. Write stays mounted behind the other tabs —
+    TipTap owns the sheet's DOM node, and unmounting it would orphan the editor.-->
+    <app-document-frame [title]="frameTitle()" [kicker]="frameKicker()" [statusTag]="statusTag()"
+                        [tab]="tab()" [tabs]="frameTabs()" [tabsLabel]="t().editor.tabsLabel"
+                        [saveWord]="syncWord()" [saveState]="frameSaveState()" [dateLabel]="dateLabel()"
+                        [footerText]="footerText()" [canUndo]="canUndo()" [canRedo]="canRedo()"
+                        [project]="frameProject()" [projects]="frameProjects()"
+                        (tabChange)="setTab($event)" (undo)="cmd(c => c.undo())" (redo)="cmd(c => c.redo())">
+        <app-popover title-actions align="right">
+            <button trigger type="button" class="btn frame-more"
+                    [title]="t().editor.frame.moreActions" [attr.aria-label]="t().editor.frame.moreActions">
+                <app-icon name="dots-three" size="sm"></app-icon>
+            </button>
+            <div panel class="block-menu">
+                <button type="button" (click)="openRevisions()"><app-icon name="clock" size="xs"></app-icon> {{ t().editor.inspector.history }}</button>
+                <a class="block-menu-link" routerLink="/posts"><app-icon name="paper-plane-tilt" size="xs"></app-icon> {{ t().editor.frame.postsManager }}</a>
+            </div>
+        </app-popover>
+        <!--Details folds the inspector away (CONTRACT §D3). A toggle, so it says which way it is.-->
+        <button title-actions type="button" class="btn" [attr.aria-pressed]="inspectorOpen()"
+                aria-controls="editor-inspector" (click)="toggleDetails()">
+            {{ inspectorOpen() ? t().editor.frame.hideDetails : t().editor.frame.details }}
+        </button>
+
+        <!--One primary action per state (ADR-242 clause 4): the footer's end is the next step,
+        its start the way back. Share preview keeps its one home here on Write and Preview.-->
+        <span footer-start class="frame-back">
+            @if (tab() !== 'write') {
+                <button type="button" class="btn" (click)="setTab(tab() === 'publish' ? 'preview' : 'write')">
+                    <app-icon name="caret-left" size="xs"></app-icon>{{ t().editor.frame.back }}
+                </button>
+            }
+            @if (tab() !== 'publish') {
+                <button type="button" class="btn" (click)="sharePreview()" [disabled]="previewLinkBusy()"
+                        [title]="t().editor.preview.shareTitle">
+                    <app-icon name="link" size="sm"></app-icon>{{ t().editor.preview.share }}
+                </button>
+            }
+        </span>
+        <span footer-end class="frame-next">
+            @switch (tab()) {
+                @case ('write') {
+                    <button type="button" class="btn primary" (click)="setTab('preview')">
+                        {{ t().editor.frame.continueToPreview }}<app-icon name="caret-right" size="xs"></app-icon>
+                    </button>
+                }
+                @case ('preview') {
+                    <!--A test send goes to the test channel only, and only when it is connected
+                    (.claude/rules/telegram-bot.md); with no such channel there is no button.-->
+                    @if (testChannel(); as channel) {
+                        <button type="button" class="btn" (click)="sendTest()" [disabled]="testSendBusy()">
+                            @if (testSendBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                            @else { <app-brand-icon name="telegram" [size]="14"></app-brand-icon> }
+                            {{ t().editor.frame.sendTest(channel.username!) }}
+                        </button>
+                    }
+                    <button type="button" class="btn primary" (click)="setTab('publish')">
+                        {{ t().editor.frame.continueToPublish }}<app-icon name="caret-right" size="xs"></app-icon>
+                    </button>
+                }
+                @default {
+                    <!--One Publish for the whole workspace (B5) — fires every ticked destination. Its
+                    label follows what pressing it will actually do (FI2.6/FI2.7).-->
+                    <button type="button" class="btn primary btn-publish" (click)="publishAll()" [disabled]="!canPublishAll()">
+                        @if (publishingAll()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                        @else { <app-icon name="paper-plane-tilt" size="sm"></app-icon> }
+                        {{ publishButtonLabel() }}
+                    </button>
+                }
+            }
+        </span>
+
+        <div body class="preview-slot" [class.is-hidden]="tab() !== 'preview'"
+             id="frame-panel-preview" role="tabpanel" aria-labelledby="frame-tab-preview">
+            @if (tab() === 'preview' && previewFacts(); as facts) {
+                <app-editor-preview [facts]="facts" [channels]="channels()" [initialLang]="lang()"
+                                    [savedVersion]="savedVersion()" (details)="setTab('publish')" (fix)="fixCheck($event)" />
+            }
+        </div>
+
+        <!--Publish / Export (ADR-242): the Export window's steps as the document's third state.
+        FI2.6 still rules it — Export manages only export; unpublishing and scheduled-post
+        management live in the Posts Manager. ADR-096's three questions (version, where, with what)
+        and ADR-099's "when" are the regions the stepper walks.-->
+        <div body class="publish-slot" [class.is-hidden]="tab() !== 'publish'"
+             id="frame-panel-publish" role="tabpanel" aria-labelledby="frame-tab-publish">
+            @if (tab() === 'publish' && currentId(); as id) {
+            <div class="pub">
+                <app-publish-stepper class="card pub-stepper" [steps]="publishSteps()" (pick)="focusPublishStep($event)" />
+
+                <div class="pub-columns">
+                    <!--The rack: one card per destination, ticked or not. A network with no account
+                    stays visible and stays honest — not hidden, not tickable, and the way out is the
+                    one place that can fix it (ADR-095). Each card is two controls (ADR-242 clause 6).-->
+                    <section class="card pub-rack" id="pub-destinations" tabindex="-1" [attr.aria-label]="t().editor.publishTab.destinations">
+                        <div class="pub-rack-head">
+                            <span class="label">{{ t().editor.publishTab.destinations }}</span>
+                            <span class="pub-rack-count">{{ tickedDestinationCount() }}</span>
+                        </div>
+                        <!--T-331 — a saved set of destinations fills the ticks below in one pick.-->
+                        @if (exportPresets().length) {
+                        <select class="chat-input dest-preset" [value]="''"
+                                [attr.aria-label]="t().editor.exportModal.applyPreset"
+                                (change)="applyExportPreset($any($event.target).value)">
+                            <option value="">{{ t().editor.exportModal.applyPreset }}</option>
+                            @for (p of exportPresets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+                        </select>
+                        }
+                        <div class="dest-cards">
+                            <app-destination-card id="blog" [name]="t().editor.exportModal.destinationBlog" icon="newspaper"
+                                                  [meta]="destinationMeta('blog')" [state]="destinationState('blog')"
+                                                  [includable]="true" [included]="destBlog()" [active]="activeExportDestination() === 'blog'"
+                                                  (include)="includeDestination('blog', $event)" (select)="activeExportDestination.set('blog')" />
+                            <app-destination-card id="telegram" [name]="t().editor.exportModal.destinationTelegram" brand="telegram"
+                                                  [meta]="destinationMeta('telegram')" [state]="destinationState('telegram')"
+                                                  [includable]="channels().length > 0" [included]="destTelegram()" [active]="activeExportDestination() === 'telegram'"
+                                                  (include)="includeDestination('telegram', $event)" (select)="activeExportDestination.set('telegram')">
+                                @if (!channels().length) {
+                                <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'integrations' }">{{ t().editor.exportModal.connectInSettings }}</a>
+                                }
+                            </app-destination-card>
+                            @for (network of microNetworks; track network) {
+                            <app-destination-card [id]="network" [name]="microLabels[network]" [brand]="brandOf(network)"
+                                                  [meta]="destinationMeta(network)" [state]="destinationState(network)"
+                                                  [includable]="!!account(network)" [included]="destination(network)()"
+                                                  [active]="activeExportDestination() === network"
+                                                  (include)="includeDestination(network, $event)" (select)="activeExportDestination.set(network)">
+                                @if (!account(network)) {
+                                <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'integrations' }">{{ t().editor.exportModal.connectInSettings }}</a>
+                                }
+                            </app-destination-card>
+                            }
+                        </div>
+                        @if (!anyDestination()) {
+                        <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.noDestination }}</p>
+                        }
+                        <label class="pub-select-all">
+                            <input type="checkbox" [checked]="allReadySelected()" [disabled]="!readyDestinationIds().length"
+                                   (change)="selectAllReady($any($event.target).checked)">
+                            {{ t().editor.publishTab.selectAllReady(readyDestinationIds().length) }}
+                        </label>
+
+                        <!--T-318 — Steam/itch are copy destinations: the card only selects the panel that
+                        renders the text for the clipboard. No checkbox on purpose — nothing here is a
+                        publish, so nothing here can be ticked into one.-->
+                        <details class="pub-group" open>
+                            <summary class="label">{{ t().editor.publishTab.copyForStores }}<app-icon name="caret-down" size="xs"></app-icon></summary>
+                            <div class="dest-cards">
+                                @for (target of copyTargets; track target.id) {
+                                <app-destination-card [id]="target.id" [name]="target.name" [brand]="target.icon" kind="copy"
+                                                      [meta]="t().editor.exportModal.copyOnly" [active]="activeExportDestination() === target.id"
+                                                      (select)="selectCopyTarget(target.id)" />
+                                }
+                            </div>
+                        </details>
+                        <details class="pub-group">
+                            <summary class="label">{{ t().editor.publishTab.comingLater }}<app-icon name="caret-down" size="xs"></app-icon></summary>
+                            <div class="dest-cards">
+                                @for (network of unsupportedDestinations; track network.id) {
+                                <app-destination-card [id]="network.id" [name]="network.name" [brand]="network.icon" kind="unsupported"
+                                                      [state]="destinationState(network.id)" [active]="activeExportDestination() === network.id"
+                                                      (select)="activeExportDestination.set(network.id)" />
+                                }
+                            </div>
+                        </details>
+                    </section>
+
+                    <!--The middle column: the version for the whole publish (ADR-096), the active
+                    destination's own settings, then when it goes and who may open it.-->
+                    <section class="card pub-main">
+                        <div class="pub-section" id="pub-version" tabindex="-1">
+                            <span class="label">{{ t().editor.exportModal.stepVersion }}</span>
                 <div class="lang-check-row">
                     <label class="lang-check" [title]="endonym(primaryLanguage)">
                         <input type="checkbox" [checked]="isExportLang(primaryLanguage)" (change)="toggleExportLang(primaryLanguage)">
@@ -42,196 +671,10 @@
                 @if (missingLanguages().length) {
                 <p class="field-hint-inline">{{ t().editor.exportModal.versionMissing(missingLanguagesLabel()) }}</p>
                 }
-                </div>
-            </app-shelf-panel>
-
-            <!-- ============ PRE-PUBLISH CHECKS (Wave 2 item 14) ============ -->
-            <!--One modal-wide checklist: the Telegram capability warnings that used to live inside
-            the Telegram panel, plus the per-language content checks (empty version, dead links).
-            Warnings only — nothing here ever disables Publish.-->
-            @if (hasAnyWarnings() || preflightLoading()) {
-            <app-shelf-panel class="export-step export-global" [title]="t().editor.exportModal.checksPanel"
-                             [count]="visiblePublishIssues().length + preflightWarnings().length + (isWorkingMaterial() ? 1 : 0)">
-                <div class="export-step-body">
-                @if (preflightLoading() && !hasAnyWarnings()) {
-                <p class="field-hint-inline">{{ t().editor.exportModal.checksRunning }}</p>
-                }
-                <!--ADR-102 — the one check that DOES block publish, said before pressing the
-                button instead of coming back as a server 400. The fix is the inspector's type row.-->
-                @if (isWorkingMaterial()) {
-                <div class="check-group">
-                    <span class="export-section-title check-group-name">{{ t().editor.inspector.type }}</span>
-                    <ul class="publish-issues">
-                        <li class="blocking">
-                            <app-icon name="warning" size="sm"></app-icon>
-                            {{ t().editor.exportModal.checkWorkingMaterial(t().projects.docTypes[documentType()].name) }}
-                        </li>
-                    </ul>
-                </div>
-                }
-                @if (visiblePublishIssues().length) {
-                <div class="check-group">
-                    <span class="export-section-title check-group-name"><app-brand-icon name="telegram" [size]="14"></app-brand-icon>Telegram</span>
-                    <ul class="publish-issues">
-                        @for (issue of visiblePublishIssues(); track issue.code) {
-                        <li [class.blocking]="issue.blocking">
-                            <app-icon [name]="issue.blocking ? 'warning' : 'info'" size="sm"></app-icon>
-                            {{ publishIssueText(issue) }}
-                        </li>
-                        }
-                    </ul>
-                </div>
-                }
-                @for (check of preflightWarnings(); track check.language) {
-                <div class="check-group">
-                    <span class="export-section-title check-group-name">{{ t().editor.exportModal.checksLanguage(check.language.toUpperCase()) }}</span>
-                    <ul class="publish-issues">
-                        @if (check.emptyVersion) {
-                        <li><app-icon name="warning" size="sm"></app-icon>{{ t().editor.exportModal.checkEmptyVersion }}</li>
-                        }
-                        @for (dead of check.deadLinks; track dead.url) {
-                        <li><app-icon name="warning" size="sm"></app-icon>{{ t().editor.exportModal.checkDeadLink(dead.url, dead.status) }}</li>
-                        }
-                    </ul>
-                </div>
-                }
-                @if (visiblePublishIssues().length || preflightWarnings().length) {
-                <p class="field-hint-inline">{{ t().editor.exportModal.checksNeverBlock }}</p>
-                }
-                </div>
-            </app-shelf-panel>
-            }
-
-            <!-- ============ 2 · DESTINATIONS ============ -->
-            <app-shelf-panel class="export-step export-destinations" [title]="'2 · ' + t().editor.exportModal.stepWhere"
-                             [count]="tickedDestinationCount()">
-                <!--T-331 — a saved set of destinations fills the ticks below in one pick. A panel
-                command, so it rides the header's actions slot rather than the body.-->
-                @if (exportPresets().length) {
-                <select actions class="chat-input dest-preset" [value]="''"
-                        [attr.aria-label]="t().editor.exportModal.applyPreset"
-                        (change)="applyExportPreset($any($event.target).value)">
-                    <option value="">{{ t().editor.exportModal.applyPreset }}</option>
-                    @for (p of exportPresets(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
-                </select>
-                }
-                <div class="export-step-body">
-                <!--A network with no account stays visible and stays honest: it is not hidden, not
-                silently tickable, and the way out is the one place that can fix it (ADR-095).
-                Two independent affordances per card: the body selects what step 3 manages, only
-                the checkbox changes what gets published — neither ever does the other's job.-->
-                <div class="dest-cards">
-                    <div class="dest-card" role="button" tabindex="0"
-                         [class.on]="destBlog()" [class.active]="activeExportDestination() === 'blog'"
-                         [attr.aria-pressed]="activeExportDestination() === 'blog'"
-                         (click)="activeExportDestination.set('blog')"
-                         (keydown.enter)="selectDestinationKey($event, 'blog')"
-                         (keydown.space)="selectDestinationKey($event, 'blog')">
-                        <input type="checkbox" [checked]="destBlog()" (change)="destBlog.set(!destBlog())"
-                               (click)="$event.stopPropagation()"
-                               (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()"
-                               [attr.aria-label]="t().editor.exportModal.includeDestination(t().editor.exportModal.destinationBlog)">
-                        <app-icon name="newspaper" size="sm"></app-icon>
-                        <span class="dest-card-name">{{ t().editor.exportModal.destinationBlog }}</span>
-                        @if (currentBlog()?.isPublished) { <span class="state-chip live">LIVE</span> }
-                    </div>
-
-                    <div class="dest-card" role="button" tabindex="0"
-                         [class.on]="destTelegram()" [class.active]="activeExportDestination() === 'telegram'"
-                         [attr.aria-pressed]="activeExportDestination() === 'telegram'"
-                         (click)="activeExportDestination.set('telegram')"
-                         (keydown.enter)="selectDestinationKey($event, 'telegram')"
-                         (keydown.space)="selectDestinationKey($event, 'telegram')">
-                        <input type="checkbox" [checked]="destTelegram()" (change)="destTelegram.set(!destTelegram())"
-                               (click)="$event.stopPropagation()"
-                               (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()"
-                               [attr.aria-label]="t().editor.exportModal.includeDestination(t().editor.exportModal.destinationTelegram)">
-                        <app-brand-icon name="telegram" [size]="15"></app-brand-icon>
-                        <span class="dest-card-name">{{ t().editor.exportModal.destinationTelegram }}</span>
-                        @if (telegramPostUrl()) { <span class="state-chip live">LIVE</span> }
-                    </div>
-
-                    @for (network of microNetworks; track network) {
-                        @if (account(network); as acc) {
-                        <div class="dest-card" role="button" tabindex="0"
-                             [class.on]="destination(network)()" [class.active]="activeExportDestination() === network"
-                             [attr.aria-pressed]="activeExportDestination() === network"
-                             (click)="activeExportDestination.set(network)"
-                             (keydown.enter)="selectDestinationKey($event, network)"
-                             (keydown.space)="selectDestinationKey($event, network)">
-                            <input type="checkbox" [checked]="destination(network)()"
-                                   (change)="destination(network).set(!destination(network)())"
-                                   (click)="$event.stopPropagation()"
-                                   (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()"
-                                   [attr.aria-label]="t().editor.exportModal.includeDestination(microLabels[network])">
-                            <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
-                            <span class="dest-card-name">{{ microLabels[network] }}</span>
-                            <span class="dest-card-meta">{{ acc.displayName }}</span>
                         </div>
-                        } @else {
-                        <div class="dest-card off" role="button" tabindex="0"
-                             [class.active]="activeExportDestination() === network"
-                             [attr.aria-pressed]="activeExportDestination() === network"
-                             (click)="activeExportDestination.set(network)"
-                             (keydown.enter)="selectDestinationKey($event, network)"
-                             (keydown.space)="selectDestinationKey($event, network)">
-                            <app-brand-icon [name]="brandOf(network)" [size]="14"></app-brand-icon>
-                            <span class="dest-card-name">{{ microLabels[network] }}</span>
-                            <span class="dest-card-meta">{{ t().editor.exportModal.notConnected }}</span>
-                            <a class="state-link" routerLink="/settings" [queryParams]="{ tab: 'integrations' }"
-                               (click)="$event.stopPropagation()">
-                                {{ t().editor.exportModal.connectInSettings }}
-                            </a>
-                        </div>
-                        }
-                    }
-                    <!--T-318 — Steam/itch are copy destinations: the card only selects the step-3
-                    panel that renders the text for the clipboard. No checkbox on purpose — nothing
-                    here is a publish, so nothing here can be ticked into one.-->
-                    @for (target of copyTargets; track target.id) {
-                    <div class="dest-card off copy-target" role="button" tabindex="0"
-                         [class.active]="activeExportDestination() === target.id"
-                         [attr.aria-pressed]="activeExportDestination() === target.id"
-                         (click)="selectCopyTarget(target.id)"
-                         (keydown.enter)="selectCopyTargetKey($event, target.id)"
-                         (keydown.space)="selectCopyTargetKey($event, target.id)">
-                        <app-brand-icon [name]="target.icon" [size]="14"></app-brand-icon>
-                        <span class="dest-card-name">{{ target.name }}</span>
-                        <span class="dest-card-meta">{{ t().editor.exportModal.copyOnly }}</span>
-                    </div>
-                    }
-                    @for (network of unsupportedDestinations; track network.id) {
-                    <div class="dest-card off unsupported" role="button" tabindex="0"
-                         [class.active]="activeExportDestination() === network.id"
-                         [attr.aria-pressed]="activeExportDestination() === network.id"
-                         (click)="activeExportDestination.set(network.id)"
-                         (keydown.enter)="selectDestinationKey($event, network.id)"
-                         (keydown.space)="selectDestinationKey($event, network.id)">
-                        <app-brand-icon [name]="network.icon" [size]="14"></app-brand-icon>
-                        <span class="dest-card-name">{{ network.name }}</span>
-                        <span class="dest-card-meta">{{ t().editor.exportModal.notSupported }}</span>
-                    </div>
-                    }
-                </div>
-                @if (!anyDestination()) {
-                <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.noDestination }}</p>
-                }
-                </div>
-            </app-shelf-panel>
 
-            <!--ADR-241 — what of the document each destination takes, before anything is sent. A
-            global panel like steps 1 and 4: the table needs the whole width, not the rack column.-->
-            <app-shelf-panel class="export-step export-global dest-matrix" [title]="t().matrix.title">
-                <div class="export-step-body">
-                    <app-publish-matrix [capabilities]="networkCaps()" [connected]="connectedNetworks()"
-                                        [present]="documentKindCounts()" />
-                </div>
-            </app-shelf-panel>
-
-            <!-- ============ 3 · PER-DESTINATION SETTINGS ============ -->
-            @if (activeExportDestination()) {
-            <app-shelf-panel class="export-step export-settings" [title]="'3 · ' + t().editor.exportModal.stepParams">
-                <div class="export-step-body">
+                        <div class="pub-section pub-settings" id="pub-settings" tabindex="-1">
+                            <h3 class="pub-settings-title">{{ activeDestinationTitle() }}</h3>
                 <div class="export-panels">
 
                 @if (activeExportDestination() === 'blog') {
@@ -617,20 +1060,14 @@
                 </div>
                 }
                 </div>
-                </div>
-            </app-shelf-panel>
-            }
+                        </div>
 
-            <!-- ============ 4 · WHEN ============ -->
-            <!--ADR-099 — scheduling is a property of the publication, not of Telegram. It lived
-            inside the Telegram panel while Telegram was the only network that could be scheduled;
-            with four destinations that stopped being true. Shown only when something schedulable
-            is ticked — the blog is not a publish target and has nothing to postpone.-->
-            @if (anyNetworkDestination()) {
-            <app-shelf-panel class="export-step export-global" [title]="'4 · ' + t().editor.exportModal.stepWhen">
-                <div class="export-step-body">
-                <!--ADR-190 — the sentence that used to sit beside the title lives on the paper now:
-                wood carries labels and counters, paper carries prose.-->
+                        <!--ADR-099 — scheduling is a property of the publication, not of Telegram. Shown
+                        only when something schedulable is ticked — the blog is not a publish target and
+                        has nothing to postpone.-->
+                        @if (anyNetworkDestination()) {
+                        <div class="pub-section" id="pub-when">
+                            <span class="label">{{ t().editor.exportModal.stepWhen }}</span>
                 <p class="field-hint-inline">{{ t().editor.exportModal.stepWhenHint }}</p>
                 <!--Wave 2 item 12 — the channel's own history, only when it has one: no data, no hint.-->
                 @if (destTelegram() && bestTimeHint(); as hint) {
@@ -660,17 +1097,16 @@
                 <a class="state-link" routerLink="/posts">{{ t().editor.exportModal.manageInManager }}</a>
                 }
                 @if (scheduleResult()) { <p class="export-result">{{ scheduleResult() }}</p> }
-                </div>
-            </app-shelf-panel>
-            }
+                        </div>
+                        }
 
-            <!--ADR-096 — who may open this post, and what their copy looks like. Not a destination:
-            it is true of the private page whether or not this window is publishing anywhere, so it
-            is not gated behind ticking the blog.-->
-            @if (isPrivate()) {
-            <app-shelf-panel class="export-step export-global" [title]="t().editor.exportModal.privateAccess">
-                <div class="export-step-body">
-                <p class="field-hint-inline">{{ t().editor.exportModal.privateAccessHint }}</p>
+                        <!--ADR-096 — who may open this post, and what their copy looks like. Not a
+                        destination: it is true of the private page whether or not anything is being
+                        published, so it is not gated behind ticking the blog.-->
+                        @if (isPrivate()) {
+                        <div class="pub-section">
+                            <span class="label">{{ t().editor.exportModal.privateAccess }}</span>
+                            <p class="field-hint-inline">{{ t().editor.exportModal.privateAccessHint }}</p>
                 <div class="export-panels">
                 <div class="export-section">
                     <div class="export-section-title">{{ t().editor.exportModal.invitations }}</div>
@@ -719,24 +1155,53 @@
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.watermarkHint }}</p>
                 </div>
                 </div>
-                </div>
-            </app-shelf-panel>
-            }
+                        </div>
+                        }
+                    </section>
 
-            <!-- ============ FILES ============ -->
-            <app-shelf-panel class="export-step export-global" [title]="t().editor.exportModal.filesPanel"
-                             [count]="draftAssets().length">
-                <div class="export-step-body">
-                <p class="field-hint-inline">{{ t().editor.exportModal.filesPanelHint }}</p>
-                <div class="export-panels">
-                <!--FI2.10: two buttons. The per-language .html links they replace produced a page
-                whose images all pointed back at the blog — a saved page only while the blog is up.-->
-                <div class="export-section">
-                    <div class="export-section-title">{{ t().editor.exportModal.fileExports }}</div>
-                    <!--T-042 — buttons rather than plain download links: the server packages the media
-                    before it answers, which on a heavy post is tens of seconds of a browser doing
-                    nothing visible. Fetching it ourselves is what makes "working" and "failed"
-                    sayable at all.-->
+                    <!--The review: the four headings both tabs share, the summary of what pressing the
+                    button does, and the matrix folded behind its warning count (ADR-241, ADR-242).-->
+                    <aside class="pub-review" id="pub-review" tabindex="-1" [attr.aria-label]="t().editor.publishTab.readiness">
+                        <app-preview-checks class="pub-checks" [title]="t().editor.publishTab.readiness" [checks]="publishChecks()"
+                                            [loading]="preflightLoading()" [showAll]="false" (fix)="fixCheck($event)" />
+                        <section class="card pub-summary">
+                            <span class="label">{{ t().editor.publishTab.summary }}</span>
+                            <app-spec-row scope="document" [label]="t().editor.publishTab.summaryVersions" [value]="exportLangsLabel()"></app-spec-row>
+                            <app-spec-row scope="document" [label]="t().editor.publishTab.summaryDestinations" [value]="t().editor.publishTab.selected(tickedDestinationCount())"></app-spec-row>
+                            <app-spec-row scope="document" [label]="t().editor.publishTab.summarySchedule" [value]="scheduleSummary()"></app-spec-row>
+                            <app-spec-row scope="document" [label]="t().editor.publishTab.summaryPrivacy" [value]="isPrivate() ? t().editor.state.private : t().editor.state.public"></app-spec-row>
+                            <app-spec-row scope="document" [label]="t().editor.publishTab.summaryWarnings" [value]="'' + publishWarningCount()" [warn]="publishWarningCount() > 0"></app-spec-row>
+                        </section>
+                        <details class="card pub-compat">
+                            <summary><app-icon name="table" size="sm"></app-icon>{{ t().editor.publishTab.compatibility(matrixWarnings()) }}<app-icon name="caret-down" size="xs" class="pub-compat-caret"></app-icon></summary>
+                            <app-publish-matrix [capabilities]="networkCaps()" [connected]="connectedNetworks()"
+                                                [present]="documentKindCounts()" />
+                        </details>
+                        <!--FI2.11: the result of a publish, with the links it produced. It waits to be
+                        dismissed: the progress checklist stacks over it, so a timed life meant the links
+                        were gone before anything uncovered them.-->
+            @if (publishSuccess(); as done) {
+            <div class="publish-toast">
+                <app-icon name="check" size="sm"></app-icon>
+                <span>{{ t().editor.exportModal.publishedOk }}</span>
+                @for (link of done.links; track link.url) {
+                <a [href]="link.url" target="_blank" rel="noopener">{{ link.label }}</a>
+                }
+                <button class="toast-close" (click)="dismissPublishSuccess()"
+                        [title]="t().common.close" [attr.aria-label]="t().common.close">
+                    <app-icon name="x" size="xs"></app-icon>
+                </button>
+            </div>
+            }
+                    </aside>
+                </div>
+
+                <!--FI2.10 / T-042 / Wave 2 item 16 — the part of the window that publishes nothing
+                anywhere: file exports, the tracked short link and the document's own files.-->
+                <section class="card pub-utility">
+                    <span class="label">{{ t().editor.publishTab.utility }}</span>
+                    <div class="pub-utility-row">
+                        <div class="pub-utility-cell">
                     <button class="export-btn" (click)="downloadExport('cedar')" [disabled]="!!downloading()">
                         @if (downloading() === 'cedar') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                         @else { <app-icon name="download-simple" size="sm"></app-icon> }
@@ -750,10 +1215,9 @@
                     @if (downloading()) { <p class="field-hint-inline">{{ t().editor.exportModal.preparing }}</p> }
                     @if (downloadError()) { <p class="channel-error">{{ downloadError() }}</p> }
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.zipHint }}</p>
-
-                    <!--Wave 2 item 16 — a /l/{code} short link that counts clicks. Reuse-or-create,
-                    so pressing twice copies the same link rather than minting a second one.-->
-                    <div class="export-section-title" style="margin-top:12px">{{ t().editor.exportModal.trackedLink }}</div>
+                        </div>
+                        <div class="pub-utility-cell">
+                    <div class="export-section-title">{{ t().editor.exportModal.trackedLink }}</div>
                     @if (currentBlog()?.isPublished) {
                     @for (l of exportLangs(); track l) {
                     <button class="export-btn" (click)="copyTrackedBlogLink(l)" [disabled]="trackedLinkBusy()">
@@ -776,15 +1240,16 @@
                     </div>
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.trackedLinkHint }}</p>
                     @if (trackedLinkError()) { <p class="channel-error">{{ trackedLinkError() }}</p> }
-                </div>
-
-                <div class="export-section">
-                    <div class="export-section-title">
-                        {{ t().editor.exportModal.draftFiles }}
-                        @if (draftAssets().length) {
-                        <span class="field-hint-inline">· {{ draftAssets().length }} · {{ formatFileSize(totalAssetsBytes()) }}</span>
-                        }
-                    </div>
+                        </div>
+                        <details class="pub-utility-cell pub-files">
+                            <summary class="export-section-title">
+                                {{ t().editor.exportModal.draftFiles }}
+                                @if (draftAssets().length) {
+                                <span class="field-hint-inline">· {{ draftAssets().length }} · {{ formatFileSize(totalAssetsBytes()) }}</span>
+                                }
+                                <app-icon name="caret-down" size="xs"></app-icon>
+                            </summary>
+                <div class="pub-files-body">
                     @if (draftAssetsLoading()) {
                     <p class="field-hint-inline">{{ t().common.loading }}</p>
                     } @else if (!draftAssets().length) {
@@ -818,605 +1283,17 @@
                     </div>
                     }
                 </div>
-                </div>
-                </div>
-            </app-shelf-panel>
-            }
-            </div>
-
-            <!--FI2.11: the result of a publish, with the links it produced. Inside the modal
-            rather than over the page — this is the answer to the button that was just pressed, and
-            the window stays open after publishing. **It waits to be dismissed** (11.08.2026): the
-            progress checklist stacks over it, so a ten-second life meant the links were gone before
-            anything uncovered them.-->
-            @if (publishSuccess(); as done) {
-            <div class="publish-toast">
-                <app-icon name="check" size="sm"></app-icon>
-                <span>{{ t().editor.exportModal.publishedOk }}</span>
-                @for (link of done.links; track link.url) {
-                <a [href]="link.url" target="_blank" rel="noopener">{{ link.label }}</a>
-                }
-                <button class="toast-close" (click)="dismissPublishSuccess()"
-                        [title]="t().common.close" [attr.aria-label]="t().common.close">
-                    <app-icon name="x" size="xs"></app-icon>
-                </button>
-            </div>
-            }
-
-            <!--One Publish for the whole window (B5) — fires every ticked destination. Its label
-            follows what pressing it will actually do (FI2.6/FI2.7).-->
-            <button modal-actions class="btn-ghost" (click)="exportModalOpen.set(false)">{{ t().common.close }}</button>
-            <button modal-actions class="btn-accent btn-publish" (click)="publishAll()" [disabled]="!canPublishAll()">
-                @if (publishingAll()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                {{ publishButtonLabel() }}
-            </button>
-    </app-modal>
-    }
-
-    <!--The publish checklist — a publication runs like a test suite: one row per phase, a thread
-    unfolds into numbered part chips, an error is pinned to the step that broke (and it is the
-    FIRST failed part's error — the root cause, not the held-back cascade). Stacks over the export
-    modal; closing it never cancels anything, the queue owns the jobs (T-090).-->
-    @if (publishRun(); as run) {
-    <app-modal [width]="460" (closed)="closePublishRun()">
-        <app-icon modal-icon name="paper-plane-tilt" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.publishRun.title }}</span>
-
-        <ul class="publish-run">
-            @for (step of run.steps; track step.id) {
-            <li class="pr-step">
-                <span class="pr-status" [class]="'pr-' + step.status">
-                    @switch (step.status) {
-                        @case ('waiting') { <span class="pr-dot"></span> }
-                        @case ('running') { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                        @case ('done') { <app-icon name="check" size="sm"></app-icon> }
-                        @case ('failed') { <app-icon name="x" size="sm"></app-icon> }
-                    }
-                </span>
-                <div class="pr-body">
-                    <div class="pr-row">
-                        <span class="pr-label">{{ step.label }}</span>
-                        @if (step.parts?.length) {
-                        <span class="pr-count">{{ runDoneParts(step) }}/{{ step.parts!.length }}</span>
-                        }
-                        @if (step.link; as link) {
-                        <a class="pr-link" [href]="link.url" target="_blank" rel="noopener">{{ link.label }} →</a>
-                        }
+                        </details>
                     </div>
-                    @if (step.parts?.length) {
-                    <div class="pr-parts">
-                        @for (part of step.parts; track part.index) {
-                        <span class="pr-part" [class]="'pr-' + part.status">{{ part.index + 1 }}</span>
-                        }
-                    </div>
-                    }
-                    @if (step.error) { <p class="pr-error">{{ step.error }}</p> }
-                </div>
-            </li>
-            }
-        </ul>
-
-        @if (run.finished) {
-        <p class="pr-summary" [class.failed]="runHasFailure(run)">
-            @if (runHasFailure(run)) { <app-icon name="x" size="sm"></app-icon> {{ t().editor.publishRun.withErrors }} }
-            @else { <app-icon name="check" size="sm"></app-icon> {{ t().editor.publishRun.allDone }} }
-        </p>
-        } @else {
-        <p class="pr-summary running">
-            <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> {{ t().editor.publishRun.working }}
-        </p>
-        }
-
-        <button modal-actions [class]="run.finished ? 'btn-accent' : 'btn-ghost'" (click)="closePublishRun()">
-            {{ t().common.close }}
-        </button>
-    </app-modal>
-    }
-
-    <!--One group, one template, instantiated into whichever row the fit puts it in. The ids and
-    their order come from core/toolbar-layout.ts, which is a catalogue and no longer a setting.-->
-    <ng-template #tplText>
-        <div class="tb-group" data-tb-group="text">
-            <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleBold())" [class.on]="isActive('bold')" [title]="tip(t().editor.tb.bold, 'bold')"><app-icon name="text-b" size="xs"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleItalic())" [class.on]="isActive('italic')" [title]="tip(t().editor.tb.italic, 'italic')"><app-icon name="text-italic" size="xs"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleUnderline())" [class.on]="isActive('underline')" [title]="tip(t().editor.tb.underline, 'underline')"><app-icon name="text-underline" size="xs"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleStrike())" [class.on]="isActive('strike')" [title]="tip(t().editor.tb.strike, 'strike')"><app-icon name="text-strikethrough" size="xs"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleMark('spoiler'))" [class.on]="isActive('spoiler')" [title]="t().editor.tb.spoiler"><app-icon name="eye-slash" size="xs"></app-icon></button> 
-                
-                <span class="sep"></span>
-                <button (click)="setAlign('left')" [class.on]="isActive('paragraph', {textAlign:'left'}) || isActive('heading', {textAlign:'left'})" [title]="t().editor.tb.alignLeft" [attr.aria-label]="t().editor.tb.alignLeft"><app-icon name="text-align-left" size="xs"></app-icon></button>
-                <button (click)="setAlign('center')" [class.on]="isActive('paragraph', {textAlign:'center'}) || isActive('heading', {textAlign:'center'})" [title]="t().editor.tb.alignCenter" [attr.aria-label]="t().editor.tb.alignCenter"><app-icon name="text-align-center" size="xs"></app-icon></button>
-                <button (click)="setAlign('right')" [class.on]="isActive('paragraph', {textAlign:'right'}) || isActive('heading', {textAlign:'right'})" [title]="t().editor.tb.alignRight" [attr.aria-label]="t().editor.tb.alignRight"><app-icon name="text-align-right" size="xs"></app-icon></button>
-                <button (click)="setAlign('justify')" [class.on]="isActive('paragraph', {textAlign:'justify'}) || isActive('heading', {textAlign:'justify'})" [title]="t().editor.tb.alignJustify" [attr.aria-label]="t().editor.tb.alignJustify"><app-icon name="text-align-justify" size="xs"></app-icon></button>
-                
+                </section>
             </div>
-            <span class="tb-caption">{{ t().editor.groups.text }}</span>
-        </div>
-    </ng-template>
-
-    <ng-template #tplInsert>
-        <div class="tb-group" data-tb-group="insert">
-            <div class="tb-row">
-                
-                <button (click)="openInsertModal()" [class.on]="isActive('link')" [title]="t().editor.tb.insert" [attr.aria-label]="t().editor.tb.insert">
-                    <app-icon name="link" size="xs"></app-icon>
-                </button>
-                
-
-                
-                <button (click)="openEmojiModal()" [title]="t().editor.tb.emoji" [attr.aria-label]="t().editor.tb.emoji"><app-icon name="smiley" size="xs"></app-icon></button>
-                
-
-                
-                <button (click)="datetimeOpen.set(true)" [title]="t().editor.tb.datetime" [attr.aria-label]="t().editor.tb.datetime"><app-icon name="clock" size="xs"></app-icon></button>
-                
-
-                
-                <button (click)="openFootnoteModal()" [title]="t().editor.tb.footnote" [attr.aria-label]="t().editor.tb.footnote"><app-icon name="text-superscript" size="xs"></app-icon></button>
-                
-            </div>
-            <span class="tb-caption">{{ t().editor.groups.insert }}</span>
-        </div>
-    </ng-template>
-
-    <ng-template #tplLists>
-        <div class="tb-group" data-tb-group="lists">
-            <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleBulletList())" [class.on]="isActive('bulletList')" [title]="tip(t().editor.tb.bulletList, 'bulletList')"><app-icon name="list" size="xs"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleOrderedList())" [class.on]="isActive('orderedList')" [title]="tip(t().editor.tb.orderedList, 'orderedList')"><app-icon name="list-numbers" size="xs"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleTaskList())" [class.on]="isActive('taskList')" [title]="tip(t().editor.tb.taskList, 'taskList')"><app-icon name="list-checks" size="xs"></app-icon></button> 
-                 <button (click)="indent()" [disabled]="!canIndent()" [title]="t().editor.tb.indent" [attr.aria-label]="t().editor.tb.indent"><app-icon name="text-indent" size="xs"></app-icon></button> 
-                 <button (click)="outdent()" [disabled]="!canOutdent()" [title]="t().editor.tb.outdent" [attr.aria-label]="t().editor.tb.outdent"><app-icon name="text-outdent" size="xs"></app-icon></button> 
-            </div>
-            <span class="tb-caption">{{ t().editor.groups.lists }}</span>
-        </div>
-    </ng-template>
-
-    <ng-template #tplCode>
-        <div class="tb-group" data-tb-group="code">
-            <div class="tb-row">
-                 <button (click)="cmd(c => c.toggleCode())" [class.on]="isActive('code')" [title]="tip(t().editor.tb.inlineCode, 'inlineCode')"><app-icon name="code" size="xs"></app-icon></button> 
-                 <button (click)="cmd(c => c.toggleCodeBlock())" [class.on]="isActive('codeBlock')" [title]="tip(t().editor.tb.codeBlock, 'codeBlock')"><app-icon name="code-block" size="xs"></app-icon></button> 
-            </div>
-            <span class="tb-caption">{{ t().editor.groups.code }}</span>
-        </div>
-    </ng-template>
-
-    <ng-template #tplMedia>
-        <div class="tb-group" data-tb-group="media">
-            <div class="tb-row">
-                
-                <button (click)="fileInput.click()" [title]="t().editor.tb.image" [attr.aria-label]="t().editor.tb.image"><app-icon name="image" size="xs"></app-icon></button>
-                <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onFileChosen($event)">
-                
-
-                
-                <button (click)="videoInput.click()" [title]="t().editor.tb.video" [attr.aria-label]="t().editor.tb.video"><app-icon name="video-camera" size="xs"></app-icon></button>
-                <input #videoInput type="file" accept="video/mp4" multiple hidden (change)="onVideoChosen($event)">
-                
-
-                
-                <button class="gif-btn" (click)="gifInput.click()" [title]="t().editor.tb.gif">GIF</button>
-                <input #gifInput type="file" accept="image/gif" multiple hidden (change)="onGifChosen($event)">
-                
-
-                
-                <button (click)="audioInput.click()" [title]="t().editor.tb.audio" [attr.aria-label]="t().editor.tb.audio"><app-icon name="waveform" size="xs"></app-icon></button>
-                <input #audioInput type="file" accept="audio/mpeg,audio/ogg" multiple hidden (change)="onAudioChosen($event)">
-                
-
-                
-                <button (click)="carouselInput.click()" [title]="t().editor.tb.carousel" [attr.aria-label]="t().editor.tb.carousel"><app-icon name="images" size="xs"></app-icon></button>
-                <input #carouselInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCarouselChosen($event)">
-                
-
-                
-                <button (click)="collageInput.click()" [title]="t().editor.tb.collage" [attr.aria-label]="t().editor.tb.collage"><app-icon name="squares-four" size="xs"></app-icon></button>
-                <input #collageInput type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="onCollageChosen($event)">
-                
-
-                
-                <button (click)="libraryOpen.set(true)" [title]="t().editor.tb.library" [attr.aria-label]="t().editor.tb.library"><app-icon name="archive" size="xs"></app-icon></button>
-                
-
-                
-            </div>
-            <span class="tb-caption">{{ t().editor.groups.media }}</span>
-        </div>
-    </ng-template>
-
-    <ng-template #tplBlocks>
-        <div class="tb-group" data-tb-group="blocks">
-            <div class="tb-row">
-                
-                <app-popover>
-                    <button trigger [title]="t().editor.tb.table" [attr.aria-label]="t().editor.tb.table"><app-icon name="table" size="xs"></app-icon></button>
-                    <div panel class="block-menu">
-                        @if (isActive('table')) {
-                        <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowAbove }}</button>
-                        <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowBelow }}</button>
-                        <button (click)="cmd(c => c.deleteRow())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteRow }}</button>
-                        <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnLeft }}</button>
-                        <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnRight }}</button>
-                        <button (click)="cmd(c => c.deleteColumn())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteColumn }}</button>
-                        <button (click)="cmd(c => c.deleteTable())"><app-icon name="trash" size="xs"></app-icon> {{ t().editor.tableMenu.deleteTable }}</button>
-                        } @else {
-                        <button (click)="openTableModal()"><app-icon name="table" size="xs"></app-icon> {{ t().editor.tableMenu.insert }}</button>
-                        }
-                    </div>
-                </app-popover>
-                
-
-                
-                <button (click)="openFormulaModal()" [title]="t().editor.tb.formula" [attr.aria-label]="t().editor.tb.formula"><app-icon name="sigma" size="xs"></app-icon></button>
-                
-
-                 <button (click)="cmd(c => c.toggleBlockquote())" [class.on]="isActive('blockquote')" [title]="tip(t().editor.tb.blockquote, 'blockquote')"><app-icon name="quotes" size="xs"></app-icon></button>
-                <!--Wave 2 item 17 — only over a quote: marks it expandable (Telegram folds it
-                natively; the blog renders a plain quote either way).-->
-                @if (isActive('blockquote')) {
-                <button (click)="toggleExpandableQuote()" [class.on]="isActive('blockquote', {expandable: true})" [title]="t().editor.tb.expandableQuote" [attr.aria-label]="t().editor.tb.expandableQuote"><app-icon name="caret-down" size="xs"></app-icon></button>
-                }
-                 <button (click)="insertToggle()" [title]="t().editor.tb.toggleBlock" [attr.aria-label]="t().editor.tb.toggleBlock"><app-icon name="list-dashes" size="xs"></app-icon></button> 
-                 <button (click)="insertTableOfContents()" [title]="t().editor.tb.toc" [attr.aria-label]="t().editor.tb.toc"><app-icon name="list-bullets" size="xs"></app-icon></button> 
-                 <button (click)="insertDivider()" [title]="t().editor.tb.divider" [attr.aria-label]="t().editor.tb.divider"><app-icon name="rows" size="xs"></app-icon></button> 
-            </div>
-            <span class="tb-caption">{{ t().editor.groups.blocks }}</span>
-        </div>
-    </ng-template>
-
-    <!--Split out from Blocks on Marty's request: these are reader-engagement tools (comment
-    anchors, a vote), not content-authoring blocks like tables/formulas/dividers.-->
-    <ng-template #tplFeedback>
-        <div class="tb-group" data-tb-group="feedback">
-            <div class="tb-row">
-                
-                <button (click)="insertAnnotation()" [disabled]="!canAnnotate()" [title]="t().editor.tb.annotation" [attr.aria-label]="t().editor.tb.annotation">
-                    <app-icon name="chat-teardrop" size="xs"></app-icon>
-                </button>
-                
-                 <button (click)="insertPoll()" [title]="t().editor.tb.poll" [attr.aria-label]="t().editor.tb.poll"><app-icon name="check-square" size="xs"></app-icon></button> 
-            </div>
-            <span class="tb-caption">{{ t().editor.groups.feedback }}</span>
-        </div>
-    </ng-template>
-
-
-    <!--One switch shared by both rows, so a group's markup exists once and the rows differ
-    only in which ids the fit puts in them.-->
-    <ng-template #tplGroup let-g>
-        @switch (g) {
-            @case ('text') { <ng-container *ngTemplateOutlet="tplText"></ng-container> }
-            @case ('insert') { <ng-container *ngTemplateOutlet="tplInsert"></ng-container> }
-            @case ('lists') { <ng-container *ngTemplateOutlet="tplLists"></ng-container> }
-            @case ('code') { <ng-container *ngTemplateOutlet="tplCode"></ng-container> }
-            @case ('media') { <ng-container *ngTemplateOutlet="tplMedia"></ng-container> }
-            @case ('blocks') { <ng-container *ngTemplateOutlet="tplBlocks"></ng-container> }
-            @case ('feedback') { <ng-container *ngTemplateOutlet="tplFeedback"></ng-container> }
-        }
-    </ng-template>
-
-    <!--AI confirm dialog (replaces window.confirm)-->
-    @if (aiConfirmKind(); as kind) {
-    <app-modal (closed)="cancelAiConfirm()">
-        <app-icon modal-icon name="sparkle" size="sm"></app-icon>
-        <span modal-title>{{ aiConfirmTitle() }}</span>
-        <p>{{ aiConfirmBody() }}</p>
-        <button modal-actions class="btn-ghost" (click)="cancelAiConfirm()">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmAiEdit()">{{ kind === 'fix-errors' ? 'Fix errors' : 'Run it' }}</button>
-    </app-modal>
-    }
-
-    <!--Emoji modal: was a popover, and PopoverComponent closes on any document scroll, so
-    scrolling the panel closed it — the same fix ADR-057 applied to the Appearance panel.
-    The panel scrolls on one axis only: it used to be one 10-column grid holding both the captions
-    and the rows, which put every caption in a cell and drove the whole thing sideways.-->
-    @if (emojiOpen()) {
-    <app-modal [width]="360" (closed)="emojiOpen.set(false)">
-        <app-icon modal-icon name="smiley" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.tb.emoji }}</span>
-
-        <input class="emoji-search" type="search" [ngModel]="emojiQuery()"
-               (ngModelChange)="emojiQuery.set($event)"
-               [placeholder]="t().editor.emoji['search']" [attr.aria-label]="t().editor.emoji['search']">
-
-        <div class="emoji-popover">
-            @for (g of emojiGroups(); track g.key) {
-            <span class="emoji-caption">{{ t().editor.emoji[g.key] }}</span>
-            <div class="emoji-grid" [class.emoji-grid-wide]="g.wide">
-                @for (e of g.emoji; track e.ch) {
-                <button class="emoji-btn" [class.has-label]="!!e.label" (click)="insertEmoji(e.ch)"
-                        [title]="e.en">
-                    <span class="emoji-glyph">{{ e.ch }}</span>
-                    @if (e.label) { <span class="emoji-label">{{ e.label }}</span> }
-                </button>
-                }
-            </div>
-            } @empty {
-            <p class="field-hint-inline">{{ t().editor.emoji['noMatches'] }}</p>
-            }
-        </div>
-    </app-modal>
-    }
-
-    <!--Date/time modal: was app-popover, moved alongside the emoji panel for consistency.-->
-    @if (datetimeOpen()) {
-    <app-modal [width]="320" (closed)="datetimeOpen.set(false)">
-        <app-icon modal-icon name="clock" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.tb.datetime }}</span>
-
-        <input type="datetime-local" class="chat-input" [(ngModel)]="dtValue">
-        <div class="dt-flags">
-            <label><input type="checkbox" [(ngModel)]="dtWeekday"> {{ t().editor.datetimeFlags.weekday }}</label>
-            <label><input type="checkbox" [(ngModel)]="dtDate"> {{ t().editor.datetimeFlags.date }}</label>
-            <label><input type="checkbox" [(ngModel)]="dtTime"> {{ t().editor.datetimeFlags.time }}</label>
-        </div>
-
-        <button modal-actions class="btn-ghost" (click)="datetimeOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="insertDateTime()" [disabled]="!dtValue">{{ t().editor.groups.insert }}</button>
-    </app-modal>
-    }
-
-    <!--Table and formula are set up in a dialog rather than inserted blind: the size used to come
-    from a preference nobody remembered setting, and the LaTeX came from window.prompt.-->
-    @if (footnoteOpen()) {
-    <app-modal [width]="420" (closed)="footnoteOpen.set(false)">
-        <app-icon modal-icon name="text-superscript" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.tb.footnote }}</span>
-
-        <textarea rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
-
-        <button modal-actions class="btn-ghost" (click)="footnoteOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
-    </app-modal>
-    }
-
-    @if (tableOpen()) {
-    <app-modal [width]="320" (closed)="tableOpen.set(false)">
-        <app-icon modal-icon name="table" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.tableMenu.title }}</span>
-
-        <div class="dialog-grid">
-            <label class="dialog-field">
-                <span>{{ t().editor.tableMenu.rows }}</span>
-                <input type="number" min="1" [max]="maxTableSize" [(ngModel)]="tableRows">
-            </label>
-            <label class="dialog-field">
-                <span>{{ t().editor.tableMenu.cols }}</span>
-                <input type="number" min="1" [max]="maxTableSize" [(ngModel)]="tableCols">
-            </label>
-        </div>
-        <label class="dialog-check"><input type="checkbox" [(ngModel)]="tableHeaderRow"> {{ t().editor.tableMenu.headerRow }}</label>
-
-        <button modal-actions class="btn-ghost" (click)="tableOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="insertTable()">{{ t().editor.groups.insert }}</button>
-    </app-modal>
-    }
-
-    @if (formulaOpen()) {
-    <app-modal [width]="420" (closed)="formulaOpen.set(false)">
-        <app-icon modal-icon name="sigma" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.formula.title }}</span>
-
-        <label class="dialog-field">
-            <span>{{ t().editor.formula.latex }}</span>
-            <textarea rows="3" [placeholder]="t().editor.formula.placeholder" [(ngModel)]="formulaText"></textarea>
-        </label>
-        <p class="field-hint-inline">{{ t().editor.formula.hint }}</p>
-
-        <button modal-actions class="btn-ghost" (click)="formulaOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-ghost" (click)="insertFormula('inline')" [disabled]="!formulaText.trim()">{{ t().editor.formula.inline }}</button>
-        <button modal-actions class="btn-accent" (click)="insertFormula('block')" [disabled]="!formulaText.trim()">{{ t().editor.formula.block }}</button>
-    </app-modal>
-    }
-
-    @if (libraryOpen()) {
-    <app-media-picker (picked)="onLibraryPicked($event)" (closed)="libraryOpen.set(false)"></app-media-picker>
-    }
-
-    <!--ADR-128 — the `[[` suggester. mousedown+preventDefault keeps the editor selection alive
-    so the plugin's command still knows the range to replace.-->
-    @if (wikiSuggest(); as ws) {
-    <div class="wiki-suggest" [style.left.px]="ws.x" [style.top.px]="ws.y">
-        @for (item of ws.items; track item.id; let i = $index) {
-        <button class="wiki-suggest-item" [class.active]="i === ws.index"
-                (mousedown)="$event.preventDefault(); wikiPick(item)">{{ item.title || t().drafts.untitled }}</button>
-        } @empty {
-        <p class="wiki-suggest-none">{{ t().editor.wikilink.noMatches }}</p>
-        }
-    </div>
-    }
-
-    <!--Insert modal: unified link/YouTube/email/phone/mention, replaces the separate Link and YouTube popovers-->
-    @if (insertOpen()) {
-    <app-modal [width]="480" (closed)="closeInsertModal()">
-        <app-icon modal-icon name="link" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.groups.insert }}</span>
-
-        <div class="format-toggle insert-type-rail">
-            <button [class.on]="insertType === 'auto'" (click)="insertType = 'auto'">{{ t().editor.groups.auto }}</button>
-            <button [class.on]="insertType === 'url'" (click)="insertType = 'url'">{{ t().editor.groups.link }}</button>
-            <button [class.on]="insertType === 'youtube'" (click)="insertType = 'youtube'">YouTube</button>
-            <button [class.on]="insertType === 'email'" (click)="insertType = 'email'">{{ t().editor.groups.email }}</button>
-            <button [class.on]="insertType === 'phone'" (click)="insertType = 'phone'">{{ t().editor.groups.phone }}</button>
-            <button [class.on]="insertType === 'mention'" (click)="insertType = 'mention'">{{ t().editor.groups.mention }}</button>
-        </div>
-
-        <input class="chat-input" style="margin-top:10px"
-            [(ngModel)]="insertValue"
-            [placeholder]="effectiveInsertType() === 'email' ? 'name@example.com' : effectiveInsertType() === 'phone' ? '+1234567890' : effectiveInsertType() === 'mention' ? 'numeric user id' : effectiveInsertType() === 'youtube' ? 'https://www.youtube.com/watch?v=…' : 'https://…'"
-            (keyup.enter)="applyInsert()">
-
-        @if (insertType === 'auto' && insertValue.trim()) {
-        <div class="insert-detected">
-            <app-stamp-badge tone="ink" [rotate]="0">{{ effectiveInsertType() === 'youtube' ? 'YouTube' : 'Link' }}</app-stamp-badge>
-            detected
-        </div>
-        }
-
-        @if (effectiveInsertType() === 'youtube') {
-        <input class="chat-input" style="margin-top:8px" [(ngModel)]="insertCaption" [placeholder]="t().editor.groups.captionPlaceholder">
-        }
-
-        @if (insertError()) { <p class="channel-error">{{ insertError() }}</p> }
-
-        <button modal-actions class="btn-ghost" (click)="closeInsertModal()">{{ t().common.cancel }}</button>
-        @if (isActive('link')) {
-        <button modal-actions class="btn-ghost" (click)="removeLink()">{{ t().editor.groups.removeLink }}</button>
-        }
-        <button modal-actions class="btn-accent" (click)="applyInsert()">{{ t().editor.groups.insert }}</button>
-    </app-modal>
-    }
-
-    <!--T-014 — same shape as the glossary's batch translate (ADR-062): tick the targets, one
-    language after another, whatever stays ticked after a failure is what's left to do.-->
-    @if (translateAllOpen()) {
-    <app-modal [width]="460" (closed)="translateAllOpen.set(false)">
-        <h2 modal-title>{{ t().editor.lang.translateAllTitle }}</h2>
-        <div modal-body>
-            <p class="muted">{{ t().editor.lang.translateAllIntro(primaryLanguage.toUpperCase()) }}</p>
-
-            @for (l of translateAllCandidates(); track l) {
-            <label class="translate-all-row">
-                <input type="checkbox" [checked]="translateAllTargets().includes(l)"
-                       [disabled]="translateAllBusy()" (change)="toggleTranslateAllTarget(l)">
-                <span>{{ l.toUpperCase() }} · {{ endonym(l) }}</span>
-                @if (translateAllDone().includes(l)) {
-                <span class="translate-all-state done">{{ t().editor.lang.translateAllDone }}</span>
-                } @else if (translateAllCurrent() === l) {
-                <span class="translate-all-state">{{ t().editor.lang.translateAllRunning }}</span>
-                } @else if (translationOf(l)) {
-                <span class="translate-all-state warn">{{ t().editor.lang.translateAllOverwrites }}</span>
-                }
-            </label>
-            }
-
-            <p class="field-hint-inline">{{ t().editor.lang.translateAllCost(translateAllCost()) }}</p>
-            @if (translateAllError(); as err) { <p class="error">{{ err }}</p> }
-        </div>
-        <button modal-actions class="btn-ghost" [disabled]="translateAllBusy()" (click)="translateAllOpen.set(false)">
-            {{ t().common.cancel }}
-        </button>
-        <button modal-actions class="btn-accent" [disabled]="translateAllBusy() || !translateAllCost()" (click)="runTranslateAll()">
-            {{ translateAllBusy() ? t().editor.lang.translateAllRunning : t().editor.lang.translateAllStart }}
-        </button>
-    </app-modal>
-    }
-
-    <!--Re-translate confirm dialog (replaces window.confirm)-->
-    @if (translateConfirmOpen()) {
-    <app-modal (closed)="cancelTranslateConfirm()">
-        <app-icon modal-icon name="arrow-clockwise" size="sm"></app-icon>
-        <span modal-title>{{ t().editor.lang.replaceTitle(lang().toUpperCase()) }}</span>
-        <p>{{ t().editor.lang.replaceBody }}</p>
-        <button modal-actions class="btn-ghost" (click)="cancelTranslateConfirm()">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmTranslate()">{{ t().common.save }}</button>
-    </app-modal>
-    }
-
-    <!--AI success toast-->
-    @if (aiToast(); as toast) {
-    <div class="ai-toast">
-        <app-icon name="check" size="xs"></app-icon>
-        <span>{{ toast }}</span>
-    </div>
-    }
-
-
-    <!--Upload progress-->
-    @if (uploads().length) {
-    <div class="uploads">
-        @for (u of uploads(); track u.id) {
-        <div class="upload-item" [class.error]="u.error">
-            <span class="upload-name">{{ u.name }}</span>
-            @if (u.error) {
-                <span class="upload-error">{{ u.error }}</span>
-            } @else {
-                <div class="upload-bar"><div class="upload-fill" [style.width.%]="u.progress"></div></div>
-                <span class="upload-pct">{{ u.progress }}%</span>
-            }
-        </div>
-        }
-    </div>
-    }
-
-    <!--One document, three tabs (ADR-239 clause 9). The frame draws the top bar, the title, the
-    tabs and the footer; this page fills its slots. Write stays mounted behind the other tabs —
-    TipTap owns the sheet's DOM node, and unmounting it would orphan the editor.-->
-    <app-document-frame [title]="frameTitle()" [kicker]="frameKicker()" [statusTag]="statusTag()"
-                        [tab]="tab()" [tabs]="frameTabs()" [tabsLabel]="t().editor.tabsLabel"
-                        [saveWord]="syncWord()" [saveState]="frameSaveState()" [dateLabel]="dateLabel()"
-                        [footerText]="footerText()" [canUndo]="canUndo()" [canRedo]="canRedo()"
-                        [project]="frameProject()" [projects]="frameProjects()"
-                        (tabChange)="setTab($event)" (undo)="cmd(c => c.undo())" (redo)="cmd(c => c.redo())">
-        <span primary class="publish-split">
-            <app-button variant="pine" (clicked)="openExportModal()">
-                <app-icon name="paper-plane-tilt" size="sm"></app-icon>{{ t().editor.exportModal.publish }}
-            </app-button>
-            <app-popover align="right">
-                <button trigger type="button" class="btn publish-caret"
-                        [title]="t().editor.frame.publishMenu" [attr.aria-label]="t().editor.frame.publishMenu">
-                    <app-icon name="caret-down" size="xs"></app-icon>
-                </button>
-                <div panel class="block-menu">
-                    <button type="button" (click)="setTab('preview')"><app-icon name="eye" size="xs"></app-icon> {{ t().editor.frame.previewFirst }}</button>
-                    <button type="button" (click)="openExportModal()"><app-icon name="clock" size="xs"></app-icon> {{ t().editor.frame.schedule }}</button>
-                </div>
-            </app-popover>
-        </span>
-
-        <app-popover title-actions align="right">
-            <button trigger type="button" class="btn frame-more"
-                    [title]="t().editor.frame.moreActions" [attr.aria-label]="t().editor.frame.moreActions">
-                <app-icon name="dots-three" size="sm"></app-icon>
-            </button>
-            <div panel class="block-menu">
-                <button type="button" (click)="openRevisions()"><app-icon name="clock" size="xs"></app-icon> {{ t().editor.inspector.history }}</button>
-                <a class="block-menu-link" routerLink="/posts"><app-icon name="paper-plane-tilt" size="xs"></app-icon> {{ t().editor.frame.postsManager }}</a>
-            </div>
-        </app-popover>
-        <!--Details folds the inspector away (CONTRACT §D3). A toggle, so it says which way it is.-->
-        <button title-actions type="button" class="btn" [attr.aria-pressed]="inspectorOpen()"
-                (click)="inspectorOpen.update(v => !v)">
-            {{ inspectorOpen() ? t().editor.frame.hideDetails : t().editor.frame.details }}
-        </button>
-
-        <button footer-start type="button" class="btn" (click)="sharePreview()" [disabled]="previewLinkBusy()"
-                [title]="t().editor.preview.shareTitle">
-            <app-icon name="link" size="sm"></app-icon>{{ t().editor.preview.share }}
-        </button>
-        <span footer-end class="frame-next">
-            @if (tab() === 'write') {
-                <button type="button" class="btn primary" (click)="setTab('preview')">
-                    {{ t().editor.frame.continueToPreview }}<app-icon name="caret-right" size="xs"></app-icon>
-                </button>
-            } @else {
-                <!--A test send goes to the test channel only, and only when it is connected
-                (.claude/rules/telegram-bot.md); with no such channel there is no button.-->
-                @if (testChannel(); as channel) {
-                    <button type="button" class="btn" (click)="sendTest()" [disabled]="testSendBusy()">
-                        @if (testSendBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                        @else { <app-brand-icon name="telegram" [size]="14"></app-brand-icon> }
-                        {{ t().editor.frame.sendTest(channel.username!) }}
-                    </button>
-                }
-                <button type="button" class="btn primary" (click)="openExportModal()">
-                    {{ t().editor.frame.continueToPublish }}<app-icon name="caret-right" size="xs"></app-icon>
-                </button>
-            }
-        </span>
-
-        <div body class="preview-slot" [class.is-hidden]="tab() !== 'preview'">
-            @if (tab() === 'preview' && previewFacts(); as facts) {
-                <app-editor-preview [facts]="facts" [channels]="channels()" [initialLang]="lang()"
-                                    [savedVersion]="savedVersion()" (details)="openExportModal()" />
             }
         </div>
 
     <!--The sheet and the shelf beside it: the shelf describes either what is selected on the sheet
     or the document itself, never both (ADR-159).-->
-    <div body class="main" [class.is-hidden]="tab() !== 'write'">
+    <div body class="main" [class.is-hidden]="tab() !== 'write'"
+         id="frame-panel-write" role="tabpanel" aria-labelledby="frame-tab-write">
         <div class="mid">
             <!--The tool strip fits itself (ADR-150). Rows and captions are read off measured widths in
             measureToolbar(); nothing here is stored and nothing is a width breakpoint (ADR-147). The
@@ -1543,7 +1420,7 @@
             </app-worktop>
         </div>
 
-        <app-shelf-panel class="inspector" [class.is-hidden]="!inspectorOpen()"
+        <app-shelf-panel class="inspector" id="editor-inspector" [class.is-hidden]="!inspectorOpen()"
                          [title]="t().editor.inspector.title" [count]="inspectorScopeWord()">
             <!--The sheet's surface is restated on an element of this template: the shelf's own paper
             sheet carries another component's scope attribute, which the inspector's rules cannot see.-->

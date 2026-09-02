@@ -1,6 +1,6 @@
 import {
     AfterViewInit, Component, ElementRef, OnDestroy,
-    ViewChild, computed, effect, inject, signal
+    ViewChild, computed, effect, inject, signal, untracked
 } from '@angular/core';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -34,6 +34,11 @@ import { PostsService, PostFormat, CompressionLevel, UpdatePreview, PreflightLan
 import { PublishService, PublishAccount, PublishCapabilities, PublishJob, ThreadPart } from '../core/publish.service';
 import { DocumentKindCounts, documentKinds } from '../core/document-kinds';
 import { PublishMatrixComponent } from '../shared/publish-matrix.component';
+import { PreviewCheck, PreviewChecksComponent } from './editor-preview/preview-checks.component';
+import { DestinationState } from './editor-preview/state-tag.component';
+import { DestinationCardComponent } from './editor-publish/destination-card.component';
+import { PublishStep, PublishStepState, PublishStepperComponent, publishStepStates } from './editor-publish/publish-stepper.component';
+import { matrixWarningCount } from './editor-publish/publish-readiness';
 import { LinksService } from '../core/links.service';
 import { BillingService } from '../core/billing.service';
 import { DraftRevision, DraftRevisionDetail, RevisionDiff } from '../core/drafts.service';
@@ -84,7 +89,6 @@ import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
 import { avatarFill, avatarInitial } from '../core/avatar-color.util';
 import { ShelfPanelComponent } from '../bench/chrome/shelf-panel.component';
-import { ButtonComponent } from '../bench/forms/button.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { StampBadgeComponent } from '../bench/display/stamp-badge.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
@@ -236,12 +240,19 @@ interface UploadItem {
     error?: string;
 }
 
+const DETAILS_KEY = 'cedar-editor-details';
+
+function readDetailsPreference(): boolean {
+    try { return localStorage.getItem(DETAILS_KEY) === '1'; } catch { return false; }
+}
+
 @Component({
     selector: 'app-editor',
     imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
         DocumentOutlineComponent, PlanLockComponent, LocationInputComponent, LanguageMenuComponent,
-        DocumentFrameComponent, EditorPreviewComponent, ButtonComponent, PublishMatrixComponent],
+        DocumentFrameComponent, EditorPreviewComponent, PublishMatrixComponent, PreviewChecksComponent,
+        DestinationCardComponent, PublishStepperComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css']
 })
@@ -262,11 +273,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private currentProject = inject(CurrentProjectService);
 
     // ─── The document frame (ADR-239 clause 9, CONTRACT §D3) ─────────────────────────────────
-    // One document, three tabs, addressed by ?tab=. Publish is a door to the export window until
-    // T-365, so it never becomes the selected tab.
+    // One document, three tabs, addressed by ?tab= (ADR-242): Write is the bare URL, Preview and
+    // Publish / Export are real selected states a link can land on.
     private readonly tabParam = toSignal(this.route.queryParamMap.pipe(map(p => p.get('tab'))),
         { initialValue: this.route.snapshot.queryParamMap.get('tab') });
-    readonly tab = computed<DocumentTab>(() => this.tabParam() === 'preview' ? 'preview' : 'write');
+    readonly tab = computed<DocumentTab>(() => {
+        const param = this.tabParam();
+        return param === 'preview' || param === 'publish' ? param : 'write';
+    });
     readonly frameTabs = computed<DocumentTabItem[]>(() => {
         const t = this.t().editor.tabs;
         return [
@@ -275,8 +289,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             { id: 'publish', label: t.publish, icon: 'upload-simple' },
         ];
     });
-    /** The Details title action folds the inspector away and back. */
-    inspectorOpen = signal(true);
+    /** The Details title action folds the inspector away and back; closed by default, remembered per browser. */
+    inspectorOpen = signal(readDetailsPreference());
+
+    toggleDetails() {
+        this.inspectorOpen.update(open => !open);
+        try { localStorage.setItem(DETAILS_KEY, this.inspectorOpen() ? '1' : '0'); } catch { /* private mode */ }
+    }
     /** Bumped after every successful save, so the Preview tab follows the stored document. */
     savedVersion = signal(0);
     private lastSavedAt = signal<number | null>(null);
@@ -287,7 +306,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     testSendBusy = signal(false);
 
     setTab(id: DocumentTab) {
-        if (id === 'publish') { void this.openExportModal(); return; }
         void this.router.navigate([], {
             relativeTo: this.route,
             queryParams: { tab: id === 'write' ? null : id },
@@ -492,6 +510,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private readonly stripLocale = effect(() => {
         this.t();
         setTimeout(() => this.measureToolbar());
+    });
+
+    // A deep link and a click arrive at the same state: whatever the Publish tab needs is loaded
+    // when it becomes the selected one, for the draft that is open then.
+    private readonly publishEntry = effect(() => {
+        const entered = this.tab() === 'publish';
+        const id = this.currentId();
+        if (entered && id) untracked(() => void this.enterPublish());
     });
 
     // ─── Waiting on the publish queue (T-090) ─────────────────────────────────────────────────
@@ -713,10 +739,235 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    /** Keyboard select on a destination card — preventDefault keeps Space from scrolling the modal. */
-    selectDestinationKey(event: Event, destination: ExportDestination) {
-        event.preventDefault();
-        this.activeExportDestination.set(destination);
+    // ─── The Publish / Export workspace (ADR-242) ─────────────────────────────────────────────
+    // Everything below is read off the ticks, the accounts and the checks the window already
+    // held; nothing here is a second source of truth about what can publish.
+    readonly publishDestinationIds: ExportDestination[] = ['blog', 'telegram', 'bluesky', 'x', 'discord'];
+
+    isIncluded(destination: ExportDestination): boolean {
+        switch (destination) {
+            case 'blog': return this.destBlog();
+            case 'telegram': return this.destTelegram();
+            case 'bluesky': case 'x': case 'discord': return this.destination(destination)();
+            default: return false;
+        }
+    }
+
+    /** The checkbox's job and nothing else — though ticking a destination while none is inspected brings its settings forward. */
+    includeDestination(destination: ExportDestination, on: boolean) {
+        switch (destination) {
+            case 'blog': this.destBlog.set(on); break;
+            case 'telegram': this.destTelegram.set(on); break;
+            case 'bluesky': case 'x': case 'discord': this.destination(destination).set(on); break;
+            default: return;
+        }
+        if (on && !this.isIncluded(this.activeExportDestination())) this.activeExportDestination.set(destination);
+    }
+
+    destinationState(destination: ExportDestination): DestinationState | null {
+        if (destination === 'steam' || destination === 'itch') return null;
+        if (destination === 'instagram' || destination === 'threads' || destination === 'youtube') return 'unavailable';
+        if (destination === 'blog') return this.isWorkingMaterial() ? 'blocking' : 'ready';
+        if (destination === 'telegram') {
+            if (!this.channels().length) return 'setup';
+            if (this.isWorkingMaterial()) return 'blocking';
+            if (this.destTelegram() && this.langsMissingChannel().length) return 'blocking';
+            if (this.destTelegram() && this.visiblePublishIssues().some(i => i.blocking)) return 'blocking';
+            return this.visiblePublishIssues().length ? 'warn' : 'ready';
+        }
+        const network = destination as MicroNetwork;
+        const account = this.account(network);
+        if (!account) return 'setup';
+        if (this.isWorkingMaterial()) return 'blocking';
+        if (this.destination(network)() && this.microOverLimit(network)) return 'blocking';
+        if (network === 'x' && this.destX() && this.xCreditsShort()) return 'blocking';
+        return account.lastError ? 'warn' : 'ready';
+    }
+
+    destinationMeta(destination: ExportDestination): string {
+        const tx = this.t().editor;
+        if (destination === 'blog') {
+            return `${this.t().projects.docTypes[this.documentType()].name} · ${this.isPrivate() ? tx.state.private : tx.state.public}`;
+        }
+        if (destination === 'telegram') {
+            if (!this.channels().length) return tx.exportModal.notConnected;
+            const chosen = this.exportLangs().map(l => this.selectedChannelFor(l)?.title).filter(Boolean);
+            return chosen.length ? [...new Set(chosen)].join(' · ') : this.channels()[0].title;
+        }
+        const account = this.account(destination as MicroNetwork);
+        return account ? account.displayName : tx.exportModal.notConnected;
+    }
+
+    readyDestinationIds(): ExportDestination[] {
+        return this.publishDestinationIds.filter(d => this.destinationState(d) === 'ready');
+    }
+
+    allReadySelected(): boolean {
+        const ready = this.readyDestinationIds();
+        return ready.length > 0 && ready.every(d => this.isIncluded(d));
+    }
+
+    selectAllReady(on: boolean) {
+        for (const destination of this.readyDestinationIds()) this.includeDestination(destination, on);
+    }
+
+    /** The settings column opens on the first ticked destination that can run, else the first that can. */
+    private settleActiveDestination() {
+        const active = this.activeExportDestination();
+        const isPublish = (this.publishDestinationIds as string[]).includes(active);
+        if (isPublish && this.isIncluded(active)) return;
+        if (this.activeCopyTarget() || this.activeUnsupportedDestination()) return;
+        const ticked = this.publishDestinationIds.find(d => this.isIncluded(d) && this.destinationState(d) === 'ready')
+            ?? this.publishDestinationIds.find(d => this.isIncluded(d));
+        this.activeExportDestination.set(ticked ?? this.readyDestinationIds()[0] ?? 'blog');
+    }
+
+    activeDestinationTitle(): string {
+        const active = this.activeExportDestination();
+        const tx = this.t().editor;
+        if (active === 'blog') return tx.publishTab.settingsFor(tx.exportModal.destinationBlog);
+        if (active === 'telegram') return tx.publishTab.settingsFor(tx.exportModal.destinationTelegram);
+        const micro = this.activeMicroNetwork();
+        if (micro) return tx.publishTab.settingsFor(this.microLabels[micro]);
+        const copy = this.activeCopyTarget();
+        if (copy) return tx.publishTab.settingsFor(copy.name);
+        const unavailable = this.activeUnsupportedDestination();
+        return unavailable ? tx.publishTab.settingsFor(unavailable.name) : tx.exportModal.stepParams;
+    }
+
+    tickedNetworks(): string[] {
+        const list: string[] = [];
+        if (this.destTelegram()) list.push('telegram');
+        for (const network of this.microNetworks) if (this.destination(network)()) list.push(network);
+        return list;
+    }
+
+    matrixWarnings(): number {
+        return matrixWarningCount(this.documentKindCounts(), this.networkCaps(), this.tickedNetworks(), this.t().matrix.notes);
+    }
+
+    publishSteps(): PublishStepState[] {
+        return publishStepStates({
+            languages: this.exportLangs().length,
+            anyDestination: this.anyDestination(),
+            settingsComplete: this.publishSettingsComplete(),
+        });
+    }
+
+    /** The stepper is navigation: the region it names takes focus and scrolls into view. */
+    focusPublishStep(step: PublishStep) {
+        this.focusPublishRegion(`pub-${step}`);
+    }
+
+    private focusPublishRegion(id: string) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        el.focus({ preventScroll: true });
+    }
+
+    /** A check's own way out, where one exists: the inspector's Type row, the rack, a destination's settings. */
+    fixCheck(id: string) {
+        if (id === 'type') {
+            if (!this.inspectorOpen()) this.toggleDetails();
+            this.setTab('write');
+            return;
+        }
+        if (id === 'destinations') { this.focusPublishRegion('pub-destinations'); return; }
+        const destination = id.split(':')[0] as ExportDestination;
+        if ((this.publishDestinationIds as string[]).includes(destination)) {
+            this.activeExportDestination.set(destination);
+            this.focusPublishRegion('pub-settings');
+        }
+    }
+
+    // One list under the four headings both tabs share. Blocking is exactly what the contract
+    // already refuses — the button reads publishSettingsComplete(), and these rows say why.
+    publishChecks(): PreviewCheck[] {
+        const tx = this.t().editor;
+        const words = tx.publishTab;
+        const settings = { label: tx.previewTab.checks.fix, route: '/settings', query: { tab: 'integrations' } };
+        const rows: PreviewCheck[] = [];
+
+        if (this.isWorkingMaterial()) {
+            rows.push({
+                id: 'type', label: tx.inspector.type, tone: 'blocking', fix: { label: tx.previewTab.checks.fix },
+                detail: tx.exportModal.checkWorkingMaterial(this.t().projects.docTypes[this.documentType()].name),
+            });
+        }
+        if (!this.anyDestination()) {
+            rows.push({ id: 'destinations', label: words.noDestinationCheck, detail: words.noDestinationDetail, tone: 'blocking', fix: { label: tx.previewTab.checks.fix } });
+        }
+        if (this.destTelegram() && this.channels().length && this.langsMissingChannel().length) {
+            rows.push({
+                id: 'telegram:channel', label: words.channelMissing(this.missingChannelLabel()), detail: words.channelMissingDetail,
+                tone: 'blocking', fix: { label: tx.previewTab.checks.fix },
+            });
+        }
+        for (const network of this.microNetworks) {
+            if (!this.destination(network)()) continue;
+            if (!this.account(network)) {
+                rows.push({ id: `${network}:account`, label: words.notConnected(this.microLabels[network]), detail: words.notConnectedDetail, tone: 'blocking', fix: settings });
+            } else if (this.microOverLimit(network)) {
+                rows.push({ id: `${network}:limit`, label: words.overLimit(this.microLabels[network]), detail: words.overLimitDetail, tone: 'blocking', fix: { label: tx.previewTab.checks.fix } });
+            }
+        }
+        if (this.destX() && this.xCreditsShort()) {
+            rows.push({ id: 'x:credits', label: words.creditsShort, detail: tx.exportModal.creditsShort(this.xCreditCost(), this.xCredits() ?? 0), tone: 'blocking' });
+        }
+        if (this.destTelegram()) {
+            for (const issue of this.visiblePublishIssues()) {
+                rows.push({
+                    id: `telegram:${issue.code}`, label: 'Telegram', detail: this.publishIssueText(issue),
+                    tone: issue.blocking ? 'blocking' : 'warn', fix: issue.blocking ? { label: tx.previewTab.checks.fix } : undefined,
+                });
+            }
+        }
+        for (const check of this.preflightWarnings()) {
+            const lang = tx.exportModal.checksLanguage(check.language.toUpperCase());
+            if (check.emptyVersion) rows.push({ id: `lang:${check.language}:empty`, label: lang, detail: tx.exportModal.checkEmptyVersion, tone: 'warn' });
+            for (const dead of check.deadLinks) {
+                rows.push({ id: `lang:${check.language}:${dead.url}`, label: lang, detail: tx.exportModal.checkDeadLink(dead.url, dead.status), tone: 'warn' });
+            }
+        }
+
+        if (this.destBlog() && !this.isWorkingMaterial()) {
+            rows.push({ id: 'blog:ready', label: words.readyBlog(this.isPrivate() ? tx.state.private : tx.state.public), detail: '', tone: 'ok' });
+        }
+        if (this.destTelegram() && this.destinationState('telegram') === 'ready') {
+            rows.push({ id: 'telegram:ready', label: words.readyTelegram(this.destinationMeta('telegram')), detail: '', tone: 'ok' });
+        }
+        for (const network of this.microNetworks) {
+            const account = this.account(network);
+            if (this.destination(network)() && account && this.destinationState(network) === 'ready') {
+                rows.push({ id: `${network}:ready`, label: words.readyNetwork(this.microLabels[network], account.displayName), detail: '', tone: 'ok' });
+            }
+        }
+
+        if (!this.channels().length) rows.push({ id: 'telegram:setup', label: words.noChannels, detail: words.notConnectedDetail, tone: 'setup', fix: settings });
+        for (const network of this.microNetworks) {
+            if (!this.account(network)) rows.push({ id: `${network}:setup`, label: words.notConnected(this.microLabels[network]), detail: words.notConnectedDetail, tone: 'setup', fix: settings });
+        }
+        for (const unsupported of this.unsupportedDestinations) {
+            rows.push({ id: `${unsupported.id}:unavailable`, label: words.unavailable(unsupported.name), detail: '', tone: 'unavailable' });
+        }
+        return rows;
+    }
+
+    publishWarningCount(): number {
+        return this.publishChecks().filter(c => c.tone === 'warn').length;
+    }
+
+    exportLangsLabel(): string {
+        return this.exportLangs().map(l => l.toUpperCase()).join(' + ');
+    }
+
+    scheduleSummary(): string {
+        if (!this.schedulingActive()) return this.t().editor.publishTab.publishNow;
+        const date = new Date(this.scheduledAt);
+        return Number.isFinite(date.getTime())
+            ? date.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+            : this.scheduledAt;
     }
 
     activeMicroNetwork(): MicroNetwork | null {
@@ -754,11 +1005,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     selectCopyTarget(target: CopyTarget) {
         this.activeExportDestination.set(target);
         void this.loadCopyText();
-    }
-
-    selectCopyTargetKey(event: Event, target: CopyTarget) {
-        event.preventDefault();
-        this.selectCopyTarget(target);
     }
 
     setCopyTargetLang(lang: string) {
@@ -1434,7 +1680,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private autoTranslateCancelled = false;
     autoTranslateError = signal<string | null>(null);
     translateConfirmOpen = signal(false);
-    exportModalOpen = signal(false);
     draftAssets = signal<DraftAsset[]>([]);
     // Sorting the file list (Marty, 01.08.2026). Kept in the component rather than sorting the
     // fetched array in place: the order is a view preference, and re-fetching must not silently
@@ -3270,10 +3515,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }));
     }
 
-    async openExportModal() {
-        this.exportModalOpen.set(true);
-        // Presets are the only form control left in this modal (N12) — a failed load just means
-        // no preset chips, never a blocked export.
+    async enterPublish() {
+        this.settleActiveDestination();
+        // Presets are the only form control left here (N12) — a failed load just means no preset
+        // chips, never a blocked export.
         this.presetsApi.list().then(p => this.formPresets.set(p)).catch(() => this.formPresets.set([]));
         // T-086 — asked once per opening, not per keystroke: it reads the stored document, which is
         // what would be sent anyway.
@@ -3559,11 +3804,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.publishingAll()) return tx.publishing;
         if (this.schedulingActive()) return tx.scheduleAndPublish;
         if (this.destBlog() && this.currentBlog()?.isPublished) return tx.update;
-        return tx.publish;
+        const count = this.tickedDestinationCount();
+        return count ? this.t().editor.frame.publishTo(count) : tx.publish;
     }
 
     canPublishAll(): boolean {
         if (this.publishingAll() || this.blogBusy() || this.exporting()) return false;
+        return this.publishSettingsComplete();
+    }
+
+    /** Every ticked destination can run — the same contract as the button, minus the busy states. */
+    publishSettingsComplete(): boolean {
         if (!this.destBlog() && !this.destTelegram() && !this.destBluesky() && !this.destX() && !this.destDiscord()) return false;
         // Each ticked destination must be able to run. The blog needs nothing extra; Telegram needs
         // a chosen channel for EVERY ticked version (ADR-098) — "RU picked, EN not" is an

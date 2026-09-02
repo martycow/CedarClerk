@@ -100,4 +100,28 @@ describe('DocumentFrameComponent', () => {
         fixture.detectChanges();
         expect(tabs.map(t => t.classList.contains('is-on'))).toEqual([false, true, false]);
     });
+
+    it('lets Publish be the selected tab like any other (ADR-242)', () => {
+        const { el, host, fixture } = mount('full');
+        host.tab.set('publish');
+        fixture.detectChanges();
+        const tabs = [...el.querySelectorAll('[role="tab"]')] as HTMLButtonElement[];
+        expect(tabs.map(t => t.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true']);
+        expect(tabs.map(t => t.tabIndex)).toEqual([-1, -1, 0]);
+        expect(tabs[2].getAttribute('aria-controls')).toBe('frame-panel-publish');
+        tabs[2].click();
+        expect(host.picked).toEqual([]);
+    });
+
+    it('walks the tablist with the arrow keys and selects as it goes', () => {
+        const { el, host } = mount('full');
+        const tabs = [...el.querySelectorAll('[role="tab"]')] as HTMLButtonElement[];
+        tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        expect(host.picked).toEqual(['preview']);
+        expect(document.activeElement).toBe(tabs[1]);
+        tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+        expect(host.picked).toEqual(['preview', 'publish']);
+        tabs[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+        expect(document.activeElement).toBe(tabs[0]);
+    });
 });

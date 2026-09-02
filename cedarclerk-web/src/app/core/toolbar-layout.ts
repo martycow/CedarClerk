@@ -23,7 +23,7 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
         id: 'text', label: 'Text', buttons: [
             { id: 'bold', label: 'Bold' }, { id: 'italic', label: 'Italic' }, { id: 'underline', label: 'Underline' },
             { id: 'strike', label: 'Strikethrough' }, { id: 'spoiler', label: 'Spoiler' },
-            { id: 'align', label: 'Text alignment (blog only)' },
+            { id: 'inlineCode', label: 'Inline code' },
         ],
     },
     {
@@ -38,7 +38,6 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
             { id: 'taskList', label: 'Task list' }, { id: 'indent', label: 'Indent' }, { id: 'outdent', label: 'Outdent' },
         ],
     },
-    { id: 'code', label: 'Code', buttons: [{ id: 'inlineCode', label: 'Inline code' }, { id: 'codeBlock', label: 'Code block' }] },
     {
         id: 'media', label: 'Media', buttons: [
             { id: 'image', label: 'Image' }, { id: 'video', label: 'Video' }, { id: 'gif', label: 'GIF' },
@@ -48,16 +47,17 @@ export const TOOLBAR_GROUPS: ToolbarGroupDef[] = [
     },
     {
         id: 'blocks', label: 'Blocks', buttons: [
-            { id: 'table', label: 'Table' }, { id: 'formula', label: 'Formula' }, { id: 'blockquote', label: 'Blockquote' },
-            { id: 'toggle', label: 'Toggle block' }, { id: 'toc', label: 'Table of contents' },
+            { id: 'table', label: 'Table' }, { id: 'blockquote', label: 'Blockquote' }, { id: 'codeBlock', label: 'Code block' },
             { id: 'divider', label: 'Divider' },
         ],
     },
-    // Reader-engagement tools — split out from "Blocks" on Marty's request: these two are about
-    // getting feedback from a reader (comment anchors, a vote), not authoring content, so they
-    // don't belong grouped with tables/formulas/dividers.
+    // The commands a devlog reaches for least often sit behind one menu, so the strip's first
+    // row is the twenty buttons a session actually uses. Nothing here is a second copy of a
+    // dialog's or the context menu's command — each entry is the only trigger it has.
     {
-        id: 'feedback', label: 'Feedback', buttons: [
+        id: 'more', label: 'More', buttons: [
+            { id: 'align', label: 'Text alignment (blog only)' }, { id: 'formula', label: 'Formula' },
+            { id: 'toggle', label: 'Toggle block' }, { id: 'toc', label: 'Table of contents' },
             { id: 'annotation', label: 'Annotation' }, { id: 'poll', label: 'Poll' },
         ],
     },

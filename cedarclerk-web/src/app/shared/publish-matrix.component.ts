@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DOCUMENT_KINDS, DocumentKind, DocumentKindCounts } from '../core/document-kinds';
+import { Dict } from '../core/i18n/en';
 import { LocaleService } from '../core/i18n/locale.service';
 import { PublishCapabilities } from '../core/publish.service';
 import { BrandIconComponent, BrandIconName } from './brand-icon.component';
@@ -183,31 +184,37 @@ export class PublishMatrixComponent {
 
     cellOf(kind: DocumentKind, network: string): MatrixCell {
         const cap = network === 'blog' ? BLOG : this.capabilities().find(c => c.network === network);
-        if (!cap) return { verdict: 'no', note: '' };
-        const words = this.t().matrix.notes;
-        const yes: MatrixCell = { verdict: 'yes', note: '' };
-        const no: MatrixCell = { verdict: 'no', note: '' };
-        const asText: MatrixCell = { verdict: 'partial', note: words.asText };
-        switch (kind) {
-            case 'text':
-                if (cap.maxCharacters === null) return yes;
-                return cap.supportsThreads
-                    ? { verdict: 'partial', note: words.teaserOrThread(cap.maxCharacters) }
-                    : { verdict: 'partial', note: words.teaser(cap.maxCharacters) };
-            case 'headings': return cap.supportsHeadings ? yes : asText;
-            case 'lists': return cap.supportsLists ? yes : asText;
-            case 'links': return cap.supportsRichText ? yes : cap.supportsLinkPreview ? { verdict: 'partial', note: words.blogLinkOnly } : no;
-            case 'images':
-                if (cap.maxMediaItems <= 0) return { verdict: 'no', note: cap.supportsLinkPreview ? words.linkCard : '' };
-                if (cap.maxMediaItems >= 1000) return yes;
-                return { verdict: 'partial', note: cap.supportsThreads ? words.upToFirst(cap.maxMediaItems) : words.upTo(cap.maxMediaItems) };
-            case 'video': return cap.supportsVideo ? yes : no;
-            case 'audio': return cap.supportsAudio ? yes : no;
-            case 'tables': return cap.supportsTables ? yes : cap.supportsRichText ? asText : no;
-            case 'code': return cap.supportsCodeBlocks ? yes : asText;
-            case 'math': return cap.supportsMath ? yes : cap.supportsRichText ? asText : no;
-            case 'quotes': return cap.supportsRichText ? yes : asText;
-        }
+        return matrixCell(kind, cap, this.t().matrix.notes);
+    }
+}
+
+export type MatrixWords = Dict['matrix']['notes'];
+
+/** The network's own answer for one kind of content — the same record the pre-flight reads. */
+export function matrixCell(kind: DocumentKind, cap: PublishCapabilities | undefined, words: MatrixWords): MatrixCell {
+    if (!cap) return { verdict: 'no', note: '' };
+    const yes: MatrixCell = { verdict: 'yes', note: '' };
+    const no: MatrixCell = { verdict: 'no', note: '' };
+    const asText: MatrixCell = { verdict: 'partial', note: words.asText };
+    switch (kind) {
+        case 'text':
+            if (cap.maxCharacters === null) return yes;
+            return cap.supportsThreads
+                ? { verdict: 'partial', note: words.teaserOrThread(cap.maxCharacters) }
+                : { verdict: 'partial', note: words.teaser(cap.maxCharacters) };
+        case 'headings': return cap.supportsHeadings ? yes : asText;
+        case 'lists': return cap.supportsLists ? yes : asText;
+        case 'links': return cap.supportsRichText ? yes : cap.supportsLinkPreview ? { verdict: 'partial', note: words.blogLinkOnly } : no;
+        case 'images':
+            if (cap.maxMediaItems <= 0) return { verdict: 'no', note: cap.supportsLinkPreview ? words.linkCard : '' };
+            if (cap.maxMediaItems >= 1000) return yes;
+            return { verdict: 'partial', note: cap.supportsThreads ? words.upToFirst(cap.maxMediaItems) : words.upTo(cap.maxMediaItems) };
+        case 'video': return cap.supportsVideo ? yes : no;
+        case 'audio': return cap.supportsAudio ? yes : no;
+        case 'tables': return cap.supportsTables ? yes : cap.supportsRichText ? asText : no;
+        case 'code': return cap.supportsCodeBlocks ? yes : asText;
+        case 'math': return cap.supportsMath ? yes : cap.supportsRichText ? asText : no;
+        case 'quotes': return cap.supportsRichText ? yes : asText;
     }
 }
 

@@ -16,14 +16,16 @@ test('a post that does not fit offers a thread, with its parts listed', async ({
 
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
-    // Two affordances per card: the checkbox ticks Telegram for publishing, and a click on the
-    // card body brings its settings panel forward — which is where the limit checks live.
+    await page.getByRole('tab', { name: 'Publish / Export' }).click();
+    // Two controls per card (ADR-242): the checkbox ticks Telegram for publishing, and its
+    // settings button brings the panel forward — which is where the thread offer lives.
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
-    await page.locator('.dest-card').nth(1).click();
+    await page.locator('.dest-card .dest-select').nth(1).click();
 
-    // The problem is stated before the remedy is offered.
-    await expect(page.locator('.publish-issues li.blocking')).toHaveCount(1);
+    // The problem is stated before the remedy is offered — under Blocking in the review.
+    const tooLong = page.locator('app-preview-checks .pc-row[data-check="telegram:too-long"]');
+    await expect(tooLong).toHaveCount(1);
+    await expect(tooLong).toHaveAttribute('data-tone', 'blocking');
 
     const toggle = page.locator('.thread-toggle input');
     await expect(toggle).toBeVisible();
@@ -36,8 +38,8 @@ test('a post that does not fit offers a thread, with its parts listed', async ({
     const parts = page.locator('.thread-parts li');
     await expect(parts.first()).toBeVisible();
     expect(await parts.count()).toBeGreaterThan(1);
-    // And the issue it answers is gone from the list.
-    await expect(page.locator('.publish-issues li.blocking')).toHaveCount(0);
+    // And the issue it answers is gone from the review.
+    await expect(tooLong).toHaveCount(0);
 });
 
 test('a post that fits is never offered a thread', async ({ page, context }) => {
@@ -45,10 +47,10 @@ test('a post that fits is never offered a thread', async ({ page, context }) => 
 
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await page.getByRole('tab', { name: 'Publish / Export' }).click();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
-    // Bring the Telegram panel forward so the absence below is the panel's, not the modal's.
-    await page.locator('.dest-card').nth(1).click();
+    // Bring the Telegram panel forward so the absence below is the panel's, not the tab's.
+    await page.locator('.dest-card .dest-select').nth(1).click();
     await expect(page.locator('.export-section-title').filter({ hasText: 'Telegram' })).toBeVisible();
 
     await expect(page.locator('.thread-toggle')).toHaveCount(0);
@@ -80,13 +82,13 @@ test('a connected short-post network offers link and thread as two modes', async
     const id = await createDraft(context, 'Короткий пост', ['Тело поста.']);
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await page.getByRole('tab', { name: 'Publish / Export' }).click();
 
     // Blog, Telegram, then the connected network — an unconnected one renders no checkbox at all.
     const bluesky = page.locator('.dest-card input[type=checkbox]').nth(2);
     await bluesky.check();
-    // The checkbox only ticks it for publishing; the card body is what opens its panel.
-    await page.locator('.dest-card').nth(2).click();
+    // The checkbox only ticks it for publishing; the settings button is what opens its panel.
+    await page.locator('.dest-card .dest-select').nth(2).click();
 
     const modes = page.locator('.mode-toggle button');
     await expect(modes).toHaveCount(2);

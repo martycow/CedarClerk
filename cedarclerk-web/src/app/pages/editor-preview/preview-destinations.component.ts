@@ -2,9 +2,10 @@ import { ChangeDetectionStrategy, Component, inject, input, output } from '@angu
 import { RouterLink } from '@angular/router';
 import { LocaleService } from '../../core/i18n/locale.service';
 import { IconComponent } from '../../shared/icon.component';
+import { DestinationState, StateTagComponent } from './state-tag.component';
 
 export type PreviewDestination = 'blog' | 'telegram' | 'x' | 'bluesky' | 'discord';
-export type Readiness = 'ready' | 'off' | 'warn';
+export type Readiness = DestinationState;
 
 /** One row of the destinations card. Readiness is composed by the tab, never fetched. */
 export interface DestinationRow {
@@ -17,7 +18,7 @@ export interface DestinationRow {
 @Component({
     selector: 'app-preview-destinations',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [RouterLink, IconComponent],
+    imports: [RouterLink, IconComponent, StateTagComponent],
     host: { 'data-surface': 'paper', class: 'card' },
     template: `
         <span class="label pd-caption" id="pd-caption">{{ t().editor.previewTab.destinations }}</span>
@@ -27,15 +28,8 @@ export interface DestinationRow {
                         [attr.aria-selected]="row.id === selected()" [attr.tabindex]="row.id === selected() ? 0 : -1"
                         (click)="pick.emit(row.id)">
                     <span class="pd-text">
-                        <span class="pd-name">
-                            {{ row.name }}
-                            @if (row.readiness === 'ready') {
-                                <span class="tag ok pd-tag">{{ t().editor.previewTab.ready }}</span>
-                            } @else {
-                                <span class="pd-dot" [class.is-warn]="row.readiness === 'warn'" [class.is-off]="row.readiness === 'off'" aria-hidden="true">!</span>
-                                <span class="visually-hidden">{{ row.readiness === 'warn' ? t().editor.previewTab.needsAttention : t().editor.exportModal.notConnected }}</span>
-                            }
-                        </span>
+                        <span class="pd-name">{{ row.name }}</span>
+                        <app-state-tag [state]="row.readiness" />
                         <span class="pd-detail">{{ row.detail }}</span>
                     </span>
                     <span class="pd-thumb" [attr.data-kind]="row.id" aria-hidden="true">
@@ -86,25 +80,9 @@ export interface DestinationRow {
         .pd-row:hover { background: var(--alt); }
         .pd-row.is-on { border-left-color: var(--accent); background: var(--asoft); }
 
-        .pd-text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+        .pd-text { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
 
-        .pd-name { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-15); font-weight: 700; }
-        .pd-tag { height: 20px; font-size: var(--fs-11); }
-
-        .pd-dot {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--surface);
-            color: var(--t2);
-            font-size: var(--fs-12);
-            font-weight: 700;
-        }
-
-        .pd-dot.is-warn, .pd-dot.is-off { background: var(--warn-soft); color: var(--warn); }
+        .pd-name { font-size: var(--fs-15); font-weight: 700; }
 
         .pd-detail { font-size: var(--fs-13); color: var(--t2); }
 
@@ -147,18 +125,6 @@ export interface DestinationRow {
 
         .pd-manage:hover { background: var(--alt); }
 
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            margin: -1px;
-            padding: 0;
-            border: 0;
-            overflow: hidden;
-            white-space: nowrap;
-            clip-path: inset(50%);
-        }
-
         @media (max-width: 1180px) {
             :host { flex-direction: row; align-items: stretch; width: 100%; }
             .pd-caption { display: none; }
@@ -179,6 +145,10 @@ export interface DestinationRow {
             .pd-detail { font-size: var(--fs-12); white-space: nowrap; }
             .pd-thumb, .pd-spacer { display: none; }
             .pd-manage { flex: none; padding: 0 var(--space-3); border-top: 0; border-left: 1px solid var(--paper-edge); white-space: nowrap; }
+        }
+
+        @media (max-width: 759px) {
+            .pd-detail { display: none; }
         }
     `],
 })

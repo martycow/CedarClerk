@@ -71,14 +71,14 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await expect(page.locator('.tiptap')).toBeVisible();
     await shot(page, '20-editor');
 
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
-    await shot(page, '21-export-collapsed');
+    await page.getByRole('tab', { name: 'Publish / Export' }).click();
+    await shot(page, '21-publish-untouched');
 
-    // Both destinations ticked — the state the export window is actually used in.
+    // Both destinations ticked — the state the Publish tab is actually used in.
     await page.locator('.dest-card input[type=checkbox]').nth(0).check();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
-    await shot(page, '22-export-expanded');
-    await page.keyboard.press('Escape');
+    await shot(page, '22-publish-ticked');
+    await page.getByRole('tab', { name: 'Write' }).click();
 
     await page.getByTitle(/history/i).click();
     await shot(page, '23-version-history');
@@ -315,10 +315,10 @@ test('@audit thread offer', async ({ page, context }) => {
     const id = await createDraft(context, 'Длинный документ', long);
     await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
-    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await page.getByRole('tab', { name: 'Publish / Export' }).click();
     await page.locator('.dest-card input[type=checkbox]').nth(1).check();
-    // The checkbox only ticks the destination — the card body click brings its panel forward.
-    await page.locator('.dest-card').nth(1).click();
+    // The checkbox only ticks the destination — the settings button brings its panel forward.
+    await page.locator('.dest-card .dest-select').nth(1).click();
     await page.locator('.thread-toggle input').check();
     await expect(page.locator('.thread-parts li').first()).toBeVisible();
     await shot(page, '79-thread-offer');
