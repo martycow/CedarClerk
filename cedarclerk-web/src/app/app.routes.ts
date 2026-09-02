@@ -48,7 +48,7 @@ export const routes: Routes = [
     // /dev/* stays inside, because the styleguide's job is showing chrome components in chrome.
     {
         path: '',
-        loadComponent: () => import('./bench/chrome/bench-shell.component').then(m => m.BenchShellComponent),
+        loadComponent: () => import('./shell/app-shell.component').then(m => m.AppShellComponent),
         children: [
             {
                 path: 'editor',

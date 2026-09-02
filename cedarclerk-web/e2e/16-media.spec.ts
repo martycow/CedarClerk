@@ -11,7 +11,10 @@ test.beforeEach(async ({ context }) => {
 // actually assert without uploading anything.
 test('the media library opens and shows the empty state', async ({ page }) => {
     await page.goto('/library');
-    await expect(page.locator('app-rail-header')).toBeVisible();
-    await expect(page.locator('.media-empty')).toBeVisible();
-    await expect(page.locator('.media-empty')).toContainText('No files yet');
+    await expect(page.locator('app-sidebar')).toBeVisible();
+    // The page lane moves the sentence into app-empty-state (CONTRACT §D2); until it does the old
+    // paragraph still carries it, so either home satisfies this.
+    const empty = page.locator('app-empty-state, .media-empty').first();
+    await expect(empty).toBeVisible();
+    await expect(empty).toContainText('No files yet');
 });

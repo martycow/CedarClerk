@@ -58,8 +58,8 @@ describe('IndexTabsComponent', () => {
         expect(seen).toEqual(['preview']);
     });
 
-    // Tabs switch what a panel shows; the rail navigates between screens. The component cannot do
-    // the rail's job because it draws no link at all.
+    // Tabs switch what a panel shows; the sidebar navigates between screens. The component cannot
+    // do the sidebar's job because it draws no link at all.
     it('draws buttons, never links', () => {
         create();
         expect(fixture.nativeElement.querySelectorAll('a').length).toBe(0);
@@ -87,7 +87,6 @@ describe('IndexTabsComponent', () => {
         expect(tiles().some(t => t.classList.contains('is-on'))).toBe(false);
     });
 
-    // The two behaviours a chrome badge owes, and this component is where they live.
     describe('the badge counts the way the app already counted', () => {
         it('draws nothing at zero or below', () => {
             create([{ id: 'a', label: 'A', badge: 0 }, { id: 'b', label: 'B', badge: -3 }], 'a');
@@ -106,9 +105,6 @@ describe('IndexTabsComponent', () => {
             expect(badges.map(b => b.textContent!.trim())).toEqual(['new']);
         });
 
-        // The count is the whole point of the badge, and an aria-label replaces the text it is
-        // written on rather than adding to it — so the label has to carry both or the tile is
-        // announced as "Checks unresolved checks" with the number gone (ADR-155 clause 5).
         it('names what it counts without dropping the count', () => {
             create();
             const badge = fixture.nativeElement.querySelector('.it-badge') as HTMLElement;
@@ -119,7 +115,7 @@ describe('IndexTabsComponent', () => {
             expect(fixture.nativeElement.querySelector('.it-badge').hasAttribute('aria-label')).toBe(false);
         });
 
-        it('states the rules once, where the retirement can reuse them', () => {
+        it('states the rules once, where the sidebar can reuse them', () => {
             expect(indexTabBadgeLabel(undefined)).toBe('');
             expect(indexTabBadgeLabel(0)).toBe('');
             expect(indexTabBadgeLabel(1)).toBe('1');
@@ -129,37 +125,33 @@ describe('IndexTabsComponent', () => {
         });
     });
 
-    // role="tab" without aria-controls is half the pattern: the strip announces tabs and never
-    // says what any of them opens.
     it('names the body a tile opens, when the caller gave it one', () => {
         create();
         expect(tiles().map(t => t.getAttribute('aria-controls'))).toEqual([null, 'preview-body', null]);
     });
 
-    describe('the chrome band, read off the shipped CSS', () => {
+    // ADR-239 — the strip is the artboards' segmented control: paper inks in a trough, the lit tile
+    // a raised sheet, still cut at trim so a 24px control fits a caption line.
+    describe('the segmented control, read off the shipped CSS', () => {
         let css: string;
         beforeEach(() => { create(); css = sheetFor('.it-tile'); });
 
-        // A tile label is read, so it never takes the soft cream: that measures 3.2:1 on an unlit
-        // tile, which the recede filter darkens further. A resting tile may dim to the cream that
-        // still clears 4.5:1 on the lit stop (ADR-138 item 6); the lit tile is full cream.
-        it('never spends the soft cream on a label', () => {
+        it('writes with paper ink and lifts the lit tile onto a sheet', () => {
             const inked = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g))
                 .filter(m => /(^|[^-])color:/.test(m[2]));
             expect(inked.length).toBeGreaterThan(0);
             for (const m of inked) {
-                const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim().replace(/^(var\(--[\w-]+),.*\)$/, '$1)');
-                expect(['var(--rail-ink)', 'var(--rail-ink-dim)', 'var(--rail-edge)'], m[1].trim()).toContain(value);
+                const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
+                expect(['var(--t2)', 'var(--text)', 'var(--accent)'], m[1].trim()).toContain(value);
             }
-            expect(css).toMatch(/is-on[^{]*\{[^}]*color:\s*var\(--rail-ink\)/);
+            expect(css).toMatch(/is-on[^{]*\{[^}]*background:\s*var\(--sheet\)/);
+            expect(css).not.toMatch(/--rail-ink|--sign-tile|--tex-wood|--brass/);
         });
 
-        // ADR-200 — an index tile rides a chrome band, so it is drawn at trim: a 30px tile inside
-        // a 30px header fills the wood it is supposed to be cut into.
-        it('holds 11px type on a 24px box', () => {
+        it('holds trim type on a trim box', () => {
             const sizes = Array.from(css.matchAll(/font-size:\s*([^;}]+)/g)).map(m => m[1].trim());
             expect(sizes.length).toBeGreaterThan(0);
-            for (const size of sizes) expect(['var(--text-chrome)', 'var(--text-chrome-sm)']).toContain(size);
+            for (const size of sizes) expect(['var(--fs-11)', 'var(--fs-12)']).toContain(size);
             expect(css).toMatch(/min-height:\s*var\(--hit-surface, var\(--hit-trim\)\)/);
         });
     });

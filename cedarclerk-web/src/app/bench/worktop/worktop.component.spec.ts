@@ -4,13 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PaperCardComponent } from '../display/paper-card.component';
 import { WorktopComponent } from './worktop.component';
 
-// The component's own stylesheet, read back out of the document. Half of what this port owes is a
-// CSS rule — which layer the pencil grid is on, which ink the edge strip takes — and the only way
-// to hold it to them is to read what shipped. The length assertion is the control: without it a
-// renamed class would make every rule below pass over an empty string.
-// Emulated encapsulation rewrites what was authored — :host becomes an [_nghost-…] attribute and
-// every other selector gains an [_ngcontent-…] one — so the shim is undone before the rules are
-// read, and attribute values are unquoted the way the shim leaves them.
+// The component's own stylesheet, read back out of the document. Emulated encapsulation rewrites
+// what was authored — :host becomes an [_nghost-…] attribute and every other selector gains an
+// [_ngcontent-…] one — so the shim is undone before the rules are read.
 function sheetFor(marker: string): string {
     const inline = Array.from(document.querySelectorAll('style')).map(s => s.textContent ?? '');
     const adopted = Array.from(document.adoptedStyleSheets ?? []).map(
@@ -46,15 +42,12 @@ describe('WorktopComponent', () => {
 
     afterEach(() => fixture.destroy());
 
-    it('is chrome — it is the frame, and the frame lives in the shell', () => {
+    it('is chrome — its caption line is measured as chrome', () => {
         expect(top().getAttribute('data-surface')).toBe('chrome');
     });
 
-    // The trap: a chrome box holding paper. Chrome's 30px/11-13px numbers ride down from the
-    // attribute, so without the body restating the axis the sheet lying on the top would inherit
-    // them, and every control on that sheet would come out at chrome's density. What this runner
-    // can hold the worktop to is the chain of declarations; the px the chain resolves to needs an
-    // engine with a coarse pointer, and is measured in e2e/17-density.spec.ts.
+    // The trap: a chrome box holding paper. Without the body restating the axis the sheet lying
+    // in it would inherit chrome's numbers.
     it('does not leak chrome onto what lies on it', () => {
         expect(body().getAttribute('data-surface')).toBe('paper');
 
@@ -62,9 +55,6 @@ describe('WorktopComponent', () => {
         const projected = TestBed.createComponent(SheetOnTopHost);
         projected.detectChanges();
         const card = projected.nativeElement.querySelector('app-paper-card') as HTMLElement;
-        // The floor rides down as an inherited custom property, so what decides a control's floor
-        // is the last surface named on the way to it. The chain from the top down to the card is
-        // read whole: the frame opens it, and nothing under the body may put chrome back.
         const chain: string[] = [];
         for (let node: HTMLElement | null = card; node; node = node.parentElement) {
             if (node.hasAttribute('data-surface')) chain.unshift(node.getAttribute('data-surface')!);
@@ -75,19 +65,7 @@ describe('WorktopComponent', () => {
         projected.destroy();
     });
 
-
-    it('lays lamp over rules over stock, and lets a consumer drop either layer', () => {
-        expect(top().style.getPropertyValue('--wt-lamp')).toBe('var(--lamp)');
-        expect(top().style.getPropertyValue('--wt-grid')).toBe('var(--grid-worktop)');
-
-        fixture.componentRef.setInput('lamp', false);
-        fixture.componentRef.setInput('grid', false);
-        fixture.detectChanges();
-        expect(top().style.getPropertyValue('--wt-lamp')).toBe('');
-        expect(top().style.getPropertyValue('--wt-grid')).toBe('');
-    });
-
-    it('draws the strip only for what it was given', () => {
+    it('draws the caption line only for what it was given', () => {
         expect(edge()).toBeNull();
 
         fixture.componentRef.setInput('meta', 'пост · RU');
@@ -97,7 +75,9 @@ describe('WorktopComponent', () => {
 
         fixture.componentRef.setInput('label', 'лист 640 px');
         fixture.detectChanges();
-        expect(edge()!.querySelector('.wt-label')!.textContent!.trim()).toBe('лист 640 px');
+        const label = edge()!.querySelector('.wt-label') as HTMLElement;
+        expect(label.textContent!.trim()).toBe('лист 640 px');
+        expect(label.classList).toContain('label');
     });
 
     it('clips what it holds until it is told to scroll', () => {
@@ -107,26 +87,28 @@ describe('WorktopComponent', () => {
         expect(top().classList.contains('scrolls')).toBe(true);
     });
 
-    // Worktop.jsx: the wall tone swaps the ground and keeps the lamp and the rules.
-    it('keeps the pencil rules on either tone, and drops them only when asked', () => {
-        fixture.componentRef.setInput('tone', 'wall');
+    // ADR-239 clause 2 — the lamp, the grid and the chalk edge are gone; the inputs stay so the
+    // pages that name them still compile, and they paint nothing.
+    it('paints neither lamp nor grid whatever it is told', () => {
+        expect(top().style.getPropertyValue('--wt-lamp')).toBe('');
+        expect(top().style.getPropertyValue('--wt-grid')).toBe('');
+        fixture.componentRef.setInput('lamp', true);
+        fixture.componentRef.setInput('grid', true);
         fixture.detectChanges();
-        expect(top().getAttribute('data-tone')).toBe('wall');
-        expect(top().style.getPropertyValue('--wt-grid')).toBe('var(--grid-worktop)');
-
-        fixture.componentRef.setInput('grid', false);
-        fixture.detectChanges();
+        expect(top().style.getPropertyValue('--wt-lamp')).toBe('');
         expect(top().style.getPropertyValue('--wt-grid')).toBe('');
     });
 
-    it('draws the edge as a strip unless the screen asks for chips', () => {
+    it('keeps its tone and edge attributes for the pages that read them', () => {
+        expect(top().getAttribute('data-tone')).toBe('paper');
         expect(top().getAttribute('data-edge')).toBe('strip');
+        fixture.componentRef.setInput('tone', 'wall');
         fixture.componentRef.setInput('edge', 'chips');
         fixture.detectChanges();
+        expect(top().getAttribute('data-tone')).toBe('wall');
         expect(top().getAttribute('data-edge')).toBe('chips');
     });
 
-    // "Only one Worktop per screen — a bench has one top."
     it('says so when a second top appears, and gives the slot back when one goes', () => {
         fixture.destroy();
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -151,55 +133,36 @@ describe('WorktopComponent', () => {
         }
     });
 
-    describe('the prompt.md rules and the token contract, read off the shipped CSS', () => {
+    describe('the card, read off the shipped CSS', () => {
         let css: string;
         beforeEach(() => { css = sheetFor('.wt-edge'); });
 
-        it('names the grid token and never draws a rule of its own', () => {
-            expect(css).toMatch(/background-image:\s*var\(--wt-lamp,\s*none\),\s*var\(--wt-grid,\s*none\),\s*var\(--tex-paper\)/);
-            expect(css).not.toMatch(/repeating-linear-gradient/);
-            expect(css).not.toMatch(/--grid-worktop\s*:/);
+        it('is a plain card with no wood, no lamp and no rules', () => {
+            expect(css).not.toMatch(/--lamp|--grid-worktop|--tex-wood|--wood-edge|--rule-ink|repeating-linear-gradient/);
+            expect(css).toMatch(/background-color:\s*var\(--sheet\)/);
+            expect(css).toMatch(/border:\s*1px solid var\(--border\)/);
         });
 
-        it('keeps the grid under content — no overlay, no stacking order to climb', () => {
-            expect(css).not.toMatch(/::(before|after)/);
-            expect(css).not.toMatch(/z-index/);
-            expect(css).not.toMatch(/\.wt-body[^{]*\{[^}]*background/);
-        });
-
-        it('puts the edge readout on measured ink, not on the faintest tier', () => {
+        it('puts the caption readout on measured ink, not on the faintest tier', () => {
             expect(css).toMatch(/\.wt-edge\s*\{[^}]*color:\s*var\(--t2\)/);
-            expect(css).toMatch(/\[data-tone=wall\][^{]*\.wt-edge\s*\{[^}]*color:\s*var\(--wood-ink\)/);
-            expect(css).not.toMatch(/--t3\b/);
             expect(css).not.toMatch(/--text-faint/);
         });
 
-        it('takes both grounds by their contract names, which are the ones that are measured', () => {
-            expect(css).toMatch(/background-color:\s*var\(--surface\)/);
-            expect(css).toMatch(/\[data-tone=wall\][^{]*\{[^}]*background-color:\s*var\(--canvas\)/);
-            expect(css).not.toMatch(/--paper-2|--wall-lo/);
-        });
-
-        it('sizes the strip from the surface, so the density lint can score it', () => {
-            expect(css).toMatch(/\[data-surface=chrome\][^{]*\.wt-edge\s*\{[^}]*font-size:\s*var\(--text-chrome-sm\)/);
-            expect(css).toMatch(/height:\s*var\(--bench-worktop-edge-h/);
+        it('sizes the caption line from the surface, so the density lint can score it', () => {
+            expect(css).toMatch(/\[data-surface=chrome\][^{]*\.wt-meta\s*\{[^}]*font-size:\s*var\(--text-chrome\)/);
+            expect(css).toMatch(/min-height:\s*var\(--hit-chrome\)/);
         });
 
         it('spends one box-shadow, and withholds it while focused so the global halo stands', () => {
             const shadowed = [...css.matchAll(/([^{}]+)\{([^{}]*box-shadow[^{}]*)\}/g)];
             expect(shadowed.length).toBe(1);
             expect(shadowed[0][1]).toContain(':not(:focus-visible)');
-            expect(shadowed[0][2]).toMatch(/box-shadow:\s*var\(--shadow-worktop-inset/);
+            expect(shadowed[0][2]).toMatch(/box-shadow:\s*var\(--shadow\)/);
         });
 
-        it('paints no literal colour, and spends pixels only on hairlines and the chalk strip', () => {
+        it('paints no literal colour', () => {
             expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
             expect(css).not.toMatch(/rgba?\(/);
-            // A token fallback is the kit's value waiting for its token; the strip's own geometry
-            // (Worktop.jsx:21, hub.html:77-78) has no token in either system.
-            const bare = css.replace(/var\(--[\w-]+,\s*[^)]*\)/g, '');
-            const strip = new Set(['1', '2', '7', '10', '14']);
-            for (const [, value] of bare.matchAll(/(\d+(?:\.\d+)?)px/g)) expect(strip.has(value), `${value}px`).toBe(true);
         });
     });
 });

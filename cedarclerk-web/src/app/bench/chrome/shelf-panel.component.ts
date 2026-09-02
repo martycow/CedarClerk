@@ -2,33 +2,21 @@ import { ChangeDetectionStrategy, Component, booleanAttribute, computed, inject,
 
 export type ShelfTone = 'paper' | 'cork';
 
-// A shelf board with a carved sign tile for a header and a paper sheet set into it. Every dock,
-// sidebar and inspector on the bench is one of these.
-//
-// Two rules from ShelfPanel.prompt.md are structural, so both are put where they cannot be missed
-// rather than left to prose. A panel's own commands go in `[actions]` and never in a global
-// toolbar, so the header carries no command input at all — the slot is the only door in. And a
-// panel may never show another panel: one board, one sheet, refused in the constructor because the
-// check is exact and lexical, so nesting cannot survive a first render to be caught in review.
-//
-// The board and its header are chrome, the sheet is paper (ADR-138 item 1). The sheet spells its
-// own surface so that projected content lands on paper's numbers, and names no type size, since
-// inherited type is the one leak encapsulation cannot stop.
+// A plain card with a caption line (ADR-239 clause 2): the label, the count beside it, and the
+// panel's own commands in `[actions]` — the slot is the only door in for a control. A panel may
+// never show another panel, refused in the constructor because the check is exact and lexical.
 @Component({
     selector: 'app-shelf-panel',
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {
-        'data-surface': 'chrome',
+        'data-surface': 'paper',
         'role': 'region',
         '[attr.aria-label]': 'title()',
     },
     template: `
         <header class="sp-head">
-            <!--Name and count share one baseline: the display caps and the mono digits have
-            different metrics, and centring each in the band separately sat the number visibly
-            below the word it counts.-->
             <span class="sp-name">
-                <span class="sp-title">{{ title() }}</span>
+                <span class="sp-title label">{{ title() }}</span>
                 @if (hasCount()) {
                     <span class="sp-count">{{ count() }}</span>
                 }
@@ -42,94 +30,68 @@ export type ShelfTone = 'paper' | 'cork';
         </div>
     `,
     styles: [`
-        :host([data-surface="chrome"]) {
+        :host {
             display: flex;
             flex-direction: column;
             min-width: 0;
             min-height: 0;
             box-sizing: border-box;
-            padding: 3px;
-            border: 1px solid var(--wood-edge);
-            border-radius: 5px;
-            background: var(--shelf-frame);
-            box-shadow: var(--shadow-shelf);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--sheet);
+            box-shadow: var(--shadow);
+            color: var(--text);
         }
 
-        :host([data-surface="chrome"]) .sp-head {
+        .sp-head {
             display: flex;
             align-items: center;
             gap: var(--space-2);
             flex: none;
             box-sizing: border-box;
-            min-height: var(--bench-panel-hd);
-            padding: 0 var(--space-2) 0 10px;
-            border-bottom: 1px solid var(--wood-edge);
-            background-color: var(--sign-tile-hi);
-            background-image: var(--tex-wood), var(--grad-sign-tile);
-            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--rail-ink) 15%, transparent);
+            min-height: var(--hit-touch);
+            padding: 0 var(--space-3) 0 var(--space-4);
         }
 
-        :host([data-surface="chrome"]) .sp-head .sp-name {
+        .sp-name {
             display: inline-flex;
             align-items: baseline;
             gap: var(--space-2);
             min-width: 0;
         }
 
-        :host([data-surface="chrome"]) .sp-head .sp-title {
-            font-family: var(--font-display);
-            font-size: var(--text-chrome-sm);
-            font-weight: 700;
-            letter-spacing: .11em;
-            text-transform: uppercase;
-            white-space: nowrap;
-            color: var(--rail-ink);
-            text-shadow: 0 1px 1px color-mix(in srgb, var(--rail-edge) 60%, transparent);
-        }
+        .sp-title { white-space: nowrap; }
 
-        /* Cream at full strength: the soft cream measures 3.6:1 on the lit stop of the tile, and a
-           counter is read. The mono face against the title's display caps is what sets it back. */
-        :host([data-surface="chrome"]) .sp-head .sp-count {
-            font-family: var(--font-readout);
-            font-size: var(--text-chrome-sm);
-            color: var(--rail-ink);
+        .sp-count {
+            font-size: var(--fs-13);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            color: var(--t3);
             white-space: nowrap;
         }
 
-        :host([data-surface="chrome"]) .sp-spacer { flex: 1; }
+        .sp-spacer { flex: 1; }
 
-        /* A band draws its own furniture below its own height (ADR-200): the header is 30px, so a
-           search field or an action button projected into it is drawn at trim. The two box tokens
-           are shadowed rather than the controls being asked to opt in, because the placement is
-           what decides the size and the placement is known here and nowhere else. */
-        :host([data-surface="chrome"]) .sp-actions {
+        .sp-actions {
             display: inline-flex;
             align-items: center;
             gap: var(--space-1);
-            --hit-chrome: var(--hit-trim);
-            --hit-target: var(--hit-trim);
         }
 
-        /* Outside every chrome-scoped rule above on purpose: this is the paper half of the density
-           contract, and it names no type size so nothing inherits a chrome measurement across the
-           slot. */
-        .sp-sheet[data-surface="paper"] {
+        .sp-sheet {
             flex: 1;
             min-width: 0;
             min-height: 0;
             overflow: auto;
             box-sizing: border-box;
-            padding: var(--space-3);
-            background-color: var(--sheet);
-            background-image: var(--tex-paper);
-            box-shadow: var(--shadow-sheet-inset);
+            padding: 0 var(--space-4) var(--space-4);
         }
 
-        /* Lists and tables that rule their own rows to the panel's edge. */
         .sp-sheet.is-flush { padding: 0; }
 
-        /* One tan in both themes: cork is a material, and ADR-140 measured the ring against it. */
         .sp-sheet.is-cork {
+            padding: var(--space-3);
             background-color: var(--cork, #C9A46B);
             background-image: var(--tex-cork);
             color: var(--wood-ink);
@@ -137,9 +99,8 @@ export type ShelfTone = 'paper' | 'cork';
     `],
 })
 export class ShelfPanelComponent {
-    /** Carved into the header tile — uppercase display serif, wide tracking. */
     readonly title = input.required<string>();
-    /** Mono counter beside the title. Shown as written: a panel holding nothing still says 0. */
+    /** Shown as written: a panel holding nothing still says 0. */
     readonly count = input<string | number | null>(null);
     readonly tone = input<ShelfTone>('paper');
     /** Drop the sheet's inner padding. */

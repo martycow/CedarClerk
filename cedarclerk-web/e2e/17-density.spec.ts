@@ -37,7 +37,7 @@ test.beforeEach(async ({ context }) => {
 
 test('a touch control takes the floor of its nearest declared surface, either way round', async ({ page }) => {
     await page.goto('/drafts');
-    await expect(page.locator('app-rail-header')).toBeVisible();
+    await expect(page.locator('app-sidebar')).toBeVisible();
 
     const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
     expect(coarse, 'not a coarse pointer — nothing below would be measuring the touch floor').toBe(true);
@@ -75,19 +75,15 @@ test('a touch control takes the floor of its nearest declared surface, either wa
 });
 
 test('the shipped shell resolves the same two floors the fixture assumes', async ({ page }) => {
-    await page.goto('/drafts');
-    await expect(page.locator('app-rail-header')).toBeVisible();
-    // The rail is chrome and paints while the page below it is still on `loading()`, which has no
-    // control in it at all — so the paper half of this measurement read "no button on the sheet"
-    // once in five runs. Waiting for a control that is actually on the sheet is what removes the
-    // race; it cannot hide one going missing, because then this line is what goes red.
-    await expect(page.getByRole('button', { name: 'New document' })).toBeVisible();
+    await page.goto('/projects');
+    await expect(page.locator('app-sidebar')).toBeVisible();
+    // The one real chrome measurement left after the bench (ADR-239): the index tabs on the hub.
+    // Waiting for a control that is actually on the page is what removes the race with
+    // `loading()`; it cannot hide one going missing, because then this line is what goes red.
+    await expect(page.locator('app-index-tabs[data-surface="chrome"] button').first()).toBeVisible();
 
-    // Both the floor the surface hands down and the height the control ends up with. min-height
-    // alone measured the mechanism on the sheet and something else in the rail: rail-header sizes
-    // its own dots button from var(--hit-chrome) outside any media query, so that half read 30px
-    // with the whole coarse block deleted. --hit-surface exists only while the mechanism does, so
-    // it is the half that goes red when it breaks.
+    // Both the floor the surface hands down and the height the control ends up with. --hit-surface
+    // exists only while the mechanism does, so it is the half that goes red when it breaks.
     const floors = await page.evaluate(() => {
         const read = (el: Element | null, missing: string) => el
             ? {
@@ -96,8 +92,8 @@ test('the shipped shell resolves the same two floors the fixture assumes', async
             }
             : missing;
         return {
-            rail: read(document.querySelector('app-rail-header[data-surface="chrome"] button'), 'no button in the rail'),
-            body: read(document.querySelector('main[data-surface="paper"] button'), 'no button on the sheet'),
+            rail: read(document.querySelector('app-index-tabs[data-surface="chrome"] button'), 'no button in the tabs'),
+            body: read(document.querySelector('main[data-surface="paper"] app-button button'), 'no button on the sheet'),
         };
     });
 

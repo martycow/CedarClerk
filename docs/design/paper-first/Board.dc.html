@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Vollkorn:wght@600;700&family=Literata:ital,wght@0,400;0,600;1,400&family=Martian+Mono:wght@400;600&family=Caveat:wght@500&display=swap">
+  <style>
+    body { margin: 0; background: #E9E1CC; color: #2C251A; font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+    a { color: #39543C; text-decoration: none; } a:hover { color: #2C251A; }
+    * { box-sizing: border-box; }
+    .display { font-family: 'Vollkorn', Georgia, serif; }
+    .mono { font-family: 'Martian Mono', Consolas, monospace; }
+    .note { font-family: 'Caveat', cursive; }
+    .nav a { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 4px; color: #5B513E; font-size: 14px; font-weight: 600; }
+    .nav a:hover { background: rgba(44,37,26,.06); color: #2C251A; }
+    .nav a.on { background: #39543C; color: #FAF6EC; }
+    .nav a.on svg { color: #FAF6EC; }
+    .nav svg { color: #8C7F66; flex: none; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 4px; border: 1px solid #CDC1A8; background: #FAF6EC; color: #2C251A; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+    .btn.primary { background: #39543C; border-color: #39543C; color: #FAF6EC; }
+    .btn.ghost { background: transparent; border-color: transparent; color: #5B513E; }
+    .btn.sm { height: 30px; padding: 0 10px; font-size: 13px; }
+    .card { background: #FAF6EC; border: 1px solid #CDC1A8; border-radius: 8px; box-shadow: 0 1px 3px rgba(58,38,16,.14); }
+    .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 3px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .tag.ok { background: #E1E7DE; color: #356842; }
+    .tag.muted { background: #E9E1CC; color: #5B513E; }
+    .tag.warn { background: #EBE1CE; color: #7A5520; }
+    .seg { display: inline-flex; background: #E9E1CC; border-radius: 6px; padding: 3px; gap: 2px; }
+    .seg span { padding: 5px 12px; border-radius: 4px; font-size: 13px; font-weight: 600; color: #5B513E; }
+    .seg span.on { background: #FAF6EC; color: #2C251A; box-shadow: 0 1px 2px rgba(58,38,16,.14); }
+    .row { display: grid; grid-template-columns: 24px minmax(0, 1fr) 120px 210px; align-items: center; gap: 14px; height: 44px; padding: 0 16px; border-top: 1px solid #E4DBC4; font-size: 15px; }
+    .row:hover { background: #F5F0E1; }
+    .row .t { font-weight: 600; color: #2C251A; }
+    .row .m { color: #8C7F66; font-size: 13px; }
+    .row svg { color: #8C7F66; }
+    .kv { display: grid; grid-template-columns: 96px 1fr; gap: 8px 12px; font-size: 13px; align-items: center; }
+    .kv b { color: #8C7F66; font-weight: 600; }
+    .field { height: 32px; border: 1px solid #CDC1A8; border-radius: 4px; background: #FAF6EC; padding: 0 10px; display: flex; align-items: center; font-size: 13px; color: #2C251A; }
+    .label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8C7F66; }
+    .input { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid #CDC1A8; border-radius: 4px; background: #FAF6EC; color: #8C7F66; font-size: 14px; }
+    .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; border: 1.5px dashed #CDC1A8; border-radius: 8px; color: #8C7F66; padding: 24px; }
+  </style>
+</helmet>
+<div style="width:1440px;height:900px;display:flex;background:#E9E1CC;overflow:hidden;">
+<aside style="width: 232px; flex: none; display: flex; flex-direction: column; background: #F1EADA; border-right: 1px solid #CDC1A8; height: 100%;">
+  <div style="display:flex;align-items:center;gap:10px;height:56px;padding:0 16px;color:#39543C;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 7 10h3l-4 6h4l-3 4h10l-3-4h4l-4-6h3z"/><path d="M12 20v2"/></svg><span class="display" style="font-size:18px;font-weight:700;color:#2C251A;">Cedar Clerk</span></div>
+  <div style="margin: 0 12px 16px; display:flex; align-items:center; gap:10px; height:44px; padding:0 10px; background:#FAF6EC; border:1px solid #CDC1A8; border-radius:6px;">
+    <div style="width:26px;height:26px;border-radius:5px;background:#B98A5E;color:#FAF6EC;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">DD</div>
+    <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Dev Dairy Diary</div><div style="font-size:12px;color:#8C7F66;">Blog · 2 projects</div></div>
+    <span style="color:#8C7F66"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+  </div>
+  <nav class="nav" style="display:flex;flex-direction:column;gap:2px;padding:0 12px;">
+    <div class="label" style="padding:8px 12px 6px;">Write</div>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span style="flex:1">Documents</span><span style="font-size:12px;font-weight:600;opacity:.7">23</span></a>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg><span style="flex:1">Assets</span><span style="font-size:12px;font-weight:600;opacity:.7">77</span></a>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg><span style="flex:1">Site</span></a>
+    <div class="label" style="padding:16px 12px 6px;">Plan</div>
+    <a href="#" class="on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="m8 12 3 3 5-6"/></svg><span style="flex:1">Tasks</span><span style="font-size:12px;font-weight:600;opacity:.7">1</span></a>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v13l6-2 4 2 6-2V4l-6 2-4-2z"/><path d="M10 4v13M14 6v13"/></svg><span style="flex:1">Planner</span></a>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span style="flex:1">Calendar</span></a>
+    <div class="label" style="padding:16px 12px 6px;">Ship</div>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span style="flex:1">Builds</span></a>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4z"/></svg><span style="flex:1">Posts</span><span style="font-size:12px;font-weight:600;opacity:.7">24</span></a>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span style="flex:1">Metrics</span></a>
+  </nav>
+  <div style="flex:1"></div>
+  <nav class="nav" style="display:flex;flex-direction:column;gap:2px;padding:0 12px 12px;">
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v13l6-2 4 2 6-2V4l-6 2-4-2z"/><path d="M10 4v13M14 6v13"/></svg><span style="flex:1">All projects</span></a>
+    <a href="#" class=""><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span style="flex:1">Settings</span></a>
+  </nav>
+  <div style="display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;border-top:1px solid #CDC1A8;font-size:13px;color:#5B513E;">
+    <div style="width:26px;height:26px;border-radius:50%;background:#39543C;color:#FAF6EC;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">M</div>
+    <span style="flex:1;font-weight:600;">martycow</span>
+    <span style="position:relative;color:#8C7F66;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg><i style="position:absolute;top:-2px;right:-3px;width:7px;height:7px;border-radius:50%;background:#9E3D27;"></i></span>
+  </div>
+</aside>
+<main style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+<header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:28px 40px 20px;">
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    
+    <h1 class="display" style="margin:0;font-size:27px;font-weight:700;line-height:1.1;">Tasks</h1>
+    <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#5B513E;"><span>1 open</span><span style="color:#CDC1A8">·</span><span>Sprint S1 — Cedar Clerk Closed Beta Test</span><span style="color:#CDC1A8">·</span><span>28 days left</span></div>
+  </div>
+  <div style="display:flex;gap:8px;"><button class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>Sprints</button><button class="btn primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New task</button></div>
+</header>
+<div style="padding:0 40px 32px;flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="seg"><span class="on">Board</span><span>List</span></div>
+    <div class="seg"><span class="on">S1</span><span>No sprint</span><span>All</span></div>
+    <div style="flex:1"></div>
+    <div class="input" style="width:240px;height:32px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>Search tasks</span></div>
+  </div>
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:16px;">
+    <div style="display:flex;flex-direction:column;min-height:0;background:#F1EADA;border:1px solid #CDC1A8;border-radius:8px;">
+  <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;"><span style="font-weight:700;">Backlog</span><span style="font-size:12px;color:#8C7F66;font-weight:600;">0</span><div style="flex:1"></div><span style="color:#8C7F66;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+  <div style="flex:1;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px;"><div class="empty" style="flex:1;border-color:#D9CFB4;padding:16px;font-size:13px;"><span>Ideas and someday tasks land here</span></div></div>
+</div>
+    <div style="display:flex;flex-direction:column;min-height:0;background:#F1EADA;border:1px solid #CDC1A8;border-radius:8px;">
+  <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;"><span style="font-weight:700;">Planned</span><span style="font-size:12px;color:#8C7F66;font-weight:600;">0</span><div style="flex:1"></div><span style="color:#8C7F66;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+  <div style="flex:1;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px;"><div class="empty" style="flex:1;border-color:#D9CFB4;padding:16px;font-size:13px;"><span>Drag a task here to plan it for S1</span></div></div>
+</div>
+    <div style="display:flex;flex-direction:column;min-height:0;background:#F1EADA;border:1px solid #CDC1A8;border-radius:8px;">
+  <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;"><span style="font-weight:700;">In progress</span><span style="font-size:12px;color:#8C7F66;font-weight:600;">1</span><div style="flex:1"></div><span style="color:#8C7F66;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+  <div style="flex:1;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px;"><div class="card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-weight:600;font-size:15px;">Дописать пост про Mac Mini</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#8C7F66;"><span class="tag warn" style="height:20px;">P2</span><span>S1</span><div style="flex:1"></div><span style="display:flex;align-items:center;gap:4px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg> 1</span></div>
+    </div></div>
+</div>
+    <div style="display:flex;flex-direction:column;min-height:0;background:#F1EADA;border:1px solid #CDC1A8;border-radius:8px;">
+  <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;"><span style="font-weight:700;">Done</span><span style="font-size:12px;color:#8C7F66;font-weight:600;">0</span><div style="flex:1"></div><span style="color:#8C7F66;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+  <div style="flex:1;padding:0 10px 10px;display:flex;flex-direction:column;gap:8px;"><div class="empty" style="flex:1;border-color:#D9CFB4;padding:16px;font-size:13px;"><span>Nothing finished yet in this sprint</span></div></div>
+</div>
+  </div>
+</div>
+</main>
+</div>
+</x-dc>
+</body>
+</html>

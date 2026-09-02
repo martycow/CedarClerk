@@ -19,7 +19,7 @@ const CHROME_FAMILY = /^--(bench-|hit-|text-chrome|text-readout)/;
 const DENS_FAMILY = /^--dens-/;
 
 // The chrome parts ADR-138 item 1 names. A file called one of these must spell the attribute.
-const CHROME_PARTS = ['rail-header', 'hook-rail', 'shelf-panel', 'bench-drawer', 'ruler-bar', 'index-tabs'];
+const CHROME_PARTS = ['index-tabs', 'worktop', 'spec-row'];
 
 // PAPER_HIT is the box a paper control is drawn at; PAPER_TOUCH is the floor a finger is owed
 // under a coarse pointer. One constant answering both is what let the drawing size drift six pixels

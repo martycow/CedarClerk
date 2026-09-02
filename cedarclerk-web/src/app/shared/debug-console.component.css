@@ -1,9 +1,23 @@
-/* Rows only. The strip, the lip, the slide and the shut/open state are the drawer's; what is left
-   here is what one request looks like on ruled paper. */
 :host {
-    display: block;
+    display: contents;
     font-family: var(--font-sans);
+}
 
+/* Over the page, never in its flow: the overlay reserves nothing and leaves no strip behind. */
+.console-overlay {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    height: 280px;
+    border-top: 1px solid var(--border);
+    background-color: var(--sheet);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper);
+    color: var(--text);
 }
 
 .spacer { flex: 1; }
@@ -11,16 +25,27 @@
 .journal-head {
     display: flex;
     align-items: center;
-    min-height: var(--hit-chrome);
+    gap: var(--space-1);
+    flex: none;
+    min-height: var(--hit-target);
     padding: 0 var(--space-3);
+    border-bottom: 1px solid var(--paper-edge);
+}
+
+.journal-title {
+    font-size: var(--fs-11);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--t3);
 }
 
 .journal-head .mini {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: var(--hit-chrome);
-    min-height: var(--hit-chrome);
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
     border: none;
     background: none;
     border-radius: var(--radius-sm);
@@ -33,9 +58,17 @@
     color: var(--text);
 }
 
+.rows {
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-1) 0;
+    overflow-y: auto;
+}
+
 .debug-empty {
+    margin: 0;
     padding: var(--space-4);
-    font-size: var(--text-chrome);
+    font-size: var(--fs-14);
     color: var(--t2);
 }
 
@@ -60,7 +93,7 @@
 
 .debug-detail-label {
     margin: var(--space-2) 0 var(--space-1);
-    font-size: var(--text-chrome-sm);
+    font-size: var(--fs-11);
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
@@ -74,6 +107,6 @@
     border-radius: var(--radius-sm);
     white-space: pre-wrap;
     word-break: break-word;
-    max-height: var(--bench-drawer-open);
+    max-height: 172px;
     overflow-y: auto;
 }

@@ -3,9 +3,9 @@ import { TestBed } from '@angular/core/testing';
 import { ButtonComponent } from '../forms/button.component';
 import { ShelfPanelComponent } from './shelf-panel.component';
 
-// The component's own stylesheet, read back out of the document — the same trick paper-card's spec
-// uses, because the rules under test are CSS rules. The length assertion is the control: without it
-// a renamed class would make every check below pass over an empty string.
+// The component's own stylesheet, read back out of the document, because the rules under test are
+// CSS rules. The length assertion is the control: without it a renamed class would make every
+// check below pass over an empty string.
 function sheetFor(marker: string): string {
     const inline = Array.from(document.querySelectorAll('style')).map(s => s.textContent ?? '');
     const adopted = Array.from(document.adoptedStyleSheets ?? []).map(
@@ -47,12 +47,15 @@ describe('ShelfPanelComponent', () => {
 
     const el = (fixture: { nativeElement: HTMLElement }) => fixture.nativeElement;
 
-    it('is chrome, and names itself to a screen reader by its sign tile', () => {
+    // ADR-239 clause 2 — a plain card: paper, named to a screen reader by its caption line.
+    it('is a paper card, and names itself to a screen reader by its caption', () => {
         const host = el(create('Assets'));
-        expect(host.getAttribute('data-surface')).toBe('chrome');
+        expect(host.getAttribute('data-surface')).toBe('paper');
         expect(host.getAttribute('role')).toBe('region');
         expect(host.getAttribute('aria-label')).toBe('Assets');
-        expect(host.querySelector('.sp-title')!.textContent!.trim()).toBe('Assets');
+        const title = host.querySelector('.sp-title') as HTMLElement;
+        expect(title.textContent!.trim()).toBe('Assets');
+        expect(title.classList).toContain('label');
     });
 
     it('draws the counter only once one is given, and draws a zero as a zero', () => {
@@ -68,7 +71,7 @@ describe('ShelfPanelComponent', () => {
         expect(el(fixture).querySelector('.sp-count')!.textContent!.trim()).toBe('2481');
     });
 
-    it('carries tone and flush on the sheet, not on the board', () => {
+    it('carries tone and flush on the sheet, not on the card', () => {
         const fixture = create();
         const sheet = () => el(fixture).querySelector('.sp-sheet') as HTMLElement;
         expect(sheet().classList.contains('is-cork')).toBe(false);
@@ -81,9 +84,7 @@ describe('ShelfPanelComponent', () => {
         expect(sheet().classList.contains('is-flush')).toBe(true);
     });
 
-    // The placement rule V2 is built on: a panel's own commands belong to the panel's header, and
-    // the slot is the only door — there is no command input to reach for instead.
-    it('puts the panel own commands in the header slot and the rest on the sheet', () => {
+    it('puts the panel own commands in the caption slot and the rest on the sheet', () => {
         const fixture = TestBed.createComponent(PanelHost);
         fixture.detectChanges();
         const panel = fixture.nativeElement.querySelector('app-shelf-panel') as HTMLElement;
@@ -92,8 +93,6 @@ describe('ShelfPanelComponent', () => {
         expect(panel.querySelector('.sp-sheet .body-control')).not.toBeNull();
     });
 
-    // One board, one sheet. The rule is refused rather than described, so a shell that reaches for
-    // a panel-in-a-panel finds out at the first render instead of in a review.
     it('refuses to be nested inside another panel', () => {
         expect(() => {
             const fixture = TestBed.createComponent(NestedHost);
@@ -101,19 +100,13 @@ describe('ShelfPanelComponent', () => {
         }).toThrowError(/never nest a panel/i);
     });
 
-    // A counter carved into the tile is read, so it gets the cream at full strength: the soft cream
-    // measures 3.6:1 on the lit stop of the sign tile.
-    it('never spends the soft cream on the sign tile', () => {
-        const fixture = create();
-        const head = el(fixture).querySelector('.sp-head') as HTMLElement;
-        const scope = head.getAttributeNames().find(n => n.startsWith('_ngcontent-'))!.replace('_ngcontent-', '');
-        const inked = [...sheetFor('.sp-head').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-            .filter(m => m[1].includes(scope) && /\.sp-(head|title|count)/.test(m[1]) && /(^|[^-])color:/.test(m[2]));
-        expect(inked.length, 'no colour rule found on the header — the class names moved').toBeGreaterThan(0);
-        for (const m of inked) {
-            const value = m[2].match(/(^|[^-])color:\s*([^;}]+)/)![2].trim();
-            expect(value, m[1].trim()).toBe('var(--rail-ink)');
-        }
+    // The wood is gone: no frame, no sign tile, no rail ink anywhere in the sheet.
+    it('paints paper and nothing of the bench', () => {
+        create();
+        const css = sheetFor('.sp-head');
+        expect(css).not.toMatch(/--rail-ink|--sign-tile|--shelf-frame|--wood-edge|--tex-wood|--grad-sign-tile/);
+        expect(css).toMatch(/background:\s*var\(--sheet\)/);
+        expect(css).toMatch(/\.sp-count[^{]*\{[^}]*color:\s*var\(--t3\)/);
     });
 
     describe('the surface does not leak across the slot', () => {
@@ -124,38 +117,12 @@ describe('ShelfPanelComponent', () => {
             const sheet = panel.querySelector('.sp-sheet') as HTMLElement;
             expect(sheet.getAttribute('data-surface')).toBe('paper');
 
-            // The floor is carried down as an inherited custom property, so the sheet decides it
-            // only for as long as nothing of the panel's own stands between the sheet and what is
-            // projected into it and restates the axis. That is the panel's whole part in it.
             const plain = panel.querySelector('.plain') as HTMLElement;
             const between: string[] = [];
             for (let node = plain.parentElement; node && node !== sheet; node = node.parentElement) {
                 if (node.hasAttribute('data-surface')) between.push(node.getAttribute('data-surface')!);
             }
             expect(between, 'a surface declared under the sheet takes the floor away from it').toEqual([]);
-        });
-
-        // The resolved floor itself is a media-query cascade over an inherited custom property, and
-        // this runner answers neither half — so it is measured in e2e/17-density.spec.ts, and the
-        // reason is checked here rather than believed. The day this goes red the runner has grown
-        // the ability and the measurement can come home.
-        it('cannot resolve a floor at all, which is why it is measured in e2e/17-density.spec.ts', () => {
-            const style = document.createElement('style');
-            style.textContent = '[data-surface="paper"] { --floor-probe: 44px; }';
-            const outer = document.createElement('div');
-            outer.setAttribute('data-surface', 'paper');
-            outer.innerHTML = '<span></span>';
-            document.head.appendChild(style);
-            document.body.appendChild(outer);
-            try {
-                expect(typeof window.matchMedia, 'the runner grew matchMedia — @media (pointer: coarse) may apply now')
-                    .toBe('undefined');
-                expect(getComputedStyle(outer.firstElementChild!).getPropertyValue('--floor-probe'),
-                    'the runner now inherits custom properties down the tree').toBe('');
-            } finally {
-                outer.remove();
-                style.remove();
-            }
         });
 
         it('leaves a projected paper control its own surface', () => {
@@ -165,9 +132,6 @@ describe('ShelfPanelComponent', () => {
             expect(control.getAttribute('data-surface')).toBe('paper');
         });
 
-        // Encapsulation is the mechanism, so it is what gets asserted: the panel's descendant rules
-        // are stamped with a content attribute that projected elements never receive, which is why
-        // the header-scoped chrome sizing cannot reach into the body.
         it('never stamps projected content with the panel own scope', () => {
             const fixture = TestBed.createComponent(PanelHost);
             fixture.detectChanges();
@@ -183,19 +147,17 @@ describe('ShelfPanelComponent', () => {
         });
 
         // The one leak encapsulation cannot stop is inheritance: a font-size on the sheet would be
-        // read by every projected line. The panel therefore sizes type only on its header parts.
-        it('sizes type only inside the header, never on the sheet', () => {
+        // read by every projected line. The panel therefore sizes type only on its caption.
+        it('sizes type only inside the caption, never on the sheet', () => {
             const fixture = create();
             const head = el(fixture).querySelector('.sp-head') as HTMLElement;
-            // The scope id picks this component's rules out of whatever else the runner put in the
-            // document, so the scan is the panel's own CSS and all of it.
             const scope = head.getAttributeNames().find(n => n.startsWith('_ngcontent-'))!.replace('_ngcontent-', '');
             const sized = [...sheetFor('.sp-sheet').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
                 .filter(m => m[1].includes(scope) && /font-size\s*:/.test(m[2]))
                 .map(m => m[1].trim());
             expect(sized.length, 'no font-size rule found — the marker or the class names moved').toBeGreaterThan(0);
             for (const selector of sized) {
-                expect(/\.sp-(title|count)\b/.test(selector), `${selector} sizes type outside the header`).toBe(true);
+                expect(/\.sp-(title|count)\b/.test(selector), `${selector} sizes type outside the caption`).toBe(true);
             }
         });
     });

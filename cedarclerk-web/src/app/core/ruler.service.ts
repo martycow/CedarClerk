@@ -1,12 +1,14 @@
 import { Injectable, signal } from '@angular/core';
-import { RulerReadout } from '../bench/chrome/ruler-bar.component';
 
-// The rule is chrome and the numbers on it belong to whatever screen is open, so the two are
-// joined by a signal holder rather than by an input: a page publishes what it measures and the
-// bar renders it, without the shell knowing which screens exist.
-//
-// A page clears on destroy. The router destroys the outgoing component before it activates the
-// next one, so a page that sets on init cannot have its readouts wiped by the page it replaced.
+/** One readout: a count, a state word, a version. */
+export interface RulerReadout {
+    text: string;
+    /** Long-form for a readout too terse to read on its own. */
+    title?: string;
+}
+
+// Kept alive and rendered by nothing (ADR-239 clause 6): the pages still publish here until each
+// draws the same numbers in its own app-page-header, and the service goes in the stage C close.
 @Injectable({ providedIn: 'root' })
 export class RulerService {
     readonly label = signal('');

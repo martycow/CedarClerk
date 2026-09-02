@@ -81,6 +81,10 @@
   "Sparkles": "sparkle",
   "UserRound": "user",
   "LogOut": "sign-out",
+  "Globe": "globe",
+  "Calendar": "calendar-blank",
+  "Monitor": "desktop",
+  "Smartphone": "device-mobile",
 
   "game-controller": "game-controller",
   "flask": "flask",

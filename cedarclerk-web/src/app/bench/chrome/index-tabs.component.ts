@@ -18,9 +18,9 @@ export interface IndexTabItem {
 }
 
 /**
- * Exported because the badge rules outlive this component: the hook rail hangs the same tally on a
- * tool and reads it through here (ADR-155). A badge is not every number the chrome draws — a shelf
- * panel's count and a ruler readout are shown as written, zero included.
+ * Exported because the badge rules outlive this component: the sidebar draws the same count on a
+ * nav item and reads it through here. A badge is not every number drawn — a card's count is shown
+ * as written, zero included.
  */
 export function indexTabBadgeLabel(badge: number | string | undefined | null): string {
     if (badge === undefined || badge === null) return '';
@@ -31,13 +31,10 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
     return badge.trim();
 }
 
-// Painted index tiles on the edge of a shelf: the lit tile is raised, brightened and underlined in
-// brass, the rest sit back in the shadow.
-//
-// IndexTabs.prompt.md gives them one jurisdiction — they switch what a panel or a drawer SHOWS and
-// never navigate between screens, which is the rail's job. That is enforced by what the API lacks:
-// no href, no route, no link input. A tile is a <button> and the only thing leaving here is the id
-// of the body to show.
+// A segmented control (the artboards' `.seg`): the lit tile is a raised sheet, the rest sit in the
+// trough. It switches what a panel SHOWS and never navigates between screens — enforced by what
+// the API lacks: no href, no route, no link input. A tile is a <button> and the only thing leaving
+// here is the id of the body to show.
 @Component({
     selector: 'app-index-tabs',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,15 +65,14 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
     `,
     styles: [`
         :host([data-surface="chrome"]) {
-            display: flex;
-            align-items: flex-end;
-            gap: 3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
             flex: none;
             min-width: 0;
-            /* The strip stands ON the board it switches, never above it with a gap: a tile is an
-               index tile cut into the shelf edge, and a step between the two is the defect Marty
-               called a threshold. The hair of overlap is what welds the tile to the frame. */
-            margin-bottom: -1px;
+            padding: 3px;
+            border-radius: var(--radius-md);
+            background: var(--surface);
         }
 
         :host([data-surface="chrome"][data-box="trim"]) .it-tile {
@@ -85,33 +81,24 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             gap: var(--space-1);
             box-sizing: border-box;
             min-height: var(--hit-surface, var(--hit-trim));
-            padding: 0 11px;
-            border: 1px solid var(--wood-edge);
-            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-            background-color: var(--sign-tile-hi);
-            background-image: var(--tex-wood), var(--grad-sign-tile);
-            filter: brightness(.86);
-            color: var(--rail-ink-dim, rgba(242, 232, 206, .8));
-            font-family: var(--font-display);
-            font-size: var(--text-chrome-sm);
-            font-weight: 700;
-            letter-spacing: .09em;
-            text-transform: uppercase;
+            padding: 0 12px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: none;
+            color: var(--t2);
+            font-family: var(--font-sans);
+            font-size: var(--fs-12);
+            font-weight: 600;
             white-space: nowrap;
-            text-shadow: 0 1px 1px color-mix(in srgb, var(--rail-edge) 60%, transparent);
             cursor: pointer;
-            transition: filter var(--motion-fast) var(--ease-settle);
         }
 
-        :host([data-surface="chrome"][data-box="trim"]) .it-tile:hover { filter: brightness(1); }
+        :host([data-surface="chrome"][data-box="trim"]) .it-tile:hover { color: var(--text); }
 
-        /* The raise is height, not a shadow: a tile sits on the shelf edge, and the lit one stands
-           a step proud of the ones behind it. */
         :host([data-surface="chrome"][data-box="trim"]) .it-tile.is-on {
-            min-height: calc(var(--hit-surface, var(--hit-trim)) + 3px);
-            border-bottom: 2px solid var(--brass);
-            filter: brightness(1.16);
-            color: var(--rail-ink);
+            background: var(--sheet);
+            color: var(--text);
+            box-shadow: var(--shadow-paper-sm);
         }
 
         :host([data-surface="chrome"][data-box="trim"]) .it-badge {
@@ -121,13 +108,11 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             justify-content: center;
             padding: 0 var(--space-1);
             border-radius: var(--radius-stamp);
-            background: var(--tab-badge);
-            color: var(--rail-edge);
-            font-family: var(--font-readout);
-            font-size: var(--text-chrome-sm);
+            background: var(--asoft);
+            color: var(--accent);
+            font-size: var(--fs-11);
             font-weight: 700;
-            letter-spacing: normal;
-            text-shadow: none;
+            font-variant-numeric: tabular-nums;
         }
     `],
 })

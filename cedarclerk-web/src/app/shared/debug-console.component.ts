@@ -1,5 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { BenchDrawerComponent } from '../bench/chrome/bench-drawer.component';
+import { Component, inject, signal } from '@angular/core';
 import { DebugLogService } from '../core/debug-log.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { IconComponent } from './icon.component';
@@ -7,13 +6,13 @@ import { LogLineComponent } from '../bench/worktop/log-line.component';
 
 const MAX_BODY_CHARS = 4000;
 
-// The request/response journal, in the drawer under the bench — lets Marty see whether a slow
-// publish is actually stuck or just working, and read the exact raw error body a failed request
-// came back with, without SSH-ing into the server. Mounted once for the whole app, so it is
-// available on every screen rather than only where a page thought to host it.
+// The request/response journal as an overlay over the page (ADR-239 clause 11): opened from the
+// account menu or Ctrl+`, it reserves no height and draws no count anywhere while shut. Lets the
+// maintainer see whether a slow publish is stuck and read the raw error body without SSH.
 @Component({
     selector: 'app-debug-console',
-    imports: [BenchDrawerComponent, IconComponent, LogLineComponent],
+    imports: [IconComponent, LogLineComponent],
+    host: { '(document:keydown.escape)': 'onEscape()' },
     templateUrl: './debug-console.component.html',
     styleUrl: './debug-console.component.css',
 })
@@ -23,19 +22,11 @@ export class DebugConsoleComponent {
     expandedId = signal<number | null>(null);
 
     entries = this.log.entries;
-    inFlightCount = this.log.inFlightCount;
-    errorCount = computed(() => this.log.errorCount());
     open = this.log.open;
 
-    // What the lip says while the drawer is shut, and so the whole reason it can stay shut: how
-    // much traffic there was, and whether any of it is still running or went wrong.
-    summary = computed(() => {
-        const t = this.t().debug;
-        const parts = [t.requests(this.entries().length)];
-        if (this.inFlightCount() > 0) parts.push(t.inFlight(this.inFlightCount()));
-        if (this.errorCount() > 0) parts.push(t.errors(this.errorCount()));
-        return parts.join(' · ');
-    });
+    onEscape() {
+        if (this.open()) this.open.set(false);
+    }
 
     toggleExpand(id: number) {
         this.expandedId.update(cur => cur === id ? null : id);

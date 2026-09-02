@@ -17,50 +17,44 @@ describe('DebugConsoleComponent', () => {
             fixture,
             log,
             el,
-            drawer: () => el.querySelector('app-bench-drawer') as HTMLElement,
-            pull: () => el.querySelector('.pull') as HTMLButtonElement,
-            summary: () => el.querySelector('.summary')?.textContent?.trim() ?? '',
+            overlay: () => el.querySelector('.console-overlay') as HTMLElement | null,
             rows: () => [...el.querySelectorAll('.debug-row')],
         };
     }
 
-    it('is the drawer body and nothing else — no tab, no panel, no close button of its own', () => {
+    // ADR-239 clause 11 — an overlay, and nothing at all while shut: no strip, no count, no
+    // summary line on a working screen.
+    it('renders nothing while shut, and a dialog over the page while open', () => {
         const h = mount();
-        expect(h.drawer()).toBeTruthy();
-        // Everything the console renders lives inside the drawer. A node outside it would be the
-        // floating tab coming back, which is the whole thing ADR-153 replaced.
-        expect(h.el.firstElementChild).toBe(h.drawer());
-        expect(h.el.children.length).toBe(1);
+        expect(h.el.children.length).toBe(0);
+
+        h.log.open.set(true);
+        h.fixture.detectChanges();
+        const overlay = h.overlay()!;
+        expect(overlay.getAttribute('role')).toBe('dialog');
+        expect(overlay.getAttribute('data-surface')).toBe('paper');
+        expect(h.el.querySelector('.summary')).toBeNull();
     });
 
-    it('leaves open state with the service, and lets the lip be the only thing that moves it', () => {
+    it('leaves open state with the service, and shuts on Escape or the close button', () => {
         const h = mount();
-        expect(h.drawer().classList.contains('is-open')).toBe(false);
-
-        h.pull().click();
+        h.log.open.set(true);
         h.fixture.detectChanges();
-        expect(h.log.open()).toBe(true);
-        expect(h.drawer().classList.contains('is-open')).toBe(true);
+        expect(h.overlay()).toBeTruthy();
 
-        h.log.open.set(false);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         h.fixture.detectChanges();
-        expect(h.drawer().classList.contains('is-open')).toBe(false);
+        expect(h.log.open()).toBe(false);
+        expect(h.overlay()).toBeNull();
+
+        h.log.open.set(true);
+        h.fixture.detectChanges();
+        (h.el.querySelector('.journal-head .mini[aria-label="Close"]') as HTMLButtonElement).click();
+        h.fixture.detectChanges();
+        expect(h.log.open()).toBe(false);
     });
 
-    it('says on the lip what justifies leaving it shut: how much traffic, and whether any of it went wrong', () => {
-        const h = mount();
-        expect(h.summary()).toBe('0 requests');
-
-        const pending = h.log.start('GET', '/api/drafts', undefined);
-        h.fixture.detectChanges();
-        expect(h.summary()).toBe('1 request · 1 in flight');
-
-        h.log.finish(pending.id, 500, 'boom', true);
-        h.fixture.detectChanges();
-        expect(h.summary()).toBe('1 request · 1 error');
-    });
-
-    it('builds rows only while the drawer is open', () => {
+    it('builds rows only while open', () => {
         const h = mount();
         h.log.finish(h.log.start('GET', '/api/drafts', undefined).id, 200, '[]', false);
         h.fixture.detectChanges();
@@ -71,16 +65,29 @@ describe('DebugConsoleComponent', () => {
         expect(h.rows().length).toBe(1);
     });
 
-    it('clears the journal without shutting the drawer — the button acts on what is in view', () => {
+    it('clears the journal without shutting the overlay — the button acts on what is in view', () => {
         const h = mount();
         h.log.finish(h.log.start('GET', '/api/drafts', undefined).id, 200, '[]', false);
         h.log.open.set(true);
         h.fixture.detectChanges();
 
-        (h.el.querySelector('.journal-head .mini') as HTMLButtonElement).click();
+        (h.el.querySelector('.journal-head .mini[aria-label="Clear"]') as HTMLButtonElement).click();
         h.fixture.detectChanges();
         expect(h.rows().length).toBe(0);
         expect(h.log.open()).toBe(true);
         expect(h.el.querySelector('.debug-empty')).toBeTruthy();
+    });
+
+    it('expands one row to its bodies', () => {
+        const h = mount();
+        h.log.finish(h.log.start('POST', '/api/posts', { a: 1 }).id, 500, 'boom', true);
+        h.log.open.set(true);
+        h.fixture.detectChanges();
+
+        (h.rows()[0] as HTMLElement).click();
+        h.fixture.detectChanges();
+        const detail = h.el.querySelector('.debug-row-detail') as HTMLElement;
+        expect(detail.textContent).toContain('"a": 1');
+        expect(detail.textContent).toContain('boom');
     });
 });

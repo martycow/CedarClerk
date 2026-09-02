@@ -251,3 +251,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-236 — Analytics is PostHog, recorded where it happens, behind a consent nobody assumed](adr/ADR-236.md)
 - [ADR-237 — Signing in with somebody else's account: a second door, never a side door](adr/ADR-237.md)
 - [ADR-238 — Inspectors that can be written to, and the facts they were missing](adr/ADR-238.md)
+- [ADR-239 — Paper first: the shell after Cedar Bench](adr/ADR-239.md)

@@ -1,49 +1,72 @@
-.icon-sm {
-    width: 14px;
-    height: 14px;
+:host {
+    display: block;
+    min-width: 0;
 }
 
 .account-trigger {
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 10px;
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: var(--hit-target);
+    padding: 2px;
     border: none;
+    border-radius: var(--radius-sm);
     background: none;
-    padding: 2px 4px;
-    border-radius: var(--radius-md);
+    color: var(--text);
     font: inherit;
+    text-align: left;
     cursor: pointer;
 }
 
-.account-trigger:hover {
-    filter: brightness(1.08);
+.account-trigger.is-row {
+    width: 100%;
+    padding: 2px 6px 2px 2px;
 }
 
-/* The kit's brass name plate: the one brass fill that is a trigger, settled by all three
-   reference screens drawing it so. */
+.account-trigger:hover {
+    background: var(--hover);
+}
+
+.account-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--fs-13);
+    font-weight: 600;
+    color: var(--t2);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* A round face on pine: the same plate the artboard draws at the foot of the sidebar. */
 .avatar {
-    width: var(--hit-chrome);
-    height: var(--hit-chrome);
-    box-sizing: border-box;
-    border-radius: var(--radius-stamp);
-    background: var(--grad-brass);
-    border: 1px solid var(--brass-edge);
-    color: var(--rail-edge);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-display);
-    font-size: var(--fs-12);
-    font-weight: 700;
     flex: none;
+    box-sizing: border-box;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--text-on-pine);
+    font-family: var(--font-display);
+    font-size: var(--fs-11);
+    font-weight: 700;
 }
 
-/* ---------- The panel ---------- */
+.avatar-img {
+    object-fit: cover;
+    padding: 0;
+}
+
 .account-popover {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    min-width: 232px;
+    min-width: 240px;
 }
 
 .who {
@@ -78,6 +101,27 @@
     color: var(--text);
 }
 
+.who-plan {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.who-credits {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--t2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.who-credits:hover {
+    color: var(--text);
+}
+
 .account-actions {
     list-style: none;
     margin: 0;
@@ -87,8 +131,12 @@
     gap: 2px;
 }
 
-/* One row shape for all three, so the menu reads as a list of places and not as a stack of
-   plaques: the plaque face is what made "Profile" look like a form's submit button. */
+.account-sep {
+    height: 1px;
+    margin: var(--space-1) 0;
+    background: var(--border);
+}
+
 .account-item {
     display: flex;
     align-items: center;
@@ -123,7 +171,11 @@
     color: var(--danger);
 }
 
-.avatar-img {
-    object-fit: cover;
-    padding: 0;
+.account-kbd,
+.account-version {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-weight: 400;
+    color: var(--t3);
 }

@@ -1,0 +1,94 @@
+{
+  "artboards": [
+    {
+      "file": "Hub.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Projects hub"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 1540,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Project dashboard"
+    },
+    {
+      "file": "Editor.dc.html",
+      "x": 3080,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Editor"
+    },
+    {
+      "file": "Preview.dc.html",
+      "x": 4620,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Preview — Blog"
+    },
+    {
+      "file": "PreviewTelegram.dc.html",
+      "x": 6160,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Preview — Telegram"
+    },
+    {
+      "file": "Board.dc.html",
+      "x": 0,
+      "y": 1040,
+      "w": 1440,
+      "h": 900,
+      "title": "Tasks board"
+    },
+    {
+      "file": "Calendar.dc.html",
+      "x": 1540,
+      "y": 1040,
+      "w": 1440,
+      "h": 900,
+      "title": "Calendar"
+    },
+    {
+      "file": "DirectionB.dc.html",
+      "x": 3080,
+      "y": 1040,
+      "w": 1440,
+      "h": 900,
+      "title": "Direction B — wood kept, scaled (sketch)"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -260,
+      "w": 620,
+      "text": "Direction A — \"Paper first\".\nThe wood frame is gone: one paper canvas, a real sidebar with grouped, labelled navigation (Write / Plan / Ship), a page header with the primary action, and content that fills the viewport (boards, calendar rows, document lists stretch). Console and status bars are removed from the working screens. Every empty state says what to do next."
+    },
+    {
+      "id": "editor-tabs",
+      "x": 3080,
+      "y": -220,
+      "w": 660,
+      "text": "One document, three tabs: Write, Preview, Publish. The top bar is shared (project switcher, undo/redo, saved state, date, Publish). Preview = destinations on the left (with readiness), the rendered page in the middle (desktop/mobile, RU/EN), checks for the selected destination on the right. Selecting Telegram swaps the render to a phone with the real message split and the checks to Telegram ones. Footer carries the next step."
+    },
+    {
+      "id": "alt",
+      "x": 3080,
+      "y": 2000,
+      "w": 520,
+      "text": "Direction B keeps the wood chrome and only fixes scaling and empty states. Cheaper to build, but the frame stays the loudest thing on screen."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

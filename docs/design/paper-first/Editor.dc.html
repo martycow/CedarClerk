@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Vollkorn:wght@600;700&family=Literata:ital,wght@0,400;0,600;1,400&family=Martian+Mono:wght@400;600&family=Caveat:wght@500&display=swap">
+  <style>
+    body { margin: 0; background: #E9E1CC; color: #2C251A; font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+    a { color: #39543C; text-decoration: none; } a:hover { color: #2C251A; }
+    * { box-sizing: border-box; }
+    .display { font-family: 'Vollkorn', Georgia, serif; }
+    .mono { font-family: 'Martian Mono', Consolas, monospace; }
+    .note { font-family: 'Caveat', cursive; }
+    .nav a { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 4px; color: #5B513E; font-size: 14px; font-weight: 600; }
+    .nav a:hover { background: rgba(44,37,26,.06); color: #2C251A; }
+    .nav a.on { background: #39543C; color: #FAF6EC; }
+    .nav a.on svg { color: #FAF6EC; }
+    .nav svg { color: #8C7F66; flex: none; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 4px; border: 1px solid #CDC1A8; background: #FAF6EC; color: #2C251A; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+    .btn.primary { background: #39543C; border-color: #39543C; color: #FAF6EC; }
+    .btn.ghost { background: transparent; border-color: transparent; color: #5B513E; }
+    .btn.sm { height: 30px; padding: 0 10px; font-size: 13px; }
+    .card { background: #FAF6EC; border: 1px solid #CDC1A8; border-radius: 8px; box-shadow: 0 1px 3px rgba(58,38,16,.14); }
+    .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 3px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .tag.ok { background: #E1E7DE; color: #356842; }
+    .tag.muted { background: #E9E1CC; color: #5B513E; }
+    .tag.warn { background: #EBE1CE; color: #7A5520; }
+    .seg { display: inline-flex; background: #E9E1CC; border-radius: 6px; padding: 3px; gap: 2px; }
+    .seg span { padding: 5px 12px; border-radius: 4px; font-size: 13px; font-weight: 600; color: #5B513E; }
+    .seg span.on { background: #FAF6EC; color: #2C251A; box-shadow: 0 1px 2px rgba(58,38,16,.14); }
+    .row { display: grid; grid-template-columns: 24px minmax(0, 1fr) 120px 210px; align-items: center; gap: 14px; height: 44px; padding: 0 16px; border-top: 1px solid #E4DBC4; font-size: 15px; }
+    .row:hover { background: #F5F0E1; }
+    .row .t { font-weight: 600; color: #2C251A; }
+    .row .m { color: #8C7F66; font-size: 13px; }
+    .row svg { color: #8C7F66; }
+    .kv { display: grid; grid-template-columns: 96px 1fr; gap: 8px 12px; font-size: 13px; align-items: center; }
+    .kv b { color: #8C7F66; font-weight: 600; }
+    .field { height: 32px; border: 1px solid #CDC1A8; border-radius: 4px; background: #FAF6EC; padding: 0 10px; display: flex; align-items: center; font-size: 13px; color: #2C251A; }
+    .label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8C7F66; }
+    .input { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid #CDC1A8; border-radius: 4px; background: #FAF6EC; color: #8C7F66; font-size: 14px; }
+    .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; border: 1.5px dashed #CDC1A8; border-radius: 8px; color: #8C7F66; padding: 24px; }
+  </style>
+</helmet>
+<div style="width:1440px;height:900px;display:flex;flex-direction:column;background:#E9E1CC;overflow:hidden;">
+
+<div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;background:#F1EADA;border-bottom:1px solid #CDC1A8;flex:none;">
+  <div style="display:flex;align-items:center;gap:8px;color:#39543C;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 7 10h3l-4 6h4l-3 4h10l-3-4h4l-4-6h3z"/><path d="M12 20v2"/></svg><span class="display" style="font-size:18px;font-weight:700;color:#2C251A;">Cedar Clerk</span></div>
+  <span style="width:1px;height:22px;background:#CDC1A8;"></span>
+  <span style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;">Dev Dairy Diary <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+  <span style="width:1px;height:22px;background:#CDC1A8;margin-left:8px;"></span>
+  <span style="display:flex;gap:4px;color:#8C7F66;"><span style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></span><span style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:4px;opacity:.5;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></span></span>
+  <span style="display:flex;align-items:center;gap:8px;color:#356842;font-size:13px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span style="color:#5B513E;">Saved 2 min ago</span></span>
+  <div style="flex:1"></div>
+  <span style="display:flex;align-items:center;gap:8px;color:#5B513E;font-size:14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Sep 1, 2026</span>
+  <span style="width:1px;height:22px;background:#CDC1A8;"></span>
+  <span style="display:inline-flex;border-radius:4px;overflow:hidden;"><button class="btn primary" style="border-radius:4px 0 0 4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>Publish</button><button class="btn primary" style="border-radius:0 4px 4px 0;border-left:1px solid rgba(250,246,236,.3);padding:0 10px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></span>
+</div>
+<div style="flex:1;min-height:0;display:flex;">
+<aside class="nav" style="width:92px;flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;background:#F1EADA;border-right:1px solid #CDC1A8;">
+  <a href="#" class="" style="flex-direction:column;gap:6px;height:64px;width:72px;padding:0;justify-content:center;font-size:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v13l6-2 4 2 6-2V4l-6 2-4-2z"/><path d="M10 4v13M14 6v13"/></svg><span>Hub</span></a><a href="#" class="on" style="flex-direction:column;gap:6px;height:64px;width:72px;padding:0;justify-content:center;font-size:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Docs</span></a><a href="#" class="" style="flex-direction:column;gap:6px;height:64px;width:72px;padding:0;justify-content:center;font-size:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="m8 12 3 3 5-6"/></svg><span>Board</span></a><a href="#" class="" style="flex-direction:column;gap:6px;height:64px;width:72px;padding:0;justify-content:center;font-size:12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg><span>Planner</span></a><a href="#" class="" style="flex-direction:column;gap:6px;height:64px;width:72px;padding:0;justify-content:center;font-size:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg><span>Assets</span></a><a href="#" class="" style="flex-direction:column;gap:6px;height:64px;width:72px;padding:0;justify-content:center;font-size:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Calendar</span></a>
+  <div style="flex:1"></div><a href="#" class="" style="flex-direction:column;gap:6px;height:64px;width:72px;padding:0;justify-content:center;font-size:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></a>
+  <a href="#" style="width:72px;height:40px;justify-content:center;padding:0;border:1px solid #CDC1A8;background:#FAF6EC;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a>
+</aside>
+<main style="flex:1;min-width:0;display:flex;flex-direction:column;background:#E9E1CC;">
+  
+<div style="padding:22px 40px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;">
+  <div style="display:flex;flex-direction:column;gap:6px;">
+    <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#5B513E;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Blog</span><span style="color:#CDC1A8">·</span><span>23 documents</span></div>
+    <div style="display:flex;align-items:center;gap:12px;"><h1 class="display" style="margin:0;font-size:30px;font-weight:700;line-height:1.1;">Coyote vs ACME</h1><span class="tag ok">Live</span></div>
+  </div>
+  <div style="display:flex;gap:8px;"><button class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><button class="btn">Details</button></div>
+</div>
+<div style="height:18px;"></div>
+<div style="display:flex;gap:28px;padding:0 40px;border-bottom:1px solid #CDC1A8;"><span style="display:flex;align-items:center;gap:8px;padding:0 4px 12px;font-size:15px;font-weight:600;border-bottom:2px solid #39543C;color:#2C251A;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 4-1L20 7l-3-3L5 16z"/><path d="m14 6 3 3"/></svg>Write</span><span style="display:flex;align-items:center;gap:8px;padding:0 4px 12px;font-size:15px;font-weight:600;border-bottom:2px solid transparent;color:#5B513E;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Preview</span><span style="display:flex;align-items:center;gap:8px;padding:0 4px 12px;font-size:15px;font-weight:600;border-bottom:2px solid transparent;color:#5B513E;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg>Publish</span></div>
+  <div style="flex:1;min-height:0;display:flex;gap:16px;padding:16px 40px;">
+    <section class="card" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:2px;padding:8px 12px;border-bottom:1px solid #E4DBC4;">
+        <span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid #CDC1A8;border-radius:4px;background:#FAF6EC;font-size:13px;font-weight:600;">Paragraph <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+        <span style="width:1px;height:18px;background:#CDC1A8;margin:0 4px;"></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;"><b>B</b></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;"><i>I</i></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;"><u>U</u></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;"><s>S</s></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">&lt;/&gt;</span>
+        <span style="width:1px;height:18px;background:#CDC1A8;margin:0 4px;"></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">H1</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">H2</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">❝</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">•</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">1.</span>
+        <span style="width:1px;height:18px;background:#CDC1A8;margin:0 4px;"></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Link</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Image</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Video</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Gallery</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Embed</span>
+        <span style="width:1px;height:18px;background:#CDC1A8;margin:0 4px;"></span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Divider</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Spoiler</span><span style="height:28px;min-width:28px;padding:0 6px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B513E;">Poll</span>
+        <div style="flex:1"></div>
+        <div class="seg"><span class="on">RU</span><span>EN</span></div>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;padding:32px 24px 40px;">
+        <article style="max-width:680px;margin:0 auto;font-family:'Literata',Georgia,serif;font-size:17px;line-height:1.75;color:#2C251A;">
+          <p style="margin:0 0 20px;">Сегодня сходили с друзьями на Coyote vs ACME. И я просто в восторге!</p>
+          <figure style="margin:0 0 20px;">
+            <div style="height:300px;border-radius:4px;background:linear-gradient(135deg,#1D2A3A 0%,#0F1720 60%,#3B2A18 100%);"></div>
+            <figcaption style="font-family:'Source Sans 3',sans-serif;font-size:13px;color:#8C7F66;text-align:center;margin-top:8px;">Мне хочется скриншотить и выкладывать ВСЕ кадры с койотом :D</figcaption>
+          </figure>
+          <p style="margin:0 0 20px;">В меру драматичный, в меру трогательный, но самое главное очень смешной фильм! Не хочется на эмоциях говорить 10/10, но я получил ровно то, что ожидал.</p>
+          <p style="margin:0;">Поэтому мой совет поддержать создателей и пойти в кино. Учитывая всю историю создания, будет очень грустно, если фильм провалится в прокате.</p>
+        </article>
+      </div>
+    </section>
+    <aside class="card" style="width:288px;flex:none;overflow:auto;display:flex;flex-direction:column;">
+      <div style="padding:16px 16px;border-bottom:1px solid #E4DBC4;display:flex;flex-direction:column;gap:12px;">
+        <div class="label">Document</div>
+        <div class="kv">
+          <b>Type</b><span class="field" style="height:28px;justify-content:space-between;">Regular post <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          <b>Folder</b><span class="field" style="height:28px;">Random Thoughts</span>
+          <b>Series</b><span style="color:#8C7F66;">—</span>
+          <b>Tags</b><span style="display:flex;gap:6px;flex-wrap:wrap;"><span class="tag muted" style="text-transform:none;letter-spacing:0;">#life</span><span class="tag muted" style="text-transform:none;letter-spacing:0;">#movies</span><span style="color:#8C7F66;font-size:12px;">+ add</span></span>
+          <b>Location</b><span>Portland, OR</span>
+          <b>Slug</b><span class="mono" style="font-size:12px;">coyote-vs-acme</span>
+        </div>
+      </div>
+      <div style="padding:16px 16px;border-bottom:1px solid #E4DBC4;display:flex;flex-direction:column;gap:12px;">
+        <div class="label">Languages</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid #CDC1A8;border-radius:4px;background:#FAF6EC;"><span style="font-weight:600;">Русский</span><span style="font-size:12px;color:#8C7F66;">original</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid #CDC1A8;border-radius:4px;background:#FAF6EC;"><span style="font-weight:600;">English</span><span style="font-size:12px;color:#356842;">in sync</span></div>
+        </div>
+        <a href="#" style="font-size:13px;font-weight:600;">+ Add language</a>
+      </div>
+      <div style="padding:16px 16px;display:flex;flex-direction:column;gap:12px;">
+        <div class="label">Outline</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:#5B513E;">
+          <span style="padding:6px 8px;border-radius:4px;background:#E1E7DE;color:#2C251A;">1 Сегодня сходили с друзьями…</span>
+          <span style="padding:6px 8px;">2 Фото · подпись</span>
+          <span style="padding:6px 8px;">3 В меру драматичный…</span>
+          <span style="padding:6px 8px;">4 Поэтому мой совет…</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;height:60px;padding:0 40px;border-top:1px solid #CDC1A8;background:#F1EADA;flex:none;">
+  <button class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Share preview</button>
+  <div style="flex:1;text-align:center;font-size:13px;color:#8C7F66;">Last saved 2 min ago · 366 words</div>
+  <button class="btn primary">Preview <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

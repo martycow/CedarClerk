@@ -1,37 +1,34 @@
-<app-bench-drawer [open]="open()" [heading]="t().debug.console" [summary]="summary()"
-                  (toggled)="log.open.set($event)">
-    <!--Passed straight through: the drawer owns the lip, the shell owns what hangs on it, and the
-    console is only what happens to be behind it.-->
-    <ng-container lipActions><ng-content select="[lipActions]" /></ng-container>
-
+@if (open()) {
+<div class="console-overlay" role="dialog" [attr.aria-label]="t().debug.console" data-surface="paper">
     <div class="journal-head">
+        <span class="journal-title">{{ t().debug.console }}</span>
         <span class="spacer"></span>
-        <button class="mini" (click)="clear()" [title]="t().debug.clear" [attr.aria-label]="t().debug.clear"><app-icon name="trash" size="sm"></app-icon></button>
+        <button type="button" class="mini" (click)="clear()" [title]="t().debug.clear" [attr.aria-label]="t().debug.clear"><app-icon name="trash" size="sm"></app-icon></button>
+        <button type="button" class="mini" (click)="open.set(false)" [title]="t().common.close" [attr.aria-label]="t().common.close"><app-icon name="x" size="sm"></app-icon></button>
     </div>
 
-    <!--Rows are built only while the drawer is open: two hundred entries with their bodies is a
-    lot of DOM to keep alive behind a shut lip, and the summary is what is read when it is shut.-->
-    @if (open()) {
-    @for (e of entries(); track e.id) {
-    <div class="debug-row" [class.expanded]="expandedId() === e.id" (click)="toggleExpand(e.id)">
-        <app-log-line class="debug-row-summary" surface="paper"
-                      [level]="e.inFlight ? 'info' : e.isError ? 'warn' : 'ok'"
-                      [word]="e.inFlight ? t().debug.pending : '' + e.status"
-                      [at]="e.durationMs !== undefined ? e.durationMs + 'ms' : ''">{{ e.method }} {{ e.url }}</app-log-line>
-        @if (expandedId() === e.id) {
-        <div class="debug-row-detail" (click)="$event.stopPropagation()">
-            @if (e.requestBody !== undefined) {
-            <div class="debug-detail-label">{{ t().debug.request }}</div>
-            <pre>{{ formatBody(e.requestBody) }}</pre>
+    <div class="rows">
+        @for (e of entries(); track e.id) {
+        <div class="debug-row" [class.expanded]="expandedId() === e.id" (click)="toggleExpand(e.id)">
+            <app-log-line class="debug-row-summary" surface="paper"
+                          [level]="e.inFlight ? 'info' : e.isError ? 'warn' : 'ok'"
+                          [word]="e.inFlight ? t().debug.pending : '' + e.status"
+                          [at]="e.durationMs !== undefined ? e.durationMs + 'ms' : ''">{{ e.method }} {{ e.url }}</app-log-line>
+            @if (expandedId() === e.id) {
+            <div class="debug-row-detail" (click)="$event.stopPropagation()">
+                @if (e.requestBody !== undefined) {
+                <div class="debug-detail-label">{{ t().debug.request }}</div>
+                <pre>{{ formatBody(e.requestBody) }}</pre>
+                }
+                <div class="debug-detail-label">{{ t().debug.response }}</div>
+                <pre>{{ formatBody(e.responseBody) }}</pre>
+            </div>
             }
-            <div class="debug-detail-label">{{ t().debug.response }}</div>
-            <pre>{{ formatBody(e.responseBody) }}</pre>
         </div>
         }
+        @if (entries().length === 0) {
+        <p class="debug-empty">{{ t().debug.empty }}</p>
+        }
     </div>
-    }
-    @if (entries().length === 0) {
-    <p class="debug-empty">{{ t().debug.empty }}</p>
-    }
-    }
-</app-bench-drawer>
+</div>
+}

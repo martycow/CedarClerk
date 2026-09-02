@@ -8,8 +8,9 @@ export type ButtonSurface = 'paper' | 'chrome';
 
 // ADR-138 — the surface decides the box and the type: chrome is the 30px box and 13px type,
 // paper is 38px and 14px. Unless the consumer names the stock the control stands on, it is read
-// off the variant: `rail` is painted on wood, everything else sits on paper. A small paper control
-// uses the chrome-sized desktop box; the coarse-pointer floor is still enforced globally.
+// off the variant: `rail` was the wood's own and is still measured as chrome, everything else sits
+// on paper. A small paper control uses the chrome-sized desktop box; the coarse-pointer floor is
+// still enforced globally.
 //
 // A button handed a route is an anchor and looks exactly the same (ADR-169): every variant's face
 // is painted on `.btn`, and the tag it is painted on is the consumer's business.
@@ -40,87 +41,71 @@ export type ButtonSurface = 'paper' | 'chrome';
     styles: [`
         :host { display: inline-flex; }
 
+        /* The same values as the global .btn (ADR-239, CONTRACT §B), so an anchor wearing that
+           class and this component are one object. */
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: var(--space-2);
+            box-sizing: border-box;
             width: 100%;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--sheet);
+            color: var(--text);
             font-family: var(--font-sans);
-            font-weight: 700;
+            font-weight: 600;
             line-height: 1.2;
             text-decoration: none;
+            white-space: nowrap;
             cursor: pointer;
-            border-radius: var(--radius-plaque);
-            transition: filter var(--dur-tap, 150ms) var(--ease-settle),
-                        transform var(--dur-tap, 150ms) var(--ease-settle),
-                        box-shadow var(--dur-tap, 150ms) var(--ease-settle);
+            transition: background var(--dur-tap, 150ms) var(--ease-settle),
+                        color var(--dur-tap, 150ms) var(--ease-settle);
         }
 
         /* Two selectors for one state: :disabled matches no anchor, and in link form the route is
            dropped rather than the element, so aria-disabled is what is left to read (ADR-169). The
-           hover and active rules below hang off :not(:disabled), which an anchor never satisfies —
-           so the anchor's half also stops the pointer, or a dead link would still light up. */
+           hover rules below hang off :not(:disabled), which an anchor never satisfies — so the
+           anchor's half also stops the pointer, or a dead link would still light up. */
         .btn:disabled { opacity: .6; cursor: default; }
         .btn[aria-disabled="true"] { opacity: .6; cursor: default; pointer-events: none; }
 
         :host([data-surface="paper"]) .btn { min-height: var(--hit-target); font-size: var(--fs-ui); }
-        :host([data-surface="paper"]) .btn.md { padding: var(--space-2) var(--space-4); }
+        :host([data-surface="paper"]) .btn.md { padding: 0 14px; }
         /* The floor is read, not fought: a component rule out-specifies the global coarse-pointer
            one whatever that one says, so a control that names its own box has to name it as the
            fallback of the carrier. Off a coarse pointer no surface declares --hit-surface and the
            drawn box wins; on one the nearest surface hands down 44px or 30px (ADR-196, ADR-200). */
         :host([data-surface="paper"]) .btn.sm {
             min-height: var(--hit-surface, var(--hit-chrome));
-            padding: var(--space-1) var(--space-3);
+            padding: 0 10px;
             font-size: var(--text-chrome);
         }
 
         :host([data-surface="chrome"]) .btn { min-height: var(--hit-chrome); }
-        :host([data-surface="chrome"]) .btn.md { padding: var(--space-1) var(--space-3); font-size: var(--text-chrome); }
-        :host([data-surface="chrome"]) .btn.sm { padding: var(--space-1) var(--space-3); font-size: var(--text-chrome); }
+        :host([data-surface="chrome"]) .btn.md { padding: 0 10px; font-size: var(--text-chrome); }
+        :host([data-surface="chrome"]) .btn.sm { padding: 0 10px; font-size: var(--text-chrome); }
 
-        /* Every box-shadow here is withheld while the control is focused. The ADR-140 ring spends
-           its second layer on a box-shadow, and a component's own shadow out-specifies the global
-           rule that draws it — so a pine button would keep its lift and lose its halo. */
+        .btn.paper:hover:not(:disabled) { background: var(--surface); }
+
         .btn.pine {
-            border: 1px solid var(--pine-deep);
-            background: var(--grad-pine);
+            border-color: var(--pine);
+            background: var(--pine);
             color: var(--text-on-pine);
-            text-shadow: 0 1px 1px rgba(18, 26, 20, .45);
         }
 
-        /* text-shadow never reaches an svg, so an icon on pine gets its relief here or reads
-           washed out against the gradient's light stop (the + on "New project" by day). */
-        .btn.pine ::ng-deep app-icon { color: var(--text-on-pine); filter: drop-shadow(0 1px 1px rgba(18, 26, 20, .45)); }
+        .btn.pine:hover:not(:disabled) { background: var(--pine-deep); border-color: var(--pine-deep); }
 
-        .btn.pine:not(:focus-visible) { box-shadow: var(--shadow-pine-btn); }
-        .btn.pine:hover:not(:disabled) { filter: brightness(1.07); }
-        .btn.pine:active:not(:disabled) { transform: translateY(2px); }
-        .btn.pine:active:not(:disabled):not(:focus-visible) {
-            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brass-hi) 30%, transparent), var(--shadow);
-        }
-
-        .btn.paper {
-            border: 1px solid rgba(110, 86, 50, .4);
-            background: var(--sheet);
-            color: var(--t2);
-            font-weight: 600;
-        }
-
-        .btn.paper:not(:focus-visible) { box-shadow: var(--shadow-paper-sm); }
-        .btn.paper:hover:not(:disabled) { background: var(--surface); color: var(--text); }
-        .btn.paper:active:not(:disabled) { transform: translateY(1px); }
-
+        /* The wood is gone, so the variant that was painted on it is the ghost: no face until
+           approached. */
         .btn.rail {
-            border: var(--border-rail-btn);
-            background: var(--rail-btn-face, rgba(0, 0, 0, .16));
-            color: var(--rail-ink);
-            font-weight: 600;
+            border-color: transparent;
+            background: transparent;
+            color: var(--t2);
         }
 
-        .btn.rail:hover:not(:disabled) { background: var(--rail-btn-face-hover, rgba(0, 0, 0, .28)); }
-        .btn.rail:active:not(:disabled) { transform: translateY(1px); }
+        .btn.rail:hover:not(:disabled) { background: var(--hover); color: var(--text); }
 
         .btn.danger {
             border: none;

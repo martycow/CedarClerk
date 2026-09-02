@@ -34,8 +34,8 @@ export const en = {
         allProjects: 'All projects',
         hub: 'Hub',
         text: 'Text',
-        documents: 'Docs',
-        board: 'Board',
+        documents: 'Documents',
+        board: 'Tasks',
         planner: 'Planner',
         builds: 'Builds',
         assets: 'Assets',
@@ -55,6 +55,15 @@ export const en = {
         aboutLanding: 'About',
         // T-351 — the credit chip's tooltip; the chip itself shows the bare number.
         credits: (n: number) => `${n} ${n === 1 ? 'credit' : 'credits'} — X posts and AI calls spend these. Click to top up.`,
+        brand: 'Cedar Clerk',
+        groupWrite: 'Write',
+        groupPlan: 'Plan',
+        groupShip: 'Ship',
+        posts: 'Posts',
+        projectsCount: (n: number) => `${n} ${n === 1 ? 'project' : 'projects'}`,
+        debugConsole: 'Debug console',
+        alerts: 'New comments and reactions',
+        version: (v: string) => `Version ${v}`,
     },
     // T-191 — the feedback channel's modal, opened from the tray.
     feedbackForm: {

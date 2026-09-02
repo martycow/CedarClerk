@@ -40,7 +40,9 @@ test('the theme toggle switches and persists', async ({ page }) => {
     await page.goto('/drafts');
     const before = await page.locator('html').getAttribute('data-theme');
 
-    await page.getByRole('button', { name: 'More', exact: true }).click();
+    // The theme toggle lives in the account menu (ADR-239 clause 4); the trigger's visible text is
+    // the account's own name, so it is found by its title rather than by a word.
+    await page.getByTitle('Account', { exact: true }).click();
     await page.getByRole('button', { name: 'Toggle theme' }).click();
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', before ?? '');
 
@@ -51,7 +53,7 @@ test('the theme toggle switches and persists', async ({ page }) => {
 
 test('the glossary page opens', async ({ page }) => {
     await page.goto('/glossary');
-    await expect(page.locator('app-rail-header')).toBeVisible();
+    await expect(page.locator('app-sidebar')).toBeVisible();
 });
 
 // Asserted on the account's own email rather than on a tab label: the email is the one thing on
