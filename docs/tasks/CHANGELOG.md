@@ -1,5 +1,49 @@
 # Changelog
 
+## 2026-09-02 — Queryable collections and document-first editing (ADR-247…251)
+
+The app now owns one headless collection contract instead of adopting a themed data grid: visible
+queries and facets, keyboard-reachable sort headers with `aria-sort`, stable ID tie-breakers,
+filtered empty states with one reset, and route-query restoration where a manager already owns its
+view in the URL. Posts and Forms, Drafts, Media Library, Project Assets, Project Tasks, Teams,
+statistics series and the table-shaped Admin reports use it. Server-paged Admin, Media Library and
+Project Assets collections validate their criteria and filter and sort before pagination.
+
+Posts Manager's list is a compact document-first shelf with reliable cover fallbacks, a title that
+owns the flexible width, readable language and visibility metadata, one state stamp and selection
+that survives a query change. Drafts' table titles are native links. These changes close T-271;
+the remaining tree/card link decision stays in T-261.
+
+Navigation has one door per destination. All projects and Manage teams live in the Project
+switcher; Teams no longer reads as a Library item; Settings lives in the account popover; and the
+sidebar has no duplicate persistent collapse command. The popover opens beside the rail, stays in
+the viewport, supports native focus order and restores focus according to Escape or outside-press
+intent. Settings is Profile, Preferences, Integrations and Billing. Preferences combines Interface
+language with the only authenticated Appearance surface, which owns every persistent app and
+writing-sheet visual choice. The Account-only-language tab and separate Appearance overlay are
+retired. This closes T-267.
+
+The Editor gives equal, readable weight to Write, Preview and Publish, removes the repeated title,
+ellipsis and permanent Details button from its tall top band, and exposes History and a compact
+optional inspector in the document frame. Normal, Wide and Full sheet measures now produce 760px,
+960px and an uncapped working surface. At phone width the shell temporarily uses the rail without
+changing the saved desktop choice; the document remains visible, the three workflow labels remain
+whole and Settings tabs form a two-column grid. This scoped safety rule closes T-265 while the full
+physical-device and responsive-design pass remains T-034/T-236/T-237.
+
+Configured Website, GitHub, YouTube, Mastodon, Bluesky and itch.io links now appear in a safe,
+tenant-scoped Author links disclosure on every public Blog. Hover, focus and press can reveal it;
+Escape and outside press close it. Only absolute HTTP(S) URLs render. Browser captures cover the
+rebuilt manager, project/account navigation, Preferences, all four Editor measures, public Author
+links, and the 1180/820/390px layout. They are layout evidence, not physical-device or human
+accessibility verification.
+
+Validation: `cedar test --smoke` is green: 2,654 results, 2,636 passed, 18 skipped and 0 failed;
+the 78 Playwright scenarios use an isolated database. The targeted visual capture passed 2/2, and
+`cedar build --no-desktop --yes` produced the v0.21.0 server publish. The production build is green
+at 836.16 kB under the 850 kB hard ceiling; its 700 kB bundle warning and the Editor stylesheet's
+34.24/34 kB warning remain visible as T-363. Nothing was deployed.
+
 ## 2026-09-02 — One UI across the eighteen-screen set (ADR-246)
 
 The supplied 3440×1392 screenshots are now one acceptance set rather than a list of local CSS
