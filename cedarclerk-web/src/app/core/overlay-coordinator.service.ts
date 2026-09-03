@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 
-export type ShellOverlay = 'appearance' | 'feedback' | 'search' | 'debug';
+export type ShellOverlay = 'feedback' | 'search' | 'debug';
 
 interface LayerRecord {
     id: number;

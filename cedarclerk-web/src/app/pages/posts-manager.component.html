@@ -46,25 +46,80 @@ so it stays addressable by the name the smoke suite binds.-->
         } @else {
         <div class="mg-grid split-workspace">
             <section class="card shelf-list split-pane" [attr.aria-label]="t().manager.tabs.posts">
-                <div class="card-head">
-                    <span class="label">{{ t().manager.tabs.posts }}</span>
-                    <span class="card-count">{{ visiblePosts().length }}</span>
+                <div class="post-toolbar">
+                    <app-input class="post-search" type="search" [dense]="true"
+                               [label]="t().manager.searchPlaceholder" [value]="search()"
+                               (valueChange)="onPostSearch($any($event) ?? '')" />
+                    <label class="post-sort">
+                        <span>{{ t().manager.sortLabel }}</span>
+                        <select [value]="postSortValue()" (change)="setPostSortValue($any($event.target).value)">
+                            @for (option of postSortOptions(); track option.value) {
+                                <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </label>
+                    <app-popover #postFilters align="left">
+                        <button trigger type="button" class="post-filter-trigger" aria-haspopup="dialog"
+                                aria-controls="post-filter-panel" [attr.aria-expanded]="postFilters.isOpen()">
+                            {{ t().manager.filters }}
+                            @if (filterCount()) { <span class="filter-count">{{ filterCount() }}</span> }
+                        </button>
+                        <div panel id="post-filter-panel" class="post-filter-panel" role="dialog"
+                             [attr.aria-label]="t().manager.filters">
+                            <label>
+                                <span>{{ t().manager.filterState }}</span>
+                                <select [value]="stateFilter()" (change)="setStateFilter($any($event.target).value)">
+                                    <option value="all">{{ t().manager.filterAll }}</option>
+                                    <option value="live">{{ t().manager.liveChip }}</option>
+                                    <option value="draft">{{ t().manager.unpublishedChip }}</option>
+                                    <option value="scheduled">{{ t().manager.scheduled }}</option>
+                                    <option value="archived">{{ t().manager.archived }}</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>{{ t().manager.filterVisibility }}</span>
+                                <select [value]="visibilityFilter()" (change)="setVisibilityFilter($any($event.target).value)">
+                                    <option value="all">{{ t().manager.filterAll }}</option>
+                                    <option value="public">{{ t().manager.filterPublic }}</option>
+                                    <option value="private">{{ t().manager.filterPrivate }}</option>
+                                </select>
+                            </label>
+                            @if (auth.indieDev()) {
+                            <label>
+                                <span>{{ t().manager.filterProject }}</span>
+                                <select [value]="projectFilter()" (change)="setProjectFilter($any($event.target).value)">
+                                    <option value="all">{{ t().manager.filterAll }}</option>
+                                    <option value="none">{{ t().manager.filterNoProject }}</option>
+                                    @for (project of projects(); track project.id) {
+                                        <option [value]="project.id">{{ project.name }}</option>
+                                    }
+                                </select>
+                            </label>
+                            }
+                            <label>
+                                <span>{{ t().manager.filterLanguage }}</span>
+                                <select [value]="languageFilter()" (change)="setLanguageFilter($any($event.target).value)">
+                                    <option value="all">{{ t().manager.filterAll }}</option>
+                                    @for (language of availableLanguages(); track language) {
+                                        <option [value]="language">{{ language.toUpperCase() }}</option>
+                                    }
+                                </select>
+                            </label>
+                            <app-button variant="paper" size="sm" [disabled]="!hasPostFilters()"
+                                        (clicked)="clearPostFilters(); postFilters.close()">
+                                {{ t().manager.clearFilters }}
+                            </app-button>
+                        </div>
+                    </app-popover>
+                    <span class="post-result-count">{{ t().manager.resultCount(visiblePosts().length, postPool().length) }}</span>
                 </div>
-                <!--FI3.10: the list is publish-date ordered, so finding a specific post meant
-                scrolling. Search covers title and tags.-->
-                <app-input class="post-search" type="search" [label]="t().manager.searchPlaceholder"
-                           [(ngModel)]="search" />
                 <div class="row-list post-list">
                 @for (d of visiblePosts(); track d.id) {
-                <!--One row: the type plate, the title over its languages, the feedback tally, and
-                exactly one publish state — archived wins over live, live over unpublished. The
-                title column is the only one that shrinks, so a long title gives way to the tag
-                and never the reverse (T-271).-->
                 <button class="row post-card" [class.is-on]="selectedId() === d.id"
                         [attr.aria-current]="selectedId() === d.id ? 'true' : null" (click)="select(d)">
-                    @if (d.coverImagePath; as cover) {
+                    @if (d.coverImagePath && !coverFailed(d)) {
                     <span class="post-card-type has-thumb">
-                        <img [src]="'/media/' + cover" alt="" loading="lazy">
+                        <img [src]="'/media/' + d.coverImagePath" alt="" loading="lazy" (error)="markCoverFailed(d)">
                     </span>
                     } @else {
                     <span class="post-card-type" [title]="t().projects.docTypes[d.documentType].name">
@@ -73,24 +128,46 @@ so it stays addressable by the name the smoke suite binds.-->
                     }
                     <span class="post-card-main">
                         <span class="post-card-title">
-                            @if (d.isPrivate) { <app-icon name="lock" size="xs"></app-icon> }
-                            @if (hasPendingSchedule(d.id)) { <app-icon name="clock" size="xs"></app-icon> }
                             <span class="t post-card-title-text" [title]="d.title || t().drafts.untitled">{{ d.title || t().drafts.untitled }}</span>
                         </span>
-                        <span class="m post-card-langs">
+                        <span class="m post-card-meta">
+                            @if (auth.indieDev()) {
+                                <span class="post-card-project" [title]="projectName(d.projectId)">{{ projectName(d.projectId) }}</span>
+                                <span aria-hidden="true">·</span>
+                            }
+                            @if (postSort() === 'activity') {
+                                <span [title]="postActivityTitle(d)">{{ postActivity(d) }}</span>
+                            } @else if (postSort() === 'published') {
+                                @if (d.blogPublishedAt) {
+                                    <span [title]="t().manager.publishedOn">{{ d.blogPublishedAt | zonedDate:'d MMM' }}</span>
+                                } @else {
+                                    <span [title]="t().manager.publishedOn">{{ t().manager.unpublishedChip }}</span>
+                                }
+                            } @else {
+                                <span [title]="t().manager.editedOn">{{ d.updatedAt | zonedDate:'d MMM' }}</span>
+                            }
+                            <span aria-hidden="true">·</span>
                             @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
                             @if (extraLanguageCount(d); as extra) {
                             <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
                             }
-                            @if (d.isPrivate) { <span class="tag muted">{{ t().manager.privateChip }}</span> }
+                            @if (d.isPrivate) {
+                                <span class="post-card-private"><app-icon name="lock" size="xs" />{{ t().manager.privateChip }}</span>
+                            }
                         </span>
                     </span>
                     @if (newFeedbackFor(d.id); as n) {
                     <span class="tag ok is-plain" [title]="t().manager.newSinceLastLook">+{{ n }}</span>
                     } @else { <span></span> }
-                    <span class="tag post-card-state" [class.ok]="stateTone(d) === 'ok'"
-                          [class.warn]="stateTone(d) === 'warn'" [class.muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
+                    <span class="post-card-state" [class.is-live]="stateTone(d) === 'ok'"
+                          [class.is-warn]="stateTone(d) === 'warn'" [class.is-muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
                 </button>
+                } @empty {
+                    <div class="post-list-message" role="status">
+                    <p>
+                        {{ hasPostFilters() ? (search().trim() ? t().manager.noMatches(search().trim()) : t().manager.noFiltered) : t().manager.noPosts }}
+                    </p>
+                    </div>
                 }
                 </div>
             </section>
@@ -530,9 +607,10 @@ so it stays addressable by the name the smoke suite binds.-->
                     <app-empty-state icon="file-text" [title]="t().manager.pickPost" [text]="t().manager.pickPostHint">
                         <app-button variant="paper" (clicked)="selectFirstPost()">{{ t().manager.selectFirstPost }}</app-button>
                     </app-empty-state>
-                    } @else if (search.trim()) {
-                    <app-empty-state icon="magnifying-glass" [title]="t().manager.noMatches(search.trim())">
-                        <app-button variant="paper" (clicked)="search = ''">{{ t().manager.clearSearch }}</app-button>
+                    } @else if (hasPostFilters()) {
+                    <app-empty-state icon="magnifying-glass"
+                                     [title]="search().trim() ? t().manager.noMatches(search().trim()) : t().manager.noFiltered">
+                        <app-button variant="paper" (clicked)="clearPostFilters()">{{ t().manager.clearFilters }}</app-button>
                     </app-empty-state>
                     } @else {
                     <app-empty-state icon="paper-plane-tilt" [title]="t().manager.noPosts" [text]="t().manager.noPostsHint">
@@ -663,8 +741,36 @@ so it stays addressable by the name the smoke suite binds.-->
                     <span class="label">{{ t().manager.tabs.forms }}</span>
                     <span class="card-count">{{ presets().length }}</span>
                 </div>
+                <div class="post-toolbar form-toolbar">
+                    <app-input class="post-search" type="search" [dense]="true"
+                               [label]="t().manager.forms.searchLabel" [value]="presetSearch()"
+                               (valueChange)="onPresetSearch($any($event) ?? '')" />
+                    <label class="post-sort">
+                        <span>{{ t().manager.forms.sortLabel }}</span>
+                        <select [value]="presetSortValue()" (change)="setPresetSortValue($any($event.target).value)">
+                            @for (option of presetSortOptions(); track option.value) {
+                                <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="post-sort">
+                        <span>{{ t().manager.filterLanguage }}</span>
+                        <select [value]="presetLanguageFilter()" (change)="setPresetLanguageFilter($any($event.target).value)">
+                            <option value="all">{{ t().manager.filterAll }}</option>
+                            @for (language of availablePresetLanguages(); track language) {
+                                <option [value]="language">{{ language.toUpperCase() }}</option>
+                            }
+                        </select>
+                    </label>
+                    @if (hasPresetFilters() && visiblePresets().length) {
+                        <app-button variant="paper" size="sm" (clicked)="clearPresetFilters()">
+                            {{ t().manager.clearFilters }}
+                        </app-button>
+                    }
+                    <span class="post-result-count">{{ t().manager.resultCount(visiblePresets().length, presets().length) }}</span>
+                </div>
                 <div class="row-list post-list">
-                @for (p of presets(); track p.id) {
+                @for (p of visiblePresets(); track p.id) {
                 <!--Same row as the posts list: two lists on one screen that behaved and looked
                 differently was a difference with no meaning behind it.-->
                 <button class="row post-card is-preset" [class.is-on]="selectedPresetId() === p.id"
@@ -674,9 +780,13 @@ so it stays addressable by the name the smoke suite binds.-->
                         <!--ADR-060: every language the preset carries text for, first = primary.-->
                         <span class="m post-card-langs">
                             @for (l of presetLanguagesOf(p); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                            <span aria-hidden="true">·</span>
+                            <span>{{ t().manager.forms.questionsCount(presetQuestionCount(p)) }}</span>
                         </span>
                     </span>
                 </button>
+                } @empty {
+                    <p class="post-list-message" role="status">{{ t().manager.forms.emptyFiltered }}</p>
                 }
                 </div>
             </section>
@@ -895,6 +1005,13 @@ so it stays addressable by the name the smoke suite binds.-->
                         </span>
                     </div>
                 </div>
+                } @else if (hasPresetFilters() && !visiblePresets().length) {
+                <app-empty-state icon="magnifying-glass" [title]="t().manager.forms.emptyFiltered"
+                                 [text]="t().manager.forms.emptyFilteredHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearPresetFilters()">
+                        {{ t().manager.clearFilters }}
+                    </app-button>
+                </app-empty-state>
                 } @else {
                 <app-empty-state icon="clipboard-text" [title]="t().manager.forms.pickPreset" />
                 }

@@ -65,7 +65,7 @@ export function paragraphs(lines: string[]) {
 // name, and the class is TipTap's own on the editable element rather than anything our stylesheets
 // put there.
 export async function openDraft(page: Page, id: string) {
-    await page.goto(`/editor?id=${id}`);
+    await page.goto(`/editor?draft=${id}`);
     await expect(page.locator('.tiptap')).toBeVisible();
 }
 
@@ -76,7 +76,7 @@ export async function typeInSheet(page: Page, text: string) {
 }
 
 // The autosave debounce is 1.2s, and asserting the indicator alone is a race: right after a
-// keystroke the status bar still reads "Saved" from the previous save, so the assertion can pass
+// keystroke the header still reads "Synced" from the previous save, so the assertion can pass
 // before this edit has been written at all. Waiting for the PUT itself is the only version of
 // this that cannot pass early.
 export async function withSave(page: Page, action: () => Promise<void>) {
@@ -92,10 +92,9 @@ export async function withSave(page: Page, action: () => Promise<void>) {
     await expectSynced(page);
 }
 
-// The word is read off the document frame's footer (ADR-239 clause 9): the frame's top bar draws
-// the same state as an icon and a word, but the footer is the line a person reads. "Syncing…" and
-// "Sync failed" are the other two, and neither contains this one.
-export const SYNC_WORD_SELECTOR = 'app-document-frame .frame-footer';
+// ADR-249 gives sync state one home in the compact document header. "Syncing…" and "Sync failed"
+// are the other two states, and neither contains this word.
+export const SYNC_WORD_SELECTOR = 'app-document-frame .frame-save';
 
 export async function expectSynced(page: Page, timeout = 10_000) {
     await expect(page.locator(SYNC_WORD_SELECTOR)).toContainText('Synced', { timeout });

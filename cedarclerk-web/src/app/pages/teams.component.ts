@@ -12,8 +12,16 @@ import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
+import { SortDirection } from '../core/collection-query';
 
 type StateTone = 'ok' | 'muted' | 'warn' | 'danger';
+type TeamScope = 'all' | 'owned' | 'joined';
+type TeamSort = 'name' | 'members' | 'projects';
+type MemberSort = 'name' | 'role' | 'status';
+
+function compareText(a: string, b: string): number {
+    return a.localeCompare(b, undefined, { sensitivity: 'base' });
+}
 
 // T-358 — teams. The list of teams on a shelf, the selected team's people on the sheet, and an
 // inspector shelf that says what the selection amounts to: the same three-part shape the Posts
@@ -48,6 +56,7 @@ export class TeamsComponent {
     membersLoading = signal(false);
     busy = signal(false);
     error = signal<string | null>(null);
+    private memberRequestSequence = 0;
 
     creating = signal(false);
     newName = signal('');
@@ -63,7 +72,115 @@ export class TeamsComponent {
     selected = computed(() => this.teams().find(t => t.id === this.selectedId()) ?? null);
     selectedJoined = computed(() => this.joined().find(t => t.id === this.selectedId()) ?? null);
 
-    headerMeta = computed<HeaderMeta[]>(() => [{ text: this.t().teams.count(this.teams().length) }]);
+    teamQuery = signal('');
+    teamScope = signal<TeamScope>('all');
+    teamSortKey = signal<TeamSort>('name');
+    teamSortDirection = signal<SortDirection>('asc');
+
+    visibleTeams = computed(() => {
+        if (this.teamScope() === 'joined') return [];
+        const query = this.teamQuery().trim().toLocaleLowerCase();
+        const key = this.teamSortKey();
+        const direction = this.teamSortDirection() === 'asc' ? 1 : -1;
+        return this.teams()
+            .filter(team => !query || team.name.toLocaleLowerCase().includes(query))
+            .sort((a, b) => {
+                const compared = key === 'name' ? compareText(a.name, b.name)
+                    : key === 'members' ? a.memberCount - b.memberCount
+                        : a.projectCount - b.projectCount;
+                return compared * direction || a.id.localeCompare(b.id);
+            });
+    });
+
+    visibleJoined = computed(() => {
+        if (this.teamScope() === 'owned') return [];
+        const query = this.teamQuery().trim().toLocaleLowerCase();
+        const direction = this.teamSortDirection() === 'asc' ? 1 : -1;
+        return this.joined()
+            .filter(team => !query || `${team.name} ${team.ownerName}`.toLocaleLowerCase().includes(query))
+            .sort((a, b) => compareText(a.name, b.name) * direction || a.id.localeCompare(b.id));
+    });
+
+    teamListLabel = computed(() => this.teamScope() === 'owned' ? this.t().teams.yours
+        : this.teamScope() === 'joined' ? this.t().teams.joined : this.t().teams.crumb);
+    visibleTeamCount = computed(() => this.visibleTeams().length + this.visibleJoined().length);
+
+    teamFiltersActive = computed(() => Boolean(this.teamQuery().trim()) || this.teamScope() !== 'all');
+
+    memberQuery = signal('');
+    memberRole = signal('all');
+    memberStatus = signal('all');
+    memberSortKey = signal<MemberSort>('name');
+    memberSortDirection = signal<SortDirection>('asc');
+
+    visibleMembers = computed(() => {
+        const query = this.memberQuery().trim().toLocaleLowerCase();
+        const role = this.memberRole();
+        const status = this.memberStatus();
+        const key = this.memberSortKey();
+        const direction = this.memberSortDirection() === 'asc' ? 1 : -1;
+        return this.members()
+            .filter(member => (!query || `${member.name ?? ''} ${member.email}`.toLocaleLowerCase().includes(query))
+                && (role === 'all' || member.role === role)
+                && (status === 'all' || (status === 'pending' ? member.pending : !member.pending && member.status === status)))
+            .sort((a, b) => {
+                const compared = key === 'name'
+                    ? compareText(a.name || a.email, b.name || b.email)
+                    : compareText(key === 'role' ? a.role : a.pending ? 'pending' : a.status,
+                        key === 'role' ? b.role : b.pending ? 'pending' : b.status);
+                return compared * direction || a.id.localeCompare(b.id);
+            });
+    });
+
+    memberFiltersActive = computed(() => Boolean(this.memberQuery().trim())
+        || this.memberRole() !== 'all' || this.memberStatus() !== 'all');
+
+    headerMeta = computed<HeaderMeta[]>(() => [{ text: this.t().teams.count(this.teams().length + this.joined().length) }]);
+
+    toggleTeamSortDirection() {
+        this.teamSortDirection.update(direction => direction === 'asc' ? 'desc' : 'asc');
+    }
+
+    setTeamScope(scope: TeamScope) {
+        this.teamScope.set(scope);
+        if (scope !== 'owned') this.teamSortKey.set('name');
+        this.reconcileTeamSelection();
+    }
+
+    setTeamQuery(query: string) {
+        this.teamQuery.set(query);
+        this.reconcileTeamSelection();
+    }
+
+    toggleMemberSortDirection() {
+        this.memberSortDirection.update(direction => direction === 'asc' ? 'desc' : 'asc');
+    }
+
+    clearTeamFilters() {
+        this.teamQuery.set('');
+        this.setTeamScope('all');
+    }
+
+    private reconcileTeamSelection(): void {
+        const selectedId = this.selectedId();
+        if (this.visibleTeams().some(team => team.id === selectedId)
+            || this.visibleJoined().some(team => team.id === selectedId)) return;
+
+        const owned = this.visibleTeams()[0];
+        const joined = this.visibleJoined()[0];
+        const nextId = owned?.id ?? joined?.id ?? null;
+        this.selectedId.set(nextId);
+        this.lastInviteUrl.set(null);
+        this.renaming.set(false);
+        if (owned) void this.loadMembers(owned.id);
+        else this.clearMembers();
+    }
+
+    clearMemberFilters() {
+        this.memberQuery.set('');
+        this.memberRole.set('all');
+        this.memberStatus.set('all');
+    }
 
     constructor() {
         void this.load();
@@ -85,7 +202,7 @@ export class TeamsComponent {
                 ?? null;
             this.selectedId.set(keep?.id ?? null);
             if (keep && own.some(team => team.id === keep.id)) await this.loadMembers(keep.id);
-            else this.members.set([]);
+            else this.clearMembers();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().teams.loadFailed));
         } finally {
@@ -103,17 +220,29 @@ export class TeamsComponent {
 
     selectJoined(team: JoinedTeam) {
         this.selectedId.set(team.id);
-        this.members.set([]);
+        this.clearMembers();
         this.lastInviteUrl.set(null);
         this.creating.set(false);
         this.renaming.set(false);
     }
 
     private async loadMembers(teamId: string) {
+        const request = ++this.memberRequestSequence;
         this.membersLoading.set(true);
-        try { this.members.set(await this.api.members(teamId)); }
-        catch (e) { this.error.set(httpErrorMessage(e, this.t().teams.loadFailed)); }
-        finally { this.membersLoading.set(false); }
+        try {
+            const members = await this.api.members(teamId);
+            if (request === this.memberRequestSequence && this.selectedId() === teamId) this.members.set(members);
+        } catch (e) {
+            if (request === this.memberRequestSequence) this.error.set(httpErrorMessage(e, this.t().teams.loadFailed));
+        } finally {
+            if (request === this.memberRequestSequence) this.membersLoading.set(false);
+        }
+    }
+
+    private clearMembers(): void {
+        this.memberRequestSequence++;
+        this.members.set([]);
+        this.membersLoading.set(false);
     }
 
     startCreate() {

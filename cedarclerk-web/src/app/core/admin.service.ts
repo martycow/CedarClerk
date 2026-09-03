@@ -82,9 +82,27 @@ export interface AdminBilling {
     payments: AdminPayment[];
     // Completed payments only — a failed or pending row is not money.
     totalByCurrency: { currency: string; total: number }[];
+    statuses: string[];
+    total: number;
+    pageSize: number;
+}
+
+export interface AdminPostPage {
+    items: AdminPost[];
+    total: number;
+    pageSize: number;
+}
+
+export interface AdminCollectionQuery {
+    search: string;
+    filter: string;
+    sort: string;
+    direction: 'asc' | 'desc';
+    skip: number;
 }
 
 export interface AdminUsage {
+    ownerId: string;
     ownerEmail: string | null;
     bytes: number;
     files: number;
@@ -247,12 +265,28 @@ export class AdminService {
             `/api/admin/users/${userId}`));
     }
 
-    listPosts() {
-        return firstValueFrom(this.http.get<AdminPost[]>('/api/admin/posts'));
+    listPosts(query?: AdminCollectionQuery) {
+        return firstValueFrom(this.http.get<AdminPostPage>('/api/admin/posts', {
+            params: query ? {
+                q: query.search,
+                state: query.filter,
+                sort: query.sort,
+                direction: query.direction,
+                skip: query.skip,
+            } : {},
+        }));
     }
 
-    billing() {
-        return firstValueFrom(this.http.get<AdminBilling>('/api/admin/billing'));
+    billing(query?: AdminCollectionQuery) {
+        return firstValueFrom(this.http.get<AdminBilling>('/api/admin/billing', {
+            params: query ? {
+                q: query.search,
+                status: query.filter,
+                sort: query.sort,
+                direction: query.direction,
+                skip: query.skip,
+            } : {},
+        }));
     }
 
     usage() {

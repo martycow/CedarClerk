@@ -3,7 +3,7 @@ import { formatInZone } from '../core/display-time';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subscription, TimeoutError } from 'rxjs';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
@@ -32,6 +32,8 @@ import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.com
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
+import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
+import { ariaSort } from '../core/collection-query';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
 export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
@@ -141,7 +143,8 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
         IconComponent, ZonedDatePipe, FormsModule, NgTemplateOutlet, ModalComponent, PopoverComponent,
         FolderPickerComponent, TagPickerComponent, SeriesPickerComponent, IndexTabsComponent,
         SpecRowComponent, InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
-        PageHeaderComponent, EmptyStateComponent,
+        PageHeaderComponent, EmptyStateComponent, RouterLink,
+        SortHeaderComponent,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -284,7 +287,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
             .filter(d => matchesFilter(d, this.filter()))
             .filter(d => folder === 'all' || (folder === 'none' ? d.folderId === null : d.folderId === folder))
             .filter(d => !q || d.title.toLowerCase().includes(q) || d.tags.toLowerCase().includes(q))
-            .sort((a, b) => dir * this.compare(a, b, key));
+            .sort((a, b) => dir * this.compare(a, b, key) || a.id.localeCompare(b.id));
     }
 
     private compare(a: DraftMeta, b: DraftMeta, key: SortKey): number {
@@ -317,6 +320,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         return this.sortDir() === 'asc' ? 'arrow-up' : 'arrow-down';
     }
 
+    columnSort(key: SortKey): 'ascending' | 'descending' | null {
+        return ariaSort(this.sortKey() === key, this.sortDir());
+    }
+
     // Which columns are actually drawn. The template, the row's min-width and the `@if`s in the
     // markup all read this one signal, so they cannot disagree about how many tracks exist.
     private visibleColWidths(): number[] {
@@ -342,6 +349,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         const fixed = cols.reduce((sum, w) => sum + w, 0) + ACTIONS_WIDTH;
         const gaps = (cols.length + 1) * ROW_GAP;
         return `${fixed + gaps + ROW_PADDING + this.titleMinWidth()}px`;
+    }
+
+    tableColumnCount(): number {
+        return this.visibleColWidths().length + 2;
     }
 
     // Pointer events (not mouse) so a drag works with a trackpad, a pen and an iPad finger alike;

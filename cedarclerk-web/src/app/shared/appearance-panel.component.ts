@@ -1,37 +1,23 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { AppearanceService, ACCENT_PRESETS, AppearancePrefs, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { ThemeService } from '../core/theme.service';
-import { ModalComponent } from './modal.component';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from './icon.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
-import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 
-// Long enough that a slider drag is one write, short enough that closing the modal right after a
-// click never races the save (the modal's own close path flushes it anyway — see apply()).
+// Long enough that a slider drag is one write, short enough that leaving Preferences right after a
+// click does not normally expose the network round-trip.
 const APPEARANCE_COMMIT_DEBOUNCE_MS = 600;
 
-// I14/B15 put the writing-sheet preferences in a panel beside the sheet itself, so every control's
-// effect on *that sheet* was visible without judging it on a different screen.
-//
-// Moved into a modal (28.07.2026, ADR following ADR-053) — the always-present sliding column
-// broke the page's own layout (a second, page-level scrollbar alongside the sheet's own) and,
-// per Marty's direct call, didn't belong pinned to the side regardless. Live preview while
-// dragging a slider is the one thing this trades away; everything still updates the sheet the
-// instant the modal closes (the `prefs` signal never stopped updating live, only its visibility
-// changed) rather than requiring Apply-then-close to see anything.
 @Component({
     selector: 'app-appearance-panel',
-    imports: [IconComponent, ModalComponent, LeafTagComponent],
+    imports: [IconComponent, LeafTagComponent],
     templateUrl: 'appearance-panel.component.html',
     styleUrls: ['appearance-panel.component.css'],
 })
-export class AppearancePanelComponent {
+export class AppearancePanelComponent implements OnDestroy {
     appearance = inject(AppearanceService);
-    theme = inject(ThemeService);
     t = inject(LocaleService).t;
-    private readonly overlays = inject(OverlayCoordinatorService);
 
     readonly accentPresets = ACCENT_PRESETS;
 
@@ -42,37 +28,15 @@ export class AppearancePanelComponent {
     saveState = signal<'saved' | 'saving' | 'error'>('saved');
     private commitTimer?: ReturnType<typeof setTimeout>;
 
-    readonly open = computed(() => this.overlays.active() === 'appearance');
-    private wasOpen = false;
-
-    constructor() {
-        effect(() => {
-            const open = this.open();
-            if (this.wasOpen && !open) {
-                clearTimeout(this.commitTimer);
-                void this.apply();
-            }
-            this.wasOpen = open;
-        });
-    }
-
-    openPanel(): void {
-        this.overlays.open('appearance');
-    }
-
-    // FI1: the toggle used to only pick which theme's accent the swatches below edit, while the
-    // app's actual theme stayed whatever it already was — indistinguishable from a dead control.
-    // It now IS the real theme switch (instant, like every other theme toggle in the app); the
-    // accent swatches simply follow whichever theme that leaves you on.
     activeAccentHex(): string {
         const p = this.appearance.prefs();
-        return this.theme.theme() === 'dark' ? p.accentDark : p.accentLight;
+        return p.theme === 'dark' ? p.accentDark : p.accentLight;
     }
 
     // The swatch shows the tone the theme will actually paint, not the preset's day hex — night
     // derives its own (ADR-141), and a swatch that ignores that advertises a colour you cannot get.
     swatchHex(preset: { hex: string; night: string }): string {
-        return this.theme.theme() === 'dark' ? preset.night : preset.hex;
+        return this.appearance.prefs().theme === 'dark' ? preset.night : preset.hex;
     }
 
     isActivePreset(hex: string): boolean {
@@ -87,7 +51,15 @@ export class AppearancePanelComponent {
     }
 
     pickAccentPreset(hex: string) {
-        this.previewAndSave(this.theme.theme() === 'dark' ? { accentDark: hex } : { accentLight: hex });
+        this.previewAndSave(this.appearance.prefs().theme === 'dark' ? { accentDark: hex } : { accentLight: hex });
+    }
+
+    setTheme(value: AppearancePrefs['theme']) {
+        this.previewAndSave({ theme: value });
+    }
+
+    setSidebarMode(value: AppearancePrefs['sidebarMode']) {
+        this.previewAndSave({ sidebarMode: value });
     }
 
     setSheetWidth(value: AppearancePrefs['sheetWidth']) {
@@ -131,10 +103,9 @@ export class AppearancePanelComponent {
         this.commitTimer = setTimeout(() => void this.apply(), APPEARANCE_COMMIT_DEBOUNCE_MS);
     }
 
-    // Closing must not swallow a debounce still in flight.
-    close() {
+    ngOnDestroy(): void {
         clearTimeout(this.commitTimer);
-        this.overlays.close('appearance');
+        void this.apply();
     }
 
     async apply() {

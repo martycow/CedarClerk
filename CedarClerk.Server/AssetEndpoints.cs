@@ -100,8 +100,14 @@ public static class AssetEndpoints
         // unfiltered type counts (chips must not shrink when a filter is on) and the quota line.
         // ADR-204 — `project` is a guid, or the literal "none" for the files that belong to no
         // project. Absent means every bucket, which is what the library page opens on.
-        app.MapGet("/api/assets", async (ClaimsPrincipal user, CedarDbContext db, string? q, string? type, string? project, int skip = 0, int take = 60) =>
+        app.MapGet("/api/assets", async (
+            ClaimsPrincipal user, CedarDbContext db, string? q, string? type, string? project,
+            string sort = "added", string direction = "desc", int skip = 0, int take = 60) =>
             {
+                var validationError = ValidateLibraryCollectionQuery(type, project, sort, direction);
+                if (validationError is not null)
+                    return Results.BadRequest(new { error = validationError });
+
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
                 skip = Math.Max(0, skip);
                 take = Math.Clamp(take, 1, 200);
@@ -138,7 +144,8 @@ public static class AssetEndpoints
                     filtered = filtered.Where(a => a.ContentType.StartsWith(type + "/"));
 
                 var total = await filtered.CountAsync();
-                var items = await filtered.OrderByDescending(a => a.CreatedAt)
+                var ordered = OrderForLibrary(filtered, sort, direction);
+                var items = await ordered
                     .Skip(skip).Take(take)
                     .Select(a => new { a.Id, a.FileName, a.LocalPath, a.ContentType, a.SizeBytes, a.CreatedAt, a.ProjectId })
                     .ToListAsync();
@@ -202,6 +209,33 @@ public static class AssetEndpoints
             })
             .RequireAuthorization();
     }
+
+    public static string? ValidateLibraryCollectionQuery(
+        string? type, string? project, string sort, string direction)
+    {
+        if (type is not null && type is not ("image" or "video" or "audio"))
+            return ErrorMessages.UnknownMediaTypeFilter;
+        if (!string.IsNullOrWhiteSpace(project) && project != "none" && !Guid.TryParse(project, out _))
+            return ErrorMessages.UnknownMediaProjectFilter;
+        if (sort is not ("name" or "type" or "size" or "added"))
+            return ErrorMessages.UnknownMediaSortKey;
+        if (direction is not ("asc" or "desc"))
+            return ErrorMessages.UnknownMediaSortDirection;
+        return null;
+    }
+
+    public static IOrderedQueryable<Asset> OrderForLibrary(
+        IQueryable<Asset> query, string sort, string direction) => (sort, direction) switch
+    {
+        ("name", "asc") => query.OrderBy(a => a.FileName).ThenBy(a => a.Id),
+        ("name", "desc") => query.OrderByDescending(a => a.FileName).ThenBy(a => a.Id),
+        ("type", "asc") => query.OrderBy(a => a.ContentType).ThenBy(a => a.FileName).ThenBy(a => a.Id),
+        ("type", "desc") => query.OrderByDescending(a => a.ContentType).ThenBy(a => a.FileName).ThenBy(a => a.Id),
+        ("size", "asc") => query.OrderBy(a => a.SizeBytes).ThenBy(a => a.Id),
+        ("size", "desc") => query.OrderByDescending(a => a.SizeBytes).ThenBy(a => a.Id),
+        ("added", "asc") => query.OrderBy(a => a.CreatedAt).ThenBy(a => a.Id),
+        _ => query.OrderByDescending(a => a.CreatedAt).ThenBy(a => a.Id),
+    };
 
     private static void DeleteIfExists(string path)
     {

@@ -14,6 +14,7 @@ import {
     AssetIndexService,
     AssetKind,
     AssetPage,
+    AssetSort,
     LinkedDocument,
     desktopBridge,
     formatBytes,
@@ -28,6 +29,8 @@ import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
+import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
+import { ariaSort, SortDirection } from '../core/collection-query';
 
 const PAGE_SIZE = 60;
 const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
@@ -50,7 +53,7 @@ const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
     selector: 'app-project-assets',
     imports: [
         IconComponent, ZonedDatePipe, IndexTabsComponent, PageHeaderComponent, EmptyStateComponent,
-        SpecRowComponent, InputComponent, ButtonComponent, MediaLibraryComponent,
+        SpecRowComponent, InputComponent, ButtonComponent, MediaLibraryComponent, SortHeaderComponent,
     ],
     templateUrl: 'project-assets.component.html',
     styleUrls: ['project-assets.component.css'],
@@ -86,6 +89,8 @@ export class ProjectAssetsComponent implements OnDestroy {
     kind = signal<AssetKind | null>(null);
     missingOnly = signal(false);
     search = signal('');
+    sort = signal<AssetSort>('path');
+    sortDirection = signal<SortDirection>('asc');
     skip = signal(0);
 
     /** This machine, when there is one. Null in a browser, which is what makes everything a fingerprint. */
@@ -105,6 +110,9 @@ export class ProjectAssetsComponent implements OnDestroy {
     private thumbFailed = signal<ReadonlySet<string>>(new Set());
 
     private searchTimer: ReturnType<typeof setTimeout> | null = null;
+    private listRequestSequence = 0;
+    private projectRequestSequence = 0;
+    private detailRequestSequence = 0;
 
     /** No root chosen yet — the screen is the pick-a-folder card and nothing else. */
     needsFolder = computed(() => !this.loading() && !this.page()?.rootPath);
@@ -157,12 +165,18 @@ export class ProjectAssetsComponent implements OnDestroy {
             const id = params.get('id');
             if (!id) return;
             this.projectId.set(id);
+            this.project.set(null);
+            this.page.set(null);
+            this.clearSelection();
             void this.load();
         });
     }
 
     ngOnDestroy() {
         if (this.searchTimer) clearTimeout(this.searchTimer);
+        this.listRequestSequence++;
+        this.projectRequestSequence++;
+        this.detailRequestSequence++;
     }
 
     private async loadMachine() {
@@ -179,20 +193,30 @@ export class ProjectAssetsComponent implements OnDestroy {
     async load() {
         const id = this.projectId();
         if (!id) return;
+        const projectRequest = ++this.projectRequestSequence;
+        const listRequest = ++this.listRequestSequence;
+        const query = this.query();
         this.loading.set(true);
         this.loadError.set(null);
-        try {
-            const [project, page] = await Promise.all([
-                this.projects.get(id),
-                this.api.list(id, this.query()),
-            ]);
-            this.project.set(project);
-            this.page.set(page);
-        } catch (e) {
-            this.loadError.set(httpErrorMessage(e, this.t().projects.assets.loadFailed));
-        } finally {
-            this.loading.set(false);
+        const [projectResult, pageResult] = await Promise.allSettled([
+            this.projects.get(id),
+            this.api.list(id, query),
+        ]);
+
+        const projectIsCurrent = projectRequest === this.projectRequestSequence && id === this.projectId();
+        const listIsCurrent = listRequest === this.listRequestSequence && id === this.projectId();
+        let error: unknown = null;
+
+        if (projectIsCurrent) {
+            if (projectResult.status === 'fulfilled') this.project.set(projectResult.value);
+            else error = projectResult.reason;
         }
+        if (listIsCurrent) {
+            if (pageResult.status === 'fulfilled') this.page.set(pageResult.value);
+            else error ??= pageResult.reason;
+        }
+        if (error !== null) this.loadError.set(httpErrorMessage(error, this.t().projects.assets.loadFailed));
+        if (listIsCurrent) this.loading.set(false);
     }
 
     private query() {
@@ -200,6 +224,8 @@ export class ProjectAssetsComponent implements OnDestroy {
             kind: this.kind(),
             search: this.search().trim() || undefined,
             missing: this.missingOnly(),
+            sort: this.sort(),
+            direction: this.sortDirection(),
             skip: this.skip(),
             take: PAGE_SIZE,
         };
@@ -208,10 +234,18 @@ export class ProjectAssetsComponent implements OnDestroy {
     private async reloadList() {
         const id = this.projectId();
         if (!id) return;
+        const request = ++this.listRequestSequence;
+        const query = this.query();
+        this.loadError.set(null);
         try {
-            this.page.set(await this.api.list(id, this.query()));
+            const page = await this.api.list(id, query);
+            if (request !== this.listRequestSequence || id !== this.projectId()) return;
+            this.page.set(page);
         } catch (e) {
+            if (request !== this.listRequestSequence || id !== this.projectId()) return;
             this.loadError.set(httpErrorMessage(e, this.t().projects.assets.loadFailed));
+        } finally {
+            if (request === this.listRequestSequence && id === this.projectId()) this.loading.set(false);
         }
     }
 
@@ -219,6 +253,7 @@ export class ProjectAssetsComponent implements OnDestroy {
         this.kind.set(kind);
         this.missingOnly.set(false);
         this.skip.set(0);
+        this.clearSelection();
         void this.reloadList();
     }
 
@@ -226,16 +261,75 @@ export class ProjectAssetsComponent implements OnDestroy {
         this.kind.set(null);
         this.missingOnly.set(true);
         this.skip.set(0);
+        this.clearSelection();
         void this.reloadList();
     }
 
     onSearch(value: string) {
         this.search.set(value);
         this.skip.set(0);
+        this.clearSelection();
         // Debounced: the index can hold tens of thousands of rows, and a request per keystroke
         // would queue faster than it answers.
         if (this.searchTimer) clearTimeout(this.searchTimer);
         this.searchTimer = setTimeout(() => void this.reloadList(), 250);
+    }
+
+    readonly hasFilters = computed(() => !!this.kind() || this.missingOnly() || !!this.search().trim());
+
+    clearFilters() {
+        this.kind.set(null);
+        this.missingOnly.set(false);
+        this.search.set('');
+        this.skip.set(0);
+        this.clearSelection();
+        void this.reloadList();
+    }
+
+    readonly sortOptions = computed(() => {
+        const t = this.t().projects.assets;
+        return [
+            { value: 'path:asc', label: t.sortPathAsc },
+            { value: 'path:desc', label: t.sortPathDesc },
+            { value: 'type:asc', label: t.sortTypeAsc },
+            { value: 'type:desc', label: t.sortTypeDesc },
+            { value: 'size:desc', label: t.sortSizeDesc },
+            { value: 'size:asc', label: t.sortSizeAsc },
+            { value: 'modified:desc', label: t.sortModifiedDesc },
+            { value: 'modified:asc', label: t.sortModifiedAsc },
+            { value: 'status:asc', label: t.sortStatusAsc },
+            { value: 'status:desc', label: t.sortStatusDesc },
+        ];
+    });
+
+    sortValue(): string {
+        return `${this.sort()}:${this.sortDirection()}`;
+    }
+
+    setSortValue(value: string) {
+        const [key, direction] = value.split(':');
+        if (!['path', 'type', 'size', 'modified', 'status'].includes(key) || (direction !== 'asc' && direction !== 'desc')) return;
+        this.sort.set(key as AssetSort);
+        this.sortDirection.set(direction);
+        this.skip.set(0);
+        this.clearSelection();
+        void this.reloadList();
+    }
+
+    setSort(key: AssetSort) {
+        if (this.sort() === key) {
+            this.sortDirection.update(direction => direction === 'asc' ? 'desc' : 'asc');
+        } else {
+            this.sort.set(key);
+            this.sortDirection.set(key === 'path' || key === 'type' || key === 'status' ? 'asc' : 'desc');
+        }
+        this.skip.set(0);
+        this.clearSelection();
+        void this.reloadList();
+    }
+
+    columnSort(key: AssetSort): 'ascending' | 'descending' | null {
+        return ariaSort(this.sort() === key, this.sortDirection());
     }
 
     /** `missing` is a tile beside the kinds, not a kind: it crosses them and clears the kind filter. */
@@ -329,7 +423,8 @@ export class ProjectAssetsComponent implements OnDestroy {
         // Once, at the end. Refreshing the list on every batch would make a scan of a large folder
         // compete with itself for the connection.
         await this.reloadList();
-        this.project.set(await this.projects.get(id));
+        const project = await this.projects.get(id);
+        if (id === this.projectId()) this.project.set(project);
     }
 
     /**
@@ -381,19 +476,35 @@ export class ProjectAssetsComponent implements OnDestroy {
     async open(asset: AssetEntry) {
         const id = this.projectId();
         if (!id) return;
+        const request = ++this.detailRequestSequence;
+        this.selected.set({ ...asset, fullPath: null, sourceMachine: this.page()?.sourceMachine ?? null });
+        this.links.set([]);
+        this.linking.set(false);
         try {
-            this.selected.set(await this.api.get(id, asset.id));
-            this.linking.set(false);
-            this.links.set(await this.api.links(id, asset.id));
+            const [detail, links] = await Promise.all([
+                this.api.get(id, asset.id),
+                this.api.links(id, asset.id),
+            ]);
+            if (!this.detailIsCurrent(request, id, asset.id)) return;
+            this.selected.set(detail);
+            this.links.set(links);
         } catch (e) {
+            if (!this.detailIsCurrent(request, id, asset.id)) return;
             this.loadError.set(httpErrorMessage(e, this.t().projects.assets.loadFailed));
         }
     }
 
-    onAssetKeydown(event: KeyboardEvent, asset: AssetEntry): void {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        void this.open(asset);
+    clearSelection() {
+        this.detailRequestSequence++;
+        this.selected.set(null);
+        this.links.set([]);
+        this.linking.set(false);
+    }
+
+    private detailIsCurrent(request: number, projectId: string, assetId: string): boolean {
+        return request === this.detailRequestSequence
+            && projectId === this.projectId()
+            && assetId === this.selected()?.id;
     }
 
     async addLink(draftId: string) {
@@ -403,8 +514,11 @@ export class ProjectAssetsComponent implements OnDestroy {
         this.busy.set(true);
         try {
             await this.api.addLink(id, asset.id, draftId);
-            this.links.set(await this.api.links(id, asset.id));
-            this.linking.set(false);
+            const links = await this.api.links(id, asset.id);
+            if (id === this.projectId() && asset.id === this.selected()?.id) {
+                this.links.set(links);
+                this.linking.set(false);
+            }
         } catch (e) {
             this.loadError.set(httpErrorMessage(e, this.t().projects.actionFailed));
         } finally {
@@ -419,7 +533,8 @@ export class ProjectAssetsComponent implements OnDestroy {
         this.busy.set(true);
         try {
             await this.api.removeLink(id, asset.id, draftId);
-            this.links.set(await this.api.links(id, asset.id));
+            const links = await this.api.links(id, asset.id);
+            if (id === this.projectId() && asset.id === this.selected()?.id) this.links.set(links);
         } catch (e) {
             this.loadError.set(httpErrorMessage(e, this.t().projects.actionFailed));
         } finally {
@@ -463,7 +578,8 @@ export class ProjectAssetsComponent implements OnDestroy {
             // the next sweep. Pushing a "still here" record for a file that is gone is the one wrong
             // thing this button could do.
             if (answer?.file) await this.api.pushOne(id, answer.file);
-            this.selected.set(await this.api.get(id, asset.id));
+            const detail = await this.api.get(id, asset.id);
+            if (id === this.projectId() && asset.id === this.selected()?.id) this.selected.set(detail);
             await this.reloadList();
         } catch (e) {
             this.loadError.set(httpErrorMessage(e, this.t().projects.assets.loadFailed));

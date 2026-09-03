@@ -2,12 +2,24 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
-import { AssetIndexService, AssetPage } from '../core/asset-index.service';
+import { AssetDetail, AssetEntry, AssetIndexService, AssetPage, AssetQuery, LinkedDocument } from '../core/asset-index.service';
 import { AssetSyncService } from '../core/asset-sync.service';
 import { AuthService } from '../core/auth.service';
+import { en } from '../core/i18n/en';
 import { LocaleService } from '../core/i18n/locale.service';
+import { ru } from '../core/i18n/ru';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { ProjectAssetsComponent } from './project-assets.component';
+
+function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((ok, fail) => {
+        resolve = ok;
+        reject = fail;
+    });
+    return { promise, resolve, reject };
+}
 
 const ASSET = {
     id: 'a1', relativePath: 'Art/hero.png', fileName: 'hero.png', extension: '.png', kind: 'image' as const,
@@ -24,12 +36,24 @@ const PAGE: AssetPage = {
 
 class FakeIndex {
     getCalls: string[] = [];
-    async list() { return structuredClone(PAGE); }
+    queries: AssetQuery[] = [];
+    listHandler: ((_projectId: string, query: AssetQuery) => Promise<AssetPage>) | null = null;
+    getHandler: ((_projectId: string, assetId: string) => Promise<AssetDetail>) | null = null;
+    linksHandler: ((_projectId: string, assetId: string) => Promise<LinkedDocument[]>) | null = null;
+    async list(_projectId: string, query: AssetQuery = {}) {
+        this.queries.push(query);
+        if (this.listHandler) return this.listHandler(_projectId, query);
+        return structuredClone(PAGE);
+    }
     async get(_projectId: string, assetId: string) {
         this.getCalls.push(assetId);
+        if (this.getHandler) return this.getHandler(_projectId, assetId);
         return { ...ASSET, fullPath: null, sourceMachine: PAGE.sourceMachine };
     }
-    async links() { return []; }
+    async links(projectId: string, assetId: string) {
+        if (this.linksHandler) return this.linksHandler(projectId, assetId);
+        return [];
+    }
     thumbnailUrl(_projectId: string, assetId: string) { return `/thumb/${assetId}`; }
 }
 
@@ -80,7 +104,7 @@ describe('project assets', () => {
         expect(['auto', 'scroll']).not.toContain(style.overflowX);
     });
 
-    it('announces grid and list selection and opens list rows with Enter and Space', async () => {
+    it('keeps grid and list selection on native buttons and gives the list table semantics', async () => {
         const tile = root().querySelector<HTMLButtonElement>('button.tile')!;
         expect(tile.tagName).toBe('BUTTON');
         expect(tile.getAttribute('aria-pressed')).toBe('false');
@@ -94,20 +118,92 @@ describe('project assets', () => {
         fixture.detectChanges();
         const table = root().querySelector<HTMLElement>('.asset-table')!;
         const row = table.querySelector<HTMLElement>('.asset-row:not(.head-row)')!;
-        expect(table.getAttribute('role')).toBe('grid');
+        const openButton = row.querySelector<HTMLButtonElement>('button.asset-open')!;
+        expect(table.getAttribute('role')).toBe('table');
+        expect(root().querySelector('[role="grid"]')).toBeNull();
         expect(row.getAttribute('role')).toBe('row');
-        expect(row.getAttribute('aria-selected')).toBe('true');
+        expect(row.querySelectorAll('[role="cell"]').length).toBe(5);
+        expect(openButton.tagName).toBe('BUTTON');
+        expect(openButton.getAttribute('role')).toBeNull();
+        expect(openButton.getAttribute('aria-pressed')).toBe('true');
 
         const before = api.getCalls.length;
-        const space = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
-        row.dispatchEvent(space);
+        openButton.click();
         await fixture.whenStable();
-        expect(space.defaultPrevented).toBe(true);
+        expect(api.getCalls.length).toBe(before + 1);
+    });
 
-        const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
-        row.dispatchEvent(enter);
+    it('sorts the full server collection before paging and marks the active column', async () => {
+        fixture.componentInstance.setView('list');
+        fixture.detectChanges();
+
+        expect(api.queries.at(-1)).toMatchObject({ sort: 'path', direction: 'asc', skip: 0 });
+        const pathHeader = root().querySelector<HTMLElement>('[role="columnheader"][aria-sort="ascending"]')!;
+        expect(pathHeader.textContent).toContain(fixture.componentInstance.t().projects.assets.colFile);
+
+        const modifiedHeader = [...root().querySelectorAll<HTMLElement>('[role="columnheader"]')]
+            .find(header => header.textContent?.includes(fixture.componentInstance.t().projects.assets.colModified))!;
+        modifiedHeader.querySelector<HTMLButtonElement>('button')!.click();
         await fixture.whenStable();
-        expect(enter.defaultPrevented).toBe(true);
-        expect(api.getCalls.length).toBe(before + 2);
+        fixture.detectChanges();
+
+        expect(api.queries.at(-1)).toMatchObject({ sort: 'modified', direction: 'desc', skip: 0 });
+        expect(modifiedHeader.getAttribute('aria-sort')).toBe('descending');
+    });
+
+    it('does not promise localized alphabet order for the canonical type sort', () => {
+        expect(en.projects.assets.sortTypeAsc).toBe('Type: ascending');
+        expect(en.projects.assets.sortTypeDesc).toBe('Type: descending');
+        expect(ru.projects.assets.sortTypeAsc).toBe('Тип: по возрастанию');
+        expect(ru.projects.assets.sortTypeDesc).toBe('Тип: по убыванию');
+    });
+
+    it('ignores an older failed list request after a newer filter response arrives', async () => {
+        const older = deferred<AssetPage>();
+        const newer = deferred<AssetPage>();
+        let request = 0;
+        api.listHandler = () => request++ === 0 ? older.promise : newer.promise;
+
+        const olderLoad = fixture.componentInstance.load();
+        fixture.componentInstance.setKind('audio');
+        expect(request).toBe(2);
+        newer.resolve({
+            ...PAGE,
+            items: [{ ...ASSET, id: 'latest', kind: 'audio', fileName: 'latest.wav', relativePath: 'Audio/latest.wav' }],
+        });
+        await vi.waitFor(() =>
+            expect(fixture.componentInstance.page()?.items.map(item => item.id)).toEqual(['latest']));
+        expect(fixture.componentInstance.loading()).toBe(false);
+
+        older.reject(new Error('stale request'));
+        await olderLoad;
+        fixture.detectChanges();
+        expect(fixture.componentInstance.page()?.items.map(item => item.id)).toEqual(['latest']);
+        expect(fixture.componentInstance.loadError()).toBeNull();
+    });
+
+    it('keeps the most recently opened asset when detail responses finish out of order', async () => {
+        const firstAsset: AssetEntry = { ...ASSET, id: 'first', relativePath: 'Art/first.png', fileName: 'first.png' };
+        const secondAsset: AssetEntry = { ...ASSET, id: 'second', relativePath: 'Art/second.png', fileName: 'second.png' };
+        const firstDetail = deferred<AssetDetail>();
+        const secondDetail = deferred<AssetDetail>();
+        const firstLinks = deferred<LinkedDocument[]>();
+        const secondLinks = deferred<LinkedDocument[]>();
+        api.getHandler = (_projectId, assetId) => assetId === 'first' ? firstDetail.promise : secondDetail.promise;
+        api.linksHandler = (_projectId, assetId) => assetId === 'first' ? firstLinks.promise : secondLinks.promise;
+
+        const firstOpen = fixture.componentInstance.open(firstAsset);
+        const secondOpen = fixture.componentInstance.open(secondAsset);
+        secondDetail.resolve({ ...secondAsset, fullPath: null, sourceMachine: PAGE.sourceMachine });
+        secondLinks.resolve([{ id: 'd2', title: 'Second document', documentType: 'post' }]);
+        await secondOpen;
+        expect(fixture.componentInstance.selected()?.id).toBe('second');
+        expect(fixture.componentInstance.links().map(link => link.id)).toEqual(['d2']);
+
+        firstDetail.resolve({ ...firstAsset, fullPath: null, sourceMachine: PAGE.sourceMachine });
+        firstLinks.resolve([{ id: 'd1', title: 'First document', documentType: 'post' }]);
+        await firstOpen;
+        expect(fixture.componentInstance.selected()?.id).toBe('second');
+        expect(fixture.componentInstance.links().map(link => link.id)).toEqual(['d2']);
     });
 });

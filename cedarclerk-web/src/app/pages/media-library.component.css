@@ -112,6 +112,27 @@
     width: 200px;
 }
 
+.collection-sort {
+    display: grid;
+    gap: var(--space-1);
+    flex: none;
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+}
+
+.collection-sort select {
+    box-sizing: border-box;
+    min-height: var(--hit-surface);
+    padding: 0 var(--dens-control-x);
+    border: var(--border-field);
+    border-radius: var(--radius-stamp);
+    background: var(--paper-bright);
+    color: var(--text);
+    box-shadow: var(--shadow-field-inset);
+    font: inherit;
+}
+
 .usage-bar {
     width: 100%;
     box-sizing: border-box;
@@ -232,6 +253,7 @@
 }
 
 .list-row {
+    position: relative;
     display: grid;
     grid-template-columns:
         var(--hit-chrome)
@@ -260,7 +282,31 @@
 
 .list-head + .list-row { border-top: none; }
 
+.list-name,
 .list-row .tile-name { min-width: 0; }
+
+.list-open {
+    display: block;
+    width: 100%;
+    min-height: var(--hit-surface, var(--hit-target));
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.list-open::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+}
 
 .list-thumbnail {
     position: relative;

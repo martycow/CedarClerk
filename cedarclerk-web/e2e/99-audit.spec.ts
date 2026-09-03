@@ -16,7 +16,12 @@ const enabled = process.env.AUDIT === '1';
 
 test.skip(!enabled, 'set AUDIT=1 to capture the audit screenshots');
 
-test.beforeAll(() => fs.mkdirSync(OUT, { recursive: true }));
+test.beforeAll(() => {
+    fs.mkdirSync(OUT, { recursive: true });
+    for (const file of fs.readdirSync(OUT)) {
+        if (/^\d{2}-.*\.png$/.test(file)) fs.unlinkSync(path.join(OUT, file));
+    }
+});
 
 test.beforeEach(async ({ context }) => {
     await pinEnglish(context);
@@ -80,19 +85,13 @@ test('@audit editor and its modals', async ({ page, context }) => {
     await shot(page, '22-publish-ticked');
     await page.getByRole('tab', { name: 'Write' }).click();
 
-    await page.getByRole('button', { name: 'More actions' }).click();
     await page.getByRole('button', { name: 'History', exact: true }).click();
     await shot(page, '23-version-history');
     await page.keyboard.press('Escape');
 
-    // Named, not classed: `.retranslate-btn` was on two buttons — the guarded re-translate, which
-    // needs a second language version to exist, and the make-primary popover trigger, which does
-    // not. `.first()` therefore shot the star menu under this shot's name for as long as it ran.
-    await page.getByRole('button', { name: 'All languages' }).click();
-    await shot(page, '24-translate-all');
-    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Details', exact: true }).click();
+    await shot(page, '24-editor-details');
 
-    // The emoji panel and the paragraph-mark toggle: both shipped 27.07 and never opened.
     const emoji = page.locator('[title*="моji" i], [title*="Emoji" i]').first();
     if (await emoji.count()) {
         await emoji.click();
@@ -100,16 +99,22 @@ test('@audit editor and its modals', async ({ page, context }) => {
         await page.keyboard.press('Escape');
     }
 
-    await page.getByRole('button', { name: 'Show paragraph marks' }).click();
-    await page.locator('.tiptap').click();
+    await page.goto('/settings?tab=preferences');
+    await expect(page.locator('#sec-appearance')).toBeVisible();
+    await shot(page, '27-appearance');
+
+    const marks = page.getByRole('checkbox', { name: 'Show paragraph marks' });
+    const marksSaved = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+    await marks.check();
+    await marksSaved;
+    await page.goto(`/editor?draft=${id}`);
+    await expect(page.locator('.sheet.show-invisibles')).toBeVisible();
     await shot(page, '26-paragraph-marks');
 
-    // Appearance panel (ADR-057 made it a modal; ADR-069 replaced Apply with autosave). ADR-239
-    // clause 4 keeps it in the account menu, opened from the sidebar's user trigger, so it is
-    // reachable from every screen rather than from this one.
-    await page.getByRole('button', { name: 'Account', exact: true }).click();
-    await page.getByRole('button', { name: 'Appearance', exact: true }).click();
-    await shot(page, '27-appearance');
+    await page.goto('/settings?tab=preferences');
+    const marksCleared = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+    await page.getByRole('checkbox', { name: 'Show paragraph marks' }).uncheck();
+    await marksCleared;
 });
 
 test('@audit save-guard dialog', async ({ page, context }) => {
@@ -161,11 +166,64 @@ test('@audit posts manager tabs', async ({ page, context }) => {
     await shot(page, '44-stats');
 });
 
+test('@audit feedback pass at ultrawide width', async ({ page, context }) => {
+    await page.setViewportSize({ width: 3440, height: 1392 });
+    const titles = [
+        'Coyote vs ACME — production notes and the long road to launch',
+        'Станция Кедр: документ дизайна интерфейса',
+        'Multicultural Update',
+        'Screenshot Saturday — lighting pass',
+        'My plans for the next release',
+        'Dedicated to Sasha',
+        ...Array.from({ length: 14 }, (_, i) => `Production archive ${String(i + 1).padStart(2, '0')} — list density check`),
+    ];
+    const ids: string[] = [];
+    for (const title of titles) ids.push(await createDraft(context, title, ['Текст поста для визуальной проверки списка.']));
+    for (const id of ids.slice(0, 4)) {
+        const published = await context.request.post(`/api/drafts/${id}/publish-blog`, { data: {} });
+        expect(published.ok(), `publish failed for ${id}: ${published.status()}`).toBeTruthy();
+    }
+    const madePrivate = await context.request.post(`/api/drafts/${ids[2]}/private`, { data: { isPrivate: true } });
+    expect(madePrivate.ok(), `private update failed for ${ids[2]}: ${madePrivate.status()}`).toBeTruthy();
+
+    await page.goto('/posts');
+    await expect(page.locator('.post-card').first()).toBeVisible();
+    await shot(page, '45-posts-ultrawide');
+
+    await page.goto('/drafts');
+    await page.getByTitle('Account', { exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Account' })).toBeVisible();
+    await shot(page, '46-account-menu-ultrawide');
+
+    await page.keyboard.press('Escape');
+    await page.locator('app-project-switcher .side-project').click();
+    const projectSwitcher = page.getByRole('group', { name: 'Switch project' });
+    await expect(projectSwitcher.getByRole('link', { name: 'All projects', exact: true })).toBeVisible();
+    await expect(projectSwitcher.getByRole('link', { name: 'Manage teams', exact: true })).toBeVisible();
+    await shot(page, '47-sidebar-switcher-ultrawide');
+
+    await page.goto('/settings?tab=preferences');
+    await expect(page.locator('#sec-appearance')).toBeVisible();
+    const fullSaved = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+    await page.getByRole('button', { name: 'Full', exact: true }).click();
+    await fullSaved;
+    await shot(page, '48-preferences-ultrawide');
+
+    await page.goto(`/editor?draft=${ids[0]}`);
+    await expect(page.locator('.tiptap')).toBeVisible();
+    await shot(page, '49-editor-full-ultrawide');
+
+    await page.goto('/settings?tab=preferences');
+    const normalSaved = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+    await page.getByRole('button', { name: 'Normal', exact: true }).click();
+    await normalSaved;
+});
+
 test('@audit settings, glossary, admin', async ({ page, context }) => {
     await page.goto('/settings?tab=profile');
     await shot(page, '50-settings-profile');
-    await page.getByRole('tab', { name: 'Account', exact: true }).click();
-    await shot(page, '51-settings-account');
+    await page.getByRole('tab', { name: 'Preferences', exact: true }).click();
+    await shot(page, '51-settings-preferences');
 
     await page.goto('/glossary');
     await shot(page, '52-glossary-empty');
@@ -185,6 +243,13 @@ test('@audit settings, glossary, admin', async ({ page, context }) => {
 });
 
 test('@audit blog surfaces', async ({ page, context }) => {
+    await page.goto('/settings?tab=profile');
+    await page.locator('#cc-social-github').fill('https://github.com/cedar-clerk');
+    await page.locator('#cc-social-itch').fill('https://cedar-clerk.itch.io');
+    const profileSaved = page.waitForResponse(r => r.url().includes('/api/auth/profile') && r.ok());
+    await page.getByRole('button', { name: 'Save profile', exact: true }).first().click();
+    await profileSaved;
+
     const pub = await createDraft(context, 'Публичный пост', [
         'Первый абзац публичного поста, который читатель видит целиком.',
         'Второй абзац, чтобы страница не выглядела пустой.',
@@ -195,7 +260,11 @@ test('@audit blog surfaces', async ({ page, context }) => {
     await page.goto(BLOG_ORIGIN);
     await shot(page, '70-blog-index');
     await page.goto(`${BLOG_ORIGIN}/${slug}`);
-    await shot(page, '71-blog-post');
+    await page.locator('.author-links-btn').hover();
+    await expect(page.locator('.author-links-menu')).toBeVisible();
+    await expect(page.locator('.author-links-menu')).toContainText('GitHub');
+    await expect(page.locator('.author-links-menu')).toContainText('itch.io');
+    await shot(page, '71-blog-post-author-links');
 
     // A private post with a form: the gate, including the two field types added on 30.07.
     const priv = await createDraft(context, 'Приватный пост', ['Текст, доступный только по форме.']);
@@ -249,18 +318,19 @@ for (const device of DEVICES) {
         await shot(page, `91-posts-${device.name}`);
         await page.goto('/settings');
         await shot(page, `92-settings-${device.name}`);
+        await page.goto('/settings?tab=preferences');
+        await expect(page.locator('#sec-appearance')).toBeVisible();
+        await shot(page, `92-settings-preferences-${device.name}`);
 
-        // The editor's topbar is the crowded one: title field, save state, Export and four nav
-        // buttons in one row. This is where the labels wrapped onto two lines and the account
-        // email ran off the right edge.
         const id = await createDraft(context, 'Заголовок поста для проверки топбара', ['Текст.']);
         await page.goto(`/editor?draft=${id}`);
         await expect(page.locator('app-sidebar')).toBeVisible();
-        // Captured before the assertion, not after it: at 390px the writer's three columns do not
-        // collapse and the sheet is pushed clean out of the viewport, so this shot IS the evidence
-        // and the assertion below is what refuses to call it fine (T-237).
         await shot(page, `93-editor-${device.name}`);
         await expect(page.locator('.tiptap')).toBeVisible();
+        if (device.width <= 640) await expect(page.locator('app-sidebar')).toHaveClass(/is-rail/);
+        for (const label of await page.locator('.frame-tab-label').all()) {
+            expect(await label.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+        }
     });
 }
 
@@ -359,12 +429,26 @@ test('@audit landing', async ({ browser }) => {
 
 test('@audit dark theme spot check', async ({ page, context }) => {
     await createDraft(context, 'Тёмная тема', ['Текст.']);
-    await page.goto('/drafts');
-    await page.getByRole('button', { name: 'More', exact: true }).click();
-    await page.getByRole('button', { name: 'Toggle theme' }).click();
-    await shot(page, '80-dark-drafts');
-    await page.goto('/posts');
-    await shot(page, '81-dark-posts');
-    await page.goto('/admin');
-    await shot(page, '82-dark-admin');
+    await page.goto('/settings?tab=preferences');
+    const before = await page.locator('html').getAttribute('data-theme');
+    try {
+        if (before !== 'dark') {
+            const saved = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+            await page.getByRole('button', { name: 'Dark', exact: true }).click();
+            await saved;
+        }
+        await page.goto('/drafts');
+        await shot(page, '80-dark-drafts');
+        await page.goto('/posts');
+        await shot(page, '81-dark-posts');
+        await page.goto('/admin');
+        await shot(page, '82-dark-admin');
+    } finally {
+        if (before && before !== 'dark') {
+            await page.goto('/settings?tab=preferences');
+            const restored = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+            await page.getByRole('button', { name: before === 'dark' ? 'Dark' : 'Light', exact: true }).click();
+            await restored;
+        }
+    }
 });

@@ -1,5 +1,3 @@
-/* Opened from the topbar's palette button, rendered by app-modal — the modal shell owns sizing,
-   centering and its own internal scroll (.modal-body), so this is just the content layout. */
 .ap-body {
     display: flex;
     flex-direction: column;

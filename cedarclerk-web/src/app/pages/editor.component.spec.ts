@@ -1,4 +1,4 @@
-import { NO_ERRORS_SCHEMA, Type, getDebugNode, signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, Type, signal, type WritableSignal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -30,12 +30,14 @@ import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 describe('editor UI contract', () => {
     let fixture: ComponentFixture<EditorComponent>;
     let host: HTMLElement;
+    let currentProjectId: WritableSignal<string>;
 
     beforeEach(() => {
         vi.spyOn(EditorComponent.prototype, 'ngAfterViewInit').mockResolvedValue();
 
         const emptyApi = {};
         const routeParams = convertToParamMap({});
+        currentProjectId = signal('');
         TestBed.configureTestingModule({
             imports: [EditorComponent],
             providers: [
@@ -44,7 +46,7 @@ describe('editor UI contract', () => {
                 { provide: LocaleService, useValue: { t: signal(en) } },
                 { provide: ActivatedRoute, useValue: { queryParamMap: of(routeParams), snapshot: { queryParamMap: routeParams } } },
                 { provide: Router, useValue: { navigate: vi.fn() } },
-                { provide: CurrentProjectService, useValue: { id: signal(''), name: signal('') } },
+                { provide: CurrentProjectService, useValue: { id: currentProjectId, name: signal('') } },
                 ...([
                     DraftsService, FormPresetsService, PresetsService, CommentsService, AssetsService,
                     TagUsageService, PreviewService, PublishService, BillingService, LinksService,
@@ -87,15 +89,41 @@ describe('editor UI contract', () => {
         }
     });
 
-    it('keeps Undo and Redo in the document frame instead of duplicating them in the fitted strip', () => {
+    it('keeps Undo, Redo and the inspector toggle in the fitted Write strip', () => {
         const strip = host.querySelector('.strip')!;
-        expect(strip.querySelector('app-icon[name="arrow-u-up-left"]')).toBeNull();
-        expect(strip.querySelector('app-icon[name="arrow-u-up-right"]')).toBeNull();
+        expect(strip.querySelector('app-icon[name="arrow-u-up-left"]')).toBeTruthy();
+        expect(strip.querySelector('app-icon[name="arrow-u-up-right"]')).toBeTruthy();
 
-        const frame = host.querySelector('app-document-frame')!;
-        const listenerNames = getDebugNode(frame)?.listeners.map(listener => listener.name) ?? [];
-        expect(listenerNames).toContain('undo');
-        expect(listenerNames).toContain('redo');
+        const paneToggle = strip.querySelector('button[aria-controls="editor-inspector"]')!;
+        expect(paneToggle.getAttribute('aria-label')).toBe('Details');
+        expect(paneToggle.getAttribute('aria-pressed')).toBe('false');
+        expect(host.querySelector('[title-actions]')).toBeNull();
+    });
+
+    it('puts History in the Write footer instead of an overflow menu', () => {
+        const history = [...host.querySelectorAll('.frame-back button')]
+            .find(button => button.textContent?.trim() === 'History');
+        expect(history).toBeTruthy();
+        expect(host.querySelector('button[aria-label="More actions"]')).toBeNull();
+    });
+
+    it('names the project before its kind and document count in the frame kicker', () => {
+        currentProjectId.set('p1');
+        fixture.componentInstance.projectSummaries.set([{
+            id: 'p1', name: 'Cedar Quest', description: '', projectType: 'blog', coverUrl: null,
+            createdAt: '2026-09-01T00:00:00Z', archivedAt: null, documentCount: 23,
+            openTaskCount: 0, assetCount: 0, lastActivityAt: '2026-09-01T00:00:00Z',
+        }]);
+
+        expect(fixture.componentInstance.frameKicker())
+            .toBe(`Cedar Quest · ${en.projects.projectTypes.blog.name} · ${en.editor.frame.documents(23)}`);
+    });
+
+    it('lets narrow footer buttons stack and wrap their translated labels', () => {
+        const css = (EditorComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles.join('')
+            .replace(/\[_ng(?:content|host)-%COMP%\]/g, '');
+        expect(css).toMatch(/@media\s*\(max-width:\s*759px\)[\s\S]*?\.frame-back,\s*\.frame-next\s*\{[^}]*flex-direction:\s*column;[^}]*width:\s*100%;/);
+        expect(css).toMatch(/\.frame-back\s+\.btn,\s*\.frame-next\s+\.btn\s*\{[^}]*width:\s*100%;[^}]*white-space:\s*normal;/);
     });
 
     it('keeps the publish workspace columns shrink-safe and stacks them before they clip', () => {

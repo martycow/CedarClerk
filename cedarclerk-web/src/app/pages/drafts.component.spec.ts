@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { DraftsPageComponent } from './drafts.component';
 import { DraftMeta, DraftsService, FolderMeta, SeriesMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
@@ -101,6 +101,29 @@ describe('drafts page', () => {
         expect(rowTitles()).toEqual(['gamma']);
     });
 
+    it('exposes the active table order through sortable column headers', () => {
+        expect(el().querySelector('.drafts-table')?.getAttribute('role')).toBe('table');
+        expect(el().querySelector('[role="grid"]')).toBeNull();
+        expect(el().querySelector('.drafts-row-head')?.getAttribute('role')).toBe('row');
+        expect([...el().querySelectorAll('.drafts-row:not(.drafts-row-head)')]
+            .every(row => row.getAttribute('role') === 'row' && !!row.querySelector('[role="cell"]'))).toBe(true);
+        expect([...el().querySelectorAll<HTMLAnchorElement>('.draft-link')]
+            .every(link => link.tagName === 'A' && link.getAttribute('role') === null)).toBe(true);
+        const title = [...el().querySelectorAll<HTMLElement>('[role="columnheader"]')]
+            .find(header => header.textContent?.includes(t.columns.title))!;
+        expect(title.getAttribute('aria-sort')).toBeNull();
+
+        title.querySelector<HTMLButtonElement>('button')!.click();
+        fixture.detectChanges();
+        expect(title.getAttribute('aria-sort')).toBe('descending');
+        expect(rowTitles()).toEqual(['beta', 'alpha']);
+
+        title.querySelector<HTMLButtonElement>('button')!.click();
+        fixture.detectChanges();
+        expect(title.getAttribute('aria-sort')).toBe('ascending');
+        expect(rowTitles()).toEqual(['alpha', 'beta']);
+    });
+
     it('the folders shelf filters by folder and counts what has none', () => {
         const shelf = panel(t.folders.title)!;
         const rows = [...shelf.querySelectorAll('.folder-row')] as HTMLElement[];
@@ -170,20 +193,18 @@ describe('drafts page', () => {
         expect(specRows()).toContainEqual([t.inspector.tags, '#devlog#art']);
     });
 
-    it('the control toggles, and never steals the row click that opens the editor', () => {
-        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    it('the control toggles, and the draft destination remains a native link', () => {
+        const link = rows()[0].querySelector<HTMLAnchorElement>('.draft-link')!;
+        expect(link.getAttribute('href')).toBe('/editor?draft=alpha');
 
         describeButton(0).click();
         fixture.detectChanges();
-        expect(navigate).not.toHaveBeenCalled();
+        expect(link.getAttribute('href')).toBe('/editor?draft=alpha');
 
         describeButton(0).click();
         fixture.detectChanges();
         expect(panel(t.inspector.title)).toBeUndefined();
         expect(panel(t.folders.title)).toBeDefined();
-
-        rows()[0].click();
-        expect(navigate).toHaveBeenCalledWith(['/editor'], { queryParams: { draft: 'alpha' } });
     });
 
     it('a picked draft that leaves the filtered list stops being described', () => {

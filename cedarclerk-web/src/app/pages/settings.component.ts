@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
@@ -24,9 +25,16 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LanguageMenuComponent, LanguageMenuItem } from '../shared/language-menu.component';
 import { LocationInputComponent } from '../shared/location-input.component';
+import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 
 type PayMethod = 'stripe' | 'paypal' | 'stars';
-export type SettingsTab = 'profile' | 'account' | 'integrations' | 'billing';
+export type SettingsTab = 'profile' | 'preferences' | 'integrations' | 'billing';
+
+export function resolveSettingsTab(requested: string | null): SettingsTab {
+    if (requested === 'account' || requested === 'appearance') return 'preferences';
+    if (requested === 'profile' || requested === 'preferences' || requested === 'integrations' || requested === 'billing') return requested;
+    return 'profile';
+}
 
 function availableTimeZones(): string[] {
     const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] };
@@ -44,7 +52,7 @@ function availableTimeZones(): string[] {
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, IndexTabsComponent, LeafTagComponent,
         SpecRowComponent, PlanLockComponent, LocationInputComponent,
-        LanguageMenuComponent, PageHeaderComponent, EmptyStateComponent,
+        LanguageMenuComponent, PageHeaderComponent, EmptyStateComponent, AppearancePanelComponent,
     ],
     templateUrl: 'settings.component.html',
     styleUrls: ['settings.component.css']
@@ -54,6 +62,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     locale = inject(LocaleService);
     t = this.locale.t;
     private route = inject(ActivatedRoute);
+    private destroyRef = inject(DestroyRef);
     private assets = inject(AssetsService);
     private billingApi = inject(BillingService);
     private telegramLink = inject(TelegramLinkService);
@@ -113,13 +122,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     languageBusy = signal(false);
     languageSaved = signal(false);
 
-    // I12 split profile from the machinery; T-348 splits the machinery again: everything about
-    // integrations and social networks is one tab, everything paid is another, and "account"
-    // keeps what is neither (the UI language). The account menu still deep-links to profile.
     tab = signal<SettingsTab>('profile');
     tabItems = computed<IndexTabItem[]>(() => [
         { id: 'profile', label: this.t().settings.tabs.profile },
-        { id: 'account', label: this.t().settings.tabs.account },
+        { id: 'preferences', label: this.t().settings.tabs.preferences },
         { id: 'integrations', label: this.t().settings.tabs.integrations },
         { id: 'billing', label: this.t().settings.tabs.billing },
     ]);
@@ -234,9 +240,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     async ngOnInit() {
-        // The account menu links to /settings?tab=profile (I12).
-        const requested = this.route.snapshot.queryParamMap.get('tab');
-        if (requested === 'profile' || requested === 'account' || requested === 'integrations' || requested === 'billing') this.tab.set(requested);
+        this.route.queryParamMap
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(params => this.tab.set(resolveSettingsTab(params.get('tab'))));
 
         // Coming back from the confirmation link: refresh so the banner disappears rather than
         // waiting for the next full load to notice.
@@ -564,7 +570,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 { id: 'sec-subscription', label: t.subscription.nav },
                 { id: 'sec-credits', label: t.credits.nav },
             ];
-            case 'account': return [{ id: 'sec-language', label: t.language.nav }];
+            case 'preferences': return [
+                { id: 'sec-language', label: t.language.nav },
+                { id: 'sec-appearance', label: t.appearance.nav },
+            ];
             case 'integrations': return [{ id: 'sec-integrations', label: t.integrations.nav }];
         }
     });
@@ -621,9 +630,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.languageBusy.set(false);
         }
     }
-
-    // Appearance and toolbar customization moved into AppearancePanelComponent, rendered beside
-    // the writing sheet (I14/B15) — all of their state and handlers went with them.
 
     // Auto-translate for the per-language profile texts (Marty's ask). Everything else that
     // is per-language in this product could already be translated in one press; these three could

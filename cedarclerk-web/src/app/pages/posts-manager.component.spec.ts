@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { PostsManagerComponent } from './posts-manager.component';
 import { DraftMeta, DraftsService } from '../core/drafts.service';
 import { blankFormEdit, FormPreset, FormPresetsService } from '../core/form-presets.service';
@@ -196,12 +196,16 @@ describe('posts manager', () => {
     });
 
     it('switches the body with the tab, and keeps the inspector out of the forms tab', async () => {
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
         expect(page().tab()).toBe('posts');
         tiles()[2].click();
         await settle();
 
         expect(page().tab()).toBe('forms');
         expect(el().querySelector('.inspector')).toBeNull();
+        expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({
+            queryParams: expect.objectContaining({ tab: 'forms' }),
+        }));
     });
 
     it('declares the operational measure and uses the shared fluid pane anatomy', async () => {
@@ -394,15 +398,15 @@ describe('posts manager', () => {
     });
 
     it('uses one empty-state surface and one action for search misses and an empty post library', async () => {
-        page().search = 'not in the library';
+        page().onPostSearch('not in the library');
         await settle();
 
         expect(el().querySelector('.post-list app-empty-state')).toBeNull();
         expect(el().querySelectorAll('app-empty-state').length).toBe(1);
         expect([...el().querySelectorAll('app-button')]
-            .filter(x => x.textContent?.trim() === t.clearSearch).length).toBe(1);
+            .filter(x => x.textContent?.trim() === t.clearFilters).length).toBe(1);
 
-        page().search = '';
+        page().onPostSearch('');
         page().drafts.set([]);
         page().selectedId.set(null);
         await settle();
@@ -411,6 +415,89 @@ describe('posts manager', () => {
         expect(el().querySelectorAll('app-empty-state').length).toBe(1);
         expect([...el().querySelectorAll('app-button')]
             .filter(x => x.textContent?.trim() === t.writeFirst).length).toBe(1);
+    });
+
+    it('filters and stably sorts only publishable, non-template posts', async () => {
+        page().drafts.set([
+            LIVE, EARLIER, DRAFTED, OLD,
+            draft('working-note', { title: 'Internal note', documentType: 'note' }),
+            draft('template', { title: 'Post template', isTemplate: true }),
+            draft('changelog', { title: 'Alpha release', documentType: 'changelog' }),
+        ]);
+        page().setPostSortValue('title:asc');
+        await settle();
+
+        expect(page().postPool().map(d => d.id)).toEqual(['live', 'earlier', 'drafted', 'old', 'changelog']);
+        expect(page().visiblePosts().map(d => d.title)).toEqual([
+            'Alpha release', 'Devlog 11', 'Devlog 12', 'Notes', 'Retired',
+        ]);
+
+        page().setVisibilityFilter('private');
+        expect(page().visiblePosts().map(d => d.id)).toEqual(['drafted']);
+        page().setVisibilityFilter('all');
+        page().setStateFilter('archived');
+        expect(page().visiblePosts().map(d => d.id)).toEqual(['old']);
+    });
+
+    it('connects the Posts filter trigger to its labelled dialog', () => {
+        const trigger = el().querySelector('.post-filter-trigger') as HTMLButtonElement;
+        expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
+        expect(trigger.getAttribute('aria-controls')).toBe('post-filter-panel');
+        trigger.click();
+        fixture.detectChanges();
+
+        const panel = el().querySelector('#post-filter-panel') as HTMLElement;
+        expect(panel.getAttribute('role')).toBe('dialog');
+        expect(panel.getAttribute('aria-label')).toBe(t.filters);
+    });
+
+    it('shows the active sort value and replaces a broken cover with the document type', async () => {
+        page().drafts.set([
+            { ...LIVE, updatedAt: '2026-08-12T09:00:00', viewCount: 40, reactionCount: 3,
+                coverImagePath: 'missing.jpg' },
+            { ...EARLIER, updatedAt: '2026-08-11T09:00:00', viewCount: 10, reactionCount: 2 },
+        ]);
+        page().setPostSortValue('activity:desc');
+        await settle();
+
+        expect(cards()[0].textContent).toContain(t.activityMetric(43));
+        const image = cards()[0].querySelector('img') as HTMLImageElement;
+        image.dispatchEvent(new Event('error'));
+        await settle();
+        expect(cards()[0].querySelector('img')).toBeNull();
+        expect(cards()[0].querySelector('app-icon')).not.toBeNull();
+
+        page().setPostSortValue('updated:desc');
+        await settle();
+        expect(cards()[0].querySelector('.post-card-meta')?.getAttribute('title')).toBeNull();
+        expect(cards()[0].querySelector(`[title="${t.editedOn}"]`)).not.toBeNull();
+    });
+
+    it('queries, filters, and sorts the Forms collection independently', async () => {
+        const form = blankFormEdit('en');
+        form.questions.push({ id: 'q', type: 'text', label: { en: 'Name' }, options: [] });
+        const survey: FormPreset = {
+            id: 'preset-2', name: 'Alpha survey', formJson: JSON.stringify(form), language: 'en',
+            createdAt: '2026-08-03T09:00:00',
+        };
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        page().presets.set([PRESET, survey]);
+        page().setTab('forms');
+
+        page().setPresetSortValue('name:asc');
+        expect(page().visiblePresets().map(p => p.name)).toEqual(['Alpha survey', 'Game experience']);
+        page().setPresetLanguageFilter('en');
+        expect(page().visiblePresets().map(p => p.id)).toEqual(['preset-2']);
+        page().onPresetSearch('missing');
+        await settle();
+
+        expect(page().visiblePresets()).toEqual([]);
+        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
+        expect([...el().querySelectorAll('app-button')]
+            .filter(x => x.textContent?.trim() === t.clearFilters).length).toBe(1);
+        expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({
+            queryParams: expect.objectContaining({ formq: 'missing', formlanguage: 'en', formsort: 'name', formdir: 'asc' }),
+        }));
     });
 
     it('names the translate icon and marks the selected question type without colour alone', async () => {

@@ -1,5 +1,5 @@
 import { Component, OnDestroy, booleanAttribute, computed, effect, inject, input, signal } from '@angular/core';
-import { AssetsService, LibraryAsset, LibraryKind, LibraryPage } from '../core/assets.service';
+import { AssetsService, LibraryAsset, LibraryKind, LibraryPage, LibrarySort } from '../core/assets.service';
 import { ProjectsService, ProjectSummary } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
 import { formatBytes } from '../core/asset-index.service';
@@ -14,6 +14,8 @@ import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.com
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
+import { ariaSort, SortDirection } from '../core/collection-query';
+import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
 
 const PAGE_SIZE = 60;
 
@@ -26,6 +28,7 @@ const PAGE_SIZE = 60;
     imports: [
         IconComponent, ZonedDatePipe, IndexTabsComponent,
         SpecRowComponent, InputComponent, ButtonComponent, PageHeaderComponent, EmptyStateComponent,
+        SortHeaderComponent,
     ],
     templateUrl: 'media-library.component.html',
     styleUrls: ['media-library.component.css'],
@@ -61,6 +64,8 @@ export class MediaLibraryComponent implements OnDestroy {
     view = signal<'grid' | 'list'>(this.loadView());
     type = signal<LibraryKind | null>(null);
     search = signal('');
+    sort = signal<LibrarySort>('added');
+    sortDirection = signal<SortDirection>('desc');
     skip = signal(0);
 
     /** null = every bucket · 'none' = the files that belong to no project · a guid = that project. */
@@ -86,6 +91,7 @@ export class MediaLibraryComponent implements OnDestroy {
 
     private thumbFailed = signal<ReadonlySet<string>>(new Set());
     private searchTimer: ReturnType<typeof setTimeout> | null = null;
+    private listRequestSequence = 0;
 
     constructor() {
         // The names behind the strip. Absent while the module is off, which is what leaves the
@@ -104,18 +110,12 @@ export class MediaLibraryComponent implements OnDestroy {
 
     ngOnDestroy() {
         if (this.searchTimer) clearTimeout(this.searchTimer);
+        this.listRequestSequence++;
     }
 
     async load() {
         this.loading.set(true);
-        this.loadError.set(null);
-        try {
-            this.page.set(await this.api.list(this.query()));
-        } catch (e) {
-            this.loadError.set(httpErrorMessage(e, this.t().media.loadFailed));
-        } finally {
-            this.loading.set(false);
-        }
+        await this.requestPage();
     }
 
     private query() {
@@ -123,6 +123,8 @@ export class MediaLibraryComponent implements OnDestroy {
             q: this.search().trim() || undefined,
             type: this.type(),
             project: this.pinnedProject() ?? this.bucket(),
+            sort: this.sort(),
+            direction: this.sortDirection(),
             skip: this.skip(),
             take: PAGE_SIZE,
         };
@@ -156,22 +158,36 @@ export class MediaLibraryComponent implements OnDestroy {
     }
 
     private async reload() {
+        await this.requestPage();
+    }
+
+    private async requestPage() {
+        const request = ++this.listRequestSequence;
+        const query = this.query();
+        this.loadError.set(null);
         try {
-            this.page.set(await this.api.list(this.query()));
+            const page = await this.api.list(query);
+            if (request !== this.listRequestSequence) return;
+            this.page.set(page);
         } catch (e) {
+            if (request !== this.listRequestSequence) return;
             this.loadError.set(httpErrorMessage(e, this.t().media.loadFailed));
+        } finally {
+            if (request === this.listRequestSequence) this.loading.set(false);
         }
     }
 
     setType(type: LibraryKind | null) {
         this.type.set(type);
         this.skip.set(0);
+        this.selected.set(null);
         void this.reload();
     }
 
     onSearch(value: string) {
         this.search.set(value);
         this.skip.set(0);
+        this.selected.set(null);
         if (this.searchTimer) clearTimeout(this.searchTimer);
         this.searchTimer = setTimeout(() => void this.reload(), 250);
     }
@@ -181,7 +197,52 @@ export class MediaLibraryComponent implements OnDestroy {
         this.type.set(null);
         this.bucket.set(null);
         this.skip.set(0);
+        this.selected.set(null);
         void this.reload();
+    }
+
+    readonly sortOptions = computed(() => {
+        const t = this.t().media;
+        return [
+            { value: 'added:desc', label: t.sortNewest },
+            { value: 'added:asc', label: t.sortOldest },
+            { value: 'name:asc', label: t.sortNameAsc },
+            { value: 'name:desc', label: t.sortNameDesc },
+            { value: 'type:asc', label: t.sortTypeAsc },
+            { value: 'type:desc', label: t.sortTypeDesc },
+            { value: 'size:desc', label: t.sortSizeDesc },
+            { value: 'size:asc', label: t.sortSizeAsc },
+        ];
+    });
+
+    sortValue(): string {
+        return `${this.sort()}:${this.sortDirection()}`;
+    }
+
+    setSortValue(value: string) {
+        const [key, direction] = value.split(':');
+        if (!['name', 'type', 'size', 'added'].includes(key) || (direction !== 'asc' && direction !== 'desc')) return;
+        this.sort.set(key as LibrarySort);
+        this.sortDirection.set(direction);
+        this.skip.set(0);
+        this.selected.set(null);
+        void this.reload();
+    }
+
+    setSort(key: LibrarySort) {
+        if (this.sort() === key) {
+            this.sortDirection.update(direction => direction === 'asc' ? 'desc' : 'asc');
+        } else {
+            this.sort.set(key);
+            this.sortDirection.set(key === 'name' || key === 'type' ? 'asc' : 'desc');
+        }
+        this.skip.set(0);
+        this.selected.set(null);
+        void this.reload();
+    }
+
+    columnSort(key: LibrarySort): 'ascending' | 'descending' | null {
+        return ariaSort(this.sort() === key, this.sortDirection());
     }
 
     async onUploadPicked(event: Event) {

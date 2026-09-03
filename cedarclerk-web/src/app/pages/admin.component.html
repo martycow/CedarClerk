@@ -69,65 +69,161 @@ the Posts Manager and inherit its density through the cascade.-->
             </div>
             <p class="field-hint-inline invite-hint">{{ t().admin.invites.blanksHint }}</p>
 
-            <div class="row-list table">
-                <div class="row invite-row head">
-                    <span>{{ t().admin.invites.code }}</span>
-                    <span>{{ t().admin.invites.label }}</span>
-                    <span>{{ t().admin.invites.usage }}</span>
-                    <span>{{ t().admin.invites.expires }}</span>
-                    <span></span>
+            <div class="collection-toolbar" role="search" [attr.aria-label]="t().admin.invites.title">
+                <input type="search" [ngModel]="inviteQuery()" (ngModelChange)="inviteQuery.set($event)"
+                       [placeholder]="t().admin.collections.searchInvites" [attr.aria-label]="t().admin.collections.searchInvites">
+                <select [ngModel]="inviteFilter()" (ngModelChange)="inviteFilter.set($event)"
+                        [attr.aria-label]="t().admin.collections.inviteFilter">
+                    <option value="all">{{ t().admin.collections.allInvites }}</option>
+                    <option value="usable">{{ t().admin.collections.usable }}</option>
+                    <option value="unusable">{{ t().admin.collections.unusable }}</option>
+                </select>
+            </div>
+
+            <div class="row-list table" role="table" [attr.aria-label]="t().admin.invites.title">
+                <div class="row invite-row head" role="row">
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(inviteSortKey() === 'code', inviteSortDirection())">
+                        <app-sort-header [label]="t().admin.invites.code" [active]="inviteSortKey() === 'code'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInvites('code')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(inviteSortKey() === 'label', inviteSortDirection())">
+                        <app-sort-header [label]="t().admin.invites.label" [active]="inviteSortKey() === 'label'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInvites('label')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(inviteSortKey() === 'joined', inviteSortDirection())">
+                        <app-sort-header [label]="t().admin.invites.usage" [active]="inviteSortKey() === 'joined'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInvites('joined')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(inviteSortKey() === 'expires', inviteSortDirection())">
+                        <app-sort-header [label]="t().admin.invites.expires" [active]="inviteSortKey() === 'expires'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInvites('expires')" />
+                    </span>
+                    <span role="columnheader"></span>
                 </div>
-                @for (c of invites(); track c.id) {
-                <div class="row invite-row">
-                    <span class="user-email">
+                @for (c of visibleInvites(); track c.id) {
+                <div class="row invite-row" role="row">
+                    <span class="user-email" role="rowheader">
                         {{ c.code }}
                         @if (!c.isUsable) { <span class="chip warn">{{ t().admin.invites.notUsable }}</span> }
                     </span>
-                    <span class="muted">{{ c.label || '—' }}</span>
+                    <span class="muted" role="cell">{{ c.label || '—' }}</span>
                     <!--Joined is counted from accounts; uses is the code's own counter. They agree
                     unless something went wrong, which is worth being able to see.-->
-                    <span class="muted">{{ t().admin.invites.usageValue(c.joined, c.maxUses) }}</span>
-                    <span class="muted">{{ c.expiresAt ? (c.expiresAt | zonedDate:'MM/dd/yyyy') : t().admin.invites.noExpiry }}</span>
-                    <span>
+                    <span class="muted" role="cell">{{ t().admin.invites.usageValue(c.joined, c.maxUses) }}</span>
+                    <span class="muted" role="cell">{{ c.expiresAt ? (c.expiresAt | zonedDate:'MM/dd/yyyy') : t().admin.invites.noExpiry }}</span>
+                    <span role="cell">
                         <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="toggleInvite(c)">
                             {{ c.isActive ? t().admin.invites.disable : t().admin.invites.enable }}
                         </app-button>
                     </span>
                 </div>
                 } @empty {
+                <div class="table-empty-row" role="row">
+                <div role="cell" aria-colspan="5">
+                @if (invites().length && inviteFiltersActive()) {
+                <app-empty-state [icon]="null" [title]="t().admin.collections.noMatches"
+                                 [text]="t().admin.collections.noMatchesHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearInviteFilters()">{{ t().admin.collections.clearFilters }}</app-button>
+                </app-empty-state>
+                } @else {
                 <app-empty-state [title]="t().admin.empty.invites" [text]="t().admin.empty.invitesHint" />
+                }
+                </div>
+                </div>
                 }
             </div>
             }
 
             @if (tab() === 'posts') {
-            <div class="row-list table">
-                <div class="row post-row head">
-                    <span>{{ t().admin.posts.title2 }}</span>
-                    <span>{{ t().admin.posts.owner }}</span>
-                    <span>{{ t().admin.posts.state }}</span>
-                    <span>{{ t().admin.posts.activity }}</span>
-                    <span>{{ t().admin.posts.links }}</span>
+            <div class="collection-toolbar" role="search" [attr.aria-label]="t().admin.posts.title">
+                <input type="search" [ngModel]="postQuery()"
+                       (ngModelChange)="postQuery.set($event); queuePostReload()"
+                       [placeholder]="t().admin.collections.searchPosts" [attr.aria-label]="t().admin.collections.searchPosts">
+                <select [ngModel]="postFilter()" (ngModelChange)="setPostFilter($any($event))"
+                        [attr.aria-label]="t().admin.collections.postFilter">
+                    <option value="all">{{ t().admin.collections.allPosts }}</option>
+                    <option value="published">{{ t().admin.posts.published }}</option>
+                    <option value="private">{{ t().admin.posts.private }}</option>
+                    <option value="archived">{{ t().admin.posts.archived }}</option>
+                </select>
+            </div>
+            <div class="row-list table" role="table" [attr.aria-label]="t().admin.posts.title">
+                <div class="row post-row head" role="row">
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(postSortKey() === 'title', postSortDirection())">
+                        <app-sort-header [label]="t().admin.posts.title2" [active]="postSortKey() === 'title'"
+                                         [direction]="postSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPosts('title')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(postSortKey() === 'owner', postSortDirection())">
+                        <app-sort-header [label]="t().admin.posts.owner" [active]="postSortKey() === 'owner'"
+                                         [direction]="postSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPosts('owner')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(postSortKey() === 'state', postSortDirection())">
+                        <app-sort-header [label]="t().admin.posts.state" [active]="postSortKey() === 'state'"
+                                         [direction]="postSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPosts('state')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(postSortKey() === 'activity', postSortDirection())">
+                        <app-sort-header [label]="t().admin.posts.activity" [active]="postSortKey() === 'activity'"
+                                         [direction]="postSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPosts('activity')" />
+                    </span>
+                    <span role="columnheader">{{ t().admin.posts.links }}</span>
                 </div>
-                @for (p of posts(); track p.id) {
-                <div class="row post-row">
-                    <span class="user-email">{{ p.title || t().drafts.untitled }}</span>
-                    <span class="muted">{{ p.ownerEmail }}</span>
-                    <span>
+                @for (p of visiblePosts(); track p.id) {
+                <div class="row post-row" role="row">
+                    <span class="user-email" role="rowheader">{{ p.title || t().drafts.untitled }}</span>
+                    <span class="muted" role="cell">{{ p.ownerEmail }}</span>
+                    <span role="cell">
                         @if (p.isBlogPublished) { <span class="chip">{{ t().admin.posts.published }}</span> }
                         @if (p.isPrivate) { <span class="chip warn">{{ t().admin.posts.private }}</span> }
                         @if (p.isArchived) { <span class="chip">{{ t().admin.posts.archived }}</span> }
                     </span>
-                    <span class="muted">{{ t().admin.posts.activityValue(p.viewCount, p.comments) }}</span>
-                    <span class="post-links">
+                    <span class="muted" role="cell">{{ t().admin.posts.activityValue(p.viewCount, p.comments) }}</span>
+                    <span class="post-links" role="cell">
                         @if (p.blogUrl) { <a [href]="p.blogUrl" target="_blank" rel="noopener">{{ t().manager.blog }}</a> }
                         @if (p.telegramUrl) { <a [href]="p.telegramUrl" target="_blank" rel="noopener">{{ t().manager.telegram }}</a> }
                     </span>
                 </div>
                 } @empty {
+                <div class="table-empty-row" role="row">
+                <div role="cell" aria-colspan="5">
+                @if (postFiltersActive()) {
+                <app-empty-state [icon]="null" [title]="t().admin.collections.noMatches"
+                                 [text]="t().admin.collections.noMatchesHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearPostFilters()">{{ t().admin.collections.clearFilters }}</app-button>
+                </app-empty-state>
+                } @else {
                 <app-empty-state [icon]="null" [title]="t().admin.empty.posts" [text]="t().admin.empty.postsHint" />
                 }
+                </div>
+                </div>
+                }
             </div>
+            @if (postSkip() > 0 || postTotal() > postPageSize()) {
+            <nav class="collection-pager" [attr.aria-label]="t().admin.posts.title">
+                <app-button variant="paper" size="sm" [disabled]="!canPagePostsBack()" (clicked)="pagePostsBack()">
+                    {{ t().common.pageBack }}
+                </app-button>
+                <span class="hint">{{ postRangeLabel() }}</span>
+                <app-button variant="paper" size="sm" [disabled]="!canPagePostsForward()" (clicked)="pagePostsForward()">
+                    {{ t().common.pageForward }}
+                </app-button>
+            </nav>
+            }
             <p class="field-hint-inline invite-hint">{{ t().admin.posts.readOnlyNote }}</p>
             }
 
@@ -331,15 +427,55 @@ the Posts Manager and inherit its density through the cascade.-->
             <app-button variant="paper" size="sm" (clicked)="addStoryStep()">{{ t().admin.landing.addStep }}</app-button>
 
             <h2 class="label landing-section-title">{{ t().admin.landing.waitlist }}</h2>
-            <div class="row-list table">
-                @for (w of waitlistEntries(); track w.id) {
-                <div class="row waitlist-row">
-                    <span class="user-email">{{ w.email }}</span>
-                    <span class="muted">{{ w.language }}</span>
-                    <span class="muted">{{ w.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
+            <div class="collection-toolbar" role="search" [attr.aria-label]="t().admin.landing.waitlist">
+                <input type="search" [ngModel]="waitlistQuery()" (ngModelChange)="waitlistQuery.set($event)"
+                       [placeholder]="t().admin.collections.searchWaitlist" [attr.aria-label]="t().admin.collections.searchWaitlist">
+                <select [ngModel]="waitlistLanguage()" (ngModelChange)="waitlistLanguage.set($event)"
+                        [attr.aria-label]="t().admin.collections.languageFilter">
+                    <option value="all">{{ t().admin.collections.allLanguages }}</option>
+                    @for (language of waitlistLanguages(); track language) { <option [value]="language">{{ language }}</option> }
+                </select>
+            </div>
+            <div class="row-list table" role="table" [attr.aria-label]="t().admin.landing.waitlist">
+                <div class="row waitlist-row head" role="row">
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(waitlistSortKey() === 'email', waitlistSortDirection())">
+                        <app-sort-header [label]="t().admin.collections.email" [active]="waitlistSortKey() === 'email'"
+                                         [direction]="waitlistSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortWaitlist('email')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(waitlistSortKey() === 'language', waitlistSortDirection())">
+                        <app-sort-header [label]="t().admin.collections.language" [active]="waitlistSortKey() === 'language'"
+                                         [direction]="waitlistSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortWaitlist('language')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(waitlistSortKey() === 'created', waitlistSortDirection())">
+                        <app-sort-header [label]="t().admin.collections.joined" [active]="waitlistSortKey() === 'created'"
+                                         [direction]="waitlistSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortWaitlist('created')" />
+                    </span>
+                </div>
+                @for (w of visibleWaitlist(); track w.id) {
+                <div class="row waitlist-row" role="row">
+                    <span class="user-email" role="rowheader">{{ w.email }}</span>
+                    <span class="muted" role="cell">{{ w.language }}</span>
+                    <span class="muted" role="cell">{{ w.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
                 </div>
                 } @empty {
+                <div class="table-empty-row" role="row">
+                <div role="cell" aria-colspan="3">
+                @if (waitlistEntries().length && waitlistFiltersActive()) {
+                <app-empty-state [icon]="null" [title]="t().admin.collections.noMatches"
+                                 [text]="t().admin.collections.noMatchesHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearWaitlistFilters()">{{ t().admin.collections.clearFilters }}</app-button>
+                </app-empty-state>
+                } @else {
                 <app-empty-state [icon]="null" [title]="t().admin.landing.waitlistEmpty" [text]="t().admin.empty.waitlistHint" />
+                }
+                </div>
+                </div>
                 }
             </div>
             }
@@ -419,45 +555,143 @@ the Posts Manager and inherit its density through the cascade.-->
             </div>
             }
 
-            <div class="row-list table">
-                <div class="row payment-row head">
-                    <span>{{ t().admin.reports.when }}</span>
-                    <span>{{ t().admin.reports.who }}</span>
-                    <span>{{ t().admin.reports.what }}</span>
-                    <span>{{ t().admin.reports.amount }}</span>
-                    <span>{{ t().admin.reports.status }}</span>
+            <div class="collection-toolbar" role="search" [attr.aria-label]="t().admin.reports.revenue">
+                <input type="search" [ngModel]="paymentQuery()"
+                       (ngModelChange)="paymentQuery.set($event); queuePaymentReload()"
+                       [placeholder]="t().admin.collections.searchPayments" [attr.aria-label]="t().admin.collections.searchPayments">
+                <select [ngModel]="paymentStatus()" (ngModelChange)="setPaymentStatus($event)"
+                        [attr.aria-label]="t().admin.collections.paymentStatus">
+                    <option value="all">{{ t().admin.collections.allStatuses }}</option>
+                    @for (status of paymentStatuses(); track status) { <option [value]="status">{{ status }}</option> }
+                </select>
+            </div>
+            <div class="row-list table" role="table" [attr.aria-label]="t().admin.reports.revenue">
+                <div class="row payment-row head" role="row">
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(paymentSortKey() === 'created', paymentSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.when" [active]="paymentSortKey() === 'created'"
+                                         [direction]="paymentSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPayments('created')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(paymentSortKey() === 'owner', paymentSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.who" [active]="paymentSortKey() === 'owner'"
+                                         [direction]="paymentSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPayments('owner')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(paymentSortKey() === 'plan', paymentSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.what" [active]="paymentSortKey() === 'plan'"
+                                         [direction]="paymentSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPayments('plan')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(paymentSortKey() === 'amount', paymentSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.amount" [active]="paymentSortKey() === 'amount'"
+                                         [direction]="paymentSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPayments('amount')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(paymentSortKey() === 'status', paymentSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.status" [active]="paymentSortKey() === 'status'"
+                                         [direction]="paymentSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortPayments('status')" />
+                    </span>
                 </div>
-                @for (p of b.payments; track p.id) {
-                <div class="row payment-row">
-                    <span class="muted">{{ p.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
-                    <span class="muted">{{ p.ownerEmail }}</span>
-                    <span>{{ p.plan }} · {{ p.provider }}</span>
-                    <span>{{ formatAmount(p.amount, p.currency) }}</span>
-                    <span class="muted">{{ p.status }}</span>
+                @for (p of visiblePayments(); track p.id) {
+                <div class="row payment-row" role="row">
+                    <span class="muted" role="rowheader">{{ p.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
+                    <span class="muted" role="cell">{{ p.ownerEmail }}</span>
+                    <span role="cell">{{ p.plan }} · {{ p.provider }}</span>
+                    <span role="cell">{{ formatAmount(p.amount, p.currency) }}</span>
+                    <span class="muted" role="cell">{{ p.status }}</span>
                 </div>
                 } @empty {
+                <div class="table-empty-row" role="row">
+                <div role="cell" aria-colspan="5">
+                @if (paymentFiltersActive()) {
+                <app-empty-state [icon]="null" [title]="t().admin.collections.noMatches"
+                                 [text]="t().admin.collections.noMatchesHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearPaymentFilters()">{{ t().admin.collections.clearFilters }}</app-button>
+                </app-empty-state>
+                } @else {
                 <app-empty-state [icon]="null" [title]="t().admin.reports.noPayments" [text]="t().admin.empty.paymentsHint" />
                 }
+                </div>
+                </div>
+                }
             </div>
+            @if (paymentSkip() > 0 || b.total > b.pageSize) {
+            <nav class="collection-pager" [attr.aria-label]="t().admin.reports.revenue">
+                <app-button variant="paper" size="sm" [disabled]="!canPagePaymentsBack()" (clicked)="pagePaymentsBack()">
+                    {{ t().common.pageBack }}
+                </app-button>
+                <span class="hint">{{ paymentRangeLabel() }}</span>
+                <app-button variant="paper" size="sm" [disabled]="!canPagePaymentsForward()" (clicked)="pagePaymentsForward()">
+                    {{ t().common.pageForward }}
+                </app-button>
+            </nav>
+            }
             }
 
             <h2 class="label audit-title">{{ t().admin.reports.usage }}</h2>
-            <div class="row-list table">
-                <div class="row usage-row head">
-                    <span>{{ t().admin.reports.who }}</span>
-                    <span>{{ t().admin.reports.storage }}</span>
-                    <span>{{ t().admin.reports.files }}</span>
-                    <span>{{ t().admin.reports.aiToday }}</span>
+            <div class="collection-toolbar" role="search" [attr.aria-label]="t().admin.reports.usage">
+                <input type="search" [ngModel]="usageQuery()" (ngModelChange)="usageQuery.set($event)"
+                       [placeholder]="t().admin.collections.searchUsage" [attr.aria-label]="t().admin.collections.searchUsage">
+                <select [ngModel]="usageFilter()" (ngModelChange)="usageFilter.set($event)"
+                        [attr.aria-label]="t().admin.collections.usageFilter">
+                    <option value="all">{{ t().admin.collections.allUsage }}</option>
+                    <option value="storage">{{ t().admin.collections.withStorage }}</option>
+                    <option value="ai">{{ t().admin.collections.withAi }}</option>
+                </select>
+            </div>
+            <div class="row-list table" role="table" [attr.aria-label]="t().admin.reports.usage">
+                <div class="row usage-row head" role="row">
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(usageSortKey() === 'owner', usageSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.who" [active]="usageSortKey() === 'owner'"
+                                         [direction]="usageSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortUsage('owner')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(usageSortKey() === 'bytes', usageSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.storage" [active]="usageSortKey() === 'bytes'"
+                                         [direction]="usageSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortUsage('bytes')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(usageSortKey() === 'files', usageSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.files" [active]="usageSortKey() === 'files'"
+                                         [direction]="usageSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortUsage('files')" />
+                    </span>
+                    <span role="columnheader" [attr.aria-sort]="ariaSort(usageSortKey() === 'ai', usageSortDirection())">
+                        <app-sort-header [label]="t().admin.reports.aiToday" [active]="usageSortKey() === 'ai'"
+                                         [direction]="usageSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortUsage('ai')" />
+                    </span>
                 </div>
-                @for (u of usage(); track u.ownerEmail) {
-                <div class="row usage-row">
-                    <span class="muted">{{ u.ownerEmail }}</span>
-                    <span>{{ formatBytes(u.bytes) }}</span>
-                    <span class="muted">{{ u.files }}</span>
-                    <span class="muted">{{ u.aiToday }}</span>
+                @for (u of visibleUsage(); track u.ownerId) {
+                <div class="row usage-row" role="row">
+                    <span class="muted" role="rowheader">{{ u.ownerEmail }}</span>
+                    <span role="cell">{{ formatBytes(u.bytes) }}</span>
+                    <span class="muted" role="cell">{{ u.files }}</span>
+                    <span class="muted" role="cell">{{ u.aiToday }}</span>
                 </div>
                 } @empty {
+                <div class="table-empty-row" role="row">
+                <div role="cell" aria-colspan="4">
+                @if (usage().length && usageFiltersActive()) {
+                <app-empty-state [icon]="null" [title]="t().admin.collections.noMatches"
+                                 [text]="t().admin.collections.noMatchesHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearUsageFilters()">{{ t().admin.collections.clearFilters }}</app-button>
+                </app-empty-state>
+                } @else {
                 <app-empty-state [icon]="null" [title]="t().admin.empty.usage" [text]="t().admin.empty.usageHint" />
+                }
+                </div>
+                </div>
                 }
             </div>
 

@@ -13,9 +13,14 @@ import { ButtonComponent } from '../bench/forms/button.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { IconComponent } from '../shared/icon.component';
 import { GrowthChartComponent, GrowthSeries, SeriesSlot, seriesColor } from '../bench/worktop/growth-chart.component';
+import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
+import { SortDirection, ariaSort } from '../core/collection-query';
+import { ActivatedRoute, Router } from '@angular/router';
 
 type MetricKey = 'memberCount' | 'viewCount' | 'likeCount' | 'commentCount';
 type PanelView = 'chart' | 'table';
+type InviteLinkState = 'all' | 'active' | 'revoked';
+type InviteLinkSort = 'name' | 'joins' | 'leaves' | 'net';
 
 interface Source {
     id: string;
@@ -135,7 +140,7 @@ function normalize(snapshots: readonly unknown[], tracked: readonly MetricKey[])
     selector: 'app-stats',
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [FormsModule, LeafTagComponent, IndexTabsComponent, GrowthChartComponent,
-              EmptyStateComponent, ButtonComponent, IconComponent],
+              EmptyStateComponent, ButtonComponent, IconComponent, SortHeaderComponent],
     // The tab body is the reading surface the shell hands over (ADR-154); the two shelves declare
     // their own chrome from inside.
     host: { 'data-surface': 'paper' },
@@ -146,6 +151,8 @@ function normalize(snapshots: readonly unknown[], tracked: readonly MetricKey[])
 export class StatsComponent implements OnInit {
     private channelsApi = inject(ChannelsService);
     private locale = inject(LocaleService);
+    private route = inject(ActivatedRoute);
+    private router = inject(Router);
     t = this.locale.t;
 
     loading = signal(true);
@@ -157,6 +164,9 @@ export class StatsComponent implements OnInit {
     metric = signal<MetricKey>('viewCount');
     view = signal<PanelView>('chart');
     rangeDays = signal(90);
+    tableSortKey = signal('period');
+    tableSortDirection = signal<SortDirection>('asc');
+    readonly ariaSort = ariaSort;
 
     // Geography only exists for the blog: Telegram's Bot API reports no per-country breakdown,
     // so the shelf names the source it is answering about (ADR-097, ADR-149 item 4).
@@ -228,6 +238,20 @@ export class StatsComponent implements OnInit {
 
     anySelected = computed(() => this.sources().some(s => this.selected().has(s.id)));
 
+    private hiddenDrawableSource = computed(() => this.sources().some(s =>
+        !this.selected().has(s.id) && s.tracked.includes(this.metric()) && s.days.length > 0));
+
+    chartEmptyState = computed(() => {
+        const copy = this.t().stats.sources;
+        if (!this.anySelected()) {
+            return { title: copy.noneSelectedTitle, text: copy.noneSelected, action: 'show-all' as const };
+        }
+        if (this.hiddenDrawableSource()) {
+            return { title: copy.filteredTitle, text: copy.filtered, action: 'show-all' as const };
+        }
+        return { title: copy.nothingToDrawTitle, text: copy.nothingToDraw, action: 'documents' as const };
+    });
+
     /**
      * The days every drawn line has a reading for. It starts at the latest first reading among
      * them, because there is no honest value for a source before it had one, and it moves with the
@@ -245,11 +269,12 @@ export class StatsComponent implements OnInit {
         return { days, labels };
     });
 
-    series = computed<GrowthSeries[]>(() => {
+    series = computed<(GrowthSeries & { id: string })[]>(() => {
         const drawn = this.drawable();
         const { days } = this.axis();
         const metric = this.metric();
         return drawn.map(source => ({
+            id: source.id,
             slot: source.slot,
             name: source.name,
             // The wash belongs to one entity (ADR-158 clause 6): the blog, first in sources(),
@@ -327,18 +352,56 @@ export class StatsComponent implements OnInit {
     chartLabel = computed(() => `${this.t().stats.bySource} — ${this.t().stats.metrics[this.metric()]}`);
 
     tableRows = computed(() => {
-        const { labels } = this.axis();
+        const { days, labels } = this.axis();
         const series = this.series();
-        return labels.map((label, index) => ({ label, values: series.map(s => group(s.points[index])) }));
+        const rows = labels.map((label, index) => ({
+            day: days[index],
+            label,
+            raw: series.map(s => s.points[index]),
+            values: series.map(s => group(s.points[index])),
+        }));
+        const key = this.tableSortKey();
+        const sourceIndex = series.findIndex(s => s.id === key);
+        const direction = this.tableSortDirection() === 'asc' ? 1 : -1;
+        return rows.sort((a, b) => {
+            const compared = key === 'period' || sourceIndex < 0
+                ? a.day.localeCompare(b.day)
+                : (a.raw[sourceIndex] ?? 0) - (b.raw[sourceIndex] ?? 0);
+            return compared * direction || a.day.localeCompare(b.day);
+        });
     });
 
+    sortTable(key: string) {
+        if (this.tableSortKey() === key) this.tableSortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+        else {
+            this.tableSortKey.set(key);
+            this.tableSortDirection.set('asc');
+        }
+        this.syncCollectionQuery();
+    }
+
+    private normalizeTableSort(): void {
+        const key = this.tableSortKey();
+        if (key === 'period' || this.series().some(source => source.id === key)) return;
+        this.tableSortKey.set('period');
+        this.tableSortDirection.set('asc');
+    }
+
     async ngOnInit() {
+        this.restoreCollectionQuery();
         this.loading.set(true);
         try {
             const channels = await this.channelsApi.list();
             this.channels.set(channels);
             await this.load(this.rangeDays());
-            this.selected.set(new Set(this.sources().filter(s => s.days.length > 0).map(s => s.id)));
+            const available = this.sources().map(source => source.id);
+            const requested = this.route.snapshot.queryParamMap.get('statsSources');
+            this.selected.set(requested === 'none'
+                ? new Set()
+                : requested
+                    ? new Set(requested.split(',').filter(id => available.includes(id)))
+                    : new Set(available));
+            this.normalizeTableSort();
         } finally {
             this.loading.set(false);
         }
@@ -347,7 +410,8 @@ export class StatsComponent implements OnInit {
         this.channelsApi.publishingStats()
             .then(stats => this.publishing.set(stats))
             .catch(() => this.publishing.set(null));
-        const first = this.channels()[0];
+        const requestedChannel = this.route.snapshot.queryParamMap.get('inviteChannel');
+        const first = this.channels().find(channel => channel.id === requestedChannel) ?? this.channels()[0];
         if (first) {
             this.inviteChannelId.set(first.id);
             void this.loadInviteLinks();
@@ -384,6 +448,53 @@ export class StatsComponent implements OnInit {
     inviteBusy = signal(false);
     inviteError = signal('');
     newLinkName = '';
+    inviteQuery = signal('');
+    inviteState = signal<InviteLinkState>('all');
+    inviteSortKey = signal<InviteLinkSort>('name');
+    inviteSortDirection = signal<SortDirection>('asc');
+
+    visibleInviteLinks = computed(() => {
+        const query = this.inviteQuery().trim().toLocaleLowerCase();
+        const state = this.inviteState();
+        const key = this.inviteSortKey();
+        const direction = this.inviteSortDirection() === 'asc' ? 1 : -1;
+        return this.inviteLinks()
+            .filter(link => (!query || `${link.name} ${link.inviteLink}`.toLocaleLowerCase().includes(query))
+                && (state === 'all' || (state === 'revoked') === Boolean(link.revokedAt)))
+            .sort((a, b) => {
+                const compared = key === 'name'
+                    ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+                    : a[key] - b[key];
+                return compared * direction || a.id.localeCompare(b.id);
+            });
+    });
+
+    inviteFiltersActive = computed(() => Boolean(this.inviteQuery().trim()) || this.inviteState() !== 'all');
+
+    sortInviteLinks(key: InviteLinkSort) {
+        if (this.inviteSortKey() === key) this.inviteSortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+        else {
+            this.inviteSortKey.set(key);
+            this.inviteSortDirection.set(key === 'name' ? 'asc' : 'desc');
+        }
+        this.syncCollectionQuery();
+    }
+
+    clearInviteFilters() {
+        this.inviteQuery.set('');
+        this.inviteState.set('all');
+        this.syncCollectionQuery();
+    }
+
+    setInviteQuery(value: string) {
+        this.inviteQuery.set(value);
+        this.syncCollectionQuery();
+    }
+
+    setInviteState(value: InviteLinkState) {
+        this.inviteState.set(value);
+        this.syncCollectionQuery();
+    }
 
     /** The shelf renders once a Telegram source exists — chat_member only arrives where the bot is admin. */
     showInviteLinks = computed(() => this.channels().length > 0);
@@ -412,6 +523,7 @@ export class StatsComponent implements OnInit {
         this.inviteChannelId.set(id);
         this.inviteLinks.set([]);
         this.inviteOrganic.set(null);
+        this.syncCollectionQuery();
         void this.loadInviteLinks();
     }
 
@@ -485,20 +597,87 @@ export class StatsComponent implements OnInit {
         const next = new Set(this.selected());
         if (!next.delete(id)) next.add(id);
         this.selected.set(next);
+        this.normalizeTableSort();
+        this.syncCollectionQuery();
+    }
+
+    showAllSources() {
+        this.selected.set(new Set(this.sources().map(source => source.id)));
+        this.normalizeTableSort();
+        this.syncCollectionQuery();
     }
 
     setMetric(id: string) {
         this.metric.set(id as MetricKey);
+        this.normalizeTableSort();
+        this.syncCollectionQuery();
     }
 
     setView(id: string) {
         this.view.set(id as PanelView);
+        this.syncCollectionQuery();
     }
 
     async onRangeCommit(raw: number) {
         const days = RANGE_NOTCHES.includes(raw) ? raw : 90;
         this.rangeDays.set(days);
+        this.syncCollectionQuery();
         await this.load(days);
+    }
+
+    private restoreCollectionQuery() {
+        const params = this.route.snapshot.queryParamMap;
+        const metric = params.get('statsMetric');
+        if (metric && ALL_METRICS.includes(metric as MetricKey)) this.metric.set(metric as MetricKey);
+        const view = params.get('statsView');
+        if (view === 'chart' || view === 'table') this.view.set(view);
+        const range = Number(params.get('statsDays'));
+        if (RANGE_NOTCHES.includes(range)) this.rangeDays.set(range);
+        const sort = params.get('statsSort');
+        if (sort) this.tableSortKey.set(sort);
+        const direction = params.get('statsDir');
+        if (direction === 'asc' || direction === 'desc') this.tableSortDirection.set(direction);
+
+        this.inviteQuery.set(params.get('inviteQ') ?? '');
+        const state = params.get('inviteState');
+        if (state === 'active' || state === 'revoked') this.inviteState.set(state);
+        const inviteSort = params.get('inviteSort');
+        if (inviteSort && ['name', 'joins', 'leaves', 'net'].includes(inviteSort)) {
+            this.inviteSortKey.set(inviteSort as InviteLinkSort);
+            this.inviteSortDirection.set(inviteSort === 'name' ? 'asc' : 'desc');
+        }
+        const inviteDirection = params.get('inviteDir');
+        if (inviteDirection === 'asc' || inviteDirection === 'desc')
+            this.inviteSortDirection.set(inviteDirection);
+    }
+
+    private syncCollectionQuery() {
+        const available = this.sources().map(source => source.id).sort();
+        const selected = [...this.selected()].filter(id => available.includes(id)).sort();
+        const sources = selected.length === available.length && selected.every((id, index) => id === available[index])
+            ? null
+            : selected.length ? selected.join(',') : 'none';
+        const firstChannel = this.channels()[0]?.id;
+        void this.router.navigate([], {
+            relativeTo: this.route,
+            replaceUrl: true,
+            queryParamsHandling: 'merge',
+            queryParams: {
+                statsMetric: this.metric() === 'viewCount' ? null : this.metric(),
+                statsView: this.view() === 'chart' ? null : this.view(),
+                statsDays: this.rangeDays() === 90 ? null : this.rangeDays(),
+                statsSources: sources,
+                statsSort: this.tableSortKey() === 'period' ? null : this.tableSortKey(),
+                statsDir: this.tableSortDirection() === 'asc' ? null : this.tableSortDirection(),
+                inviteChannel: this.inviteChannelId() === firstChannel ? null : this.inviteChannelId() || null,
+                inviteQ: this.inviteQuery().trim() || null,
+                inviteState: this.inviteState() === 'all' ? null : this.inviteState(),
+                inviteSort: this.inviteSortKey() === 'name' ? null : this.inviteSortKey(),
+                inviteDir: this.inviteSortKey() === 'name' && this.inviteSortDirection() === 'asc'
+                    ? null
+                    : this.inviteSortDirection(),
+            },
+        });
     }
 
     rangeLabel(d = this.rangeDays()): string {

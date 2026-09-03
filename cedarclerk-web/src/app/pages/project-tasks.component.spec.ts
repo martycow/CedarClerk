@@ -137,11 +137,40 @@ describe('project tasks', () => {
         fixture.detectChanges();
 
         const rows = [...el().querySelectorAll('.tasks-row:not(.head-row)')] as HTMLElement[];
+        const links = rows.map(row => row.querySelector<HTMLAnchorElement>('.task-row-link')!);
         expect(rows.length).toBe(3);
-        expect(rows.every(r => r.tagName === 'A')).toBe(true);
-        expect(rows.map(r => r.getAttribute('href')).sort()).toEqual([
+        expect(rows.every(row => row.tagName === 'DIV' && row.getAttribute('role') === 'row')).toBe(true);
+        expect(links.every(link => link.tagName === 'A' && !link.hasAttribute('role'))).toBe(true);
+        expect(links.map(link => link.getAttribute('href')).sort()).toEqual([
             '/projects/p1/tasks?task=t1', '/projects/p1/tasks?task=t2', '/projects/p1/tasks?task=t3',
         ]);
+    });
+
+    it('sorts every list column with aria-sort and keeps missing due dates last', () => {
+        fixture.componentInstance.setView('list');
+        fixture.detectChanges();
+        expect(el().querySelector('.tasks-table')?.getAttribute('role')).toBe('table');
+        expect(el().querySelector('[role="grid"]')).toBeNull();
+        expect([...el().querySelectorAll('.tasks-row:not(.head-row)')]
+            .every(row => row.getAttribute('role') === 'row' && row.querySelectorAll('[role="cell"]').length === 5)).toBe(true);
+        const header = (label: string) => [...el().querySelectorAll<HTMLElement>('[role="columnheader"]')]
+            .find(cell => cell.textContent?.includes(label))!;
+        const rowIds = () => [...el().querySelectorAll<HTMLAnchorElement>('.task-row-link')]
+            .map(link => new URL(link.href).searchParams.get('task'));
+
+        expect(header(t.colPriority).getAttribute('aria-sort')).toBe('ascending');
+        header(t.colLinks).querySelector<HTMLButtonElement>('button')!.click();
+        fixture.detectChanges();
+        expect(header(t.colLinks).getAttribute('aria-sort')).toBe('ascending');
+        expect(rowIds()).toEqual(['t2', 't3', 't1']);
+
+        header(t.colDue).querySelector<HTMLButtonElement>('button')!.click();
+        fixture.detectChanges();
+        expect(rowIds()).toEqual(['t1', 't2', 't3']);
+        header(t.colDue).querySelector<HTMLButtonElement>('button')!.click();
+        fixture.detectChanges();
+        expect(header(t.colDue).getAttribute('aria-sort')).toBe('descending');
+        expect(rowIds()).toEqual(['t1', 't2', 't3']);
     });
 
     // A column header counts the column, not the filter: the strips above say what the filter is
@@ -155,6 +184,30 @@ describe('project tasks', () => {
         expect(columnCount(t.status.in_progress)).toBe('1');
         expect(columnCount(t.status.done)).toBe('1');
         expect(columnCount(t.status.planned)).toBe('0');
+    });
+
+    it('replaces both views with a clearable filtered-empty state', () => {
+        const component = fixture.componentInstance;
+        component.search.set('nothing matches');
+        fixture.detectChanges();
+
+        expect(el().querySelector('.board')).toBeNull();
+        expect(el().querySelector('.filtered-empty')?.textContent).toContain(t.emptyFiltered);
+        const clear = el().querySelector('.filtered-empty app-button button') as HTMLButtonElement;
+        expect(clear.textContent?.trim()).toBe(t.clearFilters);
+        clear.click();
+        fixture.detectChanges();
+        expect(cards()).toHaveLength(3);
+
+        component.setView('list');
+        component.filter.set('open');
+        component.search.set('ship');
+        fixture.detectChanges();
+        expect(el().querySelector('.tasks-table')).toBeNull();
+        expect(el().querySelector('.filtered-empty app-button')).not.toBeNull();
+        component.clearCollectionFilters();
+        fixture.detectChanges();
+        expect(el().querySelectorAll('.tasks-row:not(.head-row)')).toHaveLength(3);
     });
 
     // ADR-239 clause 6 — the rule's readouts are the header's meta line: the tally, the sprint

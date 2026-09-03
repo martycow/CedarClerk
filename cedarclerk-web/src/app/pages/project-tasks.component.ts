@@ -26,6 +26,8 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { AssetsService } from '../core/assets.service';
+import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
+import { ariaSort } from '../core/collection-query';
 
 const VIEW_KEY = 'cedar.taskView';
 const MS_PER_DAY = 86_400_000;
@@ -36,7 +38,7 @@ function civilDayNumber(day: string): number {
 }
 
 type Filter = 'all' | 'open' | 'overdue';
-type SortKey = 'title' | 'status' | 'priority' | 'dueAt';
+type SortKey = 'title' | 'status' | 'priority' | 'dueAt' | 'links';
 type Tone = 'ok' | 'warn' | 'muted' | 'danger';
 
 // T-123 (ADR-106) — the task board. Board.png (ADR-239): a header carrying the tally, the sprint
@@ -55,6 +57,7 @@ type Tone = 'ok' | 'warn' | 'muted' | 'danger';
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, RouterLink,
         PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent,
         CdkDropListGroup, CdkDropList, CdkDrag,
+        SortHeaderComponent,
     ],
     templateUrl: 'project-tasks.component.html',
     styleUrls: ['project-tasks.component.css'],
@@ -169,11 +172,19 @@ export class ProjectTasksComponent {
         });
     });
 
+    hasCollectionFilters = computed(() => this.filter() !== 'all'
+        || this.sprintFilter() !== null
+        || this.search().trim().length > 0);
+    matchingCount = computed(() => this.matching().length);
+
     /** The list view's own order. The board keeps the server's, which is already by column. */
     sorted = computed(() => {
         const key = this.sort();
         const dir = this.sortAsc() ? 1 : -1;
-        return [...this.matching()].sort((a, b) => dir * this.compare(a, b, key));
+        return [...this.matching()].sort((a, b) => {
+            if (key === 'dueAt' && !!a.dueAt !== !!b.dueAt) return a.dueAt ? -1 : 1;
+            return dir * this.compare(a, b, key) || a.id.localeCompare(b.id);
+        });
     });
 
     constructor() {
@@ -222,6 +233,12 @@ export class ProjectTasksComponent {
 
     column(status: TaskStatus) {
         return this.matching().filter(t => t.status === status);
+    }
+
+    clearCollectionFilters(): void {
+        this.filter.set('all');
+        this.sprintFilter.set(null);
+        this.search.set('');
     }
 
     /**
@@ -294,6 +311,10 @@ export class ProjectTasksComponent {
     setSort(key: SortKey) {
         if (this.sort() === key) this.sortAsc.update(v => !v);
         else { this.sort.set(key); this.sortAsc.set(true); }
+    }
+
+    columnSort(key: SortKey): 'ascending' | 'descending' | null {
+        return ariaSort(this.sort() === key, this.sortAsc() ? 'asc' : 'desc');
     }
 
     // ---- the card ---------------------------------------------------------
@@ -455,12 +476,11 @@ export class ProjectTasksComponent {
             case 'title': return a.title.localeCompare(b.title);
             case 'status': return TASK_STATUSES.indexOf(a.status) - TASK_STATUSES.indexOf(b.status);
             case 'priority': return a.priority - b.priority;
+            case 'links': return a.links.length - b.links.length;
             case 'dueAt':
                 // Undated tasks sort last in both directions: "no deadline" is not a late deadline,
                 // and flipping the column should not fill the top of the table with blanks.
-                if (!a.dueAt && !b.dueAt) return 0;
-                if (!a.dueAt) return 1;
-                if (!b.dueAt) return -1;
+                if (!a.dueAt || !b.dueAt) return 0;
                 return a.dueAt.localeCompare(b.dueAt);
         }
     }

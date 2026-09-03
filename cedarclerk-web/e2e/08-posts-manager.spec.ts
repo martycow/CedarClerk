@@ -26,6 +26,21 @@ test('search narrows the post list', async ({ page, context }) => {
     await expect(page.locator('.post-card', { hasText: 'Other manager post' })).toHaveCount(0);
 });
 
+test('the active manager collection survives reload', async ({ page }) => {
+    await page.goto('/posts');
+    const tabs = page.getByRole('tablist', { name: 'Manager sections' });
+
+    await tabs.getByRole('tab', { name: 'Stats' }).click();
+    await expect(page).toHaveURL(/[?&]tab=stats(?:&|$)/);
+    await page.reload();
+    await expect(page.getByRole('tab', { name: 'Stats' })).toHaveAttribute('aria-selected', 'true');
+
+    await page.getByRole('tab', { name: 'Forms' }).click();
+    await expect(page).toHaveURL(/[?&]tab=forms(?:&|$)/);
+    await page.reload();
+    await expect(page.getByRole('tab', { name: 'Forms' })).toHaveAttribute('aria-selected', 'true');
+});
+
 // N7 folded /comments and /stats into this page; the old paths stay as redirects because they are
 // what any existing bookmark points at.
 test('the retired /stats and /comments routes still resolve', async ({ page }) => {

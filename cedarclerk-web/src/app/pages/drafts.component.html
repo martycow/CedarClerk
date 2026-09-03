@@ -99,62 +99,102 @@ never on a component — several of the components below also appear on comforta
             </ng-template>
 
             @if (view() === 'table') {
-            <div class="row-list drafts-table">
+            <div class="row-list drafts-table" role="table" [attr.aria-label]="t().drafts.title">
                 <!--N1: headers sort, and the 5px handle on each fixed column resizes it. Title takes
                 whatever is left, so a resize redistributes rather than widening the table.-->
                 <!--The resize handles only render at full width: in compact mode the column indices no
                 longer line up with colWidths, and a 5px pointer target is not something a finger hits
                 anyway.-->
-                <div class="row drafts-row drafts-row-head label" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
-                    <button class="col-head" (click)="sortBy('title')">{{ t().drafts.columns.title }} @if (sortMark('title'); as mark) {<app-icon [name]="mark" size="xs" />}</button>
-                    <button class="col-head" (click)="sortBy('state')">{{ t().drafts.columns.state }} @if (sortMark('state'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span>}</button>
+                <div class="row drafts-row drafts-row-head label" role="row" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
+                    <div class="col-head" role="columnheader" [attr.aria-sort]="columnSort('title')">
+                        <app-sort-header [label]="t().drafts.columns.title" [active]="sortKey() === 'title'" [direction]="sortDir()"
+                                         [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                         [descendingLabel]="t().common.descending" (sorted)="sortBy('title')" />
+                    </div>
+                    <div class="col-head" role="columnheader" [attr.aria-sort]="columnSort('state')">
+                        <app-sort-header [label]="t().drafts.columns.state" [active]="sortKey() === 'state'" [direction]="sortDir()"
+                                         [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                         [descendingLabel]="t().common.descending" (sorted)="sortBy('state')" />
+                        @if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(0, $event)"></span>}
+                    </div>
                     @if (!phone()) {
-                    <button class="col-head" (click)="sortBy('languages')">{{ t().drafts.columns.languages }} @if (sortMark('languages'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span>}</button>
+                    <div class="col-head" role="columnheader" [attr.aria-sort]="columnSort('languages')">
+                        <app-sort-header [label]="t().drafts.columns.languages" [active]="sortKey() === 'languages'" [direction]="sortDir()"
+                                         [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                         [descendingLabel]="t().common.descending" (sorted)="sortBy('languages')" />
+                        @if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(1, $event)"></span>}
+                    </div>
                     }
                     @if (!tight()) {
-                    <button class="col-head" (click)="sortBy('folder')">{{ t().drafts.columns.folder }} @if (sortMark('folder'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span>}</button>
+                    <div class="col-head" role="columnheader" [attr.aria-sort]="columnSort('folder')">
+                        <app-sort-header [label]="t().drafts.columns.folder" [active]="sortKey() === 'folder'" [direction]="sortDir()"
+                                         [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                         [descendingLabel]="t().common.descending" (sorted)="sortBy('folder')" />
+                        @if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(2, $event)"></span>}
+                    </div>
                     }
                     @if (!compact()) {
-                    <button class="col-head" (click)="sortBy('tags')">{{ t().drafts.columns.tags }} @if (sortMark('tags'); as mark) {<app-icon [name]="mark" size="xs" />}<span class="col-resize" (pointerdown)="startColResize(3, $event)"></span></button>
-                    <button class="col-head" (click)="sortBy('activity')">{{ t().drafts.columns.activity }} @if (sortMark('activity'); as mark) {<app-icon [name]="mark" size="xs" />}<span class="col-resize" (pointerdown)="startColResize(4, $event)"></span></button>
+                    <div class="col-head" role="columnheader" [attr.aria-sort]="columnSort('tags')">
+                        <app-sort-header [label]="t().drafts.columns.tags" [active]="sortKey() === 'tags'" [direction]="sortDir()"
+                                         [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                         [descendingLabel]="t().common.descending" (sorted)="sortBy('tags')" />
+                        <span class="col-resize" (pointerdown)="startColResize(3, $event)"></span>
+                    </div>
+                    <div class="col-head" role="columnheader" [attr.aria-sort]="columnSort('activity')">
+                        <app-sort-header [label]="t().drafts.columns.activity" [active]="sortKey() === 'activity'" [direction]="sortDir()"
+                                         [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                         [descendingLabel]="t().common.descending" (sorted)="sortBy('activity')" />
+                        <span class="col-resize" (pointerdown)="startColResize(4, $event)"></span>
+                    </div>
                     }
                     @if (!tight()) {
-                    <button class="col-head right" (click)="sortBy('updated')">{{ t().drafts.columns.updated }} @if (sortMark('updated'); as mark) {<app-icon [name]="mark" size="xs" />}@if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span>}</button>
+                    <div class="col-head right" role="columnheader" [attr.aria-sort]="columnSort('updated')">
+                        <app-sort-header [label]="t().drafts.columns.updated" [active]="sortKey() === 'updated'" [direction]="sortDir()" align="end"
+                                         [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                         [descendingLabel]="t().common.descending" (sorted)="sortBy('updated')" />
+                        @if (!compact()) {<span class="col-resize" (pointerdown)="startColResize(5, $event)"></span>}
+                    </div>
                     }
-                    <button class="col-head col-reset" (click)="resetColWidths()" [title]="t().drafts.resetColumns" [attr.aria-label]="t().drafts.resetColumns"><app-icon name="arrows-out-simple" size="xs"></app-icon></button>
+                    <div class="col-head col-reset" role="columnheader">
+                        <button class="col-reset-button" (click)="resetColWidths()" [title]="t().drafts.resetColumns"
+                                [attr.aria-label]="t().drafts.resetColumns">
+                            <app-icon name="arrows-out-simple" size="xs"></app-icon>
+                        </button>
+                    </div>
                 </div>
                 @for (d of filteredDrafts(); track d.id) {
-                <div class="row drafts-row" [class.busy]="busyId() === d.id" [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()" (click)="openDraft(d.id)">
-                    <div class="drafts-title-cell">
-                        <div class="t drafts-title">
+                <div class="row drafts-row" role="row" [class.busy]="busyId() === d.id"
+                     [style.gridTemplateColumns]="gridTemplate()" [style.minWidth]="rowMinWidth()">
+                    <div class="drafts-title-cell" role="cell">
+                        <a class="t drafts-title draft-link" [routerLink]="['/editor']" [queryParams]="{ draft: d.id }">
                             @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
                             {{ d.title || t().drafts.untitled }}
-                        </div>
+                        </a>
                     </div>
-                    <div class="state-cell">
+                    <div class="state-cell" role="cell">
                         <span class="tag" [class.danger]="status(d).tone === 'danger'" [class.ok]="status(d).tone === 'ok'" [class.muted]="status(d).tone === 'default'">
                             {{ status(d).label }}
                         </span>
                         @if (status(d).detail) { <span class="m status-detail" [title]="status(d).detail">{{ status(d).detail }}</span> }
                     </div>
                     @if (!phone()) {
-                    <div class="lang-badges">
+                    <div class="lang-badges" role="cell">
                         <span class="draft-lang-badge">RU</span>
                         @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
                     </div>
                     }
                     @if (!tight()) {
-                    <div class="folder-cell" (click)="$event.stopPropagation()">
+                    <div class="folder-cell" role="cell" (click)="$event.stopPropagation()">
                         <app-folder-picker [folderId]="d.folderId" [compact]="true"
                                            (picked)="assignFolder(d, $event)"></app-folder-picker>
                     </div>
                     }
                     @if (!compact()) {
-                    <div class="tags-cell m">
+                    <div class="tags-cell m" role="cell">
                         <!--Loop variable is `tag`, not `t` — `t` is the dictionary accessor here.-->
                         @for (tag of d.tags.split(',').slice(0, 3); track tag) { @if (tag) { <span class="tag-chip-ro">#{{ tag }}</span> } }
                     </div>
-                    <div class="activity-cell m">
+                    <div class="activity-cell m" role="cell">
                         @if (hasActivity(d)) {
                         <span class="activity-metric" [title]="t().drafts.activity.views">
                             <app-icon name="eye" size="xs"></app-icon>{{ d.viewCount }}
@@ -170,9 +210,9 @@ never on a component — several of the components below also appear on comforta
                     </div>
                     }
                     @if (!tight()) {
-                    <div class="right m">{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</div>
+                    <div class="right m" role="cell">{{ d.updatedAt | zonedDate:'MM/dd, HH:mm' }}</div>
                     }
-                    <div class="row-actions">
+                    <div class="row-actions" role="cell">
                         <!--T-256 — the shelf's selector. It is a control in this cluster and never
                         the row's own click: the row is the door to the editor (ADR-163), and a
                         click that sometimes opened and sometimes selected would break that.-->
@@ -201,7 +241,11 @@ never on a component — several of the components below also appear on comforta
                     </div>
                 </div>
                 } @empty {
-                <ng-container *ngTemplateOutlet="emptyList"></ng-container>
+                <div class="drafts-empty-row" role="row">
+                    <div role="cell" [attr.aria-colspan]="tableColumnCount()">
+                        <ng-container *ngTemplateOutlet="emptyList"></ng-container>
+                    </div>
+                </div>
                 }
             </div>
             } @else if (view() === 'tree') {

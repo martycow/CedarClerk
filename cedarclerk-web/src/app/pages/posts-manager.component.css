@@ -282,11 +282,98 @@
     overflow: auto;
 }
 
-/* FI3.10 — search reaches one post directly in a publish-date-ordered list. Above the scroller,
-   not inside it, so it never has to be pinned. */
-.post-search {
+.post-toolbar {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-2);
     flex: none;
-    margin: var(--space-3) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--paper-edge);
+}
+
+.post-search {
+    flex: 1 0 100%;
+    min-width: 0;
+}
+
+.post-sort,
+.post-filter-panel label {
+    display: grid;
+    gap: var(--space-1);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+}
+
+.post-sort {
+    flex: 1;
+    min-width: 14ch;
+}
+
+.post-sort select,
+.post-filter-panel select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--hit-surface);
+    padding: 0 var(--dens-control-x);
+    border: var(--border-field);
+    border-radius: var(--radius-stamp);
+    background: var(--paper-bright);
+    color: var(--text);
+    box-shadow: var(--shadow-field-inset);
+    font: inherit;
+}
+
+.post-filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    box-sizing: border-box;
+    min-height: var(--hit-surface);
+    padding: 0 var(--dens-control-x);
+    border: var(--border-paper);
+    border-radius: var(--radius-sm);
+    background: var(--paper-bright);
+    color: var(--text);
+    box-shadow: var(--shadow-paper-sm);
+    font-family: var(--font-sans);
+    font-size: var(--fs-12);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.filter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-stamp);
+    background: var(--asoft);
+    color: var(--accent);
+    font-size: var(--fs-11);
+    font-weight: 700;
+}
+
+.post-filter-panel {
+    display: grid;
+    gap: var(--space-3);
+    box-sizing: border-box;
+    width: min(280px, calc(100vw - var(--space-5)));
+    padding: var(--space-3);
+}
+
+.post-filter-panel app-button { justify-self: start; }
+
+.post-result-count {
+    flex: none;
+    padding-bottom: var(--space-2);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
 }
 
 .post-list {
@@ -298,8 +385,9 @@
    title gives way to the tag and the tag never to the title (T-271). */
 .post-card {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
-    padding-top: var(--space-2);
-    padding-bottom: var(--space-2);
+    min-height: var(--hit-touch);
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
 }
 
 .post-card.is-preset {
@@ -313,8 +401,8 @@
     align-items: center;
     justify-content: center;
     flex: none;
-    width: 26px;
-    height: 26px;
+    width: 34px;
+    height: 34px;
     border-radius: var(--radius-sm);
     background: var(--alt);
     color: var(--accent);
@@ -343,11 +431,31 @@
     white-space: nowrap;
 }
 
+.post-card-meta,
 .post-card-langs {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: var(--space-1);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.form-toolbar .post-sort { flex-basis: calc(50% - var(--space-1)); }
+
+.form-toolbar app-button { align-self: end; }
+
+.post-card-project {
+    max-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.post-card-private {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--t2);
 }
 
 /* A language is a code in mono, not a pill (ADR-155). */
@@ -358,7 +466,29 @@
     letter-spacing: .03em;
 }
 
-.post-card-state { flex: none; }
+.post-card-state {
+    flex: none;
+    color: var(--t2);
+    font-size: var(--fs-11);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.post-card-state.is-live { color: var(--ok); }
+.post-card-state.is-warn { color: var(--warn); }
+.post-card-state.is-muted { color: var(--t2); }
+
+.post-list-message {
+    padding: var(--space-4);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+    line-height: 1.4;
+}
+
+.post-list-message p { margin: 0 0 var(--space-3); }
+.post-list-message p:last-child { margin-bottom: 0; }
 
 /* The slug and the button that saves it are one control, and the button that takes the post down
    is not: without this the three stacked edge to edge and read as one column of parts. */

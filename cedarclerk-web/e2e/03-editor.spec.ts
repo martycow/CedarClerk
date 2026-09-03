@@ -61,7 +61,7 @@ test('a no-op save does not flip the indicator to unsaved', async ({ page, conte
         return false;
 
         function synced() {
-            return (document.querySelector('app-document-frame .frame-footer')?.textContent ?? '').includes('Synced');
+            return (document.querySelector('app-document-frame .frame-save')?.textContent ?? '').includes('Synced');
         }
     });
     expect(settled, 'the editor never held Synced long enough to watch').toBe(true);
@@ -74,7 +74,7 @@ test('a no-op save does not flip the indicator to unsaved', async ({ page, conte
     const words = page.evaluate(async () => {
         const seen = new Set<string>();
         for (let i = 0; i < 60; i++) {
-            const text = (document.querySelector('app-document-frame .frame-footer')?.textContent ?? '').replace(/\s+/g, ' ');
+            const text = (document.querySelector('app-document-frame .frame-save')?.textContent ?? '').replace(/\s+/g, ' ');
             seen.add(text.includes('Synced') ? 'Synced' : text.trim().slice(0, 60));
             await new Promise(r => setTimeout(r, 50));
         }

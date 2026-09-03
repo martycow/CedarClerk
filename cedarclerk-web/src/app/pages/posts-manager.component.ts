@@ -1,7 +1,7 @@
-import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
@@ -26,7 +26,7 @@ import { FolderPickerComponent } from '../shared/folder-picker.component';
 import { FormRefComponent } from '../shared/form-ref.component';
 import { TagUsageService } from '../core/tag-usage.service';
 import { FoldersService } from '../core/folders.service';
-import { ProjectsService, ProjectSummary, DOCUMENT_TYPE_ICONS } from '../core/projects.service';
+import { ProjectsService, ProjectSummary, DOCUMENT_TYPE_ICONS, isPublishableType } from '../core/projects.service';
 import { StatsComponent } from './stats.component';
 import { IconComponent } from '../shared/icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -41,12 +41,18 @@ import { GrowthChartComponent, GrowthSeries, SeriesSlot } from '../bench/worktop
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
+import { PopoverComponent } from '../shared/popover.component';
+import { SortDirection } from '../core/collection-query';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
 // lives) because links to it exist in the wild — the account menu, and Marty's own bookmarks.
 export type ManagerTab = 'posts' | 'stats' | 'forms';
 const MANAGER_TABS: ManagerTab[] = ['posts', 'stats', 'forms'];
 const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
+type PostStateFilter = 'all' | 'live' | 'draft' | 'scheduled' | 'archived';
+type PostVisibilityFilter = 'all' | 'public' | 'private';
+type PostSort = 'published' | 'updated' | 'title' | 'activity';
+type PresetSort = 'created' | 'name' | 'questions';
 
 // N7 — the Posts Manager. Comments/reactions and stats used to be two separate top-level pages
 // with their own headers; they are now tab bodies here (their routes redirect), so there is one
@@ -60,6 +66,7 @@ const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
         PlanLockComponent, HintDotComponent,
         LeafTagComponent, SpecRowComponent, PageHeaderComponent, EmptyStateComponent,
         GrowthChartComponent, LanguageMenuComponent, InputComponent, BrandIconComponent,
+        PopoverComponent,
     ],
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
@@ -72,6 +79,7 @@ export class PostsManagerComponent implements OnInit {
     private publishApi = inject(PublishService);
     private linksApi = inject(LinksService);
     private route = inject(ActivatedRoute);
+    private router = inject(Router);
     feedback = inject(CommentsService);
     private tagUsageApi = inject(TagUsageService);
     private foldersApi = inject(FoldersService);
@@ -89,6 +97,7 @@ export class PostsManagerComponent implements OnInit {
 
     drafts = signal<DraftMeta[]>([]);
     selectedId = signal<string | null>(null);
+    private failedCovers = signal<ReadonlySet<string>>(new Set());
 
     // ADR-203 — a post written before the module existed belongs to no project, and there was no
     // screen that could put it in one: the project hub only offers documents it created itself.
@@ -106,7 +115,13 @@ export class PostsManagerComponent implements OnInit {
     // FI3.4 — the published post's own URL.
     editSlug = '';
     // FI3.10 — the list is publish-date ordered; search is how you reach one post directly.
-    search = '';
+    search = signal('');
+    stateFilter = signal<PostStateFilter>('all');
+    visibilityFilter = signal<PostVisibilityFilter>('all');
+    projectFilter = signal('all');
+    languageFilter = signal('all');
+    postSort = signal<PostSort>('published');
+    postSortDirection = signal<SortDirection>('desc');
     // Per-draft count of comments arrived since the last look, for the list's "+N" chip.
     newByDraft = signal<Record<string, number>>({});
     renaming = signal(false);
@@ -140,6 +155,10 @@ export class PostsManagerComponent implements OnInit {
     presetLoadError = signal('');
     private presetsLoadPromise: Promise<void> | null = null;
     selectedPresetId = signal<string | null>(null);
+    presetSearch = signal('');
+    presetLanguageFilter = signal('all');
+    presetSort = signal<PresetSort>('created');
+    presetSortDirection = signal<SortDirection>('desc');
     presetName = '';
     readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
     readonly contentLanguages = CONTENT_LANGUAGES;
@@ -156,6 +175,7 @@ export class PostsManagerComponent implements OnInit {
     published = signal<PublishedPost[]>([]);
 
     async ngOnInit() {
+        this.restoreCollectionQuery();
         this.feedback.refreshNewCount();
         // The default tab is 'posts' and setTab() only runs for a ?tab= deep link, so without
         // this eager load a plain landing here never fetched the presets at all — the form
@@ -182,7 +202,7 @@ export class PostsManagerComponent implements OnInit {
         // Wave 2 — the calendar's sent tickets deep-link here with the post to select.
         const asked = this.route.snapshot.queryParamMap.get('draft');
         if (asked) {
-            const draft = this.drafts().find(d => d.id === asked);
+            const draft = this.postPool().find(d => d.id === asked);
             if (draft) this.select(draft);
         }
     }
@@ -206,6 +226,7 @@ export class PostsManagerComponent implements OnInit {
         // Leaving the forms tab with unsaved preset edits commits them rather than dropping them.
         if (this.tab() === 'forms' && tab !== 'forms') this.flushPreset();
         this.tab.set(tab);
+        this.syncCollectionQuery();
         if (tab === 'forms') this.resetPresetScroll();
         // Presets are needed by both tabs now: authored on forms, applied to a post on posts.
         if ((tab === 'forms' || tab === 'posts') && !this.presetsLoaded()) void this.loadPresets();
@@ -213,7 +234,7 @@ export class PostsManagerComponent implements OnInit {
 
     selected(): DraftMeta | null {
         const id = this.selectedId();
-        return id ? this.drafts().find(d => d.id === id) ?? null : null;
+        return id ? this.postPool().find(d => d.id === id) ?? null : null;
     }
 
     selectFirstPost() {
@@ -221,16 +242,203 @@ export class PostsManagerComponent implements OnInit {
         if (first) void this.select(first);
     }
 
-    // FI3.10 — newest published first, then everything unpublished. Search covers title and tags,
-    // which is what a post is actually remembered by.
+    readonly postPool = computed(() =>
+        this.drafts().filter(d => !d.isTemplate && isPublishableType(d.documentType)));
+
+    readonly availableLanguages = computed(() => [...new Set(
+        this.postPool().flatMap(d => this.allLanguages(d)))].sort());
+
+    readonly postSortOptions = computed(() => {
+        const t = this.t().manager;
+        return [
+            { value: 'published:desc', label: t.sortPublishedDesc },
+            { value: 'published:asc', label: t.sortPublishedAsc },
+            { value: 'updated:desc', label: t.sortUpdatedDesc },
+            { value: 'updated:asc', label: t.sortUpdatedAsc },
+            { value: 'title:asc', label: t.sortTitleAsc },
+            { value: 'title:desc', label: t.sortTitleDesc },
+            { value: 'activity:desc', label: t.sortActivityDesc },
+            { value: 'activity:asc', label: t.sortActivityAsc },
+        ];
+    });
+
+    readonly availablePresetLanguages = computed(() => [...new Set(
+        this.presets().flatMap(p => this.presetLanguagesOf(p)))].sort());
+
+    readonly presetSortOptions = computed(() => {
+        const t = this.t().manager.forms;
+        return [
+            { value: 'created:desc', label: t.sortNewest },
+            { value: 'created:asc', label: t.sortOldest },
+            { value: 'name:asc', label: t.sortNameAsc },
+            { value: 'name:desc', label: t.sortNameDesc },
+            { value: 'questions:desc', label: t.sortQuestionsDesc },
+            { value: 'questions:asc', label: t.sortQuestionsAsc },
+        ];
+    });
+
+    postSortValue(): string {
+        return `${this.postSort()}:${this.postSortDirection()}`;
+    }
+
+    coverFailed(draft: DraftMeta): boolean {
+        return !!draft.coverImagePath && this.failedCovers().has(`${draft.id}:${draft.coverImagePath}`);
+    }
+
+    markCoverFailed(draft: DraftMeta): void {
+        if (!draft.coverImagePath) return;
+        this.failedCovers.update(current => new Set(current).add(`${draft.id}:${draft.coverImagePath}`));
+    }
+
+    postActivity(draft: DraftMeta): string {
+        return this.t().manager.activityMetric(draft.viewCount + draft.reactionCount);
+    }
+
+    postActivityTitle(draft: DraftMeta): string {
+        return this.t().manager.activityBreakdown(draft.viewCount, draft.reactionCount);
+    }
+
+    filterCount(): number {
+        return Number(this.stateFilter() !== 'all')
+            + Number(this.visibilityFilter() !== 'all')
+            + Number(this.projectFilter() !== 'all')
+            + Number(this.languageFilter() !== 'all');
+    }
+
+    hasPostFilters(): boolean {
+        return !!this.search().trim() || this.filterCount() > 0;
+    }
+
+    onPostSearch(value: string) {
+        this.search.set(value);
+        this.ensureVisibleSelection();
+        this.syncCollectionQuery();
+    }
+
+    setStateFilter(value: string) {
+        if (!['all', 'live', 'draft', 'scheduled', 'archived'].includes(value)) return;
+        this.stateFilter.set(value as PostStateFilter);
+        this.ensureVisibleSelection();
+        this.syncCollectionQuery();
+    }
+
+    setVisibilityFilter(value: string) {
+        if (!['all', 'public', 'private'].includes(value)) return;
+        this.visibilityFilter.set(value as PostVisibilityFilter);
+        this.ensureVisibleSelection();
+        this.syncCollectionQuery();
+    }
+
+    setProjectFilter(value: string) {
+        this.projectFilter.set(value);
+        this.ensureVisibleSelection();
+        this.syncCollectionQuery();
+    }
+
+    setLanguageFilter(value: string) {
+        this.languageFilter.set(value);
+        this.ensureVisibleSelection();
+        this.syncCollectionQuery();
+    }
+
+    setPostSortValue(value: string) {
+        const [key, direction] = value.split(':');
+        if (!['published', 'updated', 'title', 'activity'].includes(key)
+            || (direction !== 'asc' && direction !== 'desc')) return;
+        this.postSort.set(key as PostSort);
+        this.postSortDirection.set(direction);
+        this.syncCollectionQuery();
+    }
+
+    clearPostFilters() {
+        this.search.set('');
+        this.stateFilter.set('all');
+        this.visibilityFilter.set('all');
+        this.projectFilter.set('all');
+        this.languageFilter.set('all');
+        this.ensureVisibleSelection();
+        this.syncCollectionQuery();
+    }
+
+    presetSortValue(): string {
+        return `${this.presetSort()}:${this.presetSortDirection()}`;
+    }
+
+    hasPresetFilters(): boolean {
+        return !!this.presetSearch().trim() || this.presetLanguageFilter() !== 'all';
+    }
+
+    onPresetSearch(value: string) {
+        this.presetSearch.set(value);
+        this.ensureVisiblePresetSelection();
+        this.syncCollectionQuery();
+    }
+
+    setPresetLanguageFilter(value: string) {
+        this.presetLanguageFilter.set(value);
+        this.ensureVisiblePresetSelection();
+        this.syncCollectionQuery();
+    }
+
+    setPresetSortValue(value: string) {
+        const [key, direction] = value.split(':');
+        if (!['created', 'name', 'questions'].includes(key)
+            || (direction !== 'asc' && direction !== 'desc')) return;
+        this.presetSort.set(key as PresetSort);
+        this.presetSortDirection.set(direction);
+        this.syncCollectionQuery();
+    }
+
+    clearPresetFilters() {
+        this.presetSearch.set('');
+        this.presetLanguageFilter.set('all');
+        this.syncCollectionQuery();
+    }
+
+    private ensureVisibleSelection() {
+        const selected = this.selectedId();
+        if (selected && !this.visiblePosts().some(d => d.id === selected)) this.selectedId.set(null);
+    }
+
+    private ensureVisiblePresetSelection() {
+        const selected = this.selectedPresetId();
+        if (!selected || this.visiblePresets().some(p => p.id === selected)) return;
+        void this.flushPreset();
+        this.selectedPresetId.set(null);
+        this.presetForm.set(null);
+        this.presetState.set('saved');
+    }
+
     visiblePosts(): DraftMeta[] {
-        const q = this.search.trim().toLowerCase();
-        const matched = q
-            ? this.drafts().filter(d => d.title.toLowerCase().includes(q) || d.tags.toLowerCase().includes(q))
-            : this.drafts();
-        return [...matched].sort((a, b) =>
-            (b.blogPublishedAt ?? '').localeCompare(a.blogPublishedAt ?? '')
-            || b.updatedAt.localeCompare(a.updatedAt));
+        const q = this.search().trim().toLowerCase();
+        const state = this.stateFilter();
+        const visibility = this.visibilityFilter();
+        const project = this.projectFilter();
+        const language = this.languageFilter();
+        const matched = this.postPool().filter(d => {
+            if (q && !d.title.toLowerCase().includes(q) && !d.tags.toLowerCase().includes(q)) return false;
+            if (state !== 'all' && this.publishState(d) !== state) return false;
+            if (visibility === 'private' && !d.isPrivate) return false;
+            if (visibility === 'public' && d.isPrivate) return false;
+            if (project === 'none' && d.projectId !== null) return false;
+            if (project !== 'all' && project !== 'none' && d.projectId !== project) return false;
+            if (language !== 'all' && !this.allLanguages(d).includes(language)) return false;
+            return true;
+        });
+        const key = this.postSort();
+        const direction = this.postSortDirection() === 'asc' ? 1 : -1;
+        return [...matched].sort((a, b) => {
+            if (key === 'published' && !!a.blogPublishedAt !== !!b.blogPublishedAt)
+                return a.blogPublishedAt ? -1 : 1;
+            const compared = key === 'published'
+                ? (a.blogPublishedAt ?? '').localeCompare(b.blogPublishedAt ?? '')
+                : key === 'updated'
+                    ? a.updatedAt.localeCompare(b.updatedAt)
+                    : key === 'title'
+                        ? a.title.localeCompare(b.title)
+                        : (a.viewCount + a.reactionCount) - (b.viewCount + b.reactionCount);
+            return direction * compared || a.id.localeCompare(b.id);
+        });
     }
 
     // FI3.6 — how much arrived on this post since the last look. Comments only: reactions have no
@@ -352,15 +560,17 @@ export class PostsManagerComponent implements OnInit {
     // is archived whatever else is true of it, a published one is live, and everything else has
     // simply not gone out yet. Two chips saying different things about the same post is the
     // confusion this replaces.
-    publishState(d: { isArchived: boolean; isBlogPublished: boolean }): 'archived' | 'live' | 'draft' {
+    publishState(d: DraftMeta): 'archived' | 'live' | 'scheduled' | 'draft' {
         if (d.isArchived) return 'archived';
-        return d.isBlogPublished ? 'live' : 'draft';
+        if (d.isBlogPublished) return 'live';
+        return this.hasPendingSchedule(d.id) ? 'scheduled' : 'draft';
     }
 
-    publishStateLabel(d: { isArchived: boolean; isBlogPublished: boolean }): string {
+    publishStateLabel(d: DraftMeta): string {
         const state = this.publishState(d);
         if (state === 'archived') return this.t().manager.archived;
-        return state === 'live' ? 'LIVE' : this.t().manager.unpublishedChip;
+        if (state === 'live') return this.t().manager.liveChip;
+        return state === 'scheduled' ? this.t().manager.scheduled : this.t().manager.unpublishedChip;
     }
 
     hasPendingSchedule(draftId: string): boolean {
@@ -377,6 +587,8 @@ export class PostsManagerComponent implements OnInit {
         try {
             await this.postsApi.cancelScheduled(id);
             this.scheduled.update(list => list.filter(p => p.id !== id));
+            this.ensureVisibleSelection();
+            this.syncCollectionQuery();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.save));
         }
@@ -439,6 +651,7 @@ export class PostsManagerComponent implements OnInit {
         if (d.isPrivate) this.loadForm();
         this.loadTrackedLinks(d.id);
         this.loadHistory(d.id, true);
+        this.syncCollectionQuery();
     }
 
     // ─── Tracked links (Wave 2 item 16) — the clicks a post's short links collected ───────────
@@ -526,6 +739,8 @@ export class PostsManagerComponent implements OnInit {
 
     private patch(id: string, patch: Partial<DraftMeta>) {
         this.drafts.update(list => list.map(d => d.id === id ? { ...d, ...patch } : d));
+        this.ensureVisibleSelection();
+        this.syncCollectionQuery();
     }
 
     async saveMeta() {
@@ -831,6 +1046,28 @@ export class PostsManagerComponent implements OnInit {
             this.presetLangsCache.set(p.formJson, cached);
         }
         return cached;
+    }
+
+    presetQuestionCount(p: FormPreset): number {
+        return normalizeFormForEdit(p.formJson, p.language || DEFAULT_PRIMARY_LANGUAGE).questions.length;
+    }
+
+    visiblePresets(): FormPreset[] {
+        const query = this.presetSearch().trim().toLowerCase();
+        const language = this.presetLanguageFilter();
+        const key = this.presetSort();
+        const direction = this.presetSortDirection() === 'asc' ? 1 : -1;
+        return this.presets()
+            .filter(p => (!query || p.name.toLowerCase().includes(query))
+                && (language === 'all' || this.presetLanguagesOf(p).includes(language)))
+            .sort((a, b) => {
+                const compared = key === 'created'
+                    ? a.createdAt.localeCompare(b.createdAt)
+                    : key === 'name'
+                        ? a.name.localeCompare(b.name)
+                        : this.presetQuestionCount(a) - this.presetQuestionCount(b);
+                return direction * compared || a.id.localeCompare(b.id);
+            });
     }
 
     async selectPreset(p: FormPreset) {
@@ -1177,7 +1414,7 @@ export class PostsManagerComponent implements OnInit {
     headerMeta(): HeaderMeta[] {
         const t = this.t().manager;
         return [
-            { text: t.rulerPosts(this.drafts().length) },
+            { text: t.rulerPosts(this.postPool().length) },
             { text: t.rulerPublished(this.publishedCount()) },
             ...(this.pendingScheduleCount() ? [{ text: t.rulerScheduled(this.pendingScheduleCount()) }] : []),
         ];
@@ -1224,19 +1461,74 @@ export class PostsManagerComponent implements OnInit {
     }
 
     publishedCount(): number {
-        return this.drafts().filter(d => d.isBlogPublished).length;
+        return this.postPool().filter(d => d.isBlogPublished).length;
     }
 
     privateCount(): number {
-        return this.drafts().filter(d => d.isPrivate).length;
+        return this.postPool().filter(d => d.isPrivate).length;
     }
 
     archivedCount(): number {
-        return this.drafts().filter(d => d.isArchived).length;
+        return this.postPool().filter(d => d.isArchived).length;
     }
 
     pendingScheduleCount(): number {
         return this.scheduled().filter(p => p.status === 'Pending').length;
+    }
+
+    private restoreCollectionQuery() {
+        const params = this.route.snapshot.queryParamMap;
+        this.search.set(params.get('q') ?? '');
+        const state = params.get('status');
+        if (state && ['live', 'draft', 'scheduled', 'archived'].includes(state))
+            this.stateFilter.set(state as PostStateFilter);
+        const visibility = params.get('visibility');
+        if (visibility === 'public' || visibility === 'private')
+            this.visibilityFilter.set(visibility);
+        const project = params.get('project');
+        if (project) this.projectFilter.set(project);
+        const language = params.get('language');
+        if (language) this.languageFilter.set(language);
+        const sort = params.get('sort');
+        const direction = params.get('dir');
+        if (sort && ['published', 'updated', 'title', 'activity'].includes(sort))
+            this.postSort.set(sort as PostSort);
+        if (direction === 'asc' || direction === 'desc') this.postSortDirection.set(direction);
+        this.presetSearch.set(params.get('formq') ?? '');
+        const presetLanguage = params.get('formlanguage');
+        if (presetLanguage) this.presetLanguageFilter.set(presetLanguage);
+        const presetSort = params.get('formsort');
+        const presetDirection = params.get('formdir');
+        if (presetSort && ['created', 'name', 'questions'].includes(presetSort))
+            this.presetSort.set(presetSort as PresetSort);
+        if (presetDirection === 'asc' || presetDirection === 'desc')
+            this.presetSortDirection.set(presetDirection);
+    }
+
+    private syncCollectionQuery() {
+        const selected = this.selectedId();
+        void this.router.navigate([], {
+            relativeTo: this.route,
+            replaceUrl: true,
+            queryParamsHandling: 'merge',
+            queryParams: {
+                tab: this.tab() === 'posts' ? null : this.tab(),
+                q: this.search().trim() || null,
+                status: this.stateFilter() === 'all' ? null : this.stateFilter(),
+                visibility: this.visibilityFilter() === 'all' ? null : this.visibilityFilter(),
+                project: this.projectFilter() === 'all' ? null : this.projectFilter(),
+                language: this.languageFilter() === 'all' ? null : this.languageFilter(),
+                sort: this.postSort() === 'published' ? null : this.postSort(),
+                dir: this.postSort() === 'published' && this.postSortDirection() === 'desc'
+                    ? null : this.postSortDirection(),
+                formq: this.presetSearch().trim() || null,
+                formlanguage: this.presetLanguageFilter() === 'all' ? null : this.presetLanguageFilter(),
+                formsort: this.presetSort() === 'created' ? null : this.presetSort(),
+                formdir: this.presetSort() === 'created' && this.presetSortDirection() === 'desc'
+                    ? null : this.presetSortDirection(),
+                ...(selected ? { draft: selected } : { draft: null }),
+            },
+        });
     }
 
     private async loadProjects() {

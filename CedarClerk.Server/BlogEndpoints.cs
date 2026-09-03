@@ -1281,7 +1281,7 @@ public static partial class BlogEndpoints
         return $"""
             <div class="author-links-anchor" id="authorLinksAnchor">
             <button type="button" class="tg-open-btn author-links-btn" id="authorLinksBtn"
-                    aria-haspopup="true" aria-expanded="false" aria-controls="authorLinksMenu"
+                    aria-expanded="false" aria-controls="authorLinksMenu"
                     title="{System.Net.WebUtility.HtmlEncode(title)}" aria-label="{System.Net.WebUtility.HtmlEncode(title)}">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
             <span class="tg-open-label author-links-label">{System.Net.WebUtility.HtmlEncode(shortLabel)}</span>
@@ -2424,6 +2424,8 @@ public static partial class BlogEndpoints
             width: 220px; padding: var(--space-4); background-color: var(--sheet);
             background-image: var(--tex-paper); border: 1px solid var(--paper-edge);
             border-radius: var(--radius-paper); box-shadow: var(--shadow-sheet); color: var(--text);
+            max-height: calc(100vh - 104px); max-height: calc(100dvh - 104px);
+            overflow-y: auto; overscroll-behavior: contain;
         }
         .author-links-list { display: grid; gap: var(--space-1); }
         .author-link {

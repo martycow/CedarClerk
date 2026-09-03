@@ -196,6 +196,12 @@
     flex: none;
 }
 
+.strip .tb-history {
+    display: inline-flex;
+    gap: 0;
+    flex: none;
+}
+
 /* Pushed to the far end without a spacer element: a spacer would be one more flex item and one
    more gap than measureToolbar() counts, and the count is what decides the row. */
 .strip .tb-trail { margin-left: auto; }
@@ -555,6 +561,20 @@
 /* On a phone the preview's three columns are one, and nothing may push the page sideways. */
 @media (max-width: 759px) {
     .inspector { width: auto; }
+    .frame-back, .frame-next {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        min-width: 0;
+    }
+    .frame-back .btn, .frame-next .btn {
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        padding-block: var(--space-2);
+        white-space: normal;
+    }
 }
 
 .preview-slot {
@@ -603,15 +623,10 @@
     color: var(--t3);
 }
 
-/* The frame's slots: the title actions, the way back and the next-step buttons. */
 .frame-back {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
-}
-
-.frame-more {
-    padding: 0 var(--space-2);
 }
 
 .frame-next {
@@ -619,19 +634,6 @@
     align-items: center;
     gap: var(--space-2);
 }
-
-.block-menu-link {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-size: var(--fs-ui);
-    text-decoration: none;
-}
-
-.block-menu-link:hover { background: var(--hover); }
 
 /* The group heading above a run of spec rows. Small display caps, and the selection heading takes
    the accent so the panel says out loud which of its two subjects is on show (ADR-159 clause 5).

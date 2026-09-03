@@ -482,34 +482,19 @@
     </div>
     }
 
-    <!--One document, three tabs (ADR-239 clause 9). The frame draws the top bar, the title, the
-    tabs and the footer; this page fills its slots. Write stays mounted behind the other tabs —
-    TipTap owns the sheet's DOM node, and unmounting it would orphan the editor.-->
-    <app-document-frame [title]="frameTitle()" [kicker]="frameKicker()" [statusTag]="statusTag()"
+    <!--TipTap owns the sheet's DOM node, so Write stays mounted while another tab is selected.-->
+    <app-document-frame [kicker]="frameKicker()" [statusTag]="statusTag()"
                         [tab]="tab()" [tabs]="frameTabs()" [tabsLabel]="t().editor.tabsLabel"
                         [saveWord]="syncWord()" [saveState]="frameSaveState()" [dateLabel]="dateLabel()"
-                        [footerText]="footerText()" [canUndo]="canUndo()" [canRedo]="canRedo()"
-                        [project]="frameProject()" [projects]="frameProjects()"
-                        (tabChange)="setTab($event)" (undo)="cmd(c => c.undo())" (redo)="cmd(c => c.redo())">
-        <app-popover title-actions align="right">
-            <button trigger type="button" class="btn frame-more"
-                    [title]="t().editor.frame.moreActions" [attr.aria-label]="t().editor.frame.moreActions">
-                <app-icon name="dots-three" size="sm"></app-icon>
-            </button>
-            <div panel class="block-menu">
-                <button type="button" (click)="openRevisions()"><app-icon name="clock" size="xs"></app-icon> {{ t().editor.inspector.history }}</button>
-                <a class="block-menu-link" routerLink="/posts"><app-icon name="paper-plane-tilt" size="xs"></app-icon> {{ t().editor.frame.postsManager }}</a>
-            </div>
-        </app-popover>
-        <!--Details folds the inspector away (CONTRACT §D3). A toggle, so it says which way it is.-->
-        <button title-actions type="button" class="btn" [attr.aria-pressed]="inspectorOpen()"
-                aria-controls="editor-inspector" (click)="toggleDetails()">
-            {{ inspectorOpen() ? t().editor.frame.hideDetails : t().editor.frame.details }}
-        </button>
+                        [footerText]="footerText()"
+                        (tabChange)="setTab($event)">
 
-        <!--One primary action per state (ADR-242 clause 4): the footer's end is the next step,
-        its start the way back. Share preview keeps its one home here on Write and Preview.-->
         <span footer-start class="frame-back">
+            @if (tab() === 'write') {
+                <button type="button" class="btn" (click)="openRevisions()">
+                    <app-icon name="clock" size="sm"></app-icon>{{ t().editor.inspector.history }}
+                </button>
+            }
             @if (tab() !== 'write') {
                 <button type="button" class="btn" (click)="setTab(tab() === 'publish' ? 'preview' : 'write')">
                     <app-icon name="caret-left" size="xs"></app-icon>{{ t().editor.frame.back }}
@@ -1304,6 +1289,18 @@
                  [class.hidden-for-focus]="focusModeActive()">
                 <div class="tb-line">
                     <span class="tb-lead">
+                        <span class="tb-history">
+                            <button type="button" [disabled]="!canUndo()"
+                                    [title]="t().editor.tb.undo" [attr.aria-label]="t().editor.tb.undo"
+                                    (click)="cmd(c => c.undo())">
+                                <app-icon name="arrow-u-up-left" size="xs"></app-icon>
+                            </button>
+                            <button type="button" [disabled]="!canRedo()"
+                                    [title]="t().editor.tb.redo" [attr.aria-label]="t().editor.tb.redo"
+                                    (click)="cmd(c => c.redo())">
+                                <app-icon name="arrow-u-up-right" size="xs"></app-icon>
+                            </button>
+                        </span>
                         <span class="tb-group">
                             <app-popover>
                                 <button trigger class="block-dropdown">
@@ -1330,8 +1327,6 @@
                     }
 
                     <span class="tb-trail">
-                        <!--The three controls the status bar used to carry (ADR-153). They are controls, so
-                        the rule below could not take them: it is read-only by design and offers no slot.-->
                         <!--Only while autosave has given up. It retries on a widening backoff and then
                         stops, so this button is the last way to save the draft, not a convenience.-->
                         @if (saveState() === 'error') {
@@ -1340,6 +1335,13 @@
                             <app-icon name="arrow-clockwise" size="xs"></app-icon>
                         </button>
                         }
+                        <button type="button" class="tb-pane-toggle" [class.on]="inspectorOpen()"
+                                [title]="inspectorOpen() ? t().editor.frame.hideDetails : t().editor.frame.details"
+                                [attr.aria-label]="inspectorOpen() ? t().editor.frame.hideDetails : t().editor.frame.details"
+                                [attr.aria-pressed]="inspectorOpen()" aria-controls="editor-inspector"
+                                (click)="toggleDetails()">
+                            <app-icon name="layout" size="xs"></app-icon>
+                        </button>
                     </span>
                 </div>
 

@@ -63,15 +63,20 @@ public static class AssetIndexEndpoints
 
         group.MapGet("/", async (
             Guid projectId, ClaimsPrincipal user, CedarDbContext db,
-            string? kind = null, string? search = null, bool missing = false, int skip = 0, int take = 60) =>
+            string? kind = null, string? search = null, bool missing = false,
+            string sort = "path", string direction = "asc", int skip = 0, int take = 60) =>
         {
+            var validationError = ValidateCollectionQuery(kind, sort, direction);
+            if (validationError is not null)
+                return Results.BadRequest(new { error = validationError });
+
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == projectId && p.OwnerId == uid);
             if (project is null) return Results.NotFound();
 
             var query = db.AssetEntries.Where(a => a.ProjectId == projectId && a.OwnerId == uid);
             if (missing) query = query.Where(a => a.MissingSince != null);
-            if (kind is not null && AssetKinds.IsKnown(kind)) query = query.Where(a => a.Kind == kind);
+            if (kind is not null) query = query.Where(a => a.Kind == kind);
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var needle = search.Trim();
@@ -92,8 +97,8 @@ public static class AssetIndexEndpoints
             // Materialised before projecting, because Project() is a method and EF cannot translate
             // one into SQL. At most 200 rows of small columns, so the cost of loading whole entities
             // is real but tiny — and it buys one definition of `hasThumbnail` instead of two.
-            var rows = await query
-                .OrderBy(a => a.RelativePath)
+            var ordered = OrderForIndex(query, sort, direction);
+            var rows = await ordered
                 .Skip(Math.Max(0, skip))
                 .Take(Math.Clamp(take, 1, 200))
                 .ToListAsync();
@@ -411,6 +416,32 @@ public static class AssetIndexEndpoints
             return removed ? Results.NoContent() : Results.NotFound();
         });
     }
+
+    public static string? ValidateCollectionQuery(string? kind, string sort, string direction)
+    {
+        if (kind is not null && !AssetKinds.IsKnown(kind))
+            return ErrorMessages.UnknownAssetKindFilter;
+        if (sort is not ("path" or "type" or "size" or "modified" or "status"))
+            return ErrorMessages.UnknownAssetSortKey;
+        if (direction is not ("asc" or "desc"))
+            return ErrorMessages.UnknownAssetSortDirection;
+        return null;
+    }
+
+    public static IOrderedQueryable<AssetEntry> OrderForIndex(
+        IQueryable<AssetEntry> query, string sort, string direction) => (sort, direction) switch
+    {
+        ("path", "asc") => query.OrderBy(a => a.RelativePath).ThenBy(a => a.Id),
+        ("path", "desc") => query.OrderByDescending(a => a.RelativePath).ThenBy(a => a.Id),
+        ("type", "asc") => query.OrderBy(a => a.Kind).ThenBy(a => a.RelativePath).ThenBy(a => a.Id),
+        ("type", "desc") => query.OrderByDescending(a => a.Kind).ThenBy(a => a.RelativePath).ThenBy(a => a.Id),
+        ("size", "asc") => query.OrderBy(a => a.SizeBytes).ThenBy(a => a.Id),
+        ("size", "desc") => query.OrderByDescending(a => a.SizeBytes).ThenBy(a => a.Id),
+        ("modified", "asc") => query.OrderBy(a => a.ModifiedAt).ThenBy(a => a.Id),
+        ("modified", "desc") => query.OrderByDescending(a => a.ModifiedAt).ThenBy(a => a.Id),
+        ("status", "asc") => query.OrderBy(a => a.MissingSince != null).ThenBy(a => a.Id),
+        _ => query.OrderByDescending(a => a.MissingSince != null).ThenBy(a => a.Id),
+    };
 
     /// <summary>
     /// The row as every screen wants it. One projection rather than two hand-kept copies: the list

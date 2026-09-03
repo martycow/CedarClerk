@@ -100,7 +100,6 @@ import { CurrentProjectService } from '../core/current-project.service';
 import { PreviewService } from '../core/preview.service';
 import { DocumentFrameComponent, DocumentTab, DocumentTabItem } from '../shell/document-frame.component';
 import { HeaderMeta } from '../shell/page-header.component';
-import { SidebarProject } from '../shell/project-switcher.component';
 import { EditorPreviewComponent, PreviewDraftFacts } from './editor-preview/editor-preview.component';
 import { STRIP_GROUP_IDS } from '../core/toolbar-layout';
 import { ToolbarFit, fitToolbar } from '../core/toolbar-fit';
@@ -283,13 +282,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     });
     readonly frameTabs = computed<DocumentTabItem[]>(() => {
         const t = this.t().editor.tabs;
+        const compact = this.t().editor.tabsCompact;
         return [
-            { id: 'write', label: t.write, icon: 'pencil-simple' },
-            { id: 'preview', label: t.preview, icon: 'eye' },
-            { id: 'publish', label: t.publish, icon: 'upload-simple' },
+            { id: 'write', label: t.write, compactLabel: compact.write, icon: 'pencil-simple' },
+            { id: 'preview', label: t.preview, compactLabel: compact.preview, icon: 'eye' },
+            { id: 'publish', label: t.publish, compactLabel: compact.publish, icon: 'upload-simple' },
         ];
     });
-    /** The Details title action folds the inspector away and back; closed by default, remembered per browser. */
     inspectorOpen = signal(readDetailsPreference());
 
     toggleDetails() {
@@ -313,10 +312,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         });
     }
 
-    frameTitle(): string {
-        return this.title.trim() || this.t().drafts.untitled;
-    }
-
     private currentMeta(): DraftMeta | undefined {
         return this.drafts().find(d => d.id === this.currentId());
     }
@@ -326,29 +321,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return id ? this.projectSummaries().find(p => p.id === id) ?? null : null;
     }
 
-    /** "Blog · 23 documents" — the project the document belongs to, when there is one. */
     frameKicker(): string {
         const summary = this.draftProjectSummary();
         if (!summary) return '';
         const kind = this.t().projects.projectTypes[summary.projectType]?.name ?? '';
-        return [kind, this.t().editor.frame.documents(summary.documentCount)].filter(Boolean).join(' · ');
-    }
-
-    frameProject(): SidebarProject | null {
-        if (!this.auth.indieDev()) return null;
-        const id = this.currentMeta()?.projectId || this.currentProject.id();
-        if (!id) return { id: '', name: this.t().shell.allProjects, kind: '', link: '/projects' };
-        const summary = this.projectSummaries().find(p => p.id === id);
-        const name = summary?.name || (this.currentProject.id() === id ? this.currentProject.name() : '');
-        return { id, name: name || '…', kind: '', link: ['/projects', id] };
-    }
-
-    frameProjects(): SidebarProject[] {
-        if (!this.auth.indieDev() || !this.projectSummaries().length) return [];
-        return [
-            ...this.projectSummaries().map(p => ({ id: p.id, name: p.name, kind: '', link: ['/projects', p.id] })),
-            { id: '', name: this.t().shell.allProjects, kind: '', link: '/projects' },
-        ];
+        return [summary.name, kind, this.t().editor.frame.documents(summary.documentCount)].filter(Boolean).join(' · ');
     }
 
     statusTag(): HeaderMeta {
@@ -374,10 +351,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    /** "Synced · saved 2 min ago · 366 words" — the ruler's readouts, on the document's own foot. */
     footerText(): string {
         const t = this.t().editor;
-        const parts = [this.syncWord()];
+        const parts: string[] = [];
         const saved = this.lastSavedAt();
         if (this.saveState() === 'saved' && saved !== null) {
             const minutes = Math.floor((this.clock() - saved) / 60_000);
@@ -1911,7 +1887,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Writing-sheet preferences (ADR-035, Settings → Appearance) — blog-unaffected, editor-only.
     editorFocused = signal(false);
 
-    sheetMaxWidthPx(): number {
+    sheetMaxWidthPx(): number | null {
         return SHEET_WIDTH_PX[this.appearance.prefs().sheetWidth];
     }
 

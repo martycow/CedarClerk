@@ -1,8 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MediaLibraryComponent } from './media-library.component';
-import { AssetsService, LibraryAsset, LibraryKind, LibraryPage } from '../core/assets.service';
+import { AssetsService, LibraryAsset, LibraryKind, LibraryPage, LibrarySort } from '../core/assets.service';
+import { SortDirection } from '../core/collection-query';
 import { en } from '../core/i18n/en';
 import { formatBytes } from '../core/asset-index.service';
+
+function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((ok, fail) => {
+        resolve = ok;
+        reject = fail;
+    });
+    return { promise, resolve, reject };
+}
 
 function asset(id: string, contentType: string): LibraryAsset {
     return {
@@ -26,9 +37,20 @@ const PAGE: LibraryPage = {
 
 class FakeAssets {
     page: LibraryPage = PAGE;
-    queries: { q?: string; type?: LibraryKind | null; project?: string | null; skip: number; take: number }[] = [];
-    async list(query: { q?: string; type?: LibraryKind | null; project?: string | null; skip: number; take: number }) {
+    listHandler: ((query: {
+        q?: string; type?: LibraryKind | null; project?: string | null;
+        sort?: LibrarySort; direction?: SortDirection; skip: number; take: number;
+    }) => Promise<LibraryPage>) | null = null;
+    queries: {
+        q?: string; type?: LibraryKind | null; project?: string | null;
+        sort?: LibrarySort; direction?: SortDirection; skip: number; take: number;
+    }[] = [];
+    async list(query: {
+        q?: string; type?: LibraryKind | null; project?: string | null;
+        sort?: LibrarySort; direction?: SortDirection; skip: number; take: number;
+    }) {
         this.queries.push(query);
+        if (this.listHandler) return this.listHandler(query);
         return structuredClone(this.page);
     }
     async remove() { /* nothing here deletes */ }
@@ -135,13 +157,69 @@ describe('media library', () => {
         expect(head.textContent).toContain(t.fileSize);
         expect(head.textContent).toContain(t.added);
 
-        const rows = [...el().querySelectorAll('button.list-row')] as HTMLButtonElement[];
+        const rows = [...el().querySelectorAll('.list-row:not(.list-head)')] as HTMLElement[];
         expect(rows.length).toBe(2);
+        expect(el().querySelector('.asset-list')?.getAttribute('role')).toBe('table');
+        expect(el().querySelector('[role="grid"]')).toBeNull();
+        expect(head.getAttribute('role')).toBe('row');
+        expect(rows.every(row => row.getAttribute('role') === 'row')).toBe(true);
+        expect(rows.every(row => row.querySelectorAll('[role="cell"]').length === 5)).toBe(true);
+        const openButtons = rows.map(row => row.querySelector<HTMLButtonElement>('button.list-open')!);
+        expect(openButtons.every(button => button.tagName === 'BUTTON' && button.getAttribute('role') === null)).toBe(true);
         expect(rows[0].querySelector('.list-thumbnail img')?.getAttribute('src')).toContain('/media/x/a1');
         expect(rows[1].querySelector('.list-thumbnail app-icon')).not.toBeNull();
 
-        rows[0].click();
+        openButtons[0].click();
         fixture.detectChanges();
-        expect(rows[0].getAttribute('aria-pressed')).toBe('true');
+        expect(openButtons[0].getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('sends the selected order before paging and exposes aria-sort on the active header', async () => {
+        fixture.componentInstance.setView('list');
+        fixture.detectChanges();
+
+        expect(api.queries[0]).toMatchObject({ sort: 'added', direction: 'desc', skip: 0 });
+        const fileHeader = () => [...el().querySelectorAll<HTMLElement>('[role="columnheader"]')]
+            .find(header => header.textContent?.includes(t.fileColumn))!;
+        expect(fileHeader().getAttribute('aria-sort')).toBeNull();
+
+        fileHeader().querySelector<HTMLButtonElement>('button')!.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(api.queries.at(-1)).toMatchObject({ sort: 'name', direction: 'asc', skip: 0 });
+        expect(fileHeader().getAttribute('aria-sort')).toBe('ascending');
+
+        fileHeader().querySelector<HTMLButtonElement>('button')!.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(api.queries.at(-1)).toMatchObject({ sort: 'name', direction: 'desc', skip: 0 });
+        expect(fileHeader().getAttribute('aria-sort')).toBe('descending');
+    });
+
+    it('keeps the newest list response when an older request finishes last', async () => {
+        const older = deferred<LibraryPage>();
+        const newer = deferred<LibraryPage>();
+        let request = 0;
+        api.listHandler = () => request++ === 0 ? older.promise : newer.promise;
+
+        const olderLoad = fixture.componentInstance.load();
+        fixture.componentInstance.setType('video');
+        expect(request).toBe(2);
+
+        const latestPage = {
+            ...PAGE,
+            items: [asset('latest', 'video/mp4')],
+            total: 1,
+        };
+        newer.resolve(latestPage);
+        await vi.waitFor(() =>
+            expect(fixture.componentInstance.page()?.items.map(item => item.id)).toEqual(['latest']));
+        expect(fixture.componentInstance.loading()).toBe(false);
+
+        older.resolve({ ...PAGE, items: [asset('stale', 'image/png')], total: 1 });
+        await olderLoad;
+        fixture.detectChanges();
+        expect(fixture.componentInstance.page()?.items.map(item => item.id)).toEqual(['latest']);
+        expect(fixture.componentInstance.loadError()).toBeNull();
     });
 });

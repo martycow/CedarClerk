@@ -19,6 +19,7 @@ export class PopoverComponent implements OnDestroy {
     });
 
     align = input<'left' | 'right'>('left');
+    placement = input<'vertical' | 'right-start' | 'left-start'>('vertical');
 
     isOpen = signal(false);
     panelTop = signal(0);
@@ -33,29 +34,38 @@ export class PopoverComponent implements OnDestroy {
     // Bound so it can be added/removed as the same reference; scroll doesn't bubble, so this
     // must be registered in the capture phase to catch scrolling of the toolbar (or any other
     // ancestor), not just the window.
-    private readonly onAncestorScroll = () => this.close();
+    private readonly onAncestorScroll = (event: Event) => {
+        const target = event.target instanceof Node ? event.target : null;
+        if (target && this.panelRef?.nativeElement.contains(target)) return;
+        this.close();
+    };
 
-    toggle() {
+    toggle(event?: MouseEvent) {
         if (this.isOpen()) {
             this.close();
         } else {
-            this.open();
+            this.open(event?.detail === 0);
         }
     }
 
-    open() {
+    open(focusPanel = false) {
         this.updatePosition();
         this.isOpen.set(true);
         document.addEventListener('scroll', this.onAncestorScroll, { capture: true, passive: true });
         // T-341 — the first pass clamps with a guessed width (the panel is not in the DOM yet);
         // this one re-clamps with the real box, which is what keeps a 260px panel opened from the
         // inspector shelf on the screen.
-        requestAnimationFrame(() => { if (this.isOpen()) this.updatePosition(); });
+        requestAnimationFrame(() => {
+            if (!this.isOpen()) return;
+            this.updatePosition();
+            if (focusPanel) this.focusFirstPanelControl();
+        });
     }
 
-    close() {
+    close(restoreFocus = false) {
         this.isOpen.set(false);
         document.removeEventListener('scroll', this.onAncestorScroll, { capture: true });
+        if (restoreFocus) this.triggerControl()?.focus();
     }
 
     ngOnDestroy() {
@@ -71,6 +81,24 @@ export class PopoverComponent implements OnDestroy {
         const rect = this.triggerRef.nativeElement.getBoundingClientRect();
         const edge = 12;
         const gap = 8;
+        const placement = this.placement();
+        if (placement !== 'vertical') {
+            const width = this.panelRef?.nativeElement.offsetWidth ?? 240;
+            const height = this.panelRef?.nativeElement.offsetHeight ?? 240;
+            const sideRect = this.host.nativeElement.closest('app-sidebar')?.getBoundingClientRect() ?? rect;
+            const preferredLeft = placement === 'right-start' ? sideRect.right + gap : sideRect.left - width - gap;
+            const oppositeLeft = placement === 'right-start' ? sideRect.left - width - gap : sideRect.right + gap;
+            const preferredFits = preferredLeft >= edge && preferredLeft + width <= window.innerWidth - edge;
+            const oppositeFits = oppositeLeft >= edge && oppositeLeft + width <= window.innerWidth - edge;
+            const left = preferredFits ? preferredLeft : oppositeFits ? oppositeLeft
+                : Math.max(edge, Math.min(preferredLeft, window.innerWidth - width - edge));
+            this.panelTop.set(Math.max(edge, Math.min(rect.top, window.innerHeight - height - edge)));
+            this.panelBottom.set(null);
+            this.panelLeft.set(left);
+            this.panelRight.set(null);
+            this.panelMaxHeight.set(Math.max(0, window.innerHeight - edge * 2));
+            return;
+        }
         const below = window.innerHeight - rect.bottom - gap - edge;
         const above = rect.top - gap - edge;
         const opensAbove = below < 240 && above > below;
@@ -98,7 +126,7 @@ export class PopoverComponent implements OnDestroy {
 
     @HostListener('document:keydown.escape')
     onEscape() {
-        if (this.isOpen()) this.close();
+        if (this.isOpen()) this.close(true);
     }
 
     // An outside click closes this, and a full-screen backdrop used to be what caught it. The
@@ -115,6 +143,25 @@ export class PopoverComponent implements OnDestroy {
             if (target.closest('.popover-panel') && target.closest('a[href]')) this.close();
             return;
         }
-        this.close();
+        this.close(!this.isFocusableOutsideTarget(target));
+    }
+
+    private triggerControl(): HTMLElement | null {
+        return this.triggerRef?.nativeElement.querySelector<HTMLElement>('[trigger]')
+            ?? this.triggerRef?.nativeElement ?? null;
+    }
+
+    private isFocusableOutsideTarget(target: Element | null): boolean {
+        const control = target?.closest<HTMLElement>(
+            'a[href], area[href], button, input:not([type="hidden"]), select, textarea, summary, iframe, '
+            + '[contenteditable]:not([contenteditable="false"]), [tabindex]',
+        ) ?? null;
+        return control !== null && !control.matches(':disabled') && control.closest('[inert]') === null;
+    }
+
+    private focusFirstPanelControl(): void {
+        this.panelRef?.nativeElement
+            .querySelector<HTMLElement>('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+            ?.focus();
     }
 }

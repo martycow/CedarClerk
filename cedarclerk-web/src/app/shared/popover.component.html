@@ -1,5 +1,5 @@
 <div class="popover-host">
-    <div class="popover-trigger" #triggerEl (click)="toggle()">
+    <div class="popover-trigger" #triggerEl (click)="toggle($event)">
         <ng-content select="[trigger]"></ng-content>
     </div>
     @if (isOpen()) {

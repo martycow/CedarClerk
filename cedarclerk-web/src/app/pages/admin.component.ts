@@ -1,8 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-    AdminService, AdminAuditEntry, AdminBilling, AdminDiscovery, AdminFeedbackEntry, AdminInviteCode, AdminLanding, AdminPost,
-    AdminSummary, AdminUsage, AdminUser, AdminWaitlistEntry, LandingTextPair,
+    AdminService, AdminAuditEntry, AdminBilling, AdminCollectionQuery, AdminDiscovery, AdminFeedbackEntry, AdminInviteCode,
+    AdminLanding, AdminPost, AdminSummary, AdminUsage, AdminUser, AdminWaitlistEntry, LandingTextPair,
 } from '../core/admin.service';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -13,6 +13,8 @@ import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { LogLineComponent } from '../bench/worktop/log-line.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
+import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
+import { SortDirection, ariaSort } from '../core/collection-query';
 import { AuthService } from '../core/auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -27,18 +29,39 @@ export interface RoadmapVm { titleEn: string; titleRu: string; mark: string; ite
 export interface StoryVm { whenEn: string; whenRu: string; titleEn: string; titleRu: string; textEn: string; textRu: string; }
 export interface ShotVm { file: string; capEn: string; capRu: string; }
 
+type InviteFilter = 'all' | 'usable' | 'unusable';
+type InviteSort = 'code' | 'label' | 'joined' | 'expires';
+type PostFilter = 'all' | 'published' | 'private' | 'archived';
+type PostSort = 'title' | 'owner' | 'state' | 'activity';
+type WaitlistSort = 'email' | 'language' | 'created';
+type PaymentSort = 'created' | 'owner' | 'plan' | 'amount' | 'status';
+type UsageFilter = 'all' | 'storage' | 'ai';
+type UsageSort = 'owner' | 'bytes' | 'files' | 'ai';
+
+function compareValue(a: string | number, b: string | number): number {
+    return typeof a === 'number' && typeof b === 'number'
+        ? a - b
+        : String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
+}
+
+function sortRows<T>(rows: readonly T[], direction: SortDirection,
+    value: (row: T) => string | number, id: (row: T) => string): T[] {
+    const multiplier = direction === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => compareValue(value(a), value(b)) * multiplier || id(a).localeCompare(id(b)));
+}
+
 // Admin panel (IF2), built in five scoped steps (ADR-122). Users and their management,
 // invite codes, a read-only cross-owner post list, billing/usage reporting, and the audit log.
 @Component({
     selector: 'app-admin',
     imports: [
         ZonedDatePipe, FormsModule, IndexTabsComponent, SpecRowComponent, LogLineComponent, ButtonComponent,
-        ModalComponent, IconComponent, PageHeaderComponent, EmptyStateComponent,
+        ModalComponent, IconComponent, PageHeaderComponent, EmptyStateComponent, SortHeaderComponent,
     ],
     templateUrl: 'admin.component.html',
     styleUrls: ['admin.component.css'],
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
     auth = inject(AuthService);
     t = inject(LocaleService).t;
     private api = inject(AdminService);
@@ -52,10 +75,88 @@ export class AdminComponent implements OnInit {
     auditLoadingMore = signal(false);
     invites = signal<AdminInviteCode[]>([]);
     posts = signal<AdminPost[]>([]);
+    postTotal = signal(0);
+    postPageSize = signal(0);
+    postSkip = signal(0);
     billing = signal<AdminBilling | null>(null);
+    paymentSkip = signal(0);
     usage = signal<AdminUsage[]>([]);
     feedback = signal<AdminFeedbackEntry[]>([]);
+    waitlistEntries = signal<AdminWaitlistEntry[]>([]);
     feedbackOnlyOpen = signal(false);
+    readonly ariaSort = ariaSort;
+
+    inviteQuery = signal('');
+    inviteFilter = signal<InviteFilter>('all');
+    inviteSortKey = signal<InviteSort>('code');
+    inviteSortDirection = signal<SortDirection>('asc');
+    visibleInvites = computed(() => {
+        const query = this.inviteQuery().trim().toLocaleLowerCase();
+        const filter = this.inviteFilter();
+        const key = this.inviteSortKey();
+        return sortRows(this.invites().filter(row =>
+            (!query || `${row.code} ${row.label}`.toLocaleLowerCase().includes(query))
+            && (filter === 'all' || (filter === 'usable') === row.isUsable)), this.inviteSortDirection(), row =>
+                key === 'code' ? row.code : key === 'label' ? row.label
+                    : key === 'joined' ? row.joined : row.expiresAt ?? '\uffff', row => row.id);
+    });
+    inviteFiltersActive = computed(() => Boolean(this.inviteQuery().trim()) || this.inviteFilter() !== 'all');
+
+    postQuery = signal('');
+    postFilter = signal<PostFilter>('all');
+    postSortKey = signal<PostSort>('title');
+    postSortDirection = signal<SortDirection>('asc');
+    visiblePosts = computed(() => this.posts());
+    postFiltersActive = computed(() => Boolean(this.postQuery().trim()) || this.postFilter() !== 'all');
+
+    waitlistQuery = signal('');
+    waitlistLanguage = signal('all');
+    waitlistSortKey = signal<WaitlistSort>('created');
+    waitlistSortDirection = signal<SortDirection>('desc');
+    waitlistLanguages = computed(() => [...new Set(this.waitlistEntries().map(row => row.language))]
+        .filter(Boolean).sort((a, b) => compareValue(a, b)));
+    visibleWaitlist = computed(() => {
+        const query = this.waitlistQuery().trim().toLocaleLowerCase();
+        const language = this.waitlistLanguage();
+        const key = this.waitlistSortKey();
+        return sortRows(this.waitlistEntries().filter(row =>
+            (!query || row.email.toLocaleLowerCase().includes(query))
+            && (language === 'all' || row.language === language)), this.waitlistSortDirection(), row =>
+                key === 'email' ? row.email : key === 'language' ? row.language : row.createdAt, row => row.id);
+    });
+    waitlistFiltersActive = computed(() => Boolean(this.waitlistQuery().trim()) || this.waitlistLanguage() !== 'all');
+
+    paymentQuery = signal('');
+    paymentStatus = signal('all');
+    paymentSortKey = signal<PaymentSort>('created');
+    paymentSortDirection = signal<SortDirection>('desc');
+    paymentStatuses = computed(() => this.billing()?.statuses
+        ?? [...new Set((this.billing()?.payments ?? []).map(row => row.status))]
+        .filter(Boolean).sort((a, b) => compareValue(a, b)));
+    visiblePayments = computed(() => this.billing()?.payments ?? []);
+    paymentFiltersActive = computed(() => Boolean(this.paymentQuery().trim()) || this.paymentStatus() !== 'all');
+
+    usageQuery = signal('');
+    usageFilter = signal<UsageFilter>('all');
+    usageSortKey = signal<UsageSort>('owner');
+    usageSortDirection = signal<SortDirection>('asc');
+    visibleUsage = computed(() => {
+        const query = this.usageQuery().trim().toLocaleLowerCase();
+        const filter = this.usageFilter();
+        const key = this.usageSortKey();
+        return sortRows(this.usage().filter(row =>
+            (!query || (row.ownerEmail ?? '').toLocaleLowerCase().includes(query))
+            && (filter === 'all' || filter === 'storage' && row.bytes > 0 || filter === 'ai' && row.aiToday > 0)),
+        this.usageSortDirection(), row => key === 'owner' ? row.ownerEmail ?? ''
+            : key === 'bytes' ? row.bytes : key === 'files' ? row.files : row.aiToday,
+        row => row.ownerId);
+    });
+    usageFiltersActive = computed(() => Boolean(this.usageQuery().trim()) || this.usageFilter() !== 'all');
+
+    private postSearchTimer: ReturnType<typeof setTimeout> | null = null;
+    private paymentSearchTimer: ReturnType<typeof setTimeout> | null = null;
+    private postRequestSequence = 0;
+    private paymentRequestSequence = 0;
 
     // The panel outgrew one scroll once steps 4-5 landed — same tab pattern as the Posts Manager
     // and Settings, so the app's three secondary pages behave alike.
@@ -81,7 +182,6 @@ export class AdminComponent implements OnInit {
     // Loaded when the tab is first opened rather than with the panel: it is a form and a file
     // listing, and four of the five admin tabs never look at it.
     landing = signal<AdminLanding | null>(null);
-    waitlistEntries = signal<AdminWaitlistEntry[]>([]);
     landingBusy = signal(false);
     landingSaved = signal(false);
     readonly marks = ['done', 'doing', 'next'];
@@ -115,6 +215,11 @@ export class AdminComponent implements OnInit {
         this.loading.set(false);
     }
 
+    ngOnDestroy() {
+        if (this.postSearchTimer) clearTimeout(this.postSearchTimer);
+        if (this.paymentSearchTimer) clearTimeout(this.paymentSearchTimer);
+    }
+
     async loadMoreAudit() {
         if (this.auditLoadingMore() || !this.auditHasMore()) return;
         this.auditLoadingMore.set(true);
@@ -130,18 +235,24 @@ export class AdminComponent implements OnInit {
     }
 
     private async reload() {
+        const postRequest = ++this.postRequestSequence;
+        const paymentRequest = ++this.paymentRequestSequence;
         try {
-            const [users, summary, audit, invites, posts, billing, usage] = await Promise.all([
+            const [users, summary, audit, invites, postPage, billing, usage] = await Promise.all([
                 this.api.listUsers(), this.api.summary(), this.api.audit(), this.api.listInvites(),
-                this.api.listPosts(), this.api.billing(), this.api.usage(),
+                this.api.listPosts(this.postRequest()), this.api.billing(this.paymentRequest()), this.api.usage(),
             ]);
             this.users.set(users);
             this.summary.set(summary);
             this.audit.set(audit.entries);
             this.auditHasMore.set(audit.hasMore);
             this.invites.set(invites);
-            this.posts.set(posts);
-            this.billing.set(billing);
+            if (postRequest === this.postRequestSequence) {
+                this.posts.set(postPage.items);
+                this.postTotal.set(postPage.total);
+                this.postPageSize.set(postPage.pageSize);
+            }
+            if (paymentRequest === this.paymentRequestSequence) this.billing.set(billing);
             this.usage.set(usage);
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
@@ -155,12 +266,191 @@ export class AdminComponent implements OnInit {
         if (tab === 'feedback' && this.feedback().length === 0) void this.loadFeedback();
     }
 
+    sortInvites(key: InviteSort) {
+        if (this.inviteSortKey() === key) this.inviteSortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+        else {
+            this.inviteSortKey.set(key);
+            this.inviteSortDirection.set(key === 'joined' ? 'desc' : 'asc');
+        }
+    }
+
+    sortPosts(key: PostSort) {
+        if (this.postSortKey() === key) this.postSortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+        else {
+            this.postSortKey.set(key);
+            this.postSortDirection.set(key === 'activity' ? 'desc' : 'asc');
+        }
+        this.postSkip.set(0);
+        void this.reloadPosts();
+    }
+
+    sortWaitlist(key: WaitlistSort) {
+        if (this.waitlistSortKey() === key) this.waitlistSortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+        else {
+            this.waitlistSortKey.set(key);
+            this.waitlistSortDirection.set(key === 'created' ? 'desc' : 'asc');
+        }
+    }
+
+    sortPayments(key: PaymentSort) {
+        if (this.paymentSortKey() === key) this.paymentSortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+        else {
+            this.paymentSortKey.set(key);
+            this.paymentSortDirection.set(key === 'created' || key === 'amount' ? 'desc' : 'asc');
+        }
+        this.paymentSkip.set(0);
+        void this.reloadPayments();
+    }
+
+    sortUsage(key: UsageSort) {
+        if (this.usageSortKey() === key) this.usageSortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+        else {
+            this.usageSortKey.set(key);
+            this.usageSortDirection.set(key === 'owner' ? 'asc' : 'desc');
+        }
+    }
+
+    clearInviteFilters() { this.inviteQuery.set(''); this.inviteFilter.set('all'); }
+    clearPostFilters() {
+        this.postQuery.set('');
+        this.postFilter.set('all');
+        this.postSkip.set(0);
+        void this.reloadPosts();
+    }
+    clearWaitlistFilters() { this.waitlistQuery.set(''); this.waitlistLanguage.set('all'); }
+    clearPaymentFilters() {
+        this.paymentQuery.set('');
+        this.paymentStatus.set('all');
+        this.paymentSkip.set(0);
+        void this.reloadPayments();
+    }
+    clearUsageFilters() { this.usageQuery.set(''); this.usageFilter.set('all'); }
+
+    setPostFilter(filter: PostFilter) {
+        this.postFilter.set(filter);
+        this.postSkip.set(0);
+        void this.reloadPosts();
+    }
+
+    setPaymentStatus(status: string) {
+        this.paymentStatus.set(status);
+        this.paymentSkip.set(0);
+        void this.reloadPayments();
+    }
+
+    queuePostReload() {
+        if (this.postSearchTimer) clearTimeout(this.postSearchTimer);
+        this.postSkip.set(0);
+        this.postSearchTimer = setTimeout(() => void this.reloadPosts(), 250);
+    }
+
+    queuePaymentReload() {
+        if (this.paymentSearchTimer) clearTimeout(this.paymentSearchTimer);
+        this.paymentSkip.set(0);
+        this.paymentSearchTimer = setTimeout(() => void this.reloadPayments(), 250);
+    }
+
+    private postRequest(): AdminCollectionQuery {
+        return {
+            search: this.postQuery().trim(),
+            filter: this.postFilter(),
+            sort: this.postSortKey(),
+            direction: this.postSortDirection(),
+            skip: this.postSkip(),
+        };
+    }
+
+    private paymentRequest(): AdminCollectionQuery {
+        return {
+            search: this.paymentQuery().trim(),
+            filter: this.paymentStatus(),
+            sort: this.paymentSortKey(),
+            direction: this.paymentSortDirection(),
+            skip: this.paymentSkip(),
+        };
+    }
+
+    private async reloadPosts() {
+        const request = ++this.postRequestSequence;
+        try {
+            const page = await this.api.listPosts(this.postRequest());
+            if (request === this.postRequestSequence) {
+                this.posts.set(page.items);
+                this.postTotal.set(page.total);
+                this.postPageSize.set(page.pageSize);
+            }
+        } catch (e) {
+            if (request === this.postRequestSequence)
+                this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
+        }
+    }
+
+    private async reloadPayments() {
+        const request = ++this.paymentRequestSequence;
+        try {
+            const report = await this.api.billing(this.paymentRequest());
+            if (request === this.paymentRequestSequence) this.billing.set(report);
+        } catch (e) {
+            if (request === this.paymentRequestSequence)
+                this.error.set(httpErrorMessage(e, this.t().admin.loadFailed));
+        }
+    }
+
+    canPagePostsBack(): boolean { return this.postSkip() > 0; }
+    canPagePostsForward(): boolean { return this.postSkip() + this.posts().length < this.postTotal(); }
+
+    async pagePostsBack() {
+        const pageSize = this.postPageSize();
+        if (!this.canPagePostsBack() || !pageSize) return;
+        this.postSkip.update(skip => Math.max(0, skip - pageSize));
+        await this.reloadPosts();
+    }
+
+    async pagePostsForward() {
+        const pageSize = this.postPageSize();
+        if (!this.canPagePostsForward() || !pageSize) return;
+        this.postSkip.update(skip => skip + pageSize);
+        await this.reloadPosts();
+    }
+
+    postRangeLabel(): string {
+        if (!this.postTotal()) return '';
+        if (!this.posts().length) return `0 / ${this.postTotal()}`;
+        return `${this.postSkip() + 1}–${Math.min(this.postSkip() + this.posts().length, this.postTotal())} / ${this.postTotal()}`;
+    }
+
+    canPagePaymentsBack(): boolean { return this.paymentSkip() > 0; }
+    canPagePaymentsForward(): boolean {
+        return this.paymentSkip() + (this.billing()?.payments.length ?? 0) < (this.billing()?.total ?? 0);
+    }
+
+    async pagePaymentsBack() {
+        const pageSize = this.billing()?.pageSize ?? 0;
+        if (!this.canPagePaymentsBack() || !pageSize) return;
+        this.paymentSkip.update(skip => Math.max(0, skip - pageSize));
+        await this.reloadPayments();
+    }
+
+    async pagePaymentsForward() {
+        const pageSize = this.billing()?.pageSize ?? 0;
+        if (!this.canPagePaymentsForward() || !pageSize) return;
+        this.paymentSkip.update(skip => skip + pageSize);
+        await this.reloadPayments();
+    }
+
+    paymentRangeLabel(): string {
+        const report = this.billing();
+        if (!report?.total) return '';
+        if (!report.payments.length) return `0 / ${report.total}`;
+        return `${this.paymentSkip() + 1}–${Math.min(this.paymentSkip() + report.payments.length, report.total)} / ${report.total}`;
+    }
+
     sectionTabs(): IndexTabItem[] {
         const labels = this.t().admin;
         return [
             { id: 'users', label: labels.usersTitle, badge: this.users().length },
             { id: 'invites', label: labels.invites.title, badge: this.invites().length },
-            { id: 'posts', label: labels.posts.title, badge: this.posts().length },
+            { id: 'posts', label: labels.posts.title, badge: this.postTotal() },
             // The badge is the waitlist, which is the one countable thing the landing produces.
             { id: 'landing', label: labels.landing.title, badge: this.landing()?.waitlist },
             { id: 'discovery', label: labels.discovery.title, badge: this.discovery()?.eligiblePosts },

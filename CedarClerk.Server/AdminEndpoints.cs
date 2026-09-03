@@ -23,6 +23,130 @@ public static partial class AdminEndpoints
     public record CreateInviteRequest(string Code, string? Label, DateTime? ExpiresAt, int? MaxUses);
     public record SetActiveRequest(bool IsActive);
     public record SetUserInviteRequest(Guid? InviteCodeId);
+    public record UsageReportRow(string OwnerId, string? OwnerEmail, long Bytes, int Files, int AiToday);
+
+    private static bool IsKnownCollectionValue(string? value, params string[] known) =>
+        string.IsNullOrWhiteSpace(value) || known.Contains(value, StringComparer.OrdinalIgnoreCase);
+
+    public static string? ValidatePostCollectionQuery(string? state, string? sort, string? direction)
+    {
+        if (!IsKnownCollectionValue(state, "all", "published", "private", "archived"))
+            return ErrorMessages.UnknownAdminPostStateFilter;
+        if (!IsKnownCollectionValue(sort, "title", "owner", "state", "activity", "updated"))
+            return ErrorMessages.UnknownAdminPostSortKey;
+        return IsKnownCollectionValue(direction, "asc", "desc")
+            ? null
+            : ErrorMessages.UnknownAdminSortDirection;
+    }
+
+    public static string? ValidatePaymentCollectionQuery(string? status,
+        IReadOnlyCollection<string> availableStatuses, string? sort, string? direction)
+    {
+        if (!string.IsNullOrWhiteSpace(status)
+            && !string.Equals(status, "all", StringComparison.OrdinalIgnoreCase)
+            && !availableStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
+            return ErrorMessages.UnknownAdminPaymentStatusFilter;
+        if (!IsKnownCollectionValue(sort, "created", "owner", "plan", "amount", "status"))
+            return ErrorMessages.UnknownAdminPaymentSortKey;
+        return IsKnownCollectionValue(direction, "asc", "desc")
+            ? null
+            : ErrorMessages.UnknownAdminSortDirection;
+    }
+
+    public static IReadOnlyList<UsageReportRow> MergeUsage(
+        IReadOnlyDictionary<string, string?> owners,
+        IReadOnlyDictionary<string, long> bytesByOwner,
+        IReadOnlyDictionary<string, int> filesByOwner,
+        IReadOnlyDictionary<string, int> aiToday)
+    {
+        return bytesByOwner.Keys.Union(aiToday.Keys)
+            .Select(ownerId => new UsageReportRow(
+                ownerId,
+                owners.GetValueOrDefault(ownerId),
+                bytesByOwner.GetValueOrDefault(ownerId),
+                filesByOwner.GetValueOrDefault(ownerId),
+                aiToday.GetValueOrDefault(ownerId)))
+            .OrderByDescending(x => x.Bytes)
+            .ThenBy(x => x.OwnerId)
+            .ToList();
+    }
+
+    public static IOrderedQueryable<Draft> QueryPosts(IQueryable<Draft> posts,
+        IQueryable<ApplicationUser> users, IQueryable<Comment> comments,
+        string? search, string? state, string? sort, string? direction)
+    {
+        var queryText = search?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(queryText))
+        {
+            posts = posts.Where(d => d.Title.ToLower().Contains(queryText)
+                || users.Any(u => u.Id == d.OwnerId && u.Email != null
+                    && u.Email.ToLower().Contains(queryText)));
+        }
+
+        posts = state?.ToLowerInvariant() switch
+        {
+            "published" => posts.Where(d => d.IsBlogPublished),
+            "private" => posts.Where(d => d.IsPrivate),
+            "archived" => posts.Where(d => d.IsArchived),
+            _ => posts,
+        };
+
+        var sortKey = string.IsNullOrWhiteSpace(sort) ? "updated" : sort.ToLowerInvariant();
+        var descending = string.IsNullOrWhiteSpace(direction)
+            || string.Equals(direction, "desc", StringComparison.OrdinalIgnoreCase);
+        var ordered = (sortKey, descending) switch
+        {
+            ("owner", true) => posts.OrderByDescending(d => users.Where(u => u.Id == d.OwnerId)
+                .Select(u => u.Email).FirstOrDefault()),
+            ("owner", false) => posts.OrderBy(d => users.Where(u => u.Id == d.OwnerId)
+                .Select(u => u.Email).FirstOrDefault()),
+            ("state", true) => posts.OrderByDescending(d => d.IsArchived ? 3 : d.IsPrivate ? 2 : d.IsBlogPublished ? 1 : 0),
+            ("state", false) => posts.OrderBy(d => d.IsArchived ? 3 : d.IsPrivate ? 2 : d.IsBlogPublished ? 1 : 0),
+            ("activity", true) => posts.OrderByDescending(d => d.ViewCount + comments.Count(c => c.DraftId == d.Id)),
+            ("activity", false) => posts.OrderBy(d => d.ViewCount + comments.Count(c => c.DraftId == d.Id)),
+            ("updated", true) => posts.OrderByDescending(d => d.UpdatedAt),
+            ("updated", false) => posts.OrderBy(d => d.UpdatedAt),
+            (_, true) => posts.OrderByDescending(d => d.Title),
+            _ => posts.OrderBy(d => d.Title),
+        };
+        return ordered.ThenBy(d => d.Id);
+    }
+
+    public static IOrderedQueryable<Payment> QueryPayments(IQueryable<Payment> payments,
+        IQueryable<ApplicationUser> users, string? search, string? status, string? sort, string? direction)
+    {
+        var queryText = search?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(queryText))
+        {
+            payments = payments.Where(p => p.Plan.ToLower().Contains(queryText)
+                || p.Provider.ToLower().Contains(queryText)
+                || users.Any(u => u.Id == p.OwnerId && u.Email != null
+                    && u.Email.ToLower().Contains(queryText)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && !string.Equals(status, "all", StringComparison.OrdinalIgnoreCase))
+            payments = payments.Where(p => p.Status == status);
+
+        var sortKey = string.IsNullOrWhiteSpace(sort) ? "created" : sort.ToLowerInvariant();
+        var descending = string.IsNullOrWhiteSpace(direction)
+            || string.Equals(direction, "desc", StringComparison.OrdinalIgnoreCase);
+        var ordered = (sortKey, descending) switch
+        {
+            ("owner", true) => payments.OrderByDescending(p => users.Where(u => u.Id == p.OwnerId)
+                .Select(u => u.Email).FirstOrDefault()),
+            ("owner", false) => payments.OrderBy(p => users.Where(u => u.Id == p.OwnerId)
+                .Select(u => u.Email).FirstOrDefault()),
+            ("plan", true) => payments.OrderByDescending(p => p.Plan).ThenByDescending(p => p.Provider),
+            ("plan", false) => payments.OrderBy(p => p.Plan).ThenBy(p => p.Provider),
+            ("amount", true) => payments.OrderByDescending(p => p.Amount),
+            ("amount", false) => payments.OrderBy(p => p.Amount),
+            ("status", true) => payments.OrderByDescending(p => p.Status),
+            ("status", false) => payments.OrderBy(p => p.Status),
+            (_, false) => payments.OrderBy(p => p.CreatedAt),
+            _ => payments.OrderByDescending(p => p.CreatedAt),
+        };
+        return ordered.ThenBy(p => p.Id);
+    }
 
     // Every mutation goes through here. Takes the actor and target so the row reads correctly
     // later without joining to anything that might have changed since.
@@ -386,76 +510,98 @@ public static partial class AdminEndpoints
         //
         // READ-ONLY by decision: the panel links out to the live post rather than editing anyone
         // else's content. Nothing here writes.
-        group.MapGet("/posts", async (CedarDbContext db, IConfiguration cfg) =>
+        group.MapGet("/posts", async (string? q, string? state, string? sort, string? direction, int? skip,
+            CedarDbContext db, IConfiguration cfg) =>
         {
-            var owners = await db.Users.Select(u => new { u.Id, u.Email })
-                .ToDictionaryAsync(u => u.Id, u => u.Email);
+            sort = string.IsNullOrWhiteSpace(sort) ? "updated" : sort;
+            direction = string.IsNullOrWhiteSpace(direction) ? "desc" : direction;
+            var validationError = ValidatePostCollectionQuery(state, sort, direction);
+            if (validationError is not null) return Results.BadRequest(new { error = validationError });
 
-            var posts = await db.Drafts
-                .OrderByDescending(d => d.UpdatedAt)
+            var offset = Math.Max(0, skip ?? 0);
+            var query = QueryPosts(db.Drafts, db.Users, db.Comments, q, state, sort, direction);
+            var total = await query.CountAsync();
+            var posts = await query
+                .Skip(offset)
                 .Take(Consts.Admin.PostPageSize)
                 .Select(d => new
                 {
                     d.Id, d.Title, d.OwnerId, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished,
                     d.IsPrivate, d.IsArchived, d.ViewCount,
                     d.LastTelegramUsername, d.LastTelegramMessageId,
+                    OwnerEmail = db.Users.Where(u => u.Id == d.OwnerId).Select(u => u.Email).FirstOrDefault(),
+                    Comments = db.Comments.Count(c => c.DraftId == d.Id),
                 })
                 .ToListAsync();
-
-            var draftIds = posts.Select(p => p.Id).ToList();
-            var commentCounts = await db.Comments.Where(c => draftIds.Contains(c.DraftId))
-                .GroupBy(c => c.DraftId).Select(g => new { Id = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Id, x => x.Count);
 
             // This list spans owners and slugs are per-owner, so the host is per row — resolved in
             // one batch, in keeping with the grouped-query rule the /users list follows.
             var blogHosts = await BlogTenant.HostsForOwnersAsync(db, cfg, posts.Select(p => p.OwnerId));
 
-            return Results.Ok(posts.Select(p => new
+            return Results.Ok(new
             {
-                p.Id,
-                p.Title,
-                OwnerEmail = owners.GetValueOrDefault(p.OwnerId),
-                p.UpdatedAt,
-                p.IsBlogPublished,
-                p.IsPrivate,
-                p.IsArchived,
-                p.ViewCount,
-                Comments = commentCounts.GetValueOrDefault(p.Id),
-                BlogUrl = p.IsBlogPublished && p.BlogSlug != null && blogHosts.TryGetValue(p.OwnerId, out var blogHost)
-                    ? $"https://{blogHost}/{p.BlogSlug}"
-                    : null,
-                TelegramUrl = p.LastTelegramUsername != null && p.LastTelegramMessageId != null
-                    ? $"https://t.me/{p.LastTelegramUsername}/{p.LastTelegramMessageId}"
-                    : null,
-            }));
+                Items = posts.Select(p => new
+                {
+                    p.Id,
+                    p.Title,
+                    p.OwnerEmail,
+                    p.UpdatedAt,
+                    p.IsBlogPublished,
+                    p.IsPrivate,
+                    p.IsArchived,
+                    p.ViewCount,
+                    p.Comments,
+                    BlogUrl = p.IsBlogPublished && p.BlogSlug != null && blogHosts.TryGetValue(p.OwnerId, out var blogHost)
+                        ? $"https://{blogHost}/{p.BlogSlug}"
+                        : null,
+                    TelegramUrl = p.LastTelegramUsername != null && p.LastTelegramMessageId != null
+                        ? $"https://t.me/{p.LastTelegramUsername}/{p.LastTelegramMessageId}"
+                        : null,
+                }),
+                Total = total,
+                PageSize = Consts.Admin.PostPageSize,
+            });
         });
 
         // ---------- Step 5: reporting on data that already exists ----------
 
-        group.MapGet("/billing", async (CedarDbContext db) =>
+        group.MapGet("/billing", async (string? q, string? status, string? sort, string? direction, int? skip,
+            CedarDbContext db) =>
         {
-            var owners = await db.Users.Select(u => new { u.Id, u.Email })
-                .ToDictionaryAsync(u => u.Id, u => u.Email);
+            sort = string.IsNullOrWhiteSpace(sort) ? "created" : sort;
+            direction = string.IsNullOrWhiteSpace(direction) ? "desc" : direction;
+            var statuses = await db.Payments.Select(p => p.Status).Distinct().OrderBy(s => s).ToListAsync();
+            var validationError = ValidatePaymentCollectionQuery(status, statuses, sort, direction);
+            if (validationError is not null) return Results.BadRequest(new { error = validationError });
 
-            var payments = await db.Payments
-                .OrderByDescending(p => p.CreatedAt)
+            var offset = Math.Max(0, skip ?? 0);
+            var normalizedStatus = statuses.FirstOrDefault(value =>
+                string.Equals(value, status, StringComparison.OrdinalIgnoreCase)) ?? status;
+            var query = QueryPayments(db.Payments, db.Users, q, normalizedStatus, sort, direction);
+            var total = await query.CountAsync();
+            var payments = await query
+                .Skip(offset)
                 .Take(Consts.Admin.PaymentPageSize)
-                .ToListAsync();
-
-            return Results.Ok(new
-            {
-                Payments = payments.Select(p => new
+                .Select(p => new
                 {
                     p.Id, p.Provider, p.Plan, p.Amount, p.Currency, p.Status, p.CreatedAt,
-                    OwnerEmail = owners.GetValueOrDefault(p.OwnerId),
-                }),
+                    OwnerEmail = db.Users.Where(u => u.Id == p.OwnerId).Select(u => u.Email).FirstOrDefault(),
+                })
+                .ToListAsync();
+
+            var totals = await db.Payments.Where(p => p.Status.ToLower() == "completed")
+                .GroupBy(p => p.Currency)
+                .Select(g => new { Currency = g.Key, Total = g.Sum(p => p.Amount) })
+                .ToListAsync();
+            return Results.Ok(new
+            {
+                Payments = payments,
                 // Only completed payments count toward a revenue figure — a failed or pending row
                 // is not money.
-                TotalByCurrency = payments
-                    .Where(p => p.Status == "completed")
-                    .GroupBy(p => p.Currency)
-                    .Select(g => new { Currency = g.Key, Total = g.Sum(p => p.Amount) }),
+                TotalByCurrency = totals,
+                Statuses = statuses,
+                Total = total,
+                PageSize = Consts.Admin.PaymentPageSize,
             });
         });
 
@@ -474,13 +620,9 @@ public static partial class AdminEndpoints
             var aiToday = await db.AiUsages.Where(a => a.Day == today)
                 .ToDictionaryAsync(a => a.OwnerId, a => a.Count);
 
-            return Results.Ok(storage.Select(s => new
-            {
-                OwnerEmail = owners.GetValueOrDefault(s.OwnerId),
-                s.Bytes,
-                s.Files,
-                AiToday = aiToday.GetValueOrDefault(s.OwnerId),
-            }).OrderByDescending(x => x.Bytes));
+            var bytesByOwner = storage.ToDictionary(s => s.OwnerId, s => s.Bytes);
+            var filesByOwner = storage.ToDictionary(s => s.OwnerId, s => s.Files);
+            return Results.Ok(MergeUsage(owners, bytesByOwner, filesByOwner, aiToday));
         });
 
         // Newest first, paged. The log grows forever by design - a log that starts halfway

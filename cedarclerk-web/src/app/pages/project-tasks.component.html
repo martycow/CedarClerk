@@ -60,6 +60,14 @@
         <p class="hint">{{ t().projects.loading }}</p>
     } @else if (loadError(); as e) {
         <p class="error-line">{{ e }}</p>
+    } @else if (hasCollectionFilters() && matchingCount() === 0) {
+        <div class="card filtered-empty">
+            <app-empty-state [icon]="null" [text]="t().projects.tasks.emptyFiltered">
+                <app-button variant="paper" (clicked)="clearCollectionFilters()">
+                    {{ t().projects.tasks.clearFilters }}
+                </app-button>
+            </app-empty-state>
+        </div>
     } @else if (view() === 'board') {
         <!--Four full-height columns (ADR-239 clause 7). T-354 — one cdkDropListGroup so a card
         drags between them; a drop into a different column is a status change, which reloads the
@@ -116,49 +124,84 @@
         </div>
     } @else {
         <div class="card list-card">
-            <div class="tasks-table">
-                <div class="tasks-row head-row">
-                    <button class="sort-head" (click)="setSort('title')">{{ t().projects.tasks.colTask }}</button>
-                    <button class="sort-head" (click)="setSort('status')">{{ t().projects.tasks.colStatus }}</button>
-                    <button class="sort-head right" (click)="setSort('priority')">{{ t().projects.tasks.colPriority }}</button>
-                    <button class="sort-head" (click)="setSort('dueAt')">{{ t().projects.tasks.colDue }}</button>
-                    <div>{{ t().projects.tasks.colLinks }}</div>
+            <div class="tasks-table" role="table" [attr.aria-label]="t().projects.tasks.title">
+                <div class="tasks-row head-row" role="row">
+                    <div class="sort-head" role="columnheader" [attr.aria-sort]="columnSort('title')">
+                        <app-sort-header [label]="t().projects.tasks.colTask" [active]="sort() === 'title'"
+                            [direction]="sortAsc() ? 'asc' : 'desc'" [sortByLabel]="t().common.sortBy"
+                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                            (sorted)="setSort('title')" />
+                    </div>
+                    <div class="sort-head" role="columnheader" [attr.aria-sort]="columnSort('status')">
+                        <app-sort-header [label]="t().projects.tasks.colStatus" [active]="sort() === 'status'"
+                            [direction]="sortAsc() ? 'asc' : 'desc'" [sortByLabel]="t().common.sortBy"
+                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                            (sorted)="setSort('status')" />
+                    </div>
+                    <div class="sort-head right" role="columnheader" [attr.aria-sort]="columnSort('priority')">
+                        <app-sort-header [label]="t().projects.tasks.colPriority" [active]="sort() === 'priority'" align="end"
+                            [direction]="sortAsc() ? 'asc' : 'desc'" [sortByLabel]="t().common.sortBy"
+                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                            (sorted)="setSort('priority')" />
+                    </div>
+                    <div class="sort-head" role="columnheader" [attr.aria-sort]="columnSort('dueAt')">
+                        <app-sort-header [label]="t().projects.tasks.colDue" [active]="sort() === 'dueAt'"
+                            [direction]="sortAsc() ? 'asc' : 'desc'" [sortByLabel]="t().common.sortBy"
+                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                            (sorted)="setSort('dueAt')" />
+                    </div>
+                    <div class="sort-head" role="columnheader" [attr.aria-sort]="columnSort('links')">
+                        <app-sort-header [label]="t().projects.tasks.colLinks" [active]="sort() === 'links'"
+                            [direction]="sortAsc() ? 'asc' : 'desc'" [sortByLabel]="t().common.sortBy"
+                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                            (sorted)="setSort('links')" />
+                    </div>
                 </div>
 
                 @for (task of sorted(); track task.id) {
                     <!--A row that opens a task is a destination, so it is an anchor and carries the
                     query itself (ADR-163).-->
-                    <a class="tasks-row" [routerLink]="boardLink()" [queryParams]="{ task: task.id }"
-                       queryParamsHandling="merge" [attr.aria-label]="task.title">
-                        <div class="title-cell" [title]="task.title">{{ task.title }}</div>
-                        <div>
+                    <div class="tasks-row" role="row">
+                        <div class="title-cell" role="cell" [title]="task.title">
+                            <a class="task-row-link" [routerLink]="boardLink()" [queryParams]="{ task: task.id }"
+                               queryParamsHandling="merge">{{ task.title }}</a>
+                        </div>
+                        <div role="cell">
                             <span class="tag" [class.ok]="statusTone(task.status) === 'ok'"
                                   [class.warn]="statusTone(task.status) === 'warn'"
                                   [class.muted]="statusTone(task.status) === 'muted'">{{ t().projects.tasks.status[task.status] }}</span>
                         </div>
-                        <div class="right">
+                        <div class="right" role="cell">
                             <span class="prio" [class.p1]="task.priority === 1">
                                 {{ t().projects.tasks.priority(task.priority) }}
                             </span>
                         </div>
-                        <div class="due" [class.overdue]="overdue(task)">
+                        <div class="due" role="cell" [class.overdue]="overdue(task)">
                             @if (task.dueAt) { {{ dueLabel(task) }} } @else { <span class="none">—</span> }
                         </div>
-                        <div class="links-cell">
+                        <div class="links-cell" role="cell">
                             {{ t().projects.tasks.linkSummary(
                                 linkCounts(task).document, linkCounts(task).asset, linkCounts(task).task) || '—' }}
                         </div>
-                    </a>
+                    </div>
                 } @empty {
-                    <app-empty-state class="list-empty" [icon]="null"
-                                     [text]="tasks().length ? t().projects.tasks.emptyFiltered : t().projects.tasks.emptyHint">
-                        @if (tasks().length === 0) {
-                            <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating('backlog')">
-                                <app-icon name="plus" weight="bold" size="sm" />
-                                {{ t().projects.tasks.newTask }}
-                            </app-button>
-                        }
-                    </app-empty-state>
+                    <div class="list-empty-row" role="row">
+                        <div role="cell" aria-colspan="5">
+                            <app-empty-state class="list-empty" [icon]="null"
+                                             [text]="tasks().length ? t().projects.tasks.emptyFiltered : t().projects.tasks.emptyHint">
+                                @if (tasks().length === 0) {
+                                    <app-button variant="pine" [disabled]="busy()" (clicked)="startCreating('backlog')">
+                                        <app-icon name="plus" weight="bold" size="sm" />
+                                        {{ t().projects.tasks.newTask }}
+                                    </app-button>
+                                } @else if (hasCollectionFilters()) {
+                                    <app-button variant="paper" (clicked)="clearCollectionFilters()">
+                                        {{ t().projects.tasks.clearFilters }}
+                                    </app-button>
+                                }
+                            </app-empty-state>
+                        </div>
+                    </div>
                 }
             </div>
         </div>

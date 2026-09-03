@@ -1,6 +1,7 @@
 import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
+import { SortDirection } from './collection-query';
 
 export interface DraftAsset {
     id: string;
@@ -14,6 +15,7 @@ export interface DraftAsset {
 
 // ADR-127 — the owner-wide library behind /media.
 export type LibraryKind = 'image' | 'video' | 'audio';
+export type LibrarySort = 'name' | 'type' | 'size' | 'added';
 export interface LibraryAsset {
     id: string;
     fileName: string;
@@ -79,11 +81,21 @@ export class AssetsService {
     }
 
     /** `project`: a project id, the literal 'none' for the unfiled bucket, or null for every one. */
-    list(query: { q?: string; type?: LibraryKind | null; project?: string | null; skip: number; take: number }) {
+    list(query: {
+        q?: string;
+        type?: LibraryKind | null;
+        project?: string | null;
+        sort?: LibrarySort;
+        direction?: SortDirection;
+        skip: number;
+        take: number;
+    }) {
         const params: Record<string, string | number> = { skip: query.skip, take: query.take };
         if (query.q) params['q'] = query.q;
         if (query.type) params['type'] = query.type;
         if (query.project) params['project'] = query.project;
+        if (query.sort) params['sort'] = query.sort;
+        if (query.direction) params['direction'] = query.direction;
         return firstValueFrom(this.http.get<LibraryPage>('/api/assets', { params }));
     }
 

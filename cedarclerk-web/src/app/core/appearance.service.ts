@@ -1,7 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from './auth.service';
+import { Theme, ThemeService } from './theme.service';
+
+export type SidebarMode = 'full' | 'rail';
+export const SIDEBAR_MODE_STORAGE_KEY = 'cedar-sidebar-mode';
 
 export interface AppearancePrefs {
+    theme: Theme;
+    sidebarMode: SidebarMode;
     accentLight: string;
     accentDark: string;
     sheetWidth: 'narrow' | 'normal' | 'wide' | 'full';
@@ -39,6 +45,8 @@ const presetFor = (hex: string) =>
     ACCENT_PRESETS.find(p => p.hex.toUpperCase() === hex.toUpperCase()) ?? BENCH_ACCENT;
 
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
+    theme: 'light',
+    sidebarMode: 'full',
     accentLight: BENCH_ACCENT.hex,
     accentDark: BENCH_ACCENT.hex,
     sheetWidth: 'normal',
@@ -59,8 +67,8 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
 // Telegram's Blocks renderer has to carry every cell.
 export const MAX_TABLE_SIZE = 10;
 
-export const SHEET_WIDTH_PX: Record<AppearancePrefs['sheetWidth'], number> = {
-    narrow: 560, normal: 640, wide: 820, full: 1040,
+export const SHEET_WIDTH_PX: Record<AppearancePrefs['sheetWidth'], number | null> = {
+    narrow: 640, normal: 760, wide: 960, full: null,
 };
 
 // The three named faces are the self-hosted ones (ADR-143); the other two stacks are what the OS
@@ -74,44 +82,46 @@ export const TYPEFACE_STACK: Record<AppearancePrefs['typeface'], string> = {
     departure: 'var(--font-readout)',
 };
 
-// Personal editor preferences (ADR-035, revised by FI1) — deliberately scoped to the authoring
-// app only, never applied to the public blog (which keeps its own fixed branding). Only the
-// accent is genuinely global chrome (topbar/toolbar/buttons everywhere); the writing-sheet prefs
-// (width/typeface/font-size/etc.) are read directly by EditorComponent since they only affect its
-// own template.
-//
-// FI1 reversed ADR-035's "applies instantly, no Save button" for this half of the panel: `prefs`
-// still updates (and the sheet still re-renders) on every interaction — that live preview is the
-// entire point of the side panel — but the network round-trip is now deferred to an explicit
-// `commit()`, so dragging a slider no longer fires a save per tick. `preview()` is the live-only
-// half, `commit()` is the persist half; `dirty` is what the panel's Apply button gates on.
+// Public blog reading controls stay reader-owned. Account appearance paints the app shell and
+// editor; the settings surface debounces persistence so a slider drag is one write.
 @Injectable({ providedIn: 'root' })
 export class AppearanceService {
     private auth = inject(AuthService);
-    readonly prefs = signal<AppearancePrefs>(DEFAULT_APPEARANCE);
+    private theme = inject(ThemeService);
+    readonly prefs = signal<AppearancePrefs>(this.bootstrapDefaults());
     readonly dirty = signal(false);
-    private committed: AppearancePrefs = DEFAULT_APPEARANCE;
+    private loadedOwner: string | null | undefined;
+    private loadedSource: string | null | undefined;
+    private changeVersion = 0;
+    private commitQueue: Promise<void> | null = null;
 
-    // Idempotent — safe to call on every authGuard pass, not just the first one.
     loadFromAuth() {
+        const owner = this.auth.userEmail();
+        const source = this.auth.appearancePrefsJson();
+        if (owner === this.loadedOwner && (this.dirty() || source === this.loadedSource)) return;
+
         let parsed: Partial<AppearancePrefs> = {};
         try {
-            parsed = JSON.parse(this.auth.appearancePrefsJson() ?? '{}');
+            parsed = JSON.parse(source ?? '{}');
         } catch {
             // Corrupt or foreign blob — fall back to defaults rather than fail navigation.
         }
-        const stored = { ...DEFAULT_APPEARANCE, ...parsed };
+        const stored = { ...this.bootstrapDefaults(), ...parsed };
         // Snapped to a preset here rather than only at paint time, so the panel marks the swatch
         // the app is actually showing.
         const merged = {
             ...stored,
+            theme: stored.theme === 'dark' ? 'dark' as const : 'light' as const,
+            sidebarMode: stored.sidebarMode === 'rail' ? 'rail' as const : 'full' as const,
             accentLight: presetFor(stored.accentLight).hex,
             accentDark: presetFor(stored.accentDark).hex,
         };
         this.prefs.set(merged);
-        this.committed = merged;
+        this.loadedOwner = owner;
+        this.loadedSource = source;
+        this.changeVersion++;
         this.dirty.set(false);
-        this.applyAccent(merged);
+        this.applyVisuals(merged);
     }
 
     // Applies live (sheet + accent CSS var) without saving — the panel calls this on every
@@ -119,17 +129,49 @@ export class AppearanceService {
     preview(patch: Partial<AppearancePrefs>) {
         const merged = { ...this.prefs(), ...patch };
         this.prefs.set(merged);
-        this.applyAccent(merged);
+        this.applyVisuals(merged);
+        this.changeVersion++;
         this.dirty.set(true);
     }
 
-    // Persists whatever is currently being previewed. Throws on failure — the caller (the
-    // panel's Apply button) is what shows the error, same as every other explicit save in the app.
-    async commit(): Promise<void> {
-        const current = this.prefs();
-        await this.auth.saveAppearancePrefs(JSON.stringify(current));
-        this.committed = current;
-        this.dirty.set(false);
+    commit(): Promise<void> {
+        const source = JSON.stringify(this.prefs());
+        const version = this.changeVersion;
+        const save = async () => {
+            await this.auth.saveAppearancePrefs(source);
+            this.loadedOwner = this.auth.userEmail();
+            this.loadedSource = this.auth.appearancePrefsJson();
+            if (version === this.changeVersion) this.dirty.set(false);
+        };
+        const write = this.commitQueue
+            ? this.commitQueue.catch(() => undefined).then(save)
+            : save();
+        this.commitQueue = write;
+        const clear = () => {
+            if (this.commitQueue === write) this.commitQueue = null;
+        };
+        void write.then(clear, clear);
+        return write;
+    }
+
+    private bootstrapDefaults(): AppearancePrefs {
+        let sidebarMode: SidebarMode = 'full';
+        try {
+            sidebarMode = localStorage.getItem(SIDEBAR_MODE_STORAGE_KEY) === 'rail' ? 'rail' : 'full';
+        } catch {
+            // The expanded sidebar is the safe signed-out fallback when storage is unavailable.
+        }
+        return { ...DEFAULT_APPEARANCE, theme: this.theme.theme(), sidebarMode };
+    }
+
+    private applyVisuals(p: AppearancePrefs) {
+        this.theme.set(p.theme);
+        try {
+            localStorage.setItem(SIDEBAR_MODE_STORAGE_KEY, p.sidebarMode);
+        } catch {
+            // The signal remains the source of truth for this session.
+        }
+        this.applyAccent(p);
     }
 
     private applyAccent(p: AppearancePrefs) {

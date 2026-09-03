@@ -4,12 +4,16 @@ import { RouterLink } from '@angular/router';
 import { avatarFill } from '../core/avatar-color.util';
 import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 import { IconComponent } from '../shared/icon.component';
+import { IconName } from '../shared/icon-data.generated';
 
 export interface SidebarProject {
     id: string;
     name: string;
     kind: string;
     link: string | readonly unknown[];
+    icon?: IconName;
+    separatorBefore?: boolean;
+    active?: boolean;
 }
 
 // The one control that reads CurrentProjectService's memory (ADR-186, ADR-221): a menu button over
@@ -35,8 +39,12 @@ export interface SidebarProject {
             </button>
             <div #panel class="side-project-panel" role="group" [attr.aria-label]="hint() || null" [hidden]="!open()">
                 @for (p of projects(); track p.id) {
-                    <a class="side-project-item" [class.is-on]="p.id === project()?.id" [routerLink]="p.link"
-                       [attr.aria-current]="p.id === project()?.id ? 'true' : null">{{ p.name }}</a>
+                    <a class="side-project-item" [class.is-on]="isCurrent(p)"
+                       [class.has-separator]="p.separatorBefore" [routerLink]="p.link"
+                       [attr.aria-current]="isCurrent(p) ? 'page' : null">
+                        @if (p.icon) { <app-icon [name]="p.icon" size="sm" /> }
+                        <span>{{ p.name }}</span>
+                    </a>
                 }
             </div>
         } @else {
@@ -170,7 +178,11 @@ export interface SidebarProject {
             font-size: var(--fs-14);
             text-decoration: none;
             white-space: nowrap;
+            gap: var(--space-2);
         }
+
+        .side-project-item.has-separator { margin-top: var(--space-1); border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+        .side-project-item app-icon { flex: none; color: var(--t3); }
 
         .side-project-item:hover { background: var(--hover); }
         .side-project-item.is-on { font-weight: 700; background: var(--hover); }
@@ -211,6 +223,10 @@ export class ProjectSwitcherComponent implements OnDestroy {
         const letters = words.length > 1 ? words[0][0] + words[1][0] : name.slice(0, 2);
         return letters.toUpperCase();
     });
+
+    protected isCurrent(item: SidebarProject): boolean {
+        return item.active ?? item.id === this.project()?.id;
+    }
 
     toggle(): void { this.open.set(!this.open()); }
 

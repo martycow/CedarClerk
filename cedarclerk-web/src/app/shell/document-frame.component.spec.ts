@@ -1,10 +1,5 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
-import { LocaleService } from '../core/i18n/locale.service';
-import { AppShellComponent } from './app-shell.component';
 import { DocumentFrameComponent, DocumentTab, DocumentTabItem } from './document-frame.component';
 
 const TABS: DocumentTabItem[] = [
@@ -16,14 +11,12 @@ const TABS: DocumentTabItem[] = [
 @Component({
     imports: [DocumentFrameComponent],
     template: `
-        <app-document-frame title="Coyote vs ACME" kicker="Blog · 23 documents"
+        <app-document-frame kicker="Blog · 23 documents"
                             [statusTag]="{ text: 'Live', tone: 'ok', tag: true }"
                             [tab]="tab()" [tabs]="tabs" tabsLabel="Document views"
                             saveWord="Synced" saveState="saved" dateLabel="Sep 1, 2026"
-                            footerText="Last saved 2 min ago · 366 words" [canUndo]="true"
-                            (tabChange)="picked.push($event)" (undo)="undone = undone + 1">
-            <button primary type="button">Publish</button>
-            <button title-actions type="button">Details</button>
+                            footerText="Last saved 2 min ago · 366 words"
+                            (tabChange)="picked.push($event)">
             <div body class="the-body">sheet</div>
             <button footer-start type="button">Share preview</button>
             <button footer-end type="button">Next</button>
@@ -34,62 +27,40 @@ class Host {
     tab = signal<DocumentTab>('write');
     tabs = TABS;
     picked: DocumentTab[] = [];
-    undone = 0;
 }
 
 describe('DocumentFrameComponent', () => {
-    function mount(mode: 'full' | 'rail') {
-        TestBed.configureTestingModule({
-            providers: [
-                provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
-                { provide: AppShellComponent, useValue: { mode: signal(mode) } },
-            ],
-        });
-        TestBed.inject(LocaleService).uiLang.set('en');
+    function mount() {
         const fixture = TestBed.createComponent(Host);
         fixture.detectChanges();
         return { fixture, host: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
     }
 
-    it('draws the title line, the tabs, the body and the footer in every mode', () => {
-        const { el } = mount('full');
+    it('draws one compact context header, the tabs, the body and the footer', () => {
+        const { el } = mount();
         expect(el.querySelector('app-document-frame')!.getAttribute('data-surface')).toBe('paper');
-        expect(el.querySelector('h1.frame-title')!.textContent!.trim()).toBe('Coyote vs ACME');
+        expect(el.querySelector('.frame-header')).toBeTruthy();
+        expect(el.querySelector('.frame-head')).toBeNull();
         expect(el.querySelector('.frame-kicker')!.textContent!.trim()).toBe('Blog · 23 documents');
-        expect(el.querySelector('.frame-title-row .tag.ok')!.textContent!.trim()).toBe('Live');
-        expect(el.querySelector('.frame-title-actions button')!.textContent!.trim()).toBe('Details');
+        expect(el.querySelector('.frame-top .tag.ok')!.textContent!.trim()).toBe('Live');
         expect(el.querySelector('.frame-body .the-body')).toBeTruthy();
         expect(el.querySelector('.frame-footer-text')!.textContent!.trim()).toBe('Last saved 2 min ago · 366 words');
         expect(el.querySelector('.frame-footer-start button')!.textContent!.trim()).toBe('Share preview');
         expect(el.querySelector('.frame-footer-end button')!.textContent!.trim()).toBe('Next');
     });
 
-    it('renders document controls in both modes and only repeats the project switcher in rail mode', () => {
-        const full = mount('full');
-        const fullTop = full.el.querySelector('.frame-top') as HTMLElement;
-        expect(fullTop).toBeTruthy();
-        expect(fullTop.querySelector('app-project-switcher')).toBeNull();
-        expect(fullTop.querySelector('.frame-primary button')!.textContent!.trim()).toBe('Publish');
-        expect(fullTop.querySelector('.frame-save')!.textContent!.trim()).toBe('Synced');
-        full.fixture.destroy();
-        TestBed.resetTestingModule();
-
-        const rail = mount('rail');
-        const top = rail.el.querySelector('.frame-top') as HTMLElement;
+    it('renders one sync indicator, date and no duplicate project switcher', () => {
+        const { el } = mount();
+        const top = el.querySelector('.frame-top') as HTMLElement;
         expect(top).toBeTruthy();
-        expect(top.querySelector('app-project-switcher')).toBeTruthy();
-        expect(top.querySelector('.frame-primary button')!.textContent!.trim()).toBe('Publish');
+        expect(top.querySelector('app-project-switcher')).toBeNull();
         expect(top.querySelector('.frame-save')!.textContent!.trim()).toBe('Synced');
         expect(top.querySelector('.frame-date')!.textContent!.trim()).toBe('Sep 1, 2026');
-        const history = [...top.querySelectorAll('.frame-icon-btn')] as HTMLButtonElement[];
-        expect(history.map(b => b.getAttribute('aria-label'))).toEqual(['Undo', 'Redo']);
-        expect(history.map(b => b.disabled)).toEqual([false, true]);
-        history[0].click();
-        expect(rail.host.undone).toBe(1);
+        expect(el.querySelector('.frame-footer')!.textContent).not.toContain('Synced');
     });
 
     it('announces the tabs as a tablist, selects the one the editor names and emits a pick', () => {
-        const { el, host, fixture } = mount('full');
+        const { el, host, fixture } = mount();
         const list = el.querySelector('[role="tablist"]') as HTMLElement;
         expect(list.getAttribute('aria-label')).toBe('Document views');
         const tabs = [...list.querySelectorAll('[role="tab"]')] as HTMLButtonElement[];
@@ -106,7 +77,7 @@ describe('DocumentFrameComponent', () => {
     });
 
     it('lets Publish be the selected tab like any other (ADR-242)', () => {
-        const { el, host, fixture } = mount('full');
+        const { el, host, fixture } = mount();
         host.tab.set('publish');
         fixture.detectChanges();
         const tabs = [...el.querySelectorAll('[role="tab"]')] as HTMLButtonElement[];
@@ -118,7 +89,7 @@ describe('DocumentFrameComponent', () => {
     });
 
     it('walks the tablist with the arrow keys and selects as it goes', () => {
-        const { el, host } = mount('full');
+        const { el, host } = mount();
         const tabs = [...el.querySelectorAll('[role="tab"]')] as HTMLButtonElement[];
         tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
         expect(host.picked).toEqual(['preview']);
@@ -127,5 +98,12 @@ describe('DocumentFrameComponent', () => {
         expect(host.picked).toEqual(['preview', 'publish']);
         tabs[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
         expect(document.activeElement).toBe(tabs[0]);
+    });
+
+    it('stacks the footer regions before a narrow viewport can clip them', () => {
+        const css = (DocumentFrameComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles.join('')
+            .replace(/\[_ng(?:content|host)-%COMP%\]/g, '');
+        expect(css).toMatch(/@media\s*\(max-width:\s*759px\)[\s\S]*?\.frame-footer\s*\{[^}]*flex-direction:\s*column;[^}]*align-items:\s*stretch;/);
+        expect(css).toMatch(/\.frame-footer-start,\s*\.frame-footer-end\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/);
     });
 });

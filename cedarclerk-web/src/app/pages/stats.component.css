@@ -351,6 +351,20 @@
     color: var(--t2);
 }
 
+:host([data-surface="paper"]) .invite-query {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-2);
+}
+
+:host([data-surface="paper"]) .invite-query input {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--fs-ui);
+}
+
+:host([data-surface="paper"]) .invite-query select { font-size: var(--fs-ui); }
+
 :host([data-surface="paper"]) .invite-table {
     width: 100%;
     margin: var(--space-2) 0 0;
@@ -366,6 +380,8 @@
 }
 
 :host([data-surface="paper"]) .invite-table td { font-family: var(--font-mono); }
+
+:host([data-surface="paper"]) .invite-table tfoot { background: var(--alt); font-weight: 600; }
 
 :host([data-surface="paper"]) .invite-table tr.revoked th,
 :host([data-surface="paper"]) .invite-table tr.revoked td { opacity: .55; }
@@ -411,6 +427,10 @@
     padding: 0 var(--space-2) var(--space-2);
     color: var(--t3);
     font-size: var(--fs-ui);
+}
+
+@media (max-width: 600px) {
+    :host([data-surface="paper"]) .invite-query { flex-direction: column; }
 }
 
 :host([data-surface="paper"]) .invite-error {

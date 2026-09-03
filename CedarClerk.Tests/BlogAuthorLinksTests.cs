@@ -22,15 +22,23 @@ public class BlogAuthorLinksTests
         db.SaveChanges();
 
         var body = await GetIndex(db);
-
         Assert.Contains("id=\"authorLinksBtn\"", body);
+        var authorButtonStart = body.IndexOf("id=\"authorLinksBtn\"", StringComparison.Ordinal);
+        var authorButtonEnd = body.IndexOf("</button>", authorButtonStart, StringComparison.Ordinal);
+        var authorButton = body[authorButtonStart..authorButtonEnd];
+
         Assert.Contains("aria-controls=\"authorLinksMenu\"", body);
+        Assert.Contains("aria-expanded=\"false\"", body);
+        Assert.DoesNotContain("aria-haspopup", authorButton);
+        Assert.Contains("id=\"authorLinksMenu\" role=\"group\"", body);
         Assert.Contains("Author links", body);
         Assert.Contains("href=\"https://maker.example/about?one=1&amp;two=2\"", body);
         Assert.Contains(">GitHub</a>", body);
         Assert.Contains(">itch.io</a>", body);
         Assert.Contains("target=\"_blank\" rel=\"noopener noreferrer\"", body);
         Assert.Contains("mouseenter", body);
+        Assert.Contains("max-height: calc(100dvh - 104px)", body);
+        Assert.Contains("overflow-y: auto; overscroll-behavior: contain", body);
     }
 
     [Fact]

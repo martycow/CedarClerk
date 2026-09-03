@@ -30,11 +30,34 @@
         of the same object, but only the first is the caller's to edit.-->
         <section class="card tm-list-card split-pane" [attr.aria-label]="t().teams.crumb">
             <div class="card-head">
-                <span class="label">{{ t().teams.yours }}</span>
-                <span class="card-count">{{ teams().length }}</span>
+                <span class="label">{{ teamListLabel() }}</span>
+                <span class="card-count">{{ visibleTeamCount() }}</span>
+            </div>
+            <div class="tm-query" role="search" [attr.aria-label]="t().teams.collections.searchTeams">
+                <input type="search" [ngModel]="teamQuery()" (ngModelChange)="setTeamQuery($event)"
+                       [placeholder]="t().teams.collections.searchTeams" [attr.aria-label]="t().teams.collections.searchTeams">
+                <select [ngModel]="teamScope()" (ngModelChange)="setTeamScope($any($event))"
+                        [attr.aria-label]="t().teams.collections.scope">
+                    <option value="all">{{ t().teams.collections.scopeAll }}</option>
+                    <option value="owned">{{ t().teams.yours }}</option>
+                    <option value="joined">{{ t().teams.joined }}</option>
+                </select>
+                <select [ngModel]="teamSortKey()" (ngModelChange)="teamSortKey.set($event)"
+                        [attr.aria-label]="t().teams.collections.sortTeams">
+                    <option value="name">{{ t().teams.collections.sortName }}</option>
+                    @if (teamScope() === 'owned') {
+                    <option value="members">{{ t().teams.collections.sortPeople }}</option>
+                    <option value="projects">{{ t().teams.collections.sortProjects }}</option>
+                    }
+                </select>
+                <button type="button" class="mini tm-sort-direction" (click)="toggleTeamSortDirection()"
+                        [title]="teamSortDirection() === 'asc' ? t().common.ascending : t().common.descending"
+                        [attr.aria-label]="teamSortDirection() === 'asc' ? t().common.ascending : t().common.descending">
+                    <app-icon [name]="teamSortDirection() === 'asc' ? 'arrow-up' : 'arrow-down'" size="sm" />
+                </button>
             </div>
             <div class="row-list tm-list">
-                @for (team of teams(); track team.id) {
+                @for (team of visibleTeams(); track team.id) {
                 <button type="button" class="row tm-row" [class.is-on]="selectedId() === team.id"
                         [attr.aria-current]="selectedId() === team.id ? 'true' : null" (click)="select(team)">
                     <app-icon name="user" size="sm" />
@@ -48,9 +71,9 @@
                 </button>
                 }
 
-                @if (joined().length) {
+                @if (visibleJoined().length) {
                 <p class="tm-group label">{{ t().teams.joined }}</p>
-                @for (team of joined(); track team.id) {
+                @for (team of visibleJoined(); track team.id) {
                 <button type="button" class="row tm-row is-joined"
                         [class.is-on]="selectedId() === team.id"
                         [attr.aria-current]="selectedId() === team.id ? 'true' : null"
@@ -65,6 +88,15 @@
                     </span>
                 </button>
                 }
+                }
+
+                @if (!visibleTeams().length && !visibleJoined().length) {
+                <app-empty-state icon="user" [title]="t().teams.collections.noTeamsMatch"
+                                 [text]="t().teams.collections.noTeamsMatchHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearTeamFilters()">
+                        {{ t().teams.collections.clearFilters }}
+                    </app-button>
+                </app-empty-state>
                 }
             </div>
         </section>
@@ -129,8 +161,36 @@
             @if (membersLoading()) {
             <p class="hint">{{ t().common.loading }}</p>
             } @else {
+            @if (members().length) {
+            <div class="tm-query tm-member-query" role="search" [attr.aria-label]="t().teams.collections.searchMembers">
+                <input type="search" [ngModel]="memberQuery()" (ngModelChange)="memberQuery.set($event)"
+                       [placeholder]="t().teams.collections.searchMembers" [attr.aria-label]="t().teams.collections.searchMembers">
+                <select [ngModel]="memberRole()" (ngModelChange)="memberRole.set($event)"
+                        [attr.aria-label]="t().teams.collections.roleFilter">
+                    <option value="all">{{ t().teams.collections.allRoles }}</option>
+                    @for (role of roles; track role) { <option [value]="role">{{ roleWord(role) }}</option> }
+                </select>
+                <select [ngModel]="memberStatus()" (ngModelChange)="memberStatus.set($event)"
+                        [attr.aria-label]="t().teams.collections.statusFilter">
+                    <option value="all">{{ t().teams.collections.allStatuses }}</option>
+                    <option value="pending">{{ t().teams.pending }}</option>
+                    @for (s of statuses; track s) { <option [value]="s">{{ statusWord(s) }}</option> }
+                </select>
+                <select [ngModel]="memberSortKey()" (ngModelChange)="memberSortKey.set($event)"
+                        [attr.aria-label]="t().teams.collections.sortMembers">
+                    <option value="name">{{ t().teams.collections.sortName }}</option>
+                    <option value="role">{{ t().teams.roleLabel }}</option>
+                    <option value="status">{{ t().teams.statusLabel }}</option>
+                </select>
+                <button type="button" class="mini tm-sort-direction" (click)="toggleMemberSortDirection()"
+                        [title]="memberSortDirection() === 'asc' ? t().common.ascending : t().common.descending"
+                        [attr.aria-label]="memberSortDirection() === 'asc' ? t().common.ascending : t().common.descending">
+                    <app-icon [name]="memberSortDirection() === 'asc' ? 'arrow-up' : 'arrow-down'" size="sm" />
+                </button>
+            </div>
+            }
             <div class="row-list tm-members">
-                @for (m of members(); track m.id) {
+                @for (m of visibleMembers(); track m.id) {
                 <div class="row tm-member" [class.is-banned]="m.status === 'banned'">
                     <div class="tm-member-who">
                         <span class="t">{{ m.name || m.email }}</span>
@@ -167,7 +227,16 @@
                     </span>
                 </div>
                 } @empty {
+                @if (members().length && memberFiltersActive()) {
+                <app-empty-state icon="user" [title]="t().teams.collections.noMembersMatch"
+                                 [text]="t().teams.collections.noMembersMatchHint">
+                    <app-button variant="paper" size="sm" (clicked)="clearMemberFilters()">
+                        {{ t().teams.collections.clearFilters }}
+                    </app-button>
+                </app-empty-state>
+                } @else {
                 <app-empty-state icon="user" [title]="t().teams.noMembers" [text]="t().teams.noMembersHint" />
+                }
                 }
             </div>
             }

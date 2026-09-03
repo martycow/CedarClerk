@@ -18,9 +18,7 @@ test.afterEach(async ({ context }) => {
 // this catches, in the cheapest possible form.
 test('the UI language switches to Russian and survives a reload', async ({ page }) => {
     await page.goto('/settings');
-    // I12 split Settings in two: the UI language lives under Account, with Profile as the default
-    // tab, so the picker is one click away rather than on the page that opens.
-    await page.getByRole('tab', { name: 'Account', exact: true }).click();
+    await page.getByRole('tab', { name: 'Preferences', exact: true }).click();
     // Wait for the write, not just for the UI: the picker sets `lang` on <html> from the signal
     // immediately, while the profile POST is still in flight. Reloading between the two made this
     // test fail about one run in ten — /api/auth/me then answered with the old language and
@@ -37,18 +35,25 @@ test('the UI language switches to Russian and survives a reload', async ({ page 
 });
 
 test('the theme toggle switches and persists', async ({ page }) => {
-    await page.goto('/drafts');
+    await page.goto('/settings?tab=preferences');
     const before = await page.locator('html').getAttribute('data-theme');
+    try {
+        const saved = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+        await page.getByRole('button', { name: before === 'dark' ? 'Light' : 'Dark', exact: true }).click();
+        await expect(page.locator('html')).not.toHaveAttribute('data-theme', before ?? '');
+        await saved;
 
-    // The theme toggle lives in the account menu (ADR-239 clause 4); the trigger's visible text is
-    // the account's own name, so it is found by its title rather than by a word.
-    await page.getByTitle('Account', { exact: true }).click();
-    await page.getByRole('button', { name: 'Toggle theme' }).click();
-    await expect(page.locator('html')).not.toHaveAttribute('data-theme', before ?? '');
-
-    const after = await page.locator('html').getAttribute('data-theme');
-    await page.reload();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', after ?? '');
+        const after = await page.locator('html').getAttribute('data-theme');
+        await page.reload();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', after ?? '');
+    } finally {
+        const current = await page.locator('html').getAttribute('data-theme');
+        if (before && current !== before) {
+            const restored = page.waitForResponse(r => r.url().includes('/api/auth/appearance') && r.ok());
+            await page.getByRole('button', { name: before === 'dark' ? 'Dark' : 'Light', exact: true }).click();
+            await restored;
+        }
+    }
 });
 
 test('the glossary page opens', async ({ page }) => {
@@ -58,7 +63,10 @@ test('the glossary page opens', async ({ page }) => {
 
 // Asserted on the account's own email rather than on a tab label: the email is the one thing on
 // this screen that reads the same in either UI language.
-test('settings opens on the profile tab from the account menu deep link', async ({ page }) => {
-    await page.goto('/settings?tab=profile');
+test('the account menu has one Settings door and opens Profile by default', async ({ page }) => {
+    await page.goto('/drafts');
+    await page.getByTitle('Account', { exact: true }).click();
+    await page.getByRole('link', { name: 'Settings', exact: true }).click();
+    await expect(page).toHaveURL(/\/settings$/);
     await expect(page.locator('body')).toContainText(ADMIN.email);
 });

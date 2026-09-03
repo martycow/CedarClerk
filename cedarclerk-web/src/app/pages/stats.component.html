@@ -93,10 +93,11 @@ at the filter strip.-->
             <!--T-338 — a real zero-state, not a bare dash: the one line that explains why it is
             empty, and the way out when the reader's own doing is not the reason.-->
             <app-empty-state class="stats-empty" icon="chart-bar"
-                             [title]="anySelected() ? t().stats.sources.nothingToDrawTitle : t().stats.sources.noneSelectedTitle"
-                             [text]="anySelected() ? t().stats.sources.nothingToDraw : t().stats.sources.noneSelected">
-                @if (anySelected()) {
+                             [title]="chartEmptyState().title" [text]="chartEmptyState().text">
+                @if (chartEmptyState().action === 'documents') {
                 <app-button variant="pine" size="sm" link="/drafts">{{ t().stats.sources.nothingToDrawAction }}</app-button>
+                } @else {
+                <app-button variant="paper" size="sm" (clicked)="showAllSources()">{{ t().stats.sources.showAll }}</app-button>
                 }
             </app-empty-state>
             } @else if (view() === 'chart') {
@@ -113,14 +114,24 @@ at the filter strip.-->
                 <caption class="visually-hidden">{{ chartLabel() }}</caption>
                 <thead>
                     <tr>
-                        <th scope="col">{{ t().stats.chart.period }}</th>
-                        @for (s of series(); track s.slot) {
-                        <th scope="col">{{ s.name }}</th>
+                        <th scope="col" [attr.aria-sort]="ariaSort(tableSortKey() === 'period', tableSortDirection())">
+                            <app-sort-header [label]="t().stats.chart.period" [active]="tableSortKey() === 'period'"
+                                             [direction]="tableSortDirection()" [sortByLabel]="t().common.sortBy"
+                                             [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                             (sorted)="sortTable('period')" />
+                        </th>
+                        @for (s of series(); track s.id) {
+                        <th scope="col" [attr.aria-sort]="ariaSort(tableSortKey() === s.id, tableSortDirection())">
+                            <app-sort-header [label]="s.name" [active]="tableSortKey() === s.id"
+                                             [direction]="tableSortDirection()" align="end"
+                                             [sortByLabel]="t().common.sortBy" [ascendingLabel]="t().common.ascending"
+                                             [descendingLabel]="t().common.descending" (sorted)="sortTable(s.id)" />
+                        </th>
                         }
                     </tr>
                 </thead>
                 <tbody>
-                    @for (row of tableRows(); track row.label) {
+                    @for (row of tableRows(); track row.day) {
                     <tr>
                         <th scope="row">{{ row.label }}</th>
                         @for (value of row.values; track $index) {
@@ -200,18 +211,49 @@ at the filter strip.-->
         @if (inviteLoading()) {
         <p class="stats-hint">{{ t().common.loading }}</p>
         } @else if (inviteLinks().length) {
+        <div class="invite-query" role="search">
+            <input type="search" [ngModel]="inviteQuery()" (ngModelChange)="setInviteQuery($event)"
+                   [placeholder]="t().stats.inviteLinks.search" [attr.aria-label]="t().stats.inviteLinks.search">
+            <select [ngModel]="inviteState()" (ngModelChange)="setInviteState($event)"
+                    [attr.aria-label]="t().stats.inviteLinks.stateFilter">
+                <option value="all">{{ t().stats.inviteLinks.filterAll }}</option>
+                <option value="active">{{ t().stats.inviteLinks.filterActive }}</option>
+                <option value="revoked">{{ t().stats.inviteLinks.filterRevoked }}</option>
+            </select>
+        </div>
+        @if (visibleInviteLinks().length) {
         <table class="invite-table">
             <thead>
                 <tr>
-                    <th scope="col">{{ t().stats.inviteLinks.colName }}</th>
-                    <th scope="col">{{ t().stats.inviteLinks.colJoins }}</th>
-                    <th scope="col">{{ t().stats.inviteLinks.colLeaves }}</th>
-                    <th scope="col">{{ t().stats.inviteLinks.colNet }}</th>
+                    <th scope="col" [attr.aria-sort]="ariaSort(inviteSortKey() === 'name', inviteSortDirection())">
+                        <app-sort-header [label]="t().stats.inviteLinks.colName" [active]="inviteSortKey() === 'name'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInviteLinks('name')" />
+                    </th>
+                    <th scope="col" [attr.aria-sort]="ariaSort(inviteSortKey() === 'joins', inviteSortDirection())">
+                        <app-sort-header [label]="t().stats.inviteLinks.colJoins" [active]="inviteSortKey() === 'joins'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInviteLinks('joins')" />
+                    </th>
+                    <th scope="col" [attr.aria-sort]="ariaSort(inviteSortKey() === 'leaves', inviteSortDirection())">
+                        <app-sort-header [label]="t().stats.inviteLinks.colLeaves" [active]="inviteSortKey() === 'leaves'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInviteLinks('leaves')" />
+                    </th>
+                    <th scope="col" [attr.aria-sort]="ariaSort(inviteSortKey() === 'net', inviteSortDirection())">
+                        <app-sort-header [label]="t().stats.inviteLinks.colNet" [active]="inviteSortKey() === 'net'"
+                                         [direction]="inviteSortDirection()" [sortByLabel]="t().common.sortBy"
+                                         [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                         (sorted)="sortInviteLinks('net')" />
+                    </th>
                     <th scope="col"><span class="visually-hidden">{{ t().stats.inviteLinks.colActions }}</span></th>
                 </tr>
             </thead>
             <tbody>
-                @for (link of inviteLinks(); track link.id) {
+                @for (link of visibleInviteLinks(); track link.id) {
                 <tr [class.revoked]="link.revokedAt">
                     <th scope="row" [title]="link.inviteLink">
                         {{ link.name }}
@@ -234,7 +276,9 @@ at the filter strip.-->
                     </td>
                 </tr>
                 }
-                @if (inviteOrganic(); as organic) {
+            </tbody>
+            @if (!inviteFiltersActive() && inviteOrganic(); as organic) {
+            <tfoot>
                 <tr>
                     <th scope="row">{{ t().stats.inviteLinks.organic }}</th>
                     <td>{{ organic.joins }}</td>
@@ -242,9 +286,15 @@ at the filter strip.-->
                     <td>{{ organic.joins - organic.leaves > 0 ? '+' + (organic.joins - organic.leaves) : organic.joins - organic.leaves }}</td>
                     <td></td>
                 </tr>
-                }
-            </tbody>
+            </tfoot>
+            }
         </table>
+        } @else {
+        <app-empty-state icon="link" [title]="t().stats.inviteLinks.emptyFiltered"
+                         [text]="t().stats.inviteLinks.emptyFilteredHint">
+            <button type="button" class="btn" (click)="clearInviteFilters()">{{ t().stats.inviteLinks.clearFilters }}</button>
+        </app-empty-state>
+        }
         } @else {
         <app-empty-state icon="link" [title]="t().stats.inviteLinks.emptyTitle" [text]="t().stats.inviteLinks.empty" />
         }

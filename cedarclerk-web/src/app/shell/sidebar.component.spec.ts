@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { NavGroup, NavItem, SidebarComponent, SidebarProject } from './sidebar.component';
+import { NavGroup, SidebarComponent, SidebarProject } from './sidebar.component';
 
 const GROUPS: NavGroup[] = [
     { id: 'write', label: 'Write', items: [
@@ -15,23 +15,18 @@ const GROUPS: NavGroup[] = [
         { id: 'metrics', label: 'Metrics', icon: 'chart-bar', link: '/posts', queryParams: { tab: 'stats' }, count: 0 },
     ] },
 ];
-const FOOT: NavItem[] = [{ id: 'settings', label: 'Settings', icon: 'gear', link: '/settings' }];
-
 @Component({
     imports: [SidebarComponent],
     template: `
-        <app-sidebar [mode]="mode()" [groups]="groups" [foot]="foot" activeId="documents"
+        <app-sidebar [mode]="mode()" [groups]="groups" activeId="documents"
                      [project]="project()" [projects]="projects()" projectHint="Switch project"
-                     navLabel="Screens" brand="Cedar Clerk" brandLabel="Cedar Clerk — home"
-                     allProjectsLabel="All projects" alertsTitle="New comments and reactions" [alerts]="alerts()"
-                     collapseLabel="Collapse sidebar" expandLabel="Expand sidebar"
-                     (modeChange)="mode.set($event)" />
+                     navLabel="Screens" brand="Cedar Clerk" brandLabel="Cedar Clerk"
+                     allProjectsLabel="All projects" alertsTitle="New comments and reactions" [alerts]="alerts()" />
     `,
 })
 class Host {
     mode = signal<'full' | 'rail'>('full');
     groups = GROUPS;
-    foot = FOOT;
     project = signal<SidebarProject | null>({ id: 'p1', name: 'Cedar Quest', kind: 'Game · 2 projects', link: ['/projects', 'p1'] });
     projects = signal<SidebarProject[]>([]);
     alerts = signal(0);
@@ -59,8 +54,9 @@ describe('SidebarComponent', () => {
         expect(h.el.querySelector('app-sidebar')!.getAttribute('data-surface')).toBe('paper');
         expect(h.el.querySelectorAll('nav').length).toBe(1);
         expect(h.el.querySelector('nav')!.getAttribute('aria-label')).toBe('Screens');
+        expect(h.el.querySelector('.side-mode')).toBeNull();
         expect(h.items().every(a => a.tagName === 'A')).toBe(true);
-        expect(h.texts()).toEqual(['Documents', 'Assets', 'Metrics', 'Settings']);
+        expect(h.texts()).toEqual(['Documents', 'Assets', 'Metrics']);
     });
 
     it('skips a group with nothing in it and labels the rest', () => {
@@ -133,7 +129,7 @@ describe('SidebarComponent', () => {
         expect(h.el.querySelector('.side-dot')).toBeTruthy();
     });
 
-    it('draws the rail with compact project and footer context', () => {
+    it('draws the rail with compact project and account controls but no duplicate width control', () => {
         const h = mount();
         h.host.mode.set('rail');
         h.fixture.detectChanges();
@@ -143,14 +139,16 @@ describe('SidebarComponent', () => {
         expect(h.el.querySelector('.side-label')).toBeNull();
         expect(h.el.querySelector('.side-count')).toBeNull();
         expect(h.el.querySelector('.side-wordmark')).toBeNull();
-        expect(h.texts()).toEqual(['Documents', 'Assets', 'Metrics', 'Settings']);
+        expect(h.texts()).toEqual(['Documents', 'Assets', 'Metrics']);
         expect(h.el.querySelector('app-account-menu .account-trigger')).toBeTruthy();
         expect(h.el.querySelector('.side-bell')).toBeTruthy();
-        const toggle = h.el.querySelector('.side-mode') as HTMLButtonElement;
-        expect(toggle.getAttribute('aria-label')).toBe('Expand sidebar');
-        toggle.click();
-        h.fixture.detectChanges();
-        expect(h.host.mode()).toBe('full');
-        expect(toggle.getAttribute('aria-label')).toBe('Collapse sidebar');
+        expect(h.el.querySelector('.side-mode')).toBeNull();
+    });
+
+    it('keeps both rail footer controls inside the coarse-pointer width', () => {
+        const css = (SidebarComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles.join('')
+            .replace(/\[_ng(?:content|host)-%COMP%\]/g, '');
+        expect(css).toMatch(/@media\s*\(pointer:\s*coarse\)[\s\S]*?\[data-surface="?paper"?\]\s+\.side-bell\s*\{[^}]*width:\s*var\(--hit-touch\);[^}]*height:\s*var\(--hit-touch\);/);
+        expect(css).toMatch(/\[data-surface="?paper"?\]\.is-rail\s+\.side-user\s*\{[^}]*gap:\s*var\(--space-1\);[^}]*padding-inline:\s*0;/);
     });
 });

@@ -95,6 +95,27 @@
     width: 200px;
 }
 
+.collection-sort {
+    display: grid;
+    gap: var(--space-1);
+    flex: none;
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+}
+
+.collection-sort select {
+    box-sizing: border-box;
+    min-height: var(--hit-surface);
+    padding: 0 var(--dens-control-x);
+    border: var(--border-field);
+    border-radius: var(--radius-stamp);
+    background: var(--paper-bright);
+    color: var(--text);
+    box-shadow: var(--shadow-field-inset);
+    font: inherit;
+}
+
 /* The opened file scrolls as its own column: a tall inspector on a short window must not be
    clipped by the bounded list. */
 .inspector {
@@ -458,14 +479,15 @@
 }
 
 .asset-row {
+    position: relative;
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) 110px 200px 140px;
+    grid-template-columns: minmax(240px, 1fr) 100px 100px 170px 140px;
     gap: var(--dens-gap);
     align-items: center;
     padding: var(--dens-row-y) var(--dens-control-x);
     border-bottom: 1px solid var(--paper-edge);
     cursor: pointer;
-    min-width: 700px;
+    min-width: 800px;
     font-size: var(--fs-meta);
     color: var(--t2);
 }
@@ -491,6 +513,30 @@
 }
 
 .file-cell app-icon { color: var(--t2); flex: none; }
+
+.asset-open {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-width: 0;
+    min-height: var(--hit-surface, var(--hit-target));
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.asset-open::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+}
 
 .pager {
     display: flex;

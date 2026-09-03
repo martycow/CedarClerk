@@ -142,6 +142,14 @@ because linking it to a document means choosing from a list the modal was coveri
                                    [label]="t().media.searchLabel" [value]="search()"
                                    [placeholder]="t().projects.assets.search"
                                    (valueChange)="onSearch($any($event) ?? '')" />
+                        <label class="collection-sort">
+                            <span>{{ t().projects.assets.sortLabel }}</span>
+                            <select [value]="sortValue()" (change)="setSortValue($any($event.target).value)">
+                                @for (option of sortOptions(); track option.value) {
+                                    <option [value]="option.value">{{ option.label }}</option>
+                                }
+                            </select>
+                        </label>
                         <app-index-tabs [items]="viewTabs()" [value]="view()"
                                         [label]="t().projects.assets.viewStrip" (selected)="setView($any($event))" />
                     </div>
@@ -157,7 +165,13 @@ because linking it to a document means choosing from a list the modal was coveri
                                     }
                                 </app-empty-state>
                             } @else {
-                                <app-empty-state [icon]="null" [text]="t().projects.assets.emptyFiltered" />
+                                <app-empty-state [icon]="null" [text]="t().projects.assets.emptyFiltered">
+                                    @if (hasFilters()) {
+                                        <app-button variant="paper" size="sm" (clicked)="clearFilters()">
+                                            {{ t().projects.assets.clearFilters }}
+                                        </app-button>
+                                    }
+                                </app-empty-state>
                             }
                         } @else if (view() === 'grid') {
                             <div class="asset-grid">
@@ -196,26 +210,54 @@ because linking it to a document means choosing from a list the modal was coveri
                                 }
                             </div>
                         } @else {
-                            <div class="asset-table" role="grid" [attr.aria-label]="t().projects.assets.title">
+                            <div class="asset-table" role="table" [attr.aria-label]="t().projects.assets.title">
                                 <div class="asset-row head-row" role="row">
-                                    <div role="columnheader">{{ t().projects.assets.colFile }}</div>
-                                    <div role="columnheader">{{ t().projects.assets.colType }}</div>
-                                    <div role="columnheader" class="right">{{ t().projects.assets.colDetails }}</div>
-                                    <div role="columnheader">{{ t().projects.assets.colStatus }}</div>
+                                    <div role="columnheader" [attr.aria-sort]="columnSort('path')">
+                                        <app-sort-header [label]="t().projects.assets.colFile" [active]="sort() === 'path'"
+                                            [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                            (sorted)="setSort('path')" />
+                                    </div>
+                                    <div role="columnheader" [attr.aria-sort]="columnSort('type')">
+                                        <app-sort-header [label]="t().projects.assets.colType" [active]="sort() === 'type'"
+                                            [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                            (sorted)="setSort('type')" />
+                                    </div>
+                                    <div role="columnheader" class="right" [attr.aria-sort]="columnSort('size')">
+                                        <app-sort-header [label]="t().projects.assets.colSize" [active]="sort() === 'size'" align="end"
+                                            [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                            (sorted)="setSort('size')" />
+                                    </div>
+                                    <div role="columnheader" [attr.aria-sort]="columnSort('modified')">
+                                        <app-sort-header [label]="t().projects.assets.colModified" [active]="sort() === 'modified'"
+                                            [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                            (sorted)="setSort('modified')" />
+                                    </div>
+                                    <div role="columnheader" [attr.aria-sort]="columnSort('status')">
+                                        <app-sort-header [label]="t().projects.assets.colStatus" [active]="sort() === 'status'"
+                                            [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                            [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                            (sorted)="setSort('status')" />
+                                    </div>
                                 </div>
                                 @for (a of p.items; track a.id) {
-                                    <div class="asset-row" role="row" [class.is-on]="selected()?.id === a.id"
-                                         [attr.aria-selected]="selected()?.id === a.id"
-                                         (click)="open(a)" tabindex="0" (keydown)="onAssetKeydown($event, a)">
-                                        <div class="file-cell" role="gridcell">
-                                            <app-icon [name]="kindIcons[a.kind]" size="sm"></app-icon>
-                                            <span class="path" [title]="a.relativePath">{{ a.relativePath }}</span>
+                                    <div class="asset-row" role="row" [class.is-on]="selected()?.id === a.id">
+                                        <div class="file-cell" role="cell">
+                                            <button type="button" class="asset-open" [title]="a.relativePath"
+                                                    [attr.aria-pressed]="selected()?.id === a.id" (click)="open(a)">
+                                                <app-icon [name]="kindIcons[a.kind]" size="sm"></app-icon>
+                                                <span class="path">{{ a.relativePath }}</span>
+                                            </button>
                                         </div>
-                                        <div role="gridcell">{{ t().projects.assets.kindOne[a.kind] }}</div>
-                                        <div role="gridcell" class="right">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM yyyy, HH:mm' }}</div>
+                                        <div role="cell">{{ t().projects.assets.kindOne[a.kind] }}</div>
+                                        <div role="cell" class="right">{{ bytes(a.sizeBytes) }}</div>
+                                        <div role="cell">{{ a.modifiedAt | zonedDate:'d MMM yyyy, HH:mm' }}</div>
                                         <!-- "On disk" is a claim about *this* disk, and from a browser it would be
                                              false. Three states, not two. -->
-                                        <div role="gridcell" [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
+                                        <div role="cell" [class.danger]="!!a.missingSince" [class.ok]="!a.missingSince && isLocal()">
                                             @if (a.missingSince) {
                                                 {{ t().projects.assets.notFoundAtPath }}
                                             } @else if (isLocal()) {
@@ -250,7 +292,7 @@ because linking it to a document means choosing from a list the modal was coveri
                             <span class="index-count">{{ t().projects.assets.kindOne[a.kind] }}</span>
                             <span class="spacer"></span>
                             <app-button variant="rail" size="sm" [title]="t().common.close"
-                                        (clicked)="selected.set(null)">
+                                        (clicked)="clearSelection()">
                                 <app-icon name="x" size="xs" [label]="t().common.close"></app-icon>
                             </app-button>
                         </div>

@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { AppearanceService } from '../core/appearance.service';
 import { CommentsService } from '../core/comments.service';
 import { CreditBalanceService } from '../core/credit-balance.service';
 import { CurrentProjectService } from '../core/current-project.service';
@@ -8,7 +9,6 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 import { ProjectAccessService } from '../core/project-access.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
-import { AppearancePanelComponent } from '../shared/appearance-panel.component';
 import { DebugConsoleComponent } from '../shared/debug-console.component';
 import { FeedbackPanelComponent } from '../shared/feedback-panel.component';
 import { SearchOverlayComponent } from '../shared/search-overlay.component';
@@ -40,16 +40,6 @@ const NAV_PREFIXES: readonly (readonly [string, string])[] = [
 const PROJECT_CHILDREN: ReadonlySet<string> =
     new Set(['assets', 'tasks', 'planner', 'builds', 'canvas', 'showcase', 'dialogues']);
 
-const SIDEBAR_MODE_KEY = 'cedar-sidebar-mode';
-
-function initialSidebarMode(): 'full' | 'rail' {
-    try {
-        return localStorage.getItem(SIDEBAR_MODE_KEY) === 'rail' ? 'rail' : 'full';
-    } catch {
-        return 'full';
-    }
-}
-
 function matches(path: string, pattern: string): boolean {
     const p = path.split('/').filter(Boolean);
     const q = pattern.split('/').filter(Boolean);
@@ -59,13 +49,13 @@ function matches(path: string, pattern: string): boolean {
 
 // The paper-first shell (ADR-239): a sidebar beside the page, and nothing above or below it. A
 // parent route rather than the root component so the pre-auth pages are outside it by the shape
-// of the route tree (ADR-139 clause 1). Expanded/collapsed is a person's stable preference and
-// never a route side effect (ADR-246 clause 1).
+// of the route tree (ADR-139 clause 1). Appearance owns the desktop width; a phone uses the rail
+// so the document surface cannot be squeezed behind persistent navigation (ADR-248 clause 2).
 @Component({
     selector: 'app-shell',
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
-        RouterOutlet, SidebarComponent, AppearancePanelComponent, FeedbackPanelComponent,
+        RouterOutlet, SidebarComponent, FeedbackPanelComponent,
         SearchOverlayComponent, DebugConsoleComponent,
     ],
     host: {
@@ -74,19 +64,16 @@ function matches(path: string, pattern: string): boolean {
     },
     template: `
         <div class="shell" [class.is-rail]="mode() === 'rail'">
-            <app-sidebar [mode]="mode()" [groups]="groups()" [foot]="foot()" [activeId]="activeId()"
+            <app-sidebar [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
                          [project]="project()" [projects]="switcher()" [projectHint]="t().shell.switchProject"
                          [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
-                         [brand]="t().shell.brand" [brandLabel]="t().shell.logoHome"
-                         [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts"
-                         [collapseLabel]="t().shell.collapseSidebar" [expandLabel]="t().shell.expandSidebar"
-                         (modeChange)="setMode($event)" (openAppearance)="openAppearance()" />
+                         [brand]="t().shell.brand" [brandLabel]="t().shell.logoLabel"
+                         [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts" />
             <main class="body" data-surface="paper">
                 <router-outlet />
             </main>
         </div>
 
-        <app-appearance-panel />
         <app-feedback-panel />
         <app-search-overlay />
         <app-debug-console />
@@ -127,17 +114,18 @@ export class AppShellComponent {
     private readonly access = inject(ProjectAccessService);
     private readonly creditBalance = inject(CreditBalanceService);
     private readonly overlays = inject(OverlayCoordinatorService);
+    private readonly appearance = inject(AppearanceService);
 
     protected readonly auth = inject(AuthService);
     protected readonly t = inject(LocaleService).t;
 
-    protected readonly appearance = viewChild.required(AppearancePanelComponent);
     protected readonly search = viewChild.required(SearchOverlayComponent);
 
     private readonly url = signal(this.router.url);
     private readonly path = computed(() => this.url().split('?')[0].split('#')[0]);
 
-    readonly mode = signal<'full' | 'rail'>(initialSidebarMode());
+    private readonly phoneViewport = signal(window.innerWidth <= 640);
+    readonly mode = computed(() => this.phoneViewport() ? 'rail' : this.appearance.prefs().sidebarMode);
 
     /** Resolved once per shell; the switcher lists them and the counts are read off them. */
     private readonly summaries = signal<readonly ProjectSummary[]>([]);
@@ -198,15 +186,23 @@ export class AppShellComponent {
         return { id, name: this.openName(), kind: sub, link: ['/projects', id] };
     });
 
-    /** Every project, then the hub (ADR-186). Switching keeps the open screen (ADR-221). */
     protected readonly switcher = computed<readonly SidebarProject[]>(() => {
-        if (!this.projectOpen() || !this.summaries().length) return [];
+        if (!this.auth.indieDev()) return [];
         const child = this.projectChild();
+        const onWorkspaceAction = this.onHub() || this.path().replace(/\/+$/, '') === '/teams';
         const items: SidebarProject[] = this.summaries().map(p => ({
             id: p.id, name: p.name, kind: '',
             link: child ? ['/projects', p.id, child] : ['/projects', p.id],
+            active: onWorkspaceAction ? false : undefined,
         }));
-        items.push({ id: '', name: this.t().shell.allProjects, kind: '', link: '/projects' });
+        items.push({
+            id: '', name: this.t().shell.allProjects, kind: '', link: '/projects',
+            icon: 'folder-open', separatorBefore: !!items.length, active: this.onHub(),
+        });
+        items.push({
+            id: '__teams__', name: this.t().shell.manageTeams, kind: '', link: '/teams', icon: 'user',
+            active: this.path().replace(/\/+$/, '') === '/teams',
+        });
         return items;
     });
 
@@ -233,7 +229,6 @@ export class AppShellComponent {
             { id: 'glossary', label: this.t().glossary.crumb, icon: 'book-bookmark', link: '/glossary' },
             { id: 'presets', label: this.t().presets.crumb, icon: 'squares-four', link: '/presets' },
         ];
-        if (this.auth.indieDev()) library.push({ id: 'teams', label: this.t().teams.crumb, icon: 'user', link: '/teams' });
         if (!this.auth.indieDev() || !this.projectOpen()) {
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts' });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: '/library' });
@@ -264,14 +259,6 @@ export class AppShellComponent {
             { id: 'ship', label: t.groupShip, items: ship },
             { id: 'library', label: t.groupLibrary, items: library },
         ];
-    });
-
-    protected readonly foot = computed<readonly NavItem[]>(() => {
-        const t = this.t().shell;
-        const items: NavItem[] = [];
-        if (this.auth.indieDev()) items.push({ id: 'hub', label: t.allProjects, icon: 'folder-open', link: '/projects' });
-        items.push({ id: 'settings', label: t.settings, icon: 'gear', link: '/settings' });
-        return items;
     });
 
     protected readonly activeId = computed(() => {
@@ -363,16 +350,8 @@ export class AppShellComponent {
         }
     }
 
-    openAppearance(): void {
-        this.appearance().openPanel();
-    }
-
-    setMode(mode: 'full' | 'rail'): void {
-        this.mode.set(mode);
-        try {
-            localStorage.setItem(SIDEBAR_MODE_KEY, mode);
-        } catch {
-            // Storage may be disabled; the current session still keeps the explicit choice.
-        }
+    @HostListener('window:resize')
+    onResize(): void {
+        this.phoneViewport.set(window.innerWidth <= 640);
     }
 }

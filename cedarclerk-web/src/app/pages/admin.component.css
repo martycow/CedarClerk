@@ -104,6 +104,42 @@
     font-size: var(--dens-fs);
 }
 
+.collection-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.collection-toolbar input {
+    flex: 1 1 240px;
+    min-width: 180px;
+}
+
+.collection-toolbar select {
+    flex: 0 1 190px;
+    min-width: 150px;
+}
+
+.table .head app-sort-header {
+    min-width: 0;
+}
+
+.table-empty-row,
+.table-empty-row > [role="cell"] {
+    display: block;
+    min-width: 100%;
+}
+
+.collection-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
+
 .invite-row {
     grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1.4fr) 120px 140px 130px;
     min-width: 780px;
@@ -113,6 +149,19 @@
 .payment-row { grid-template-columns: 170px minmax(180px, 1.2fr) minmax(150px, 1fr) 130px 110px; min-width: 800px; }
 .usage-row { grid-template-columns: minmax(220px, 2fr) 120px 100px 140px; min-width: 640px; }
 .waitlist-row { grid-template-columns: minmax(220px, 2fr) 80px 140px; min-width: 460px; }
+
+@media (max-width: 560px) {
+    .collection-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .collection-toolbar input,
+    .collection-toolbar select {
+        flex-basis: auto;
+        width: 100%;
+    }
+}
 
 .post-links {
     display: flex;

@@ -1,6 +1,7 @@
 import { signal, type WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, ParamMap, convertToParamMap } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { AssetsService } from '../core/assets.service';
 import { AuthService } from '../core/auth.service';
 import { BillingService, type BillingStatus, type CreditsStatus } from '../core/billing.service';
@@ -8,7 +9,7 @@ import { type Channel, ChannelsService } from '../core/channels.service';
 import { LocaleService, type UiLang } from '../core/i18n/locale.service';
 import { PublishService } from '../core/publish.service';
 import { TelegramLinkService } from '../core/telegram-link.service';
-import { SettingsComponent } from './settings.component';
+import { SettingsComponent, resolveSettingsTab } from './settings.component';
 
 describe('settings', () => {
     let fixture: ComponentFixture<SettingsComponent>;
@@ -16,12 +17,14 @@ describe('settings', () => {
     let finishLanguageSave: () => void;
     let planTier: WritableSignal<string>;
     let telegramLinked: WritableSignal<boolean>;
+    let queryParams: BehaviorSubject<ParamMap>;
 
     beforeEach(async () => {
         localStorage.setItem('cedar-ui-lang', 'en');
         locale = new LocaleService();
         planTier = signal('Free');
         telegramLinked = signal(false);
+        queryParams = new BehaviorSubject(convertToParamMap({ tab: 'account' }));
         const empty = signal<Record<string, string>>({});
         const auth = {
             userEmail: signal<string | null>('author@example.com'),
@@ -79,7 +82,10 @@ describe('settings', () => {
                 { provide: PublishService, useValue: { networks: async () => [] } },
                 {
                     provide: ActivatedRoute,
-                    useValue: { snapshot: { queryParamMap: convertToParamMap({ tab: 'account' }) } },
+                    useValue: {
+                        snapshot: { queryParamMap: convertToParamMap({ tab: 'account' }) },
+                        queryParamMap: queryParams,
+                    },
                 },
             ],
         });
@@ -91,12 +97,33 @@ describe('settings', () => {
 
     afterEach(() => localStorage.removeItem('cedar-ui-lang'));
 
-    it('left-anchors the operational page and keeps a single-section account tab without a side index', () => {
+    it('keeps both legacy preference URLs working', () => {
+        expect(resolveSettingsTab('account')).toBe('preferences');
+        expect(resolveSettingsTab('appearance')).toBe('preferences');
+        expect(resolveSettingsTab('preferences')).toBe('preferences');
+    });
+
+    it('maps the legacy account URL to Preferences with language and Appearance', () => {
         const root = fixture.nativeElement as HTMLElement;
         expect(root.querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
         expect(root.querySelector('.settings-strip')).not.toBeNull();
-        expect(root.querySelector('.settings-body')?.classList.contains('has-index')).toBe(false);
-        expect(root.querySelector('.section-index.is-side')).toBeNull();
+        expect(fixture.componentInstance.tab()).toBe('preferences');
+        expect(root.querySelector('.settings-body')?.classList.contains('has-index')).toBe(true);
+        expect(root.querySelector('#sec-language')).not.toBeNull();
+        expect(root.querySelector('#sec-appearance app-appearance-panel')).not.toBeNull();
+        expect(root.querySelector(`[role="group"][aria-label="${locale.t().settings.appearance.themeLabel}"]`)).not.toBeNull();
+        expect(root.querySelector(`[role="group"][aria-label="${locale.t().settings.appearance.sidebarLabel}"]`)).not.toBeNull();
+        expect(root.querySelectorAll('#sec-appearance input[type="checkbox"]')).toHaveLength(6);
+    });
+
+    it('follows tab query changes while the Settings route stays mounted', () => {
+        queryParams.next(convertToParamMap({ tab: 'billing' }));
+        fixture.detectChanges();
+        expect(fixture.componentInstance.tab()).toBe('billing');
+
+        queryParams.next(convertToParamMap({ tab: 'appearance' }));
+        fixture.detectChanges();
+        expect(fixture.componentInstance.tab()).toBe('preferences');
     });
 
     it('announces language persistence after the immediate interface switch', async () => {

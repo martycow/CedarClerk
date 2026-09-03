@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { IconName } from '../shared/icon-data.generated';
+import { SortDirection } from './collection-query';
 
 // T-122 (ADR-107) — the index of a project's local files. **Paths, metadata and small previews; the
 // asset's own bytes never move.** Deliberately not the same thing as `assets.service.ts`, which
@@ -13,6 +14,7 @@ import { IconName } from '../shared/icon-data.generated';
 // ask any more, because no server reads a disk.
 
 export type AssetKind = 'image' | 'model' | 'audio' | 'video' | 'font' | 'text' | 'other';
+export type AssetSort = 'path' | 'type' | 'size' | 'modified' | 'status';
 export const ASSET_KINDS: AssetKind[] = ['image', 'model', 'audio', 'video', 'font', 'text', 'other'];
 
 export const ASSET_KIND_ICONS: Record<AssetKind, IconName> = {
@@ -112,6 +114,8 @@ export interface AssetQuery {
     kind?: AssetKind | null;
     search?: string;
     missing?: boolean;
+    sort?: AssetSort;
+    direction?: SortDirection;
     skip?: number;
     take?: number;
 }
@@ -125,6 +129,8 @@ export class AssetIndexService {
         if (query.kind) params.set('kind', query.kind);
         if (query.search) params.set('search', query.search);
         if (query.missing) params.set('missing', 'true');
+        if (query.sort) params.set('sort', query.sort);
+        if (query.direction) params.set('direction', query.direction);
         if (query.skip) params.set('skip', String(query.skip));
         if (query.take) params.set('take', String(query.take));
         const suffix = params.toString() ? `?${params}` : '';

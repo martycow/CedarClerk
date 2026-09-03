@@ -1,17 +1,20 @@
-@if (open()) {
-<app-modal [width]="440" overlayOwner="appearance" (closed)="close()">
-    <app-icon modal-icon name="palette" size="sm"></app-icon>
-    <span modal-title>{{ t().settings.appearance.title }}</span>
-
-    <div class="ap-body">
+<div class="ap-body">
         <!--T-347 — the panel is split out loud: what paints the whole interface first, what only
         the editor sheet reads after.-->
         <p class="ap-group">{{ t().settings.appearance.groupInterface }}</p>
         <div class="ap-field">
             <label>{{ t().settings.appearance.themeLabel }}</label>
             <div class="ap-leaves" role="group" [attr.aria-label]="t().settings.appearance.themeLabel">
-                <app-leaf-tag interactive [state]="theme.theme() === 'light' ? 'active' : 'idle'" (activated)="theme.set('light')">{{ t().settings.appearance.light }}</app-leaf-tag>
-                <app-leaf-tag interactive [state]="theme.theme() === 'dark' ? 'active' : 'idle'" (activated)="theme.set('dark')">{{ t().settings.appearance.dark }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().theme === 'light' ? 'active' : 'idle'" (activated)="setTheme('light')">{{ t().settings.appearance.light }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().theme === 'dark' ? 'active' : 'idle'" (activated)="setTheme('dark')">{{ t().settings.appearance.dark }}</app-leaf-tag>
+            </div>
+        </div>
+
+        <div class="ap-field">
+            <label>{{ t().settings.appearance.sidebarLabel }}</label>
+            <div class="ap-leaves" role="group" [attr.aria-label]="t().settings.appearance.sidebarLabel">
+                <app-leaf-tag interactive [state]="appearance.prefs().sidebarMode === 'full' ? 'active' : 'idle'" (activated)="setSidebarMode('full')">{{ t().settings.appearance.sidebarExpanded }}</app-leaf-tag>
+                <app-leaf-tag interactive [state]="appearance.prefs().sidebarMode === 'rail' ? 'active' : 'idle'" (activated)="setSidebarMode('rail')">{{ t().settings.appearance.sidebarCompact }}</app-leaf-tag>
             </div>
         </div>
 
@@ -57,28 +60,30 @@
         </div>
 
         <div class="ap-field">
-            <label>{{ t().settings.appearance.textSize }} — {{ appearance.prefs().fontSize }}px</label>
-            <input type="range" [min]="appearance.prefs().typeface === 'departure' ? 11 : 13"
+            <label for="appearance-font-size">{{ t().settings.appearance.textSize }} — {{ appearance.prefs().fontSize }}px</label>
+            <input id="appearance-font-size" type="range" [min]="appearance.prefs().typeface === 'departure' ? 11 : 13"
                 max="22" [step]="appearance.prefs().typeface === 'departure' ? 11 : 0.5"
                 [value]="appearance.prefs().fontSize"
                 (input)="setFontSize(+$any($event.target).value)">
         </div>
 
         <div class="ap-field">
-            <label>{{ t().settings.appearance.lineHeight }} — {{ appearance.prefs().lineHeight }}</label>
-            <input type="range" min="1.2" max="2.1" step="0.05"
+            <label for="appearance-line-height">{{ t().settings.appearance.lineHeight }} — {{ appearance.prefs().lineHeight }}</label>
+            <input id="appearance-line-height" type="range" min="1.2" max="2.1" step="0.05"
                 [value]="appearance.prefs().lineHeight"
                 (input)="setLineHeight(+$any($event.target).value)">
         </div>
 
         <!--I5: Insert → Table used to be a fixed 3×3.-->
         <div class="ap-field">
-            <label>{{ t().settings.appearance.tableSize }} — {{ appearance.prefs().tableRows }}×{{ appearance.prefs().tableCols }}</label>
+            <span class="ap-field-label">{{ t().settings.appearance.tableSize }} — {{ appearance.prefs().tableRows }}×{{ appearance.prefs().tableCols }}</span>
             <div class="ap-table-size">
                 <input type="number" min="1" [max]="maxTableSize" [value]="appearance.prefs().tableRows"
+                    [attr.aria-label]="t().editor.tableMenu.rows"
                     (change)="setTableRows(+$any($event.target).value)">
                 <span>×</span>
                 <input type="number" min="1" [max]="maxTableSize" [value]="appearance.prefs().tableCols"
+                    [attr.aria-label]="t().editor.tableMenu.cols"
                     (change)="setTableCols(+$any($event.target).value)">
             </div>
         </div>
@@ -94,12 +99,9 @@
 
         <!--T-041: no Apply button — every control here saves itself. This only reports what
         happened.-->
-        <p class="ap-save-state" [class.error]="saveState() === 'error'">
+        <p class="ap-save-state" role="status" aria-live="polite" [class.error]="saveState() === 'error'">
             @if (saveState() === 'saving') { {{ t().common.saving }} }
             @else if (saveState() === 'error') { {{ t().settings.appearance.saveFailed }} }
             @else { {{ t().common.saved }} }
         </p>
-
-    </div>
-</app-modal>
-}
+</div>

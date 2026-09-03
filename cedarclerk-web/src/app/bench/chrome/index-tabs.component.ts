@@ -114,6 +114,19 @@ export function indexTabBadgeLabel(badge: number | string | undefined | null): s
             font-weight: 700;
             font-variant-numeric: tabular-nums;
         }
+
+        @media (max-width: 640px) {
+            :host(.phone-grid) {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                width: 100%;
+            }
+
+            :host(.phone-grid) .it-tile {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     `],
 })
 export class IndexTabsComponent {

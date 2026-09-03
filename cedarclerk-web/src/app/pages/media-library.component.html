@@ -45,6 +45,14 @@
                                [label]="t().media.searchLabel" [value]="search()"
                                [placeholder]="t().media.searchPlaceholder"
                                (valueChange)="onSearch($any($event) ?? '')" />
+                    <label class="collection-sort">
+                        <span>{{ t().media.sortLabel }}</span>
+                        <select [value]="sortValue()" (change)="setSortValue($any($event.target).value)">
+                            @for (option of sortOptions(); track option.value) {
+                                <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </label>
                     <app-index-tabs [items]="viewTabs()" [value]="view()"
                                     [label]="t().media.viewStrip" (selected)="setView($any($event))" />
                 </header>
@@ -85,30 +93,53 @@
                         }
                     </div>
                 } @else {
-                    <div class="asset-list">
-                        <div class="list-row list-head">
-                            <span aria-hidden="true"></span>
-                            <span>{{ t().media.fileColumn }}</span>
-                            <span class="list-type">{{ t().media.fileType }}</span>
-                            <span class="list-size">{{ t().media.fileSize }}</span>
-                            <span class="list-date">{{ t().media.added }}</span>
+                    <div class="asset-list" role="table" [attr.aria-label]="t().media.open">
+                        <div class="list-row list-head" role="row">
+                            <span role="columnheader" aria-hidden="true"></span>
+                            <span role="columnheader" [attr.aria-sort]="columnSort('name')">
+                                <app-sort-header [label]="t().media.fileColumn" [active]="sort() === 'name'"
+                                    [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                    [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                    (sorted)="setSort('name')" />
+                            </span>
+                            <span class="list-type" role="columnheader" [attr.aria-sort]="columnSort('type')">
+                                <app-sort-header [label]="t().media.fileType" [active]="sort() === 'type'"
+                                    [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                    [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                    (sorted)="setSort('type')" />
+                            </span>
+                            <span class="list-size" role="columnheader" [attr.aria-sort]="columnSort('size')">
+                                <app-sort-header [label]="t().media.fileSize" [active]="sort() === 'size'" align="end"
+                                    [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                    [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                    (sorted)="setSort('size')" />
+                            </span>
+                            <span class="list-date" role="columnheader" [attr.aria-sort]="columnSort('added')">
+                                <app-sort-header [label]="t().media.added" [active]="sort() === 'added'"
+                                    [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
+                                    [ascendingLabel]="t().common.ascending" [descendingLabel]="t().common.descending"
+                                    (sorted)="setSort('added')" />
+                            </span>
                         </div>
                         @for (a of p.items; track a.id) {
-                            <button type="button" class="row list-row" [class.is-on]="selected()?.id === a.id"
-                                    [attr.aria-pressed]="selected()?.id === a.id"
-                                    (click)="open(a)">
-                                <span class="list-thumbnail" aria-hidden="true">
+                            <div class="row list-row" role="row" [class.is-on]="selected()?.id === a.id">
+                                <span class="list-thumbnail" role="cell" aria-hidden="true">
                                     @if (showsThumbnail(a)) {
                                         <img [src]="url(a)" alt="" loading="lazy" (error)="onThumbError(a)">
                                     } @else {
                                         <app-icon [name]="kindIcons[kindOf(a)]" size="sm"></app-icon>
                                     }
                                 </span>
-                                <span class="t tile-name" [title]="a.fileName">{{ a.fileName }}</span>
-                                <span class="m list-type">{{ a.contentType }}</span>
-                                <span class="m list-size">{{ bytes(a.sizeBytes) }}</span>
-                                <span class="m list-date">{{ a.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
-                            </button>
+                                <span class="list-name" role="cell">
+                                    <button type="button" class="list-open t tile-name" [title]="a.fileName"
+                                            [attr.aria-pressed]="selected()?.id === a.id" (click)="open(a)">
+                                        {{ a.fileName }}
+                                    </button>
+                                </span>
+                                <span class="m list-type" role="cell">{{ a.contentType }}</span>
+                                <span class="m list-size" role="cell">{{ bytes(a.sizeBytes) }}</span>
+                                <span class="m list-date" role="cell">{{ a.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
+                            </div>
                         }
                     </div>
                 }

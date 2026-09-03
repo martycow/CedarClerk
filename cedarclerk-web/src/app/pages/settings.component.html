@@ -7,11 +7,8 @@
         }
     </app-page-header>
 
-    <!--I12: "Profile" is everything about the author and what gets published under their name;
-    "Account" is the machinery. Appearance is neither: it is a panel of the shell (ADR-183). The
-    section index stands in flow beside the tabs — a stuck one floated over the field under it.-->
     <div class="settings-strip">
-        <app-index-tabs class="settings-tabs" [items]="tabItems()" [value]="tab()"
+        <app-index-tabs class="settings-tabs phone-grid" [items]="tabItems()" [value]="tab()"
                         [label]="t().settings.crumb" (selected)="setTab($any($event))" />
         @if (sections().length > 1) {
         <nav class="seg section-index is-strip" [attr.aria-label]="t().settings.sections">
@@ -200,8 +197,7 @@
             </section>
             }
 
-            <!-- ============ LANGUAGE ============ -->
-            @if (tab() === 'account') {
+            @if (tab() === 'preferences') {
             <section id="sec-language" class="card settings-card">
                 <h2>{{ t().settings.language.title }}</h2>
                 <p class="settings-lead">{{ t().settings.language.hint }}</p>
@@ -223,11 +219,13 @@
                 }
                 @if (languageError()) { <p class="field-error">{{ languageError() }}</p> }
             </section>
-            }
 
-            <!-- Appearance is a panel of the shell, opened from the rail's dots menu (ADR-151), and it
-                 has no signpost here: a settings card whose only content is "this setting is somewhere
-                 else" is a dead end that has to be read every time to be dismissed. -->
+            <section id="sec-appearance" class="card settings-card">
+                <h2>{{ t().settings.appearance.title }}</h2>
+                <p class="settings-lead">{{ t().settings.appearance.hint }}</p>
+                <app-appearance-panel />
+            </section>
+            }
 
             <!-- ============ HEADER SLOTS ============ -->
             @if (tab() === 'profile') {

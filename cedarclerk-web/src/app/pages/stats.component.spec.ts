@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { StatsComponent } from './stats.component';
 import { ChannelsService } from '../core/channels.service';
@@ -214,6 +214,88 @@ describe('stats screen (Posts Manager tab)', () => {
         expect(rows.map(r => r.map(Number))).toEqual(drawn[0].map((_, i) => drawn.map(p => p[i])));
     });
 
+    it('sorts the complete series table and exposes aria-sort on its active header', async () => {
+        page().setView('table');
+        page().sortTable('c1');
+        page().sortTable('c1');
+        await settle();
+
+        expect(page().tableRows().map(row => row.day))
+            .toEqual(['2026-08-11', '2026-08-09', '2026-08-10']);
+        const active = el().querySelector('.series-table th[aria-sort="descending"]');
+        expect(active?.textContent).toContain('Devlog');
+    });
+
+    it('returns table sorting to the day column when its source leaves the visible series', async () => {
+        page().setView('table');
+        page().sortTable('c1');
+        page().toggle('c1');
+        await settle();
+
+        expect(page().tableSortKey()).toBe('period');
+        const dayHeader = el().querySelector('.series-table th[aria-sort="ascending"]')!;
+        expect(dayHeader.textContent).toContain(en.stats.chart.period);
+        expect(dayHeader.querySelector('button')?.getAttribute('aria-label'))
+            .toBe(`${en.common.sortBy}: ${en.stats.chart.period}, ${en.common.ascending}`);
+    });
+
+    it('filters and sorts invite links before rendering a filtered empty state', async () => {
+        page().inviteLinks.set([
+            { id: 'b', name: 'Launch', inviteLink: 'https://t.me/+b', createdAt: day('10'), revokedAt: null, joins: 3, leaves: 1, net: 2 },
+            { id: 'a', name: 'Archive', inviteLink: 'https://t.me/+a', createdAt: day('09'), revokedAt: day('11'), joins: 8, leaves: 2, net: 6 },
+        ]);
+        page().sortInviteLinks('net');
+        await settle();
+
+        expect(page().visibleInviteLinks().map(link => link.name)).toEqual(['Archive', 'Launch']);
+        page().inviteState.set('active');
+        page().inviteQuery.set('missing');
+        await settle();
+
+        expect(page().visibleInviteLinks()).toEqual([]);
+        expect(el().querySelector('.invite-shelf app-empty-state')?.textContent).toContain('No links match');
+    });
+
+    it('keeps organic invite totals in a summary footer outside the sorted rows', async () => {
+        page().inviteLinks.set([
+            { id: 'named', name: 'Launch', inviteLink: 'https://t.me/+named', createdAt: day('10'),
+                revokedAt: null, joins: 3, leaves: 1, net: 2 },
+        ]);
+        page().inviteOrganic.set({ joins: 7, leaves: 2 });
+        await settle();
+
+        expect(el().querySelector('.invite-table tbody')?.textContent).not.toContain(en.stats.inviteLinks.organic);
+        expect(el().querySelector('.invite-table tfoot')?.textContent).toContain(en.stats.inviteLinks.organic);
+    });
+
+    it('writes statistics and invite-link criteria into the manager route', async () => {
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+        page().setView('table');
+        page().sortTable('c1');
+        page().setInviteQuery('launch');
+        page().setInviteState('revoked');
+        page().sortInviteLinks('net');
+        page().toggle('blog');
+        page().toggle('c2');
+        await settle();
+
+        expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({
+            replaceUrl: true,
+            queryParamsHandling: 'merge',
+            queryParams: expect.objectContaining({
+                statsMetric: 'likeCount',
+                statsView: 'table',
+                statsSources: 'c1',
+                statsSort: 'c1',
+                inviteQ: 'launch',
+                inviteState: 'revoked',
+                inviteSort: 'net',
+                inviteDir: 'desc',
+            }),
+        }));
+    });
+
     it('never offers a readout that is a sum of sources', () => {
         expect(page().readouts().map(r => r.value)).toEqual([130, 40]);
         expect(page().readouts().map(r => r.delta)).toEqual([30, 30]);
@@ -223,22 +305,61 @@ describe('stats screen (Posts Manager tab)', () => {
     it('says the sources are off rather than drawing an empty chart', async () => {
         page().toggle('blog');
         page().toggle('c1');
+        page().toggle('c2');
         await settle();
 
         expect(page().anySelected()).toBe(false);
         expect(fixture.debugElement.query(By.directive(GrowthChartComponent))).toBeNull();
         expect(el().querySelector('.stats-empty')!.textContent).toContain('switched off');
-    });
 
-    it('distinguishes "all off" from "on, but nothing to draw"', async () => {
-        // Only the source that has never been snapshotted is left on.
-        page().toggle('blog');
-        page().toggle('c1');
-        page().toggle('c2');
+        const showAll = [...el().querySelectorAll<HTMLButtonElement>('.stats-empty button')]
+            .find(button => button.textContent?.includes(en.stats.sources.showAll))!;
+        showAll.click();
         await settle();
 
         expect(page().anySelected()).toBe(true);
-        expect(el().querySelector('.stats-empty')!.textContent).toContain('from the day you publish');
+        expect(page().selected()).toEqual(new Set(['blog', 'c1', 'c2']));
+    });
+
+    it('distinguishes "all off" from filters that hide drawable sources', async () => {
+        page().toggle('blog');
+        page().toggle('c1');
+        await settle();
+
+        expect(page().anySelected()).toBe(true);
+        expect(el().querySelector('.stats-empty')!.textContent).toContain(en.stats.sources.filtered);
+        expect(el().querySelector('.stats-empty')!.textContent).toContain(en.stats.sources.showAll);
+    });
+
+    it('keeps zero-snapshot sources selected and offers the documents route', async () => {
+        api.getBlogStats = vi.fn().mockResolvedValue({ ...BLOG, snapshots: [] } as never);
+        api.getStats = vi.fn().mockResolvedValue(QUIET as never);
+        const empty = TestBed.createComponent(StatsComponent);
+        await settle(empty);
+
+        expect(empty.componentInstance.anySelected()).toBe(true);
+        expect(empty.componentInstance.drawable()).toEqual([]);
+        const state = empty.nativeElement.querySelector('.stats-empty') as HTMLElement;
+        expect(state.textContent).toContain(en.stats.sources.nothingToDraw);
+        expect(state.textContent).toContain(en.stats.sources.nothingToDrawAction);
+        expect(state.textContent).not.toContain(en.stats.sources.showAll);
+    });
+
+    it('offers to restore a hidden source that can draw the current metric', async () => {
+        page().toggle('c1');
+        page().setMetric('memberCount');
+        await settle();
+
+        expect(page().anySelected()).toBe(true);
+        expect(page().drawable()).toEqual([]);
+        const state = el().querySelector('.stats-empty') as HTMLElement;
+        expect(state.textContent).toContain(en.stats.sources.filtered);
+        const showAll = [...state.querySelectorAll<HTMLButtonElement>('button')]
+            .find(button => button.textContent?.includes(en.stats.sources.showAll))!;
+        showAll.click();
+        await settle();
+
+        expect(page().drawable().map(source => source.id)).toContain('c1');
     });
 
     it('offers Subscribers only when a source can answer it', async () => {
@@ -300,5 +421,56 @@ describe('stats screen (Posts Manager tab)', () => {
 
         expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
         expect(css).not.toMatch(/\brgba?\(/);
+    });
+});
+
+describe('stats manager route restoration', () => {
+    it('restores the full working view before the collection is shown', async () => {
+        const api = new ApiStub();
+        TestBed.configureTestingModule({
+            providers: [
+                provideRouter([]),
+                { provide: ChannelsService, useValue: api },
+                {
+                    provide: ActivatedRoute,
+                    useValue: {
+                        snapshot: {
+                            queryParamMap: convertToParamMap({
+                                statsMetric: 'likeCount',
+                                statsView: 'table',
+                                statsDays: '30',
+                                statsSources: 'c1',
+                                statsSort: 'c1',
+                                statsDir: 'desc',
+                                inviteChannel: 'c2',
+                                inviteQ: 'launch',
+                                inviteState: 'revoked',
+                                inviteSort: 'net',
+                                inviteDir: 'asc',
+                            }),
+                        },
+                    },
+                },
+            ],
+        });
+        const restored = TestBed.createComponent(StatsComponent);
+        await restored.whenStable();
+        restored.detectChanges();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await restored.whenStable();
+        restored.detectChanges();
+
+        const page = restored.componentInstance;
+        expect(page.metric()).toBe('likeCount');
+        expect(page.view()).toBe('table');
+        expect(page.rangeDays()).toBe(30);
+        expect(page.selected()).toEqual(new Set(['c1']));
+        expect(page.tableSortKey()).toBe('c1');
+        expect(page.tableSortDirection()).toBe('desc');
+        expect(page.inviteChannelId()).toBe('c2');
+        expect(page.inviteQuery()).toBe('launch');
+        expect(page.inviteState()).toBe('revoked');
+        expect(page.inviteSortKey()).toBe('net');
+        expect(page.inviteSortDirection()).toBe('asc');
     });
 });

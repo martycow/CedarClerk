@@ -256,6 +256,11 @@
     --wood-edge: #573E26;
     --wood-ink: #3A2918;
     --wood-ink-soft: rgba(58, 41, 24, .72);
+    --frame-rule: color-mix(in srgb, var(--wood-ink) 24%, transparent);
+    --frame-control-edge: color-mix(in srgb, var(--wood-ink) 28%, transparent);
+    --frame-tab-rest: color-mix(in srgb, var(--wood-ink) 6%, transparent);
+    --frame-tab-hover: color-mix(in srgb, var(--wood-ink) 10%, transparent);
+    --frame-tab-active: color-mix(in srgb, var(--wood-ink) 14%, transparent);
 
     --wall-hi: var(--bg);
     --wall-lo: var(--canvas);
