@@ -39,10 +39,10 @@ links, and the 1180/820/390px layout. They are layout evidence, not physical-dev
 accessibility verification.
 
 Validation: `cedar test --smoke` is green: 2,654 results, 2,636 passed, 18 skipped and 0 failed;
-the 78 Playwright scenarios use an isolated database. The targeted visual capture passed 2/2, and
-`cedar build --no-desktop --yes` produced the v0.21.0 server publish. The production build is green
-at 836.16 kB under the 850 kB hard ceiling; its 700 kB bundle warning and the Editor stylesheet's
-34.24/34 kB warning remain visible as T-363. Nothing was deployed.
+the 78 Playwright scenarios use an isolated database. The targeted visual capture passed 5/5, and
+`cedar build --yes` produced the v0.21.0 server publish and Electron shell. The production build is
+green at 836.16 kB under the 850 kB hard ceiling; its 700 kB bundle warning and the Editor
+stylesheet's 34.24/34 kB warning remain visible as T-363. Nothing was deployed.
 
 ## 2026-09-02 — One UI across the eighteen-screen set (ADR-246)
 
