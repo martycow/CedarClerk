@@ -376,6 +376,26 @@
     font-variant-numeric: tabular-nums;
 }
 
+@media (max-width: 640px) {
+    .post-toolbar:not(.form-toolbar) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+    }
+
+    .post-toolbar:not(.form-toolbar) .post-search,
+    .post-toolbar:not(.form-toolbar) .post-result-count {
+        grid-column: 1 / -1;
+    }
+
+    .post-toolbar:not(.form-toolbar) .post-sort { min-width: 0; }
+
+    .post-toolbar:not(.form-toolbar) .post-result-count {
+        justify-self: end;
+        padding-bottom: 0;
+    }
+}
+
 .post-list {
     display: flex;
     flex-direction: column;
