@@ -9,8 +9,8 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 - **CedarClerk.Server** — ASP.NET Core (.NET 8) API + static host for the frontend + Telegram bot host
 - **CedarClerk.Core** — the document format and renderers (pure C#, unit-tested)
 - **CedarClerk.Localization** — shared error strings and language constants
-- **CedarClerk.Cli** — `cedar`, the operations console (Spectre.Console). Wraps `Scripts/*.ps1` and read-only `ssh`; see ADR-118 for what it deliberately will not do
-- **CedarClerk.Tests** / **CedarClerk.Cli.Tests** — xUnit
+- **cedar-cli** — native Rust/Ratatui `cedar`, the operations console. JSON program profiles define actions; Rust owns execution, deployment and terminal UI (ADR-252)
+- **CedarClerk.Tests** — xUnit; **cedar-cli/tests** and Rust module tests verify the operations console
 - **cedarclerk-web** — Angular SPA (standalone components, signals, TipTap editor)
 
 Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/tech/ARCHITECTURE.md`.
@@ -29,7 +29,7 @@ Before implementation of anything, firstly read docs/product/PRD.md and docs/tec
 
 | Task                              | Command                                                                                                                                                                                                                                                                                                                                                                                                            |
 |-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Operations console**            | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `build` / `deploy` / `open` / `claude`. **Since ADR-119 this is the only way to build, test and deploy** — the logic lives in `CedarClerk.Cli/Pipelines/` and the old `.ps1` entry points are gone. Installed by `.\Scripts\install-cli.ps1` — **the first thing to run on a fresh clone, and again after changing the CLI**; `-Uninstall` removes it |
+| **Operations console**            | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `build` / `deploy` / `open` / `claude`. **Since ADR-119 this is the only way to build, test and deploy** — the logic lives in `cedar-cli/src/` (ADR-252) and the old `.ps1` entry points are gone. Installed by `.\Scripts\install-cli.ps1` — **the first thing to run on a fresh clone, and again after changing the CLI**; `-Uninstall` removes it |
 | **Everything is green?**          | `cedar test` (backend + frontend + contrast + density; `--smoke` adds Playwright)                                                                                                                                                                                                                                                                                                                                  |
 | **Build everything locally**      | `cedar build` (Angular + server + desktop shell; `--no-desktop`, `--desktop-only`, `--installer`, `--run`)                                                                                                                                                                                                                                                                                                         |
 | **Check it locally in a browser** | `cedar run` — builds front + back, serves `publish/` on `localhost:8080` against the dev database with the bot forced off, opens the browser; Ctrl+C stops it. `--no-build` reuses the last publish. Refuses if 8080 already answers (ADR-121)                                                                                                                                                                     |
@@ -44,8 +44,8 @@ Before implementation of anything, firstly read docs/product/PRD.md and docs/tec
 | New EF migration                  | `dotnet ef migrations add <Name> --project CedarClerk.Server`                                                                                                                                                                                                                                                                                                                                                      |
 
 The three top rows are the ones to reach for. **`Scripts/deploy.ps1`, `build.ps1`, `test.ps1` and
-`_git-guard.ps1` no longer exist** (12.08.2026, ADR-119) — that logic is `CedarClerk.Cli/Pipelines/`,
-with tests. `GitGuard.cs` holds the branch/tree checks the guard used to; `test` and `build`
+`_git-guard.ps1` no longer exist** (12.08.2026, ADR-119) — that logic is `cedar-cli/src/`,
+with tests. `deploy.rs` holds the branch/tree checks the guard used to; `test` and `build`
 deliberately do **not** apply them, since running and building a feature branch is the normal case,
 and only deploying does.
 
@@ -53,7 +53,7 @@ Two scripts stay, and both are real scripts rather than redirection: `e2e.ps1` (
 process, an isolated data directory and a browser — `cedar test --smoke` calls it) and
 `install-cli.ps1` (installing `cedar` with `cedar` is a circle; this is where it is cut). If `cedar`
 is ever broken, the way round needs nothing from that folder:
-`dotnet run --project CedarClerk.Cli -- deploy --preflight`.
+`cargo run --manifest-path cedar-cli/Cargo.toml -- deploy --preflight`.
 
 `Scripts/server/backup.sh` is a third kind: it does not run here at all. It is the source of truth
 for the droplet's nightly backup, and the copy that runs (`~/bin/backup.sh`) is installed by hand —
@@ -106,7 +106,7 @@ i18n rules.
 - **`dev` — general development.**
 - **`indiedev_module`** — was branched from `dev` for the indie-gamedev work; **merged into `master` with v0.10.0 and deleted** (branch gone by 18.08.2026). The module lives in `master` behind `Cedar:Modules:IndieDev`; reversibility is the flag plus ADR-101, no longer a branch.
 - **`LIVE` marks what is in production** (12.08.2026, ADR-118). `cedar deploy` moves it onto HEAD after the health check passes, keeping the tag it replaces as `LIVE-PREV`; `--rollback` moves it back. Local only — it is never pushed (re-deleted from origin 18.08.2026 after it leaked there a second time). A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
-- **Enforced since 10.08.2026**: the deploy refuses to run from a branch other than `master`, from a detached HEAD, or with uncommitted changes, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. `-Force`/`--force` overrides and says what it is overriding. The checks moved from `Scripts/_git-guard.ps1` to `CedarClerk.Cli/Pipelines/GitGuard.cs` on 12.08.2026 (ADR-119) and gained tests on the way.
+- **Enforced since 10.08.2026**: the deploy refuses to run from a branch other than `master`, from a detached HEAD, or with uncommitted changes, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. `-Force`/`--force` overrides and says what it is overriding. The checks live in `cedar-cli/src/deploy.rs` and are covered by Rust tests (ADR-252).
 
 ## Commits and versioning
 

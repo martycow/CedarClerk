@@ -74,9 +74,9 @@ on the server and is not in this repo — see `secrets.md`.
 
 Two things about it that are easy to get wrong:
 
-- **The destination is one fact in two places.** The script's `DEST` and the path `cedar status` /
-  `cedar backup verify` read (`{RemoteDataDir}/backups`, via `CedarClerk.Cli/Server/ServerProbe.cs`
-  and `Commands/BackupCommand.cs`) must stay equal. They were not for a day: the script wrote to
+- **The destination is one fact in two places.** The script's `DEST` and the path
+  `cedar backup verify` reads (`{remoteRoot}/data/backups`, via `cedar-cli/src/operations.rs`)
+  must stay equal. They were not for a day: the script wrote to
   `~/backups` while the tool looked under `data/`, so the status line said "no local copy" over a
   directory that had one. Both now point at `/home/martycow/cedarclerk/data/backups`, which is also
   where everything valuable on this host is expected to live.

@@ -26,7 +26,7 @@ bills**, because the bill knows the truth and the document only remembers the mo
 | `SixLabors.ImageSharp` | 3.1.12 | Image compression, previews, watermarking |
 | `Anthropic` | 12.35.1 | Auto-translation and AI editing (default model `claude-haiku-4-5`). OpenAI/DeepL are implemented in code as alternative providers, not configured in production |
 | `ClosedXML` | 0.105.0 | The dialogue tool's xlsx translation sheet — export and import (ADR-230) |
-| `Spectre.Console` (+ `.Cli`, `.Testing`) | 0.55.0 | The `cedar` console |
+| Rust / `ratatui` / `crossterm` | Cargo.lock | Native `cedar` operations console; `clap` parses commands, `serde_json` loads program profiles, `reqwest` checks health and `sha2` verifies transfers |
 | `xunit` + `Microsoft.NET.Test.Sdk` | 2.5.3 / 17.8.0 | ~935 tests as of 18.08.2026 — `cedar test` always has the exact count, not this file |
 
 **What's deliberately not in the stack**: an ORM on top of EF, Redis, a message queue, Docker (for now —

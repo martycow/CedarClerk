@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-09-05 — Rust operations console (ADR-252)
+
+Replaced `CedarClerk.Cli` and its C# test project with a native Rust `cedar.exe` using
+Ratatui/Crossterm. The dashboard combines animated aurora, cedar and forest layers with program
+selection, searchable actions, streamed output, timing, cancellation and confirmations. Direct
+commands retain build/test/deploy/run/status/logs/database/backup/desktop workflows. JSON profiles
+add programs, executable steps, environment values, links and optional local/SSH deployment
+settings without recompiling; interactive actions can temporarily take over the terminal.
+
+Deploy records artifact provenance and hashes, resumes uploads from a checked prefix, stages before
+downtime, uses a locked recoverable directory switch, verifies the running version and updates
+local LIVE tags afterward. The installer tests the Rust build before uninstalling the .NET tool;
+existing user JSON remains intact. The native executable is installed in the per-user tools path.
+
+Local-run verification exposed two inherited bot-disable defects: the old CLI used the obsolete
+`Cedar__BotToken` key, and the server treated whitespace as a configured token. One local attempt
+briefly overlapped production polling and logged Telegram 409; the local process was stopped.
+The console now forces `LocalNoBot` and `Cedar__Telegram__BotToken`, and checks the environment and
+bot state before reporting ready. The server rejects whitespace before constructing a client.
+Regression tests bind the JSON key to the server constant. The final local run logged
+`bot is disabled`, returned LocalNoBot with no active Telegram bot and released port 8080 on Ctrl+C.
+
+Validation: 26 Rust tests, Clippy with warnings denied, 1,837 backend tests, 617 frontend tests,
+icon/contrast/density contracts and 60 Playwright smoke scenarios passed; 18 optional audit
+scenarios were skipped. The web/server build passed with the existing 836.16 kB initial-bundle
+and 34.24 kB Editor CSS warnings. PTY interaction covered action output, default-cancel
+confirmation, interactive input, owned-child cancellation, program switching and filtering.
+Actual Ratatui buffer exports were inspected at 120×42 and 80×30; these are not native-window
+screenshots. Swap/rollback shell tests used disposable local directories and mocked service
+control. A final read-only production check returned v0.21.0, an active systemd service and an
+active bot. Production deployment, live rollback and desktop installer publishing were not run.
+
 ## 2026-09-02 — Queryable collections and document-first editing (ADR-247…251)
 
 The app now owns one headless collection contract instead of adopting a themed data grid: visible

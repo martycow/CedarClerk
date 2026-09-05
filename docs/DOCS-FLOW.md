@@ -183,6 +183,10 @@ A new doc must get a node in the diagram above **in the same commit** — STACK/
 
 **Absolute local paths, drive letters and paths to out-of-repo folders are not mentioned in documentation** (rule from 18.08.2026): example paths are written without a drive (`MyGame/Assets`); portable forms (`%APPDATA%\…`) and droplet paths (`/home/martycow/…`) are fine. Out-of-repo material (briefs, design packages, notes) is referenced descriptively — "the owner's out-of-repo brief," a filename without a path; only he knows where they live.
 
+## Operations console
+
+`docs/for_user/operations-console.md` documents installation, JSON program profiles, commands and verification of the Rust console (ADR-252).
+
 ## Known weak spots
 
 - **`docs/product/PRD.md` tends to lag behind the other references more than most** — fixed on 10.08 (languages) and again on 18.08 (Phase 13 was listed "open" while MUST was closed, "six" languages while the code had nine, payments "not yet live" while Stripe had been verified with real money). Check it against the code at every large review — don't trust status claims without the code.

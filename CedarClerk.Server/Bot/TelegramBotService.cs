@@ -27,7 +27,7 @@ public class TelegramBotService(IConfiguration cfg, ILogger<TelegramBotService> 
     {
         _stopToken = ct;
         var token = cfg[Consts.Telegram.BotTokenCfg];
-        if (string.IsNullOrEmpty(token))
+        if (string.IsNullOrWhiteSpace(token))
         {
             logger.LogWarning("Cedar:BotToken not set — bot is disabled");
             return;

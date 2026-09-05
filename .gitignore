@@ -81,3 +81,7 @@ docs/INPUT_PROMPT.md
 # material rather than source: it is read once and replaced, and the decisions it produced live in
 # docs/adr/ and CHANGELOG.md. Same reasoning as the prompt inbox above.
 CedarClerk_BAD/
+
+# Rust operations console
+cedar-cli/target/
+cedar.local.json

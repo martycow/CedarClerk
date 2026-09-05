@@ -24,7 +24,7 @@ Locally with no token configured, the bot is disabled by design — `TelegramBot
 
 Two traps that defeated earlier attempts:
 - **`--no-launch-profile` is load-bearing.** `launchSettings.json` pins `ASPNETCORE_ENVIRONMENT=Development` in all three profiles, so without the flag the real token from `appsettings.Development.json` loads anyway.
-- **`$env:Cedar__BotToken = ''` does not blank the token — PowerShell *deletes* the variable**, so the file's real token is used. This is what caused the 26.07.2026 repeat.
+- **Use the canonical setting `Cedar__Telegram__BotToken`, not `Cedar__BotToken`.** `Consts.Telegram.BotTokenCfg` is the source of truth. The local console forces a single space and `LocalNoBot`; `TelegramBotService` treats whitespace as absent. An empty PowerShell environment assignment can remove the override and expose a file's token.
 - **`CedarClerk.Server/wwwroot` must exist or startup crashes** (`DirectoryNotFoundException` from the static-web-assets loader) — it is a build artifact, absent in a clean tree. Create it to run locally; the deploy writes the Angular build into `publish/wwwroot`, so a stray pre-existing one nests as `wwwroot/browser`.
 
 **This does NOT apply to a one-off `SendRichMessage`/`SendPhoto`/etc. call** (e.g. a diagnostic script that builds a `TelegramBotClient` and sends a single message) — the 409 is specific to concurrent `getUpdates`, not to ordinary send-type API calls. Don't stop the production service just to send a test message; stopping it also takes down `/media/*` (same process serves both — see below), which can actively break what you're trying to test.

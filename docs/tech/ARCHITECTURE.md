@@ -53,9 +53,9 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 | `CedarClerk.Server` | ASP.NET Core 8: minimal-API REST endpoints, static host for the Angular SPA, Telegram bot host, Quartz.NET scheduled jobs, EF Core/SQLite data layer |
 | `CedarClerk.Core` | Document format + renderers. Zero external dependencies — pure C#, fully unit-tested |
 | `CedarClerk.Localization` | `ErrorMessages.cs` (shared error strings) and `Languages.cs` (the content/UI language lists — nine content languages: ru/en/de/fr/es/ja/uk/be/ka) |
-| `CedarClerk.Cli` | `cedar`, the operations console (Spectre.Console) — since ADR-119 the only build/test/deploy entrance; pipelines in `Pipelines/` |
+| `cedar-cli` | Native Rust/Ratatui `cedar`; JSON profiles, command runner, deploy and terminal dashboard (ADR-252) |
 | `CedarClerk.Tests` | xUnit, references `Core` and `Server` |
-| `CedarClerk.Cli.Tests` | xUnit for the CLI and its pipelines |
+| `cedar-cli/tests` | Rust integration tests for deployment scripts; module tests cover configuration, execution and terminal rendering |
 
 `CedarClerk.Server` subfolders (the list of *conventions*, not a census — the census is `ls`):
 - `Ai/` — `IAiEditProvider` + Anthropic/OpenAI implementations; `AiJobService` runs long AI calls as background jobs polled by the client (202 + jobId — a Cloudflare-timeout lesson)
@@ -171,56 +171,27 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 
 See `.claude/rules/production-environment.md` for the droplet/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
-**Where this logic lives changed on 12.08.2026 (ADR-119).** The build, the test run and the deploy are
-C# in `CedarClerk.Cli/Pipelines/`, and `Scripts/deploy.ps1`, `build.ps1`, `test.ps1` and
-`_git-guard.ps1` are **gone** — one implementation, one entrance, which is `cedar`.
+`cedar-cli` is the Rust operations console (ADR-252). It replaces the .NET CLI while preserving
+`cedar` as the build, test and deploy entry point. `cedar.json` contains versioned program profiles,
+explicit command/argument arrays, local serve settings and optional SSH/systemd deployment settings.
 
-- `Pipelines/GitGuard.cs` — branch, clean tree, version tag, and the `LIVE`/`LIVE-PREV` tags (ADR-118 d12)
-- `Pipelines/BuildPipeline.cs` — Angular, the portable server publish that ships, the self-contained
-  desktop server, Electron, the installer
-- `Pipelines/TestPipeline.cs` — backend, frontend units, the contrast contract, the density contract, and `e2e.ps1` for smoke
-- `Pipelines/DeployPipeline.cs` — the pipeline below, **master only, clean tree only** (T-138)
-- `Pipelines/StageBoard.cs` — the live screen all three run behind: the plan drawn up front, timings,
-  and a running step's own detail (upload bar, braille throughput chart)
-- `Scripts/e2e.ps1` — the smoke suite against a scratch database with no bot token. **Still a script**:
-  it owns a server process and an environment, which is what a shell script is for. `cedar test
-  --smoke` runs it as a phase
-- `Scripts/install-cli.ps1` — packs and installs `cedar` as a .NET global tool. **Still a script**, and
-  necessarily so: it is what makes the name exist, and the first thing to run on a fresh clone
+- `src/config.rs` validates profiles and resolves paths. Legacy per-user JSON loads in memory without overwriting it.
+- `src/runner.rs` owns processes, bounded output, cancellation and operator confirmations.
+- `src/operations.rs` runs build/test actions, serves loopback with the Cedar Clerk bot disabled, and exposes read-only diagnostics.
+- `src/deploy.rs` checks source state and artifact provenance, packs and resumes a checksummed archive, stages required files, confirms the production swap, verifies public health/version and updates local LIVE tags.
+- `src/ui.rs` renders the Ratatui dashboard, animated cedar/aurora title, program selection, action filter, output and confirmations.
+- `Scripts/install-cli.ps1` tests and builds the Rust executable before replacing the installed .NET tool. `Scripts/rust-cli.ps1` loads the Windows C++ toolchain for source builds.
+- `Scripts/e2e.ps1` owns the isolated smoke environment and remains an action in the JSON profile.
 
-Deploy (`cedar deploy`). Rewritten 11.08.2026 (ADR-113) so that **everything slow happens while the old
-version is still serving**; the service is stopped only for two directory renames, and the command asks
-before that swap with the default set to no:
-1. Preflight: git guard (branch `master`, clean tree, HEAD tagged with `Consts.CurrentVersion` — the tag
-   is a warning only), `tar` on PATH, and one round trip that reports the service state, free disk and
-   what is in `app/` today
-2. `npm run build` in `cedarclerk-web/` → `cedarclerk-web/dist/cedarclerk-web/browser`
-3. `dotnet publish CedarClerk.Server -c Release -o publish/`
-4. Copy the Angular build output into `publish/wwwroot`
-5. Pack `publish/` into one `cedar-<version>.tar.gz`, cached in `%TEMP%\cedarclerk-deploy` and keyed to a
-   signature of the publish folder, so a re-run ships byte-identical bytes and can continue a transfer
-6. Upload it as a **single resumable stream** (`stat -c %s` on the far side, then the local tail piped
-   into `cat >>`) — a dropped connection continues from the byte it reached, not from zero
-7. Verify sha256 on both sides, unpack into `app.new`, check `CedarClerk.Server.dll`, `wwwroot/index.html`
-   and the file count. Production is still untouched up to this point — any failure above aborts with the
-   old version still running
-8. Stop the service, `app` → `app.prev`, `app.new` → `app`, start it (measured downtime: ~1s)
-9. Health-check loop against `https://cedarclerk.mooexe.dev/api/health` (40 tries, 3s apart), which must
-   answer with the version that was just built
+Everything slow precedes downtime. A remote lock serializes the directory switch; a recovery trap
+attempts to restore the old directory if the swap fails. `app.prev` remains available for explicit
+rollback. The running version must match the artifact manifest before LIVE changes. No deploy path
+rewrites the data directory. `--desktop` publishes checksummed downloads with the manifest last.
 
-`--skip-build` re-ships what is already in `publish/` (this is how a dropped upload is continued),
-`--rollback` swaps `app.prev` back in and restarts, `--force` turns the git guard into a warning,
-`--desktop` adds the installer steps (ADR-116), and `--preflight` runs step 1 and stops. `--dry-run`
-executes nothing at all — neither processes nor file deletions (`ICommandRunner` and `IFileWriter` are
-both swapped for it).
-
-`--desktop` adds two steps **after** the health check, so nothing here can affect the site: it builds the
-installer (the `BuildPipeline` desktop path with the installer flag) and publishes it into `data/downloads/` — `.exe` and
-`.blockmap` staged, checksummed and moved into place first, `latest.yml` written last, older installers
-pruned to the last two. That directory is the one place a deploy writes inside `data/`, and it is what
-`https://cedarclerk.mooexe.dev/downloads` serves for the desktop shell's self-update (ADR-116). Without
-the flag the deploy does not touch the desktop at all, so the site's version and the published
-installer's version legitimately differ — the deploy report prints which one is live.
+`--dry-run` launches no process, contacts no endpoint and writes no file. `--skip-build` requires
+an artifact matching the current commit and its recorded hashes. `--force` warns when overriding
+branch or clean-tree checks; it does not bypass artifact or health validation. Local builds and tests
+work on feature branches. Full configuration and command reference: `docs/for_user/operations-console.md`.
 
 `Migrate()` and `PRAGMA journal_mode=WAL;` run automatically on server startup (`Program.cs`), so a deploy applies pending migrations without a separate step — which is exactly why `.claude/rules/ef-migrations.md`'s "migrate immediately after any entity change" rule matters.
 
@@ -239,6 +210,6 @@ The reason it exists is the asset index (ADR-107) — only a process on the deve
 - **See the whole thing as it will ship: `cedar run`** (ADR-121) — builds front and back, serves the real `publish/` artifact on `localhost:8080` against the dev database with the bot forced off, opens the browser; `--no-build` reuses the last publish
 - Server alone: `dotnet run --project CedarClerk.Server` (port 8080, bot disabled without a token — see `.claude/rules/telegram-bot.md`)
 - Frontend alone: `ng serve` in `cedarclerk-web/` (proxies `/api` → `http://localhost:8080` via `proxy.conf.json`)
-- Tests: `cedar test` (backend + frontend + contrast + density; `--smoke` adds Playwright) — ~930 xUnit cases across `CedarClerk.Tests` and `CedarClerk.Cli.Tests`; plain `dotnet test` from repo root also works
+- Tests: `cedar test` (backend + frontend + contrast + density; `--smoke` adds Playwright) — includes Rust console tests and xUnit in `CedarClerk.Tests`; plain `dotnet test` runs only the .NET solution
 - Frontend tests alone: `npm run test` in `cedarclerk-web/` (Vitest-backed via `@angular/build:unit-test`, not Karma)
 - EF migrations: `dotnet ef migrations add <Name> --project CedarClerk.Server`
