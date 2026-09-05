@@ -195,8 +195,8 @@
                         }
 
                         <b>{{ t().projects.builds.title }}</b>
-                        @if (builds(); as list) {
-                            <a class="kv-link" [routerLink]="['/projects', p.id, 'builds']">{{ t().projects.hub.versionsCount(list.length) }}</a>
+                        @if (summary(); as row) {
+                            <a class="kv-link" [routerLink]="['/projects', p.id, 'builds']">{{ t().projects.hub.versionsCount(row.buildCount) }}</a>
                         } @else {
                             <span class="kv-none">—</span>
                         }

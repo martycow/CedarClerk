@@ -698,7 +698,7 @@ the Posts Manager and inherit its density through the cascade.-->
             <h2 class="label audit-title">{{ t().admin.auditTitle }}</h2>
             <div class="audit-list">
                 @for (a of audit(); track a.id) {
-                <app-log-line [time]="a.createdAt | zonedDate:'MM/dd, HH:mm'" [word]="a.action"
+                <app-log-line [time]="a.createdAt | zonedDate:'MM/dd, HH:mm'" [word]="a.action" [level]="a.severity"
                               [at]="t().admin.byActor(a.actorEmail)">
                     {{ a.targetEmail || '—' }} · {{ a.details }}
                 </app-log-line>

@@ -17,7 +17,6 @@ import {
     isPublishableType,
     projectInitials,
 } from '../core/projects.service';
-import { Build, BuildsService } from '../core/builds.service';
 import { Preset, PresetsService, parseDocumentConfig } from '../core/presets.service';
 import { TaskPriority, isOverdue } from '../core/tasks.service';
 import { sprintProgress } from '../core/sprints.service';
@@ -56,7 +55,6 @@ export class ProjectComponent {
     private presetsApi = inject(PresetsService);
     private teamsApi = inject(TeamsService);
     private assets = inject(AssetsService);
-    private buildsApi = inject(BuildsService);
     private channelsApi = inject(ChannelsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
@@ -71,10 +69,8 @@ export class ProjectComponent {
     readonly sprintPercent = sprintProgress;
 
     project = signal<ProjectDetail | null>(null);
-    /** The project list, and the only place an asset count and a last-edit date can be read from. */
+    /** The project list, and the only place an asset count, a build count and a last-edit date can be read from. */
     projects = signal<readonly ProjectSummary[]>([]);
-    /** null until the build list answers — and if it never does (ADR-160 rule 4). */
-    builds = signal<readonly Build[] | null>(null);
     /** The account's Telegram channels: a project has no channel table of its own (ADR-239 cl. 12). */
     channels = signal<readonly Channel[]>([]);
     loading = signal(true);
@@ -168,7 +164,6 @@ export class ProjectComponent {
     async load(id: string) {
         this.loading.set(true);
         this.loadError.set(null);
-        this.builds.set(null);
         try {
             this.project.set(await this.api.get(id));
         } catch (e) {
@@ -177,19 +172,12 @@ export class ProjectComponent {
         } finally {
             this.loading.set(false);
         }
-        // Beside the detail rather than before it: the build count is one row's number, and a
-        // slow or failing list must not hold the whole page (ADR-160 rule 4).
-        try {
-            this.builds.set(await this.buildsApi.list(id));
-        } catch {
-            this.builds.set(null);
-        }
 
         this.showcaseStats.set(null);
         if (this.project()?.showcaseSlug) await this.loadShowcaseStats(id);
     }
 
-    /** Same rule as the builds above: counters are one group of rows, not the page. */
+    /** Beside the detail rather than before it: counters are one group of rows, not the page (ADR-160 rule 4). */
     private async loadShowcaseStats(id: string) {
         try {
             this.showcaseStats.set(await this.api.showcaseStats(id));

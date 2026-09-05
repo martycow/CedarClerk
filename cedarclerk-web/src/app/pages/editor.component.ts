@@ -3289,6 +3289,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.watermarkError.set(null);
             this.invites.set([]);
             this.previewLinkUrl.set(null);
+            // 404 is "no link" — the inspector simply stays without one.
+            this.previewApi.previewLink(id).then(r => { if (r && this.currentId() === id) this.previewLinkUrl.set(r.url); }).catch(() => {});
             this.previewLinkError.set(null);
             this.notifySubscribers.set(false);
             this.copyText.set('');

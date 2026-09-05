@@ -112,7 +112,7 @@ describe('editor UI contract', () => {
         fixture.componentInstance.projectSummaries.set([{
             id: 'p1', name: 'Cedar Quest', description: '', projectType: 'blog', coverUrl: null,
             createdAt: '2026-09-01T00:00:00Z', archivedAt: null, documentCount: 23,
-            openTaskCount: 0, assetCount: 0, lastActivityAt: '2026-09-01T00:00:00Z',
+            openTaskCount: 0, assetCount: 0, buildCount: 0, latestBuildVersion: null, lastActivityAt: '2026-09-01T00:00:00Z',
         }]);
 
         expect(fixture.componentInstance.frameKicker())

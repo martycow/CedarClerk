@@ -82,6 +82,10 @@ export interface ProjectSummary {
     /** Open tasks, not every task ever written — see ProjectEndpoints for why. */
     openTaskCount: number;
     assetCount: number;
+    /** Every build row, planned ones included. */
+    buildCount: number;
+    /** Version of the newest released build — null while nothing has shipped. */
+    latestBuildVersion: string | null;
     /** Newest edit to any of the project's documents — the project row itself never moves. */
     lastActivityAt: string;
 }
@@ -95,7 +99,7 @@ export interface ProjectDocument {
     isBlogPublished: boolean;
 }
 
-export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'lastActivityAt'> {
+export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'buildCount' | 'latestBuildVersion' | 'lastActivityAt'> {
     /** T-358 — the team whose people reach this project, or null for the owner's alone. */
     teamId: string | null;
     /** T-159 (ADR-134) — null means no public page. */

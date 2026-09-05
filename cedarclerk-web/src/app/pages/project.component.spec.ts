@@ -3,7 +3,6 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 import { ProjectComponent } from './project.component';
 import { ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
-import { Build, BuildsService } from '../core/builds.service';
 import { Channel, ChannelsService } from '../core/channels.service';
 import { en } from '../core/i18n/en';
 import { formatInZone } from '../core/display-time';
@@ -12,7 +11,8 @@ import { AssetsService } from '../core/assets.service';
 const SUMMARY: ProjectSummary = {
     id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
     createdAt: '2026-08-01T09:00:00', archivedAt: null,
-    documentCount: 3, openTaskCount: 8, assetCount: 2481, lastActivityAt: '2026-08-19T11:00:00',
+    documentCount: 3, openTaskCount: 8, assetCount: 2481, buildCount: 2, latestBuildVersion: '0.3.1',
+    lastActivityAt: '2026-08-19T11:00:00',
 };
 
 const OTHER: ProjectSummary = { ...SUMMARY, id: 'p2', name: 'Night Lanterns', assetCount: 0 };
@@ -49,11 +49,6 @@ const DETAIL: ProjectDetail = {
     openTaskCount: 8,
 };
 
-const BUILDS: Build[] = [
-    { id: 'b2', projectId: 'p1', version: '0.4.0', notes: '', releasedAt: null, createdAt: '', released: false, taskCount: 0, doneCount: 0, documents: [], isPublic: false, downloadUrl: null },
-    { id: 'b1', projectId: 'p1', version: '0.3.1', notes: '', releasedAt: '2026-08-17T09:00:00', createdAt: '', released: true, taskCount: 3, doneCount: 3, documents: [], isPublic: false, downloadUrl: null },
-];
-
 const CHANNELS: Channel[] = [
     { id: 'c1', title: 'Dev Dairy', telegramChatId: 1, username: 'devdairy', avatarUrl: null },
 ];
@@ -73,11 +68,6 @@ class FakeProjects {
     }
 }
 
-class FakeBuilds {
-    builds: Build[] | null = BUILDS;
-    async list() { if (!this.builds) throw new Error('nope'); return structuredClone(this.builds); }
-}
-
 class FakeChannels {
     channels: Channel[] | null = CHANNELS;
     async list() { if (!this.channels) throw new Error('nope'); return structuredClone(this.channels); }
@@ -94,7 +84,6 @@ class FakeAssets {
 describe('project hub', () => {
     let fixture: ComponentFixture<ProjectComponent>;
     let projects: FakeProjects;
-    let builds: FakeBuilds;
     let channels: FakeChannels;
     const t = en.projects;
 
@@ -112,13 +101,11 @@ describe('project hub', () => {
 
     async function create() {
         projects = new FakeProjects();
-        builds = new FakeBuilds();
         channels = new FakeChannels();
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
                 { provide: ProjectsService, useValue: projects },
-                { provide: BuildsService, useValue: builds },
                 { provide: ChannelsService, useValue: channels },
                 { provide: AssetsService, useValue: new FakeAssets() },
                 { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'p1' })) } },
@@ -126,7 +113,7 @@ describe('project hub', () => {
         });
         fixture = TestBed.createComponent(ProjectComponent);
         fixture.detectChanges();
-        // load(), loadProjects() and loadChannels() are a few awaits deep before the build list lands.
+        // load(), loadProjects() and loadChannels() are a few awaits deep before the rows land.
         for (let i = 0; i < 6; i++) await Promise.resolve();
         fixture.detectChanges();
     }
@@ -225,8 +212,7 @@ describe('project hub', () => {
     });
 
     // ADR-160 rule 4. 0 would say "no versions yet", which is a different sentence.
-    it('shows a dash, never a zero, when the build list or the project list cannot be asked', () => {
-        fixture.componentInstance.builds.set(null);
+    it('shows a dash, never a zero, when the project list cannot be asked', () => {
         fixture.componentInstance.projects.set([]);
         fixture.detectChanges();
         expect(kvValue(t.builds.title)?.textContent?.trim()).toBe('—');
