@@ -1,4 +1,5 @@
-import { mergeCanvasItems, sortCanvasItems } from './canvas-hub.service';
+import { HubConnectionState } from '@microsoft/signalr';
+import { CanvasHubService, mergeCanvasItems, sortCanvasItems } from './canvas-hub.service';
 import { CanvasItem } from './boards.service';
 
 function item(part: Partial<CanvasItem> & { id: string }): CanvasItem {
@@ -72,5 +73,73 @@ describe('mergeCanvasItems', () => {
             [item({ id: 'c', z: 1 }), item({ id: 'b', z: 2 })]);
 
         expect(merged.map(i => i.id)).toEqual(['c', 'b', 'a']);
+    });
+});
+
+/** The socket, reduced to the one call `write` makes: every write parks until the test lands it,
+    and `Join` (what a refusal reconciles through) answers an empty board at once. */
+class FakeConnection {
+    state = HubConnectionState.Connected;
+    pending: { method: string; land: () => void; refuse: (e: Error) => void }[] = [];
+    invoke(method: string): Promise<unknown> {
+        if (method === 'Join') {
+            return Promise.resolve({ board: null, projectName: '', items: [], role: 'editor', canWrite: true, peers: [] });
+        }
+        return new Promise<void>((land, refuse) => this.pending.push({ method, land, refuse }));
+    }
+}
+
+describe('CanvasHubService.saving', () => {
+    let hub: CanvasHubService;
+    let socket: FakeConnection;
+
+    const settle = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
+
+    beforeEach(() => {
+        hub = new CanvasHubService();
+        socket = new FakeConnection();
+        Object.assign(hub, { connection: socket, boardId: 'b1' });
+    });
+
+    afterEach(() => Object.assign(hub, { connection: null }));
+
+    // T-310 — the first of two writes to land must not report "saved" over the second.
+    it('stays true until every write in flight has landed', async () => {
+        void hub.bringToFront(['a']);
+        void hub.bringToFront(['b']);
+        expect(hub.saving()).toBe(true);
+
+        socket.pending[0].land();
+        await settle();
+        expect(hub.saving()).toBe(true);
+
+        socket.pending[1].land();
+        await settle();
+        expect(hub.saving()).toBe(false);
+    });
+
+    it('keeps a refusal that landed before an older write succeeded', async () => {
+        void hub.bringToFront(['a']);
+        void hub.deleteItems(['x']);
+
+        socket.pending[1].refuse(new Error('HubException: not yours'));
+        await settle();
+        expect(hub.lastError()).toBe('not yours');
+
+        socket.pending[0].land();
+        await settle();
+        expect(hub.lastError()).toBe('not yours');
+        expect(hub.saving()).toBe(false);
+    });
+
+    it('clears the last refusal once a later batch lands clean', async () => {
+        void hub.bringToFront(['a']);
+        socket.pending[0].refuse(new Error('HubException: not yours'));
+        await settle();
+
+        void hub.bringToFront(['a']);
+        socket.pending[1].land();
+        await settle();
+        expect(hub.lastError()).toBe('');
     });
 });

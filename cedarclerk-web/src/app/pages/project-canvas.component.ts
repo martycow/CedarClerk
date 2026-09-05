@@ -132,14 +132,16 @@ export class ProjectCanvasComponent implements OnDestroy {
     zoomPercent = computed(() => Math.round(this.view().z * 100));
     background = computed(() => this.hub.board()?.background ?? 'grid');
 
-    /** The former rule readouts: the zoom, the item count, the connection word as a tag. */
+    /** The former rule readouts: the zoom, the item count, the connection word as a tag — which
+        reads "Saving…" while a write is on the wire, the one save readout this screen has. */
     headerMeta = computed<HeaderMeta[]>(() => {
         const t = this.t().projects.canvas;
         const status = this.hub.status();
+        const settled = status === 'live' && !this.hub.saving();
         return [
             { text: t.zoomLevel(this.zoomPercent()) },
             { text: t.itemCount(this.hub.items().length) },
-            { text: this.statusWord(), tag: true, tone: status === 'live' ? 'ok' : status === 'connecting' || status === 'idle' ? 'muted' : 'warn' },
+            { text: this.statusWord(), tag: true, tone: settled ? 'ok' : status === 'live' || status === 'connecting' || status === 'idle' ? 'muted' : 'warn' },
         ];
     });
 
@@ -219,7 +221,8 @@ export class ProjectCanvasComponent implements OnDestroy {
         const status = this.hub.status();
         if (status === 'reconnecting') return t.reconnecting;
         if (status === 'connecting' || status === 'idle') return t.connecting;
-        return status === 'live' ? t.live : t.offline;
+        if (status !== 'live') return t.offline;
+        return this.hub.saving() ? this.t().common.saving : t.live;
     }
 
     // ——— items ———————————————————————————————————————————————————————————————
