@@ -269,3 +269,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-265 — `cedar test` builds the front end, and the deploy preflight warns about a stale backup](adr/ADR-265.md)
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
+- [ADR-284 — Server errors speak every UI language, from one table per language keyed by member name](adr/ADR-284.md)
