@@ -6,6 +6,7 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { avatarFill, avatarInitial } from '../core/avatar-color.util';
 import { BoardsService, CANVAS_BACKGROUNDS, CanvasBackground, CanvasBoardSummary } from '../core/boards.service';
 import { INVITABLE_ROLES, InvitableRole, MembersService, ProjectMember } from '../core/members.service';
+import { ProjectAccess, ProjectAccessService } from '../core/project-access.service';
 import { ProjectsService } from '../core/projects.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -31,6 +32,7 @@ export class ProjectBoardsComponent {
     private api = inject(BoardsService);
     private members = inject(MembersService);
     private projects = inject(ProjectsService);
+    private accessApi = inject(ProjectAccessService);
     private route = inject(ActivatedRoute);
     t = inject(LocaleService).t;
 
@@ -41,6 +43,8 @@ export class ProjectBoardsComponent {
 
     projectId = signal('');
     projectName = signal('');
+    /** What this account is to the project, asked before any owner-only route is tried. */
+    access = signal<ProjectAccess | null>(null);
     boards = signal<readonly CanvasBoardSummary[]>([]);
     people = signal<readonly ProjectMember[]>([]);
     loading = signal(true);
@@ -62,15 +66,17 @@ export class ProjectBoardsComponent {
     confirmRemove = signal<ProjectMember | null>(null);
 
     me = computed(() => this.people().find(m => m.isYou) ?? null);
-    isOwner = computed(() => this.me()?.role === 'owner');
+    isOwner = computed(() => (this.access()?.role ?? this.me()?.role) === 'owner');
 
     /**
-     * Who may write. The members list is the authority when it answered — a role is a fact about
-     * the account, while a board's `canWrite` only exists once a board does. With neither, the
-     * screen offers the action and lets the server refuse it: hiding New board from an owner whose
-     * first board does not exist yet is the worse of the two failures.
+     * Who may write. The access answer is the authority; the members list stands in for it, and a
+     * board's `canWrite` only exists once a board does. With none of the three, the screen offers
+     * the action and lets the server refuse it: hiding New board from an owner whose first board
+     * does not exist yet is the worse of the two failures.
      */
     canWrite = computed(() => {
+        const access = this.access();
+        if (access) return access.canWrite;
         const role = this.me()?.role;
         if (role) return role === 'owner' || role === 'editor';
         const first = this.boards()[0];
@@ -98,6 +104,8 @@ export class ProjectBoardsComponent {
         if (!id) return;
         this.loading.set(true);
         this.loadError.set(null);
+        const access = await this.accessApi.resolve(id);
+        this.access.set(access);
         try {
             this.boards.set(await this.api.list(id));
         } catch (e) {
@@ -105,14 +113,15 @@ export class ProjectBoardsComponent {
         } finally {
             this.loading.set(false);
         }
-        // A member cannot read the project row at all — `GET /api/projects/{id}` is owner-only and
-        // stays that way — so the shared list is where their copy of the name comes from. Without
-        // this fallback the header's kicker is simply blank for everyone but the owner.
+        // `GET /api/projects/{id}` is owner-only and stays that way (ADR-217), so a member's copy
+        // of the name comes from the shared list — chosen by the access answer rather than by
+        // trying the owner's route first and logging its 404.
         try {
-            this.projectName.set((await this.projects.get(id)).name);
+            this.projectName.set(access?.role === 'owner'
+                ? (await this.projects.get(id)).name
+                : (await this.members.shared()).find(p => p.id === id)?.name ?? '');
         } catch {
-            const shared = await this.members.shared().catch(() => []);
-            this.projectName.set(shared.find(p => p.id === id)?.name ?? '');
+            this.projectName.set('');
         }
     }
 

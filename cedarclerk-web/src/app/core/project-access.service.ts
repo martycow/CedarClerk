@@ -25,7 +25,7 @@ export class ProjectAccessService {
 
     /** Null while unknown — the shell draws nothing project-specific until an answer arrives. */
     private readonly cache = signal<ReadonlyMap<string, ProjectAccess | null>>(new Map());
-    private readonly inFlight = new Set<string>();
+    private readonly inFlight = new Map<string, Promise<ProjectAccess | null>>();
 
     accessFor(projectId: string): ProjectAccess | null {
         return this.cache().get(projectId) ?? null;
@@ -38,12 +38,22 @@ export class ProjectAccessService {
 
     /** Asks once per project id. Safe to call from a computed's dependency-free caller. */
     ensure(projectId: string) {
-        if (!projectId || this.cache().has(projectId) || this.inFlight.has(projectId)) return;
-        this.inFlight.add(projectId);
-        void this.load(projectId);
+        if (projectId) void this.resolve(projectId);
     }
 
-    private async load(projectId: string) {
+    /** The same answer as a promise, for a page that must know before it chooses its next call. */
+    resolve(projectId: string): Promise<ProjectAccess | null> {
+        if (!projectId) return Promise.resolve(null);
+        if (this.cache().has(projectId)) return Promise.resolve(this.accessFor(projectId));
+        let pending = this.inFlight.get(projectId);
+        if (!pending) {
+            pending = this.load(projectId);
+            this.inFlight.set(projectId, pending);
+        }
+        return pending;
+    }
+
+    private async load(projectId: string): Promise<ProjectAccess | null> {
         let access: ProjectAccess | null = null;
         try {
             access = await firstValueFrom(this.http.get<ProjectAccess>(`/api/projects/${projectId}/access`));
@@ -54,6 +64,7 @@ export class ProjectAccessService {
             this.inFlight.delete(projectId);
             this.cache.update(map => new Map(map).set(projectId, access));
         }
+        return access;
     }
 
     /** After accepting an invitation, the old answer for that project is a lie. */
