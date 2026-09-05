@@ -28,7 +28,7 @@ works.
 | Icon inventory | `icon-usage.generated.ts` matches the call sites in `src/app` |
 | Contrast contract | Every token pair clears its ratio in both themes |
 | Density contract | No control drops below its touch/size floor |
-| Production build (`ng build`) | The front end compiles for release and stays under its bundle ceiling — the same command the deploy runs (ADR-265) |
+| Frontend build (`ng build`) | The front end compiles for production and stays under its bundle ceiling — the same command the deploy runs (ADR-265) |
 | Smoke (Playwright, isolated database) — **`--smoke` only** | The critical paths end to end against a scratch `CEDAR_DATA_DIR` |
 
 `TestPipeline.Phases()` appends the smoke phase only under `options.Smoke`, so a bare `cedar test`

@@ -23,7 +23,7 @@ public sealed class TestPipeline
     public const string PhaseIcons = "Icon inventory";
     public const string PhaseContrast = "Contrast contract";
     public const string PhaseDensity = "Density contract";
-    public const string PhaseBuild = "Production build (ng build)";
+    public const string PhaseBuild = "Frontend build (ng build)";
     public const string PhaseSmoke = "Smoke (Playwright, isolated database)";
 
     private readonly ICommandRunner _runner;

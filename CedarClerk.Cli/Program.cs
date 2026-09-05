@@ -51,7 +51,7 @@ app.Configure(config =>
     });
 
     config.AddCommand<TestCommand>("test")
-        .WithDescription("Backend, frontend, contrast and density, with a tick per test as results arrive.")
+        .WithDescription("Backend, frontend, contrast, density and the frontend build, with a tick per test as results arrive.")
         .WithExample("test", "--smoke");
 
     config.AddCommand<BuildCommand>("build")

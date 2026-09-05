@@ -239,6 +239,6 @@ The reason it exists is the asset index (ADR-107) — only a process on the deve
 - **See the whole thing as it will ship: `cedar run`** (ADR-121) — builds front and back, serves the real `publish/` artifact on `localhost:8080` against the dev database with the bot forced off, opens the browser; `--no-build` reuses the last publish
 - Server alone: `dotnet run --project CedarClerk.Server` (port 8080, bot disabled without a token — see `.claude/rules/telegram-bot.md`)
 - Frontend alone: `ng serve` in `cedarclerk-web/` (proxies `/api` → `http://localhost:8080` via `proxy.conf.json`)
-- Tests: `cedar test` (backend + frontend + icons + contrast + density + production `ng build`; `--smoke` adds Playwright) — ~930 xUnit cases across `CedarClerk.Tests` and `CedarClerk.Cli.Tests`; plain `dotnet test` from repo root also works
+- Tests: `cedar test` (backend + frontend + contrast + density + build; `--smoke` adds Playwright) — ~930 xUnit cases across `CedarClerk.Tests` and `CedarClerk.Cli.Tests`; plain `dotnet test` from repo root also works
 - Frontend tests alone: `npm run test` in `cedarclerk-web/` (Vitest-backed via `@angular/build:unit-test`, not Karma)
 - EF migrations: `dotnet ef migrations add <Name> --project CedarClerk.Server`
