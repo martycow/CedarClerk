@@ -38,6 +38,67 @@ struct Release {
     files: BTreeMap<String, String>,
 }
 const MANIFEST: &str = ".cedar-release.json";
+// One spelling of the nightly copy's location for every reader: the script's DEST and this
+// path have disagreed for a day before, and a third spelling would be a third way to drift.
+pub const BACKUP_GLOB: &str = "cedar-*.db.gz";
+const BACKUP_STALE_SECONDS: i64 = 36 * 3600;
+
+pub fn backups_dir(d: &Deploy) -> String {
+    format!("{}/data/backups", d.remote_root)
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Backup {
+    Missing,
+    Fresh(i64),
+    Stale(i64),
+}
+
+pub fn backup_freshness(now: i64, newest: Option<i64>) -> Backup {
+    match newest {
+        None => Backup::Missing,
+        Some(stamp) => {
+            let age = (now - stamp).max(0);
+            if age > BACKUP_STALE_SECONDS {
+                Backup::Stale(age)
+            } else {
+                Backup::Fresh(age)
+            }
+        }
+    }
+}
+
+pub fn backup_notice(probe: &str, dir: &str) -> String {
+    let stamp = |key: &str| {
+        probe
+            .lines()
+            .find_map(|l| l.strip_prefix(key))
+            .and_then(|v| v.trim().parse::<i64>().ok())
+    };
+    let Some(now) = stamp("NOW=") else {
+        return "WARNING: the server did not report its clock; backup age unknown, run cedar backup verify".into();
+    };
+    match backup_freshness(now, stamp("BACKUP=")) {
+        Backup::Missing => format!(
+            "WARNING: no {BACKUP_GLOB} under {dir}; the nightly runs at 03:30 UTC, run cedar backup verify"
+        ),
+        Backup::Stale(age) => format!(
+            "WARNING: newest database backup is {} h old, past the 36 h limit; the nightly runs at 03:30 UTC, run cedar backup verify",
+            age / 3600
+        ),
+        Backup::Fresh(age) => format!("Newest database backup is {} h old", age / 3600),
+    }
+}
+
+pub fn probe_script(d: &Deploy) -> String {
+    format!(
+        "set -e\ntest -d {root}\ncommand -v tar\ncommand -v sha256sum\ncommand -v flock\nprintf 'Service: '\nsystemctl is-active {service} || true\ndf -Pk {root}\ntest ! -L {root}\nprintf 'NOW=%s\\n' \"$(date +%s)\"\nNEWEST=$(ls -t {backups}/{glob} 2>/dev/null | head -n 1)\nprintf 'BACKUP=%s\\n' \"$(if test -n \"$NEWEST\"; then stat -c %Y \"$NEWEST\"; fi)\"\n",
+        root = quote(&d.remote_root),
+        service = quote(&d.service),
+        backups = quote(&backups_dir(d)),
+        glob = BACKUP_GLOB
+    )
+}
 
 pub fn quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\"'\"'"))
@@ -208,7 +269,7 @@ pub fn run(r: &Runner, p: &Program, options: &Options) -> Result<()> {
         } else {
             vec![
                 "Check branch, clean tree, version tag and LIVE",
-                "Probe SSH service and disk",
+                "Probe SSH service, disk and backup age",
                 "Build (unless --skip-build)",
                 "Verify artifact provenance and file hashes",
                 "Pack SHA-256 addressed archive",
@@ -221,7 +282,7 @@ pub fn run(r: &Runner, p: &Program, options: &Options) -> Result<()> {
             ]
         } {
             r.log(format!("[plan] {stage}"));
-            if options.preflight && stage == "Probe SSH service and disk" {
+            if options.preflight && stage == "Probe SSH service, disk and backup age" {
                 break;
             }
         }
@@ -243,16 +304,15 @@ pub fn run(r: &Runner, p: &Program, options: &Options) -> Result<()> {
     if options.desktop {
         crate::operations::desktop_version(p)?;
     }
-    let probe = remote(
-        r,
-        p,
-        &format!(
-            "set -e\ntest -d {root}\ncommand -v tar\ncommand -v sha256sum\ncommand -v flock\nprintf 'Service: '\nsystemctl is-active {service} || true\ndf -Pk {root}\ntest ! -L {root}\n",
-            root = quote(&d.remote_root),
-            service = quote(&d.service)
-        ),
-    )?;
-    r.log(probe);
+    let probe = remote(r, p, &probe_script(d))?;
+    r.log(
+        probe
+            .lines()
+            .filter(|l| !l.starts_with("NOW=") && !l.starts_with("BACKUP="))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
+    r.log(backup_notice(&probe, &backups_dir(d)));
     if let Ok(value) = health(&d.health_url) {
         r.log(format!("Production version: {}", value["version"]));
         if let Ok(live) = git(r, p, &["rev-parse", "--verify", "refs/tags/LIVE^{commit}"]) {
@@ -729,6 +789,43 @@ mod tests {
             },
         )
         .unwrap();
+    }
+    #[test]
+    fn backup_age_warns_only_past_thirty_six_hours() {
+        let now = 1_800_000_000;
+        let limit = BACKUP_STALE_SECONDS;
+        assert_eq!(backup_freshness(now, None), Backup::Missing);
+        assert_eq!(
+            backup_freshness(now, Some(now - limit)),
+            Backup::Fresh(limit)
+        );
+        assert_eq!(
+            backup_freshness(now, Some(now - limit - 1)),
+            Backup::Stale(limit + 1)
+        );
+        assert_eq!(backup_freshness(now, Some(now + 600)), Backup::Fresh(0));
+    }
+    #[test]
+    fn backup_notice_reads_server_stamps_and_never_fails() {
+        let dir = "/home/user/app/data/backups";
+        let missing = backup_notice("Service: active\nNOW=1800000000\nBACKUP=\n", dir);
+        assert!(
+            missing.starts_with("WARNING: no cedar-*.db.gz"),
+            "{missing}"
+        );
+        let stale = backup_notice("NOW=1800000000\nBACKUP=1799800000\n", dir);
+        assert!(
+            stale.starts_with("WARNING")
+                && stale.contains("55 h")
+                && stale.contains("03:30 UTC")
+                && stale.contains("cedar backup verify"),
+            "{stale}"
+        );
+        assert_eq!(
+            backup_notice("NOW=1800000000\nBACKUP=1799982000\n", dir),
+            "Newest database backup is 5 h old"
+        );
+        assert!(backup_notice("Service: active\n", dir).starts_with("WARNING"));
     }
     #[test]
     fn checksum_is_content_based() {

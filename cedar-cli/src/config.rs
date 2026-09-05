@@ -72,7 +72,7 @@ pub struct Action {
     pub steps: Vec<Step>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase", deny_unknown_fields)]
 pub enum Step {
     Exec {
@@ -488,6 +488,18 @@ mod tests {
     #[test]
     fn bundled_profile_is_valid() {
         bundled().unwrap().validate().unwrap();
+    }
+    #[test]
+    fn test_actions_end_with_the_build_the_deploy_ships() {
+        // A test run that never compiles the production bundle leaves build-only
+        // regressions to the deploy, after the branch guard (ADR-265).
+        let c = bundled().unwrap();
+        let p = &c.programs[0];
+        let build = &p.actions[&p.deploy.as_ref().unwrap().build_action].steps[0];
+        assert!(matches!(build, Step::Exec { args, .. } if args == &["run", "build"]));
+        for id in ["test", "test-frontend"] {
+            assert_eq!(p.actions[id].steps.last(), Some(build), "{id}");
+        }
     }
     #[test]
     fn rejects_unsafe_remote_and_duplicate_ids() {

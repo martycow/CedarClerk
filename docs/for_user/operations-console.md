@@ -11,16 +11,16 @@ Use PowerShell 7, Rust stable, Visual Studio C++ Build Tools with the Windows SD
 | `./Scripts/install-cli.ps1` | Build, test and install the native `cedar.exe` into the existing per-user command directory |
 | `cedar` | Open the animated dashboard |
 | `cedar --no-animation` | Open a still dashboard; `A` also toggles animation |
-| `cedar test` | Run Rust, backend, frontend, icon, contrast and density tests |
+| `cedar test` | Run Rust, backend, frontend, icon, contrast and density tests, then the Angular production build |
 | `cedar test --backend` | Run backend tests |
-| `cedar test --frontend` | Run frontend tests and design contracts |
+| `cedar test --frontend` | Run frontend tests, design contracts and the Angular production build |
 | `cedar test --cli` | Run Rust console tests |
 | `cedar test --smoke` | Add the isolated Playwright suite |
 | `cedar build --no-desktop` | Build the web and server deployment artifact |
 | `cedar build --installer` | Also build the desktop shell and installer |
 | `cedar run` | Build and serve locally with the Telegram bot disabled |
 | `cedar run --no-build --no-open` | Reuse the artifact without opening a browser |
-| `cedar deploy --preflight` | Check source, remote tools, service and health |
+| `cedar deploy --preflight` | Check source, remote tools, service, disk, backup age and health |
 | `cedar deploy` | Build, stage, verify and ask before switching production |
 | `cedar deploy --skip-build` | Resume a release from the verified existing artifact |
 | `cedar deploy --rollback` | Verify and restore the previous release |
@@ -85,7 +85,7 @@ An optional `serve` object defines command, arguments, environment, working dire
 
 ## Deployment behavior
 
-The source must be on the configured release branch with a clean working tree. A missing version tag is a warning. `--force` explicitly overrides branch/dirty checks; it does not bypass artifact hashes or health verification. A dirty artifact cannot establish a truthful LIVE commit.
+The source must be on the configured release branch with a clean working tree. A missing version tag is a warning. `--force` explicitly overrides branch/dirty checks; it does not bypass artifact hashes or health verification. A dirty artifact cannot establish a truthful LIVE commit. The preflight also reads the age of the newest `cedar-*.db.gz` under the remote `data/backups` from the server's own clock: missing or older than 36 hours is a warning naming `cedar backup verify` and the 03:30 UTC nightly, never a stop.
 
 Build records the version, source commit and file hashes in `publish/.cedar-release.json`. A different commit, missing manifest or changed artifact requires a rebuild. Uploads use content-addressed archive names and validate a partial remote prefix before resuming. Staging checks SHA-256, required files and file count while production keeps serving.
 

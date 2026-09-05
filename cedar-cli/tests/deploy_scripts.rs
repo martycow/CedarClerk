@@ -1,6 +1,6 @@
 use cedar_cli::{
     config,
-    deploy::{quote, swap_script, verify_script},
+    deploy::{backup_notice, backups_dir, probe_script, quote, swap_script, verify_script},
 };
 use std::{
     fs,
@@ -148,6 +148,31 @@ fn missing_incoming_never_stops_service() {
     assert_eq!(
         fs::read_to_string(tmp.path().join("app/server.bin")).unwrap(),
         "old"
+    );
+}
+
+#[test]
+fn preflight_probe_reads_newest_backup_from_the_server_clock() {
+    let (tmp, d) = fixture();
+    let backups = tmp.path().join("data/backups");
+    fs::create_dir_all(&backups).unwrap();
+    let dir = backups_dir(&d);
+    let empty = shell(tmp.path(), &mock_service(&probe_script(&d)));
+    assert!(
+        empty.status.success(),
+        "{}",
+        String::from_utf8_lossy(&empty.stderr)
+    );
+    let out = String::from_utf8(empty.stdout).unwrap();
+    assert!(out.contains("NOW=") && out.contains("BACKUP=\n"), "{out}");
+    assert!(backup_notice(&out, &dir).starts_with("WARNING: no"));
+    fs::write(backups.join("backup.log"), "").unwrap();
+    fs::write(backups.join("cedar-2026-09-04.db.gz"), "x").unwrap();
+    let fresh = shell(tmp.path(), &mock_service(&probe_script(&d)));
+    let out = String::from_utf8(fresh.stdout).unwrap();
+    assert_eq!(
+        backup_notice(&out, &dir),
+        "Newest database backup is 0 h old"
     );
 }
 
