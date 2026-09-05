@@ -391,7 +391,9 @@ public static class Consts
         public const int InviteTokenBytes = 32;
 
         // A peer's colour is hash(userId) % this, so it is stable per person with nothing stored.
-        public const int PresenceColors = 8;
+        // Equal to the client's --avatar-1..6 palette: a larger modulus wraps two indices onto one
+        // swatch, which is the collision the index exists to prevent.
+        public const int PresenceColors = 6;
     }
 }
 

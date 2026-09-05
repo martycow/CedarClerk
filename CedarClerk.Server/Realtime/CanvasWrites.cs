@@ -99,7 +99,7 @@ public static class CanvasWrites
         var board = await BoardAsync(db, access, boardId, ct);
         if (board is null) return (ErrorMessages.UnknownBoard, []);
         if (inputs.Count == 0) return (null, []);
-        if (inputs.Count > MaxItemsPerCall) return (ErrorMessages.CanvasItemLimitReached(MaxItemsPerCall), []);
+        if (inputs.Count > MaxItemsPerCall) return (ErrorMessages.CanvasBatchLimitReached(MaxItemsPerCall), []);
 
         var payloads = new Dictionary<Guid, string>();
         foreach (var input in inputs)
@@ -176,7 +176,7 @@ public static class CanvasWrites
         var board = await BoardAsync(db, access, boardId, ct);
         if (board is null) return (ErrorMessages.UnknownBoard, []);
         if (patches.Count == 0) return (null, []);
-        if (patches.Count > MaxItemsPerCall) return (ErrorMessages.CanvasItemLimitReached(MaxItemsPerCall), []);
+        if (patches.Count > MaxItemsPerCall) return (ErrorMessages.CanvasBatchLimitReached(MaxItemsPerCall), []);
 
         var ids = patches.Select(p => p.Id).ToList();
         var items = await db.CanvasItems.Where(i => i.BoardId == boardId && ids.Contains(i.Id)).ToListAsync(ct);
