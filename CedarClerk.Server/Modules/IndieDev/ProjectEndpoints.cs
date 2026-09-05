@@ -199,13 +199,37 @@ public static class ProjectEndpoints
 
     private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
+    /// <summary>
+    /// The error to answer with, or null once both fields are applied. Unknown keys are refused
+    /// rather than dropped: ProjectPlatforms.Parse forgives what is already in the column, but a
+    /// client naming a platform the list lacks is a bug worth hearing about.
+    /// </summary>
+    public static string? ApplyEngineAndPlatforms(Project project, string? engine, string[]? platforms)
+    {
+        if (engine is not null)
+        {
+            var trimmed = engine.Trim();
+            if (trimmed.Length > 0 && !ProjectEngines.IsKnown(trimmed)) return ErrorMessages.UnknownProjectEngine(trimmed);
+            project.Engine = trimmed;
+        }
+        if (platforms is not null)
+        {
+            var keys = platforms.Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
+            if (keys.FirstOrDefault(p => !ProjectPlatforms.IsKnown(p)) is { } unknown) return ErrorMessages.UnknownProjectPlatform(unknown);
+            project.TargetPlatforms = ProjectPlatforms.Join(keys);
+        }
+        return null;
+    }
+
     public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
         string? TrailerUrl, string? CustomDomain,
         string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
         string? PressGenre = null, string? PressFactsheetRows = null,
         string? DiscoveryCategory = null, string? BlocksJson = null);
     public record ShowcaseAssistRequest(string Kind, string Text);
-    public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl);
+    // T-247 — Engine/TargetPlatforms are null for "leave alone", so a client written before they
+    // existed keeps working; "" and [] clear them.
+    public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl, string? Engine = null, string[]? TargetPlatforms = null);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title, Guid? PresetId);
     public record UpdateDocumentTypeRequest(string DocumentType);
@@ -281,6 +305,8 @@ public static class ProjectEndpoints
                 p.ProjectType,
                 p.DiscoveryCategory,
                 p.CoverUrl,
+                p.Engine,
+                targetPlatforms = ProjectPlatforms.Parse(p.TargetPlatforms),
                 p.CreatedAt,
                 p.ArchivedAt,
                 documentCount = stats.GetValueOrDefault(p.Id)?.Count ?? 0,
@@ -333,6 +359,8 @@ public static class ProjectEndpoints
                 project.ProjectType,
                 project.DiscoveryCategory,
                 project.CoverUrl,
+                project.Engine,
+                targetPlatforms = ProjectPlatforms.Parse(project.TargetPlatforms),
                 project.TeamId,
                 project.CreatedAt,
                 project.ArchivedAt,
@@ -441,11 +469,18 @@ public static class ProjectEndpoints
             var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
             if (project is null) return Results.NotFound();
 
+            if (ApplyEngineAndPlatforms(project, req.Engine, req.TargetPlatforms) is { } refused)
+                return Results.Json(new { error = refused }, statusCode: StatusCodes.Status400BadRequest);
+
             project.Name = req.Name.Trim();
             project.Description = req.Description?.Trim() ?? "";
             project.CoverUrl = req.CoverUrl;
             await db.SaveChangesAsync();
-            return Results.Ok(new { project.Id, project.Name, project.Description, project.CoverUrl });
+            return Results.Ok(new
+            {
+                project.Id, project.Name, project.Description, project.CoverUrl, project.Engine,
+                targetPlatforms = ProjectPlatforms.Parse(project.TargetPlatforms),
+            });
         });
 
         // T-159 (ADR-134) — the public game page's switch. The slug is slugified server-side and

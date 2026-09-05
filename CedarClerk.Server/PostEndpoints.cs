@@ -16,6 +16,15 @@ public static class PostEndpoints
     public record PublishTargetRequest(Guid DraftId, Guid TargetId, string? Language = null);
     public record ValidateRequest(Guid DraftId, string Network, string? Language = null);
     public record UpdatePreviewRequest(Guid DraftId, string Kind, string? ChatId = null, string? Language = null);
+    public record TelegramSyncRequest(string? Language = null);
+
+    public sealed record TelegramSyncResult(int? MessageId, string? Url, DateTime? SyncedAt, bool Unchanged, string? Error, int StatusCode)
+    {
+        public bool Success => Error is null;
+        public static TelegramSyncResult Fail(string error, int statusCode) => new(null, null, null, false, error, statusCode);
+    }
+
+    private const string ChannelNotConnected = "You can only publish to your connected channels — connect this channel first (Channels popup)";
 
     // "small"/"standard"/"high" — see the export modal's compression-level control and the ADR
     // following ADR-031 in docs/DECISIONS.md. Unknown/missing values fall back to "standard".
@@ -85,7 +94,7 @@ public static class PostEndpoints
 
         var targetChannel = await SubscriptionPlan.ResolveOwnedChannelAsync(db, ownerId, chatId);
         if (targetChannel is null)
-            return new PublishResult(null, "You can only publish to your connected channels — connect this channel first (Channels popup)", StatusCodes.Status403Forbidden);
+            return new PublishResult(null, ChannelNotConnected, StatusCodes.Status403Forbidden);
 
         // The channel is the permission check (unchanged); the target row is what publishing runs
         // against. Ensure rather than look up, so a channel connected before this table existed —
@@ -192,8 +201,81 @@ public static class PostEndpoints
             RemoteId: outcome.Receipt.RemoteId, PublicUrl: outcome.Receipt.PublicUrl);
     }
 
+    /// <summary>
+    /// T-180 — edits the last single-message Telegram send of a draft in place. Publish means a new
+    /// message; sync means the one already in the channel says what the document says now. The
+    /// edit itself is injected so the checks around it can be proved without a Bot API.
+    /// </summary>
+    public static async Task<TelegramSyncResult> SyncTelegramAsync(
+        Guid draftId,
+        string ownerId,
+        string? language,
+        CedarDbContext db,
+        Func<PublishRequest, string, int, CancellationToken, Task<TelegramPublishTarget.TelegramEditOutcome>> edit,
+        CancellationToken ct = default)
+    {
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId, ct);
+        if (draft is null)
+            return TelegramSyncResult.Fail(ErrorMessages.DraftNotFound, StatusCodes.Status404NotFound);
+        if (draft.LastTelegramChatId is not { } chatId || draft.LastTelegramMessageId is not { } messageId)
+            return TelegramSyncResult.Fail(ErrorMessages.TelegramNotSentYet, StatusCodes.Status404NotFound);
+
+        // A thread stores one job per part, each with the part's message id; the last part is what
+        // LastTelegramMessageId points at. Editing one part of eight is not syncing the post.
+        var messageRef = messageId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (await db.PublishJobs.AnyAsync(j => j.DraftId == draftId && j.OwnerId == ownerId && j.ThreadId != null && j.RemoteId == messageRef, ct))
+            return TelegramSyncResult.Fail(ErrorMessages.TelegramThreadNotSyncable, StatusCodes.Status409Conflict);
+
+        if (!DocumentTypes.IsPublishable(draft.DocumentType))
+            return TelegramSyncResult.Fail(ErrorMessages.DocumentTypeNotPublishable, StatusCodes.Status400BadRequest);
+
+        language ??= draft.PrimaryLanguage;
+        var document = await DraftRevisionService.ResolveAsync(db, draft, language, ct);
+        if (document is null)
+            return TelegramSyncResult.Fail(ErrorMessages.NoVersionInLanguage(language), StatusCodes.Status404NotFound);
+        var (title, cedarJson) = document.Value;
+
+        var channel = await SubscriptionPlan.ResolveOwnedChannelAsync(db, ownerId, chatId);
+        if (channel is null)
+            return TelegramSyncResult.Fail(ChannelNotConnected, StatusCodes.Status403Forbidden);
+        var target = await TelegramTargetProjection.EnsureAsync(db, channel, ct);
+
+        var outcome = await edit(new PublishRequest
+        {
+            DraftId = draftId,
+            OwnerId = ownerId,
+            Language = language,
+            Title = title,
+            CedarJson = cedarJson,
+            Target = target,
+        }, chatId, messageId, ct);
+
+        target.LastError = outcome.Error;
+        if (!outcome.Success)
+        {
+            await db.SaveChangesAsync(ct);
+            return TelegramSyncResult.Fail(outcome.Error!, outcome.StatusCode);
+        }
+
+        var syncedAt = DateTime.UtcNow;
+        draft.LastTelegramSentAt = syncedAt;
+        await db.SaveChangesAsync(ct);
+        return new TelegramSyncResult(messageId, outcome.Url, syncedAt, outcome.Unchanged, null, StatusCodes.Status200OK);
+    }
+
     public static void MapPostEndpoints(this WebApplication app)
     {
+        app.MapPost("/api/posts/{id:guid}/telegram-sync", async (Guid id, TelegramSyncRequest? req, ClaimsPrincipal user,
+            CedarDbContext db, TelegramPublishTarget telegram, CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await SyncTelegramAsync(id, uid, req?.Language, db, telegram.EditAsync, ct);
+
+            return result.Success
+                ? Results.Ok(new { messageId = result.MessageId, url = result.Url, syncedAt = result.SyncedAt, unchanged = result.Unchanged })
+                : Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
+        }).RequireAuthorization();
+
         // ADR-065 — what an update would overwrite, for one language and one destination. The client
         // asks once per language it is about to publish; "has this been published here before" is
         // answered from the revision log rather than from whatever the client thinks it knows,

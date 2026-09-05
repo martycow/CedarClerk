@@ -57,12 +57,15 @@ public class TelegramPublishTarget(
         PostsHavePublicUrls = true,
     };
 
-    public async Task<PublishOutcome> PublishAsync(PublishRequest request, CancellationToken ct = default)
-    {
-        if (!bot.IsRunning)
-            return PublishOutcome.Fail(ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
+    public sealed record TelegramContent(InputRichMessage Message, Draft Draft, Channel? Channel, bool IsLastPart);
 
-        var chatId = request.Target.RemoteId;
+    /// <summary>
+    /// Everything a send and an edit (T-180) have in common: the document as Blocks, with the
+    /// signature, blog link, hashtags and CTA row a fresh send would carry. Failure is the same
+    /// outcome the send would have answered with.
+    /// </summary>
+    public async Task<(TelegramContent? Content, PublishOutcome? Failure)> BuildContentAsync(PublishRequest request, CancellationToken ct = default)
+    {
         var sendJson = request.CedarJson;
         var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
 
@@ -95,7 +98,7 @@ public class TelegramPublishTarget(
         var blocks = CedarToTelegramBlocksRenderer.Render(sendJson, mainHost).ToList();
 
         if (blocks.Count == 0)
-            return PublishOutcome.Fail(ErrorMessages.DraftIsEmpty);
+            return (null, PublishOutcome.Fail(ErrorMessages.DraftIsEmpty));
 
         // T-106 — one part of a thread. The split is recomputed from the document rather than
         // carried in the job row: the same document and the same limits produce the same parts, so
@@ -105,7 +108,7 @@ public class TelegramPublishTarget(
         {
             var parts = TelegramThreadSplitter.Split(blocks, Capabilities);
             if (part.Index >= parts.Count)
-                return PublishOutcome.Fail(ErrorMessages.ThreadPartGone, StatusCodes.Status409Conflict);
+                return (null, PublishOutcome.Fail(ErrorMessages.ThreadPartGone, StatusCodes.Status409Conflict));
             blocks = parts[part.Index].Blocks.ToList();
         }
 
@@ -199,7 +202,18 @@ public class TelegramPublishTarget(
         // the stored draft/blog/.cedar export never see them.
         if (isLastPart && BuildCtaButtons(draft.CtaButtonsJson) is { } ctaButtons)
             wireBlocks.Add(ctaButtons);
-        var content = new InputRichMessage { Blocks = wireBlocks };
+        return (new TelegramContent(new InputRichMessage { Blocks = wireBlocks }, draft, channel, isLastPart), null);
+    }
+
+    public async Task<PublishOutcome> PublishAsync(PublishRequest request, CancellationToken ct = default)
+    {
+        if (!bot.IsRunning)
+            return PublishOutcome.Fail(ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
+
+        var chatId = request.Target.RemoteId;
+        var (built, failure) = await BuildContentAsync(request, ct);
+        if (built is null) return failure!;
+        var (content, draft, channel, isLastPart) = built;
 
         Message msg;
         try
@@ -286,6 +300,69 @@ public class TelegramPublishTarget(
 
         var publicUrl = username is null ? null : $"https://t.me/{username}/{msg.MessageId}";
         return PublishOutcome.Ok(new PublishReceipt(msg.MessageId.ToString(System.Globalization.CultureInfo.InvariantCulture), publicUrl));
+    }
+
+    public sealed record TelegramEditOutcome(int? MessageId, string? Url, bool Unchanged, string? Error, int StatusCode)
+    {
+        public bool Success => Error is null;
+        public static TelegramEditOutcome Fail(string error, int statusCode) => new(null, null, false, error, statusCode);
+    }
+
+    /// <summary>
+    /// T-180 — rewrites a message this bot sent with the Blocks a fresh send would carry. Not an
+    /// <see cref="IPublishTarget"/> member (ADR-078: targets do not edit) — a Telegram-only door.
+    /// </summary>
+    public Task<TelegramEditOutcome> EditAsync(PublishRequest request, string chatId, int messageId, CancellationToken ct = default) =>
+        bot.IsRunning
+            ? EditAsync(bot.Client, request, chatId, messageId, ct)
+            : Task.FromResult(TelegramEditOutcome.Fail(ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable));
+
+    // The client is a parameter so the edit can run against a stubbed Bot API without a started bot.
+    public async Task<TelegramEditOutcome> EditAsync(ITelegramBotClient client, PublishRequest request, string chatId, int messageId, CancellationToken ct = default)
+    {
+        var (built, failure) = await BuildContentAsync(request, ct);
+        if (built is null) return TelegramEditOutcome.Fail(failure!.Error!, failure.StatusCode);
+
+        var username = await ResolveChannelUsernameAsync(db, chatId, ct);
+        var url = username is null ? null : $"https://t.me/{username}/{messageId}";
+        var unchanged = false;
+        try
+        {
+            await client.EditMessageText(new ChatId(chatId), messageId, text: null, richMessage: built.Message, cancellationToken: ct);
+        }
+        // Telegram answers 400 to an edit that changes nothing; for a sync that is the good news.
+        catch (Telegram.Bot.Exceptions.ApiRequestException ex)
+            when (ex.ErrorCode == 400 && ex.Message.Contains("message is not modified", StringComparison.OrdinalIgnoreCase))
+        {
+            unchanged = true;
+        }
+        catch (Telegram.Bot.Exceptions.ApiRequestException ex)
+        {
+            logger.LogError(ex, "Telegram rejected edit of message {MessageId} in {ChatId} for draft {DraftId} (code {ErrorCode})",
+                messageId, chatId, request.DraftId, ex.ErrorCode);
+            if (ex.ErrorCode == 400 && (ex.Message.Contains("can't be edited", StringComparison.OrdinalIgnoreCase)
+                                        || ex.Message.Contains("message to edit not found", StringComparison.OrdinalIgnoreCase)))
+                return TelegramEditOutcome.Fail(ErrorMessages.TelegramPostGone(ex.Message), StatusCodes.Status409Conflict);
+
+            var retryHint = ex.Parameters?.RetryAfter is { } retryAfter ? $" — retry after {retryAfter}s" : "";
+            var status = ex.ErrorCode switch
+            {
+                400 or 401 or 403 or 404 => ex.ErrorCode,
+                429 => StatusCodes.Status429TooManyRequests,
+                _ => StatusCodes.Status502BadGateway,
+            };
+            return TelegramEditOutcome.Fail($"Telegram rejected the edit: {ex.Message} (code {ex.ErrorCode}){retryHint}", status);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Unexpected failure editing message {MessageId} in {ChatId} for draft {DraftId}", messageId, chatId, request.DraftId);
+            return TelegramEditOutcome.Fail($"Sync failed: {ex.GetType().Name}: {ex.Message}", StatusCodes.Status500InternalServerError);
+        }
+
+        await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title, request.CedarJson,
+            DraftRevisionService.Kinds.Telegram, chatId, ct);
+        built.Draft.LastTelegramSentAt = DateTime.UtcNow;
+        return new TelegramEditOutcome(messageId, url, unchanged, null, StatusCodes.Status200OK);
     }
 
     // Maps CedarClerk.Core's framework-agnostic RichBlock/RichRun tree (see

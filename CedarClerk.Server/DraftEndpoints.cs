@@ -211,7 +211,7 @@ public static class DraftEndpoints
                 {
                     d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                     d.DocumentType,
-                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
+                    d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.LastTelegramSentAt, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                     d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
                     d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount, d.CoverImagePath,
                     Translations = db.DraftTranslations.Where(t => t.DraftId == d.Id)
@@ -299,7 +299,7 @@ public static class DraftEndpoints
             {
                 d.Id, d.Title, d.PrimaryLanguage, d.CreatedAt, d.UpdatedAt, d.BlogSlug, d.IsBlogPublished, d.BlogPublishedAt, d.Tags,
                 d.DocumentType,
-                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
+                d.IsArchived, d.LastTelegramMessageId, d.LastTelegramUsername, d.LastTelegramSentAt, d.FolderId, d.SeriesId, d.ProjectId, d.IsPrivate, d.IsTemplate,
                 d.ParentDraftId, d.SiblingOrder, d.IsEvergreen,
                 d.DisableCopy, d.DisableReactions, d.DisableComments, d.ViewCount,
                 // T-337 — the value this listing just computed, or the cached one from the query.
