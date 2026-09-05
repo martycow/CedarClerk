@@ -159,8 +159,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: var(--avatar-size);
+    height: var(--avatar-size);
     border-radius: 50%;
     color: var(--avatar-ink);
     font-family: var(--font-sans);
