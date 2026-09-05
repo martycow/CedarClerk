@@ -1,4 +1,4 @@
----
+﻿---
 owner: marty
 last_verified: 2026-09-05
 source_of_truth_for: ADR index — which decisions exist and where their texts live
@@ -270,3 +270,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
 - [ADR-271 — The invite shelf draws the day series it already has](adr/ADR-271.md)
+- [ADR-273 — X and Bluesky get their own snapshot table and their own nightly job](adr/ADR-273.md)
+- [ADR-274 — Engine and target platforms are closed-vocabulary keys, stored comma-joined](adr/ADR-274.md)
+- [ADR-275 — `Draft.LastTelegramSentAt` is the one timestamp "edited since" is measured against](adr/ADR-275.md)
