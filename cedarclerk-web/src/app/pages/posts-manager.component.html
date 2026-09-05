@@ -294,14 +294,14 @@ so it stays addressable by the name the smoke suite binds.-->
                 <details class="detail-group" [open]="isOpen('basics')" (toggle)="rememberOpen('basics', $event)">
                     <summary>{{ t().manager.groups.basics }}</summary>
                 <div class="detail-field">
-                    <label>{{ t().manager.title }}</label>
-                    <input class="chat-input" [(ngModel)]="editTitle">
+                    <label for="post-title">{{ t().manager.title }}</label>
+                    <input id="post-title" class="chat-input" [(ngModel)]="editTitle">
                 </div>
                 <!--Idea #4: the name in the drafts list and the headline a reader sees are
                 two different things. Empty keeps them the same.-->
                 <div class="detail-field">
-                    <label>{{ t().manager.articleTitle }}</label>
-                    <input class="chat-input" [(ngModel)]="editArticleTitle"
+                    <label for="post-article-title">{{ t().manager.articleTitle }}</label>
+                    <input id="post-article-title" class="chat-input" [(ngModel)]="editArticleTitle"
                            [placeholder]="editTitle || t().manager.articleTitlePlaceholder" maxlength="200">
                     <p class="field-hint-inline">{{ t().manager.articleTitleHint }}</p>
                 </div>
@@ -380,7 +380,8 @@ so it stays addressable by the name the smoke suite binds.-->
                     <!--FI3.4: the URL outlives the draft, so it's worth being able to choose.
                     Slugified server-side, so a hand-typed value can't be unroutable.-->
                     <div class="action-row">
-                        <input class="chat-input" [(ngModel)]="editSlug" [placeholder]="t().manager.slugPlaceholder">
+                        <input class="chat-input" [(ngModel)]="editSlug" [placeholder]="t().manager.slugPlaceholder"
+                               [attr.aria-label]="t().manager.slugLabel">
                         <app-button variant="paper" (clicked)="saveSlug(d)" [disabled]="busy() || !editSlug.trim()">
                             {{ t().common.save }}
                         </app-button>
@@ -512,6 +513,7 @@ so it stays addressable by the name the smoke suite binds.-->
                     } @else {
                     <app-form-ref
                         [regForm]="regForm()" [presets]="presets()" [languages]="postFormLanguages()"
+                        [fieldLabel]="t().manager.forms.postForm"
                         [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
                         [onLabel]="t().manager.forms.formOn" [offLabel]="t().manager.forms.formOff"
                         [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"

@@ -24,6 +24,8 @@ export class FormRefComponent {
     languages = input<string[]>([]);
     primaryLanguage = input('ru');
     busy = input(false);
+    /** The select's accessible name — its first option is a prompt, not a label. */
+    fieldLabel = input.required<string>();
 
     onLabel = input.required<string>();
     offLabel = input.required<string>();

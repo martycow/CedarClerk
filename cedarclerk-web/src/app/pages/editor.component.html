@@ -735,6 +735,7 @@
                     component, this page's own already-translated wording.-->
                     <app-form-ref
                         [regForm]="regForm()" [presets]="formPresets()" [languages]="formLanguages()"
+                        [fieldLabel]="t().manager.forms.postForm"
                         [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
                         [onLabel]="t().editor.exportModal.formOn" [offLabel]="t().editor.exportModal.formOff"
                         [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
