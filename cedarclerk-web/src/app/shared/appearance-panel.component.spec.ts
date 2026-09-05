@@ -26,7 +26,7 @@ describe('AppearancePanelComponent', () => {
         const root = fixture.nativeElement as HTMLElement;
         const group = root.querySelector('.ap-accents') as HTMLElement;
         const label = root.querySelector('.ap-field-label') as HTMLElement;
-        const buttons = () => [...root.querySelectorAll<HTMLButtonElement>('.ap-accent')];
+        const buttons = () => [...root.querySelectorAll<HTMLButtonElement>('button.ap-accent')];
         const status = root.querySelector('.ap-save-state') as HTMLElement;
         expect(group.getAttribute('role')).toBe('group');
         expect(group.getAttribute('aria-label')).toBe(locale.t().settings.appearance.accentHint);
@@ -53,5 +53,69 @@ describe('AppearancePanelComponent', () => {
         fixture.componentInstance.setSidebarMode('rail');
         expect(appearance.preview).toHaveBeenCalledWith({ theme: 'dark' });
         expect(appearance.preview).toHaveBeenCalledWith({ sidebarMode: 'rail' });
+    });
+
+    function mount(overrides: Partial<typeof DEFAULT_APPEARANCE> = {}) {
+        const prefs = signal({ ...DEFAULT_APPEARANCE, ...overrides });
+        const appearance = {
+            prefs,
+            dirty: signal(false),
+            preview: vi.fn((patch: Partial<typeof DEFAULT_APPEARANCE>) => prefs.update(p => ({ ...p, ...patch }))),
+            commit: vi.fn().mockResolvedValue(undefined),
+        };
+        TestBed.configureTestingModule({ providers: [{ provide: AppearanceService, useValue: appearance }] });
+        TestBed.inject(LocaleService).uiLang.set('en');
+        const fixture = TestBed.createComponent(AppearancePanelComponent);
+        fixture.detectChanges();
+        return { fixture, appearance, root: fixture.nativeElement as HTMLElement };
+    }
+
+    it('refuses a custom accent under 3:1 on the paper with an inline message and paints one that clears it', () => {
+        const { fixture, appearance, root } = mount();
+        const input = root.querySelector<HTMLInputElement>('.ap-swatch-input')!;
+        expect(input.getAttribute('aria-label')).toBe('Your own colour');
+
+        fixture.componentInstance.setCustomAccent('#e0c060');
+        fixture.detectChanges();
+        expect(appearance.preview).not.toHaveBeenCalled();
+        const refused = root.querySelector('.ap-accent-refused') as HTMLElement;
+        expect(refused.getAttribute('role')).toBe('alert');
+        expect(refused.textContent).toContain('3:1');
+        expect(input.getAttribute('aria-invalid')).toBe('true');
+        expect(input.getAttribute('aria-describedby')).toBe(refused.id);
+
+        fixture.componentInstance.setCustomAccent('#204060');
+        fixture.detectChanges();
+        expect(appearance.preview).toHaveBeenCalledWith({ accentLight: '#204060' });
+        expect(root.querySelector('.ap-accent-refused')).toBeNull();
+        expect(root.querySelector('.ap-accent-custom')?.classList.contains('on')).toBe(true);
+        expect(root.querySelectorAll('button.ap-accent[aria-pressed="true"]')).toHaveLength(0);
+
+        fixture.componentInstance.setTheme('dark');
+        fixture.componentInstance.setCustomAccent('#7E7E7E');
+        expect(appearance.preview).not.toHaveBeenCalledWith({ accentDark: '#7E7E7E' });
+        expect(fixture.componentInstance.accentRefused()).toContain('3:1');
+    });
+
+    it('offers the area presets as one select that sets the three sheet controls together', () => {
+        const { fixture, appearance, root } = mount();
+        const select = root.querySelector<HTMLSelectElement>('#appearance-area-preset')!;
+        expect([...select.options].map(o => o.textContent?.trim())).toEqual(['Custom', 'Telegram', 'iPhone', 'iPad', 'Blog']);
+        expect(select.selectedIndex).toBe(0);
+
+        fixture.componentInstance.pickAreaPreset('telegram');
+        fixture.detectChanges();
+        expect(appearance.preview).toHaveBeenCalledWith({ sheetWidth: 'narrow', fontSize: 15, lineHeight: 1.45 });
+        expect(fixture.componentInstance.areaPreset()).toBe('telegram');
+        expect(select.selectedIndex).toBe(1);
+
+        fixture.componentInstance.setFontSize(16);
+        fixture.detectChanges();
+        expect(fixture.componentInstance.areaPreset()).toBe('custom');
+        expect(select.selectedIndex).toBe(0);
+
+        appearance.preview.mockClear();
+        fixture.componentInstance.pickAreaPreset('custom');
+        expect(appearance.preview).not.toHaveBeenCalled();
     });
 });

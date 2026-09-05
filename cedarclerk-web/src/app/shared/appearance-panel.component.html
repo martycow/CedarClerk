@@ -32,11 +32,27 @@
                     }
                 </button>
                 }
+                <label class="ap-accent ap-accent-custom" [class.on]="isCustomAccent()" [title]="t().settings.appearance.accentCustom">
+                    <input type="color" class="ap-swatch ap-swatch-input" [value]="activeAccentHex()"
+                        [attr.aria-label]="t().settings.appearance.accentCustom"
+                        [attr.aria-invalid]="accentRefused() ? 'true' : null"
+                        [attr.aria-describedby]="accentRefused() ? 'appearance-accent-refused' : null"
+                        (input)="setCustomAccent($any($event.target).value)">
+                    @if (isCustomAccent()) {
+                    <app-icon class="ap-accent-check" name="check" weight="bold" size="xs" />
+                    }
+                </label>
             </div>
+            @if (accentRefused()) { <p class="ap-error ap-accent-refused" id="appearance-accent-refused" role="alert">{{ accentRefused() }}</p> }
         </div>
         @if (appearanceError()) { <p class="ap-error">{{ appearanceError() }}</p> }
 
         <p class="ap-group">{{ t().settings.appearance.groupEditor }}</p>
+        <div class="ap-field">
+            <app-select inputId="appearance-area-preset" class="ap-area-preset"
+                [label]="t().settings.appearance.areaPreset" [hint]="t().settings.appearance.areaPresetHint"
+                [options]="areaPresetOptions()" [value]="areaPreset()" (valueChange)="pickAreaPreset($event)" />
+        </div>
         <div class="ap-field">
             <label>{{ t().settings.appearance.sheetWidth }}</label>
             <div class="ap-leaves" role="group" [attr.aria-label]="t().settings.appearance.sheetWidth">

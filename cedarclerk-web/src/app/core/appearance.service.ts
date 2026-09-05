@@ -39,10 +39,59 @@ export const ACCENT_PRESETS: { name: string; hex: string; night: string }[] = [
 
 const BENCH_ACCENT = ACCENT_PRESETS[0];
 
-// A stored accent from another palette has no vetted night tone, and the picker offers nothing but
-// these five — so it resolves to the bench accent rather than painting an unmeasured colour.
-const presetFor = (hex: string) =>
-    ACCENT_PRESETS.find(p => p.hex.toUpperCase() === hex.toUpperCase()) ?? BENCH_ACCENT;
+export const HEX_COLOUR = /^#[0-9a-fA-F]{6}$/;
+
+// The deepest paper of each theme, the surface every dark-on-light ratio is bound to (ADR-141).
+// Mirrors --surface in styles.scss: the gate below runs for a theme that is not the one painted,
+// so it cannot read the live token.
+export const PAPER_SURFACE: Record<Theme, string> = { light: '#F1EADA', dark: '#D9CEAE' };
+
+// WCAG 2.2 SC 1.4.11 — the floor for a control boundary or a graphical object. The shipped
+// presets are held to 4.5:1 by check-contrast.mjs; a colour the user typed is held to this.
+export const ACCENT_MIN_CONTRAST = 3;
+
+export function relativeLuminance(hex: string): number {
+    const channel = (i: number) => {
+        const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+}
+
+export function contrastRatio(a: string, b: string): number {
+    const la = relativeLuminance(a), lb = relativeLuminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+export function accentContrast(hex: string, theme: Theme): number {
+    return HEX_COLOUR.test(hex) ? contrastRatio(hex, PAPER_SURFACE[theme]) : 0;
+}
+
+// The ink painted over an accent fill: light paper ink until the accent is bright enough that
+// dark text wins (the 0.179 luminance crossover is where white and black tie at 4.5:1).
+export function accentInk(hex: string): 'light' | 'dark' {
+    return relativeLuminance(hex) > 0.179 ? 'dark' : 'light';
+}
+
+const presetFor = (hex: string) => ACCENT_PRESETS.find(p => p.hex.toUpperCase() === hex.toUpperCase());
+
+export const isAccentPreset = (hex: string) => !!presetFor(hex);
+
+// The stored key: a preset keeps its day hex, which names both tones; a custom colour is itself,
+// but only if it clears the floor on that theme's paper. Anything else — a foreign palette, a
+// colour that fails — falls back to the bench accent rather than painting an unmeasured one.
+export function storedAccent(hex: string, theme: Theme): string {
+    const preset = presetFor(hex);
+    if (preset) return preset.hex;
+    return accentContrast(hex, theme) >= ACCENT_MIN_CONTRAST ? hex.toUpperCase() : BENCH_ACCENT.hex;
+}
+
+// The tone actually painted: a preset's vetted day or night value, or the custom hex.
+export function resolveAccent(hex: string, theme: Theme): string {
+    const key = storedAccent(hex, theme);
+    const preset = presetFor(key);
+    return preset ? (theme === 'dark' ? preset.night : preset.hex) : key;
+}
 
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
     theme: 'light',
@@ -113,8 +162,8 @@ export class AppearanceService {
             ...stored,
             theme: stored.theme === 'dark' ? 'dark' as const : 'light' as const,
             sidebarMode: stored.sidebarMode === 'rail' ? 'rail' as const : 'full' as const,
-            accentLight: presetFor(stored.accentLight).hex,
-            accentDark: presetFor(stored.accentDark).hex,
+            accentLight: storedAccent(String(stored.accentLight), 'light'),
+            accentDark: storedAccent(String(stored.accentDark), 'dark'),
         };
         this.prefs.set(merged);
         this.loadedOwner = owner;
@@ -181,11 +230,13 @@ export class AppearanceService {
             el.id = '__appearance-accent';
             document.head.appendChild(el);
         }
-        const day = presetFor(p.accentLight), night = presetFor(p.accentDark);
+        const day = resolveAccent(p.accentLight, 'light'), night = resolveAccent(p.accentDark, 'dark');
         // The default writes nothing: this rule and the base block have equal specificity and this
         // one comes later in <head>, so an injected copy would pin the bench accent against
         // styles.scss for every logged-in user.
-        el.textContent = day === BENCH_ACCENT && night === BENCH_ACCENT ? ''
-            : `:root{--accent:${day.hex}}:root[data-theme="dark"]{--accent:${night.night}}`;
+        const ink = (hex: string) => accentInk(hex) === 'dark' ? 'var(--text)' : 'var(--sheet)';
+        el.textContent = day === BENCH_ACCENT.hex && night === BENCH_ACCENT.hex ? ''
+            : `:root{--accent:${day};--accent-ink:${ink(day)}}`
+            + `:root[data-theme="dark"]{--accent:${night};--accent-ink:${ink(night)}}`;
     }
 }

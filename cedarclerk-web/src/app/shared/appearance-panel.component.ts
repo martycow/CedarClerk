@@ -1,9 +1,14 @@
-import { Component, OnDestroy, inject, signal } from '@angular/core';
-import { AppearanceService, ACCENT_PRESETS, AppearancePrefs, MAX_TABLE_SIZE } from '../core/appearance.service';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import {
+    ACCENT_MIN_CONTRAST, ACCENT_PRESETS, AppearancePrefs, AppearanceService, MAX_TABLE_SIZE,
+    accentContrast, isAccentPreset,
+} from '../core/appearance.service';
+import { AREA_PRESETS, AreaPresetId, areaPresetPatch, matchAreaPreset } from '../core/area-presets';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from './icon.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
+import { BenchSelectOption, BenchSelectValue, SelectComponent } from '../bench/forms/select.component';
 
 // Long enough that a slider drag is one write, short enough that leaving Preferences right after a
 // click does not normally expose the network round-trip.
@@ -11,7 +16,7 @@ const APPEARANCE_COMMIT_DEBOUNCE_MS = 600;
 
 @Component({
     selector: 'app-appearance-panel',
-    imports: [IconComponent, LeafTagComponent],
+    imports: [IconComponent, LeafTagComponent, SelectComponent],
     templateUrl: 'appearance-panel.component.html',
     styleUrls: ['appearance-panel.component.css'],
 })
@@ -22,6 +27,22 @@ export class AppearancePanelComponent implements OnDestroy {
     readonly accentPresets = ACCENT_PRESETS;
 
     appearanceError = signal<string | null>(null);
+    accentRefused = signal<string | null>(null);
+
+    // The select shows the preset the three sheet controls currently add up to; Custom is what
+    // any other combination reads as, and picking it changes nothing.
+    readonly areaPreset = computed<AreaPresetId | 'custom'>(() => matchAreaPreset(this.appearance.prefs()) ?? 'custom');
+    readonly areaPresetOptions = computed<BenchSelectOption[]>(() => {
+        const labels = this.t().settings.appearance;
+        const name: Record<AreaPresetId, string> = {
+            telegram: labels.areaPresetTelegram, iphone: labels.areaPresetIphone,
+            ipad: labels.areaPresetIpad, blog: labels.areaPresetBlog,
+        };
+        return [
+            { value: 'custom', label: labels.areaPresetCustom },
+            ...AREA_PRESETS.map(p => ({ value: p.id, label: name[p.id] })),
+        ];
+    });
     // T-041 — Apply was real (it persisted the prefs) but read as decoration, because every
     // control already changed the sheet live (ADR-053). The panel saves itself; this is the
     // indicator that replaced the button.
@@ -43,6 +64,10 @@ export class AppearancePanelComponent implements OnDestroy {
         return this.activeAccentHex().toUpperCase() === hex.toUpperCase();
     }
 
+    isCustomAccent(): boolean {
+        return !isAccentPreset(this.activeAccentHex());
+    }
+
     // FI1/T-041: every control updates the sheet immediately through `AppearanceService.prefs`
     // and the write follows on its own a moment later — there is no button to press.
     private previewAndSave(patch: Partial<AppearancePrefs>) {
@@ -51,7 +76,24 @@ export class AppearancePanelComponent implements OnDestroy {
     }
 
     pickAccentPreset(hex: string) {
+        this.accentRefused.set(null);
         this.previewAndSave(this.appearance.prefs().theme === 'dark' ? { accentDark: hex } : { accentLight: hex });
+    }
+
+    // Gated before it is previewed: an accent that fails the floor on this theme's paper is never
+    // painted, and the message says by how much rather than only that it was refused.
+    setCustomAccent(hex: string) {
+        const ratio = accentContrast(hex, this.appearance.prefs().theme);
+        if (ratio < ACCENT_MIN_CONTRAST) {
+            this.accentRefused.set(this.t().settings.appearance.accentRefused(ratio.toFixed(1)));
+            return;
+        }
+        this.pickAccentPreset(hex.toUpperCase());
+    }
+
+    pickAreaPreset(value: BenchSelectValue) {
+        if (value === 'custom' || typeof value !== 'string') return;
+        this.previewAndSave(areaPresetPatch(value as AreaPresetId, this.appearance.prefs()));
     }
 
     setTheme(value: AppearancePrefs['theme']) {
