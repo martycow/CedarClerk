@@ -92,7 +92,7 @@ public static class OgMetaBuilder
         {
             if (input.PublishedUtc is { } published)
                 sb.Append("<meta property=\"article:published_time\" content=\"").Append(published.ToString("yyyy-MM-ddTHH:mm:ssZ")).Append("\">\n");
-            if (input.ModifiedUtc is { } modified)
+            if (ClampModified(input.PublishedUtc, input.ModifiedUtc) is { } modified)
                 sb.Append("<meta property=\"article:modified_time\" content=\"").Append(modified.ToString("yyyy-MM-ddTHH:mm:ssZ")).Append("\">\n");
         }
 
@@ -108,6 +108,16 @@ public static class OgMetaBuilder
             sb.Append("<link rel=\"alternate\" hreflang=\"x-default\" href=\"").Append(WebUtility.HtmlEncode(input.XDefaultUrl)).Append("\">\n");
 
         return sb.ToString();
+    }
+
+    /// <summary>The draft's UpdatedAt predates its publication on first publish (the last save came
+    /// before the publish click), so an unclamped value advertises a modification before the
+    /// publication — the same clamp the JSON-LD Article applies, so both surfaces of one page agree.</summary>
+    public static DateTime? ClampModified(DateTime? publishedUtc, DateTime? modifiedUtc)
+    {
+        if (modifiedUtc is not { } modified)
+            return null;
+        return publishedUtc is { } floor && modified < floor ? floor : modified;
     }
 
     /// <summary>Cuts at the last word boundary inside the cap — a preview that ends mid-word reads

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using CedarClerk.Core;
 using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -83,15 +84,8 @@ public static partial class BlogEndpoints
         };
         if (publishedUtc is { } published)
             doc["datePublished"] = published.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        if (modifiedUtc is { } modified)
-        {
-            // UpdatedAt predates BlogPublishedAt on first publish (the draft was last saved before
-            // the publish click) — a modification date earlier than the publication date is a claim
-            // no crawler should be handed.
-            if (publishedUtc is { } floor && modified < floor)
-                modified = floor;
+        if (OgMetaBuilder.ClampModified(publishedUtc, modifiedUtc) is { } modified)
             doc["dateModified"] = modified.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        }
 
         return "<script type=\"application/ld+json\">" + JsonSerializer.Serialize(doc) + "</script>";
     }
