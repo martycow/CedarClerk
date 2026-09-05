@@ -188,8 +188,8 @@ at the filter strip.-->
         </div>
     </section>
 
-    <!--Wave 2 item 15 — named invite links with their daily-aggregate totals (cut #6 taken:
-    the totals table, no per-day bars). chat_member only reaches the bot where it is admin,
+    <!--Wave 2 item 15 — named invite links with their daily-aggregate totals, and since T-327 the
+    same tallies day by day above the table. chat_member only reaches the bot where it is admin,
     which is true of posting channels — the hint says so.-->
     @if (showInviteLinks()) {
     <section class="card invite-shelf" [attr.aria-label]="t().stats.inviteLinks.title">
@@ -207,6 +207,43 @@ at the filter strip.-->
                 }
             </select>
         </label>
+        }
+        <!--Summed across links per day: which link a join came through is the table's question,
+        and a 30-column figure cannot answer it legibly. The figure is one image with the totals
+        as its name; every number is also in the page as a visually-hidden table.-->
+        @if (flowDays(); as days) {
+        <div class="flow">
+            <div class="flow-head">
+                <span>{{ t().stats.inviteLinks.flowTitle }}</span>
+                <span class="flow-legend">
+                    <span><i class="flow-swatch joins"></i>{{ t().stats.inviteLinks.colJoins }}</span>
+                    <span><i class="flow-swatch leaves"></i>{{ t().stats.inviteLinks.colLeaves }}</span>
+                </span>
+            </div>
+            @if (flowHasEvents()) {
+            <div class="flow-bars" role="img" [attr.aria-label]="t().stats.inviteLinks.flowSummary(memberFlowDays, flowTotals().joins, flowTotals().leaves)">
+                @for (d of days; track d.day) {
+                <div class="flow-day" [title]="t().stats.inviteLinks.flowDayReadout(d.label, d.joins, d.leaves)">
+                    <span class="flow-bar joins" [style.height.%]="flowPercent(d.joins)"></span>
+                    <span class="flow-bar leaves" [style.height.%]="flowPercent(d.leaves)"></span>
+                </div>
+                }
+            </div>
+            <div class="flow-axis" aria-hidden="true"><span>{{ days[0].label }}</span><span>{{ days[days.length - 1].label }}</span></div>
+            <p class="flow-summary">{{ t().stats.inviteLinks.flowSummary(memberFlowDays, flowTotals().joins, flowTotals().leaves) }}</p>
+            <table class="visually-hidden">
+                <caption>{{ t().stats.inviteLinks.flowTitle }}</caption>
+                <thead><tr><th scope="col">{{ t().stats.inviteLinks.flowDay }}</th><th scope="col">{{ t().stats.inviteLinks.colJoins }}</th><th scope="col">{{ t().stats.inviteLinks.colLeaves }}</th></tr></thead>
+                <tbody>
+                    @for (d of days; track d.day) {
+                    <tr><th scope="row">{{ d.day }}</th><td>{{ d.joins }}</td><td>{{ d.leaves }}</td></tr>
+                    }
+                </tbody>
+            </table>
+            } @else {
+            <p class="flow-summary">{{ t().stats.inviteLinks.flowEmpty(memberFlowDays) }}</p>
+            }
+        </div>
         }
         @if (inviteLoading()) {
         <p class="stats-hint">{{ t().common.loading }}</p>

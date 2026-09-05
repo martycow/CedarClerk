@@ -3,7 +3,7 @@ import { formatInZone, zoneAbbreviation } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
 import {
     ChannelsService, Channel, ChannelStats, BlogStats, AudienceSlice,
-    PublishingStats, ChannelInviteLink,
+    PublishingStats, ChannelInviteLink, ChannelMemberFlowRow,
 } from '../core/channels.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -52,6 +52,17 @@ const OTHER_CODE = 'other';
 const UNKNOWN_GEO = '??';
 
 const RANGE_NOTCHES = [7, 14, 30, 60, 90, 180];
+
+// The member-flow window. Days are the server's UTC calendar days, so the window ends on today's
+// UTC date and never on the display zone's.
+const MEMBER_FLOW_DAYS = 30;
+
+interface FlowDay {
+    day: string;
+    label: string;
+    joins: number;
+    leaves: number;
+}
 
 const BLOG_ID = 'blog';
 const BLOG_METRICS: readonly MetricKey[] = ['viewCount', 'likeCount', 'commentCount'];
@@ -444,6 +455,8 @@ export class StatsComponent implements OnInit {
     inviteLinks = signal<ChannelInviteLink[]>([]);
     /** Joins with no named link, plus every leave — Telegram never attributes a leave. */
     inviteOrganic = signal<{ joins: number; leaves: number } | null>(null);
+    /** null until the day series answers — and if it never does, the totals table stands alone. */
+    memberFlow = signal<ChannelMemberFlowRow[] | null>(null);
     inviteLoading = signal(false);
     inviteBusy = signal(false);
     inviteError = signal('');
@@ -504,6 +517,9 @@ export class StatsComponent implements OnInit {
         if (!id) return;
         this.inviteLoading.set(true);
         this.inviteError.set('');
+        this.channelsApi.memberFlow(id, MEMBER_FLOW_DAYS)
+            .then(rows => { if (this.inviteChannelId() === id) this.memberFlow.set(rows); })
+            .catch(() => { if (this.inviteChannelId() === id) this.memberFlow.set(null); });
         try {
             const res = await this.channelsApi.listInviteLinks(id);
             if (this.inviteChannelId() === id) {
@@ -523,8 +539,49 @@ export class StatsComponent implements OnInit {
         this.inviteChannelId.set(id);
         this.inviteLinks.set([]);
         this.inviteOrganic.set(null);
+        this.memberFlow.set(null);
         this.syncCollectionQuery();
         void this.loadInviteLinks();
+    }
+
+    // ─── Member flow (T-327) — the daily series the shelf used to sum away ────────────────────
+    readonly memberFlowDays = MEMBER_FLOW_DAYS;
+
+    /** Every day of the window, oldest first, links summed per day and quiet days filled with zeros. */
+    flowDays = computed<FlowDay[] | null>(() => {
+        const rows = this.memberFlow();
+        if (!rows) return null;
+        const byDay = new Map<string, { joins: number; leaves: number }>();
+        for (const row of rows) {
+            const key = row.day.slice(0, 10);
+            const sum = byDay.get(key) ?? { joins: 0, leaves: 0 };
+            sum.joins += row.joins;
+            sum.leaves += row.leaves;
+            byDay.set(key, sum);
+        }
+        const end = new Date();
+        end.setUTCHours(0, 0, 0, 0);
+        const days: FlowDay[] = [];
+        for (let i = MEMBER_FLOW_DAYS - 1; i >= 0; i--) {
+            const day = new Date(end.getTime() - i * 86_400_000).toISOString().slice(0, 10);
+            const sum = byDay.get(day);
+            days.push({ day, label: `${day.slice(5, 7)}/${day.slice(8, 10)}`, joins: sum?.joins ?? 0, leaves: sum?.leaves ?? 0 });
+        }
+        return days;
+    });
+
+    flowTotals = computed(() => {
+        const days = this.flowDays() ?? [];
+        return days.reduce((t, d) => ({ joins: t.joins + d.joins, leaves: t.leaves + d.leaves }), { joins: 0, leaves: 0 });
+    });
+
+    /** The tallest bar's scale — never below one, so a quiet window draws nothing rather than dividing by zero. */
+    flowPeak = computed(() => Math.max(1, ...(this.flowDays() ?? []).map(d => Math.max(d.joins, d.leaves))));
+
+    flowHasEvents = computed(() => (this.flowDays() ?? []).some(d => d.joins || d.leaves));
+
+    flowPercent(value: number): number {
+        return Math.round(value / this.flowPeak() * 100);
     }
 
     async createInviteLink() {

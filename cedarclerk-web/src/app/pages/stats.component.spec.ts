@@ -85,7 +85,16 @@ class ApiStub {
     listInviteLinks() {
         return Promise.resolve({ links: [], organic: { joins: 0, leaves: 0 } } as never);
     }
+
+    flow: { day: string; inviteLinkId: string | null; joins: number; leaves: number }[] = [];
+    memberFlow() {
+        return Promise.resolve(this.flow as never);
+    }
 }
+
+/** A UTC calendar day `n` days before today, in the server's offset-less shape. */
+const utcDay = (n: number) => new Date(Date.UTC(
+    new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - n)).toISOString().slice(0, 10) + 'T00:00:00';
 
 describe('stats screen (Posts Manager tab)', () => {
     let fixture: ComponentFixture<StatsComponent>;
@@ -254,6 +263,34 @@ describe('stats screen (Posts Manager tab)', () => {
 
         expect(page().visibleInviteLinks()).toEqual([]);
         expect(el().querySelector('.invite-shelf app-empty-state')?.textContent).toContain('No links match');
+    });
+
+    // T-327 — the daily series is summed across links, every day of the window is drawn, and the
+    // totals are the figure's name as well as a sentence anyone can read.
+    it('draws thirty days of member flow, links summed per day and quiet days at zero', async () => {
+        api.flow = [
+            { day: utcDay(3), inviteLinkId: 'a', joins: 2, leaves: 0 },
+            { day: utcDay(3), inviteLinkId: null, joins: 1, leaves: 1 },
+            { day: utcDay(0), inviteLinkId: 'b', joins: 4, leaves: 0 },
+        ];
+        page().pickInviteChannel('c1');
+        await settle();
+        const columns = el().querySelectorAll('.flow-bars .flow-day');
+        expect(columns.length).toBe(30);
+        expect(page().flowDays()![26]).toMatchObject({ day: utcDay(3).slice(0, 10), joins: 3, leaves: 1 });
+        expect(page().flowDays()![10]).toMatchObject({ joins: 0, leaves: 0 });
+        expect(el().querySelector('.flow-bars')?.getAttribute('aria-label')).toBe(en.stats.inviteLinks.flowSummary(30, 7, 1));
+        expect(el().querySelector('.flow-summary')?.textContent).toContain(en.stats.inviteLinks.flowSummary(30, 7, 1));
+        expect(el().querySelectorAll('.flow table tbody tr').length).toBe(30);
+        expect((columns[29].querySelector('.flow-bar.joins') as HTMLElement).style.height).toBe('100%');
+    });
+
+    it('says the window was quiet instead of drawing an empty figure', async () => {
+        api.flow = [];
+        page().pickInviteChannel('c1');
+        await settle();
+        expect(el().querySelector('.flow-bars')).toBeNull();
+        expect(el().querySelector('.flow-summary')?.textContent).toContain(en.stats.inviteLinks.flowEmpty(30));
     });
 
     it('keeps organic invite totals in a summary footer outside the sorted rows', async () => {
