@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-09-01
+last_verified: 2026-09-05
 source_of_truth_for: project terminology — what the words the code and docs use mean
 guard: none
 ---
@@ -46,6 +46,9 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | tracked link | трекинговая ссылка | `TrackedLink` — a `/l/{code}` short redirect with per-day click tallies; counters, not visit logs: nothing per-visitor is kept, bots count, and the UI says so | `Entities.cs`, `TrackedLinkEndpoints.cs` |
 | member flow | приток и отток подписчиков | The invite-link analytics: joins/leaves per (channel, UTC day, invite link) from `chat_member` updates — `ChannelMemberDaily`, a daily aggregate that never stores who; a mute is not churn | ADR-227 |
 | pre-publish checks | предпубликационные проверки | The export modal's checks shelf: `POST /api/posts/preflight` (empty language versions, dead links) plus the client's alt-text pass — warnings that never block a send. Not the same word's other meaning, `cedar deploy --preflight` | `PreflightEndpoints.cs`, CHANGELOG 29.08 |
+| PublishTargetStatSnapshot | снапшот статистики таргета | The X/Bluesky counterpart of `ChannelStat`: one row per (PublishTarget, UTC day) with followers and the engagement sums the network's public API answers, written by `SnapshotPublishTargetStatsJob` at 04:10 UTC; the Stats tab grows a leaf per target the moment a row exists | `Entities.cs`, `Publishing/SnapshotPublishTargetStatsJob.cs`, ADR-273 |
+| stat series | серия статистики | `GET /api/stats/series?days&sources` — every selected source over **one aligned window** (the same day axis for all of them, nulls where a source has no snapshot), plus `available[]`: every source the account has, in leaf-strip order, so the client never fans out per source; the window delta replaces Δ7d, and `series.csv` is the same query as a file | `StatSeriesEndpoints.cs`, ADR-279 |
+| Telegram sync | синхронизация с Telegram | `POST /api/posts/{id}/telegram-sync` — edits the one channel message the last send left (`LastTelegramMessageId`) with the current document; "edited since" is measured against `Draft.LastTelegramSentAt`; single-message posts only (a thread answers 409), and Telegram's own verdict is the answer | `PostEndpoints.cs`, ADR-275, ADR-278 |
 
 ## Blog and readers
 
@@ -133,6 +136,7 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | last writer wins | побеждает последний | The board's conflict rule: every write from a permitted writer is accepted, `Version` is bumped server-side and broadcast. Not optimistic locking — the server never refuses a stale write; `Version` only lets a client drop an echo older than what it holds | ADR-218 |
 | board group | группа борды | `canvas:{boardId}` — the SignalR group everything about one board is broadcast to; persisted changes go to the whole group including the sender, transient ones (cursor, selection, live drag) to the others | `Modules/IndieDev/CanvasHub.cs` |
 | presence | присутствие | Who is on a board, their cursors and selections — in-process memory in the hub, never a row: meaningless a second after a disconnect, and a row per cursor move would be the heaviest write in the app. A second server instance would need a backplane | `Modules/IndieDev/CanvasHub.cs`, ADR-218 |
+| project journal | журнал проекта | `GET /api/projects/{id}/activity` — a union of timestamps the module already writes, not a new log: `ActivityKinds` (document created/updated, blog published, task created/…) with one item shape `{at, kind, title, subtitle, href}`, drawn on the hub as log lines; the publishing nudge is one date on the same list | `Modules/IndieDev/ProjectEndpoints.cs`, ADR-277, ADR-281 |
 | asset index | индекс ассетов | A cloud-side description of the project folder: a single root (`AssetRootPath`), scanned by the agent, in batches of 500; a missing file is flagged MissingSince, not deleted | `Entities.IndieDev.cs`, INDIEDEV |
 | AssetEntry | строка индекса | One file: path + metadata + preview; the bytes are not copied. Deliberately not `Asset` — that's uploaded media with its own quota | `Entities.IndieDev.cs` |
 | AssetKinds | вид ассета | A kind by extension (image/model/audio/…): opening tens of thousands of files isn't feasible; `SkippedDirectories` filters out engine caches; `.blend` has a built-in preview | `Core/AssetKinds.cs`, `Core/BlendThumbnail.cs` |
@@ -168,6 +172,11 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | live-verify | живая верификация | Manual verification on top of the automated tests; the "not verified live" checklist lives in TASKS.md | ADR-070, DOCS-FLOW |
 | pseudo-locale | псевдо-локаль | Padded-out strings standing in for translations to check layout (`?pseudo=1`); never lands in a profile | UI-INVENTORY |
 | Cedar Bench | Cedar Bench | The app's single look: paper, wood, pine, brass. The values are both base blocks of `styles.scss`; a continuation of the "Cabin" set's direction, rewritten in place rather than added alongside it | ADR-136, ADR-137 |
+| bench form controls | бенч-контролы формы | `app-input` / `app-select` / `app-textarea` / `app-checkbox` in `bench/forms/` — the kit's own form fields, so no screen dresses a native control by hand; `app-input` passes `maxlength` through and takes an accessible name without a visible label | `bench/forms/*.component.ts`, ADR-260 |
+| area preset | пресет области | A named macro over the sheet controls — `telegram` / `iphone` / `ipad` / `blog` patch sheet width, font size and line height at once — applied from the Appearance panel; a shortcut, not a fourth measure | `core/area-presets.ts`, ADR-288 |
+| custom accent / `--accent-ink` | свой акцент | A user-chosen accent hex, admitted only if it clears 3:1 on the paper (else the bench accent stands in); `--accent-ink` is the ink to paint over an accent fill, light or dark by the accent's own luminance — set today, consumed by nothing yet (T-373) | `core/appearance.service.ts`, `styles.scss`, ADR-288 |
+| skeleton loader | скелетон | `app-skeleton` — one placeholder component (text/card/avatar/table-row) with a shimmer under the motion tokens, held for at least 300 ms so it never flashes, and `aria-busy` on the region it stands in for | `shared/skeleton.component.ts`, ADR-286 |
+| tree drag grip | ручка перетаскивания | The handle on a `/drafts` tree row that starts a cdk drag: one flat drop list, the drop's depth read off sideways travel, so a node moves under a new parent without a nested drop-list per level | `pages/drafts.component.html`, ADR-283 |
 | density mode | режим плотности | Two densities (ADR-071): comfortable by default, `[data-density="compact"]` on table-heavy screens; only spacing/sizes differ — never a color | DESIGN |
 | surface class | класс поверхности | `data-surface` set to `chrome` or `paper` on an element — a second axis of density, not of palette: chrome has a minimum hit box of `--hit-chrome` (30px), paper has `--hit-target` (44px). Inherited via `--hit-surface`, never chosen by pinning a surface | ADR-138, ADR-156 |
 | fidelity contract | контракт соответствия | A list of divergences between the port and the Cedar Bench prototype, checked against both code and pixels and broken down by file zone (tokens, chrome, primitives, screens); each row is either a defect for the fixer or an ADR-bound divergence the fixer must not touch | CHANGELOG 22.08, ADR-174…176 |

@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-09-02
+last_verified: 2026-09-05
 source_of_truth_for: what is in progress now, decisions waiting on Marty, which verification checks are still outstanding (how to run them: docs/tech/QA.md)
 guard: none
 ---
@@ -24,7 +24,7 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 - [x] `T-282` Telegram engagement — reactions via message_reaction_count (explicit allowed_updates, so the bot left the event API for StartReceiving), comments from the linked discussion group, both stored on ChannelPost and summed nightly. Views withdrawn for a Telegram source: the Bot API reports none. ADR-205 #telegram #stats P0
 - [x] `T-281` Second annotated round — trim tier for chips and chrome-band passengers, index tiles cut into the board they switch, panel name and counter on one baseline, fullscreen on the drawer lip, blog index language pick, post-to-project filing, Telegram channel pictures, MM/DD/YYYY numeric dates, and three unreported defects: a dense field that was never dense, a small paper button below its touch floor, and a dialog under the drawer lip. ADR-200…203 #design #ux #blog #phase13 P0
 - [x] `T-280` Annotated screen corrections — reconciled the full annotated screenshot pass: contextual navigation; compact controls and bounded overlays; Blog projects, Project logo upload, and task files; localized forms; discrete stats periods; paged Glossary and credit activity; Document-facing vocabulary and writer structure; full Glossary coverage with per-language exclusions; Git-like revision diff; independent AI progress; and the Export destination rack. ADR-194…198 #design #ux #editor #phase13 P0
-- [ ] UI V2 follow-through — the Cedar Bench port and fidelity pass are merged, and every screen uses the kit (ADR-136…176, `T-205`…`T-233`). Remaining work is on the board: kit gaps `T-251`/`T-252`/`T-254`, cleanup `T-262`/`T-263`/`T-264`, the feature rows `T-238`…`T-250` and `T-255`…`T-261`, decisions `T-273`/`T-274`, and fidelity rows `T-266`/`T-268`/`T-269`/`T-272`; plan in `docs/design/UI-V2-PLAN.md` #design P1
+- [ ] UI V2 follow-through — the Cedar Bench port and fidelity pass are merged, and every screen uses the kit (ADR-136…176, `T-205`…`T-233`). The 05.09 sweep closed the kit gaps (`T-251`/`T-252`/`T-254`, ADR-260), the modal-button and i18n cleanup (`T-262`/`T-263`/`T-264`) and the fidelity rows `T-266`/`T-269`. Still on the board: the feature rows `T-248`/`T-250`/`T-259`/`T-261`, decisions `T-273`/`T-274`, fidelity rows `T-268`/`T-272`, and `T-229`/`T-236`/`T-237`; plan in `docs/design/UI-V2-PLAN.md` #design P1
 - [ ] Growth anchors — all five are done: T-154 (landing: devlog-first, EN default, waitlist — ADR-135), T-158 (devlog assembler, ADR-132), T-159 (showcase page, ADR-134), T-160 (starter skeletons + example project, ADR-133), T-161 (Discord webhook, ADR-131). Hands-on checks below; the editor screenshot for the landing is T-204 #growth P1
 - [ ] Cheap safety — T-175 (EXIF/GPS stripping) is done, ADR-130; hands-on check below, old files on the droplet are T-202. T-174 (OG tags) is done, hands-on check below #security P1
 - [ ] Registration blockers — T-172 remainder: media into R2 (quotas cut, ADR-129; first backup restore tested 18.08 — monthly cadence per `docs/product/BUSINESS.md` §5) #infra P1
@@ -45,6 +45,7 @@ section is only the list of what is outstanding *now*: a row leaves it when the 
 when the feature ships, and the behaviour stays in QA.md for the next time someone touches that
 surface.
 
+- [ ] The 05.09 backlog sweep by eye — everything in it is unit/e2e-verified only, nobody has opened a screen. **Editor and sheet**: the bench form controls in the project-tasks modal and Settings (ADR-260); a custom accent that fails 3:1 falling back, and the four area presets changing the sheet (ADR-288); Escape closes a dialog, a scrim click does not (ADR-285); the SPA cross-fade and the blog's cover→hero transition, both gone under reduced motion (ADR-287); tree drag on `/drafts` with the grip, depth from sideways travel (ADR-283); the split editor stylesheet and the single-language initial bundle in a real browser (ADR-263). **Hub and stats**: engine and platforms pickers and the hero tag (ADR-274/276); the journal and the days-since-last-post nudge (ADR-277/281); the Stats tab on one aligned window with a Bluesky/X leaf after a night's snapshot (04:10 UTC) and the CSV button (ADR-273/279); per-day bars on the invite shelf (ADR-271); admin skeletons and audit severity. **Telegram, to `@testingandfun`**: silent + pin on an immediate send; sync of an edited post (T-180 remainder — needs the button); server errors read in each of the nine UI languages. **Forms**: revoke and restore a registration from the Forms tab. QA.md sections as named #sweep #screens P1
 - [ ] The Advanced Showcase builder by hand (02.09, T-357, ADR-245) — visual acceptance is complete: the scratch E2E Project was enabled, given a slug and prose, saved, reopened through its canonical public renderer and captured with the authenticated builder at 3440×1392. Still exercise reorder, hide, remove and add; structured links/gallery/trailer data; and one reviewed Pro Plus AI suggestion before this hands-on row can close #showcase #screens P1
 - [ ] The Publish / Export tab by eye (02.09, ADR-242) — Write → Preview → Publish / Export at 1536×1024 in both themes: the rack's two controls per card, the stepper's focus moves, a ticked destination's settings, the review's Blocking group emptying as a channel is picked, the compatibility disclosure's count against the table, the utility strip, Back and the Publish button; then Preview and Publish near 1180px and Publish below 760px. Screenshots were taken on the E2E stack, nobody has opened it #editor #screens P1
 - [ ] The 02.09 publishing batch by eye — a real X publish with pictures after reconnecting the account (ADR-241, `media.write`) and the publish matrix under Preview's destinations and in the Publish window #x #publishing P1
@@ -63,6 +64,13 @@ see them.
 
 ## Notes
 
+- **The 05.09 backlog sweep lives on `claude/backlog-sweep`, not merged, not deployed.** Fifty-five
+  board rows closed (CHANGELOG 05.09, ADR-260…288), `Consts.CurrentVersion` bumped to **0.22.0**
+  (the tag is the dispatcher's to set). Four migrations ride with it, all add-column/add-table:
+  `AddPublishJobSilentPin`, `AddPublishTargetStatSnapshot`, `AddProjectEngineAndPlatforms`,
+  `AddDraftLastTelegramSentAt`. Verified by tests only — the smoke suite's cold run (60 passed, 18
+  audit skips) and the login spec's ten-times repeat (40/40) were green on the branch; the eye-checks
+  are the sweep row under §Live verification.
 - **T-003 (sign in with Google/Telegram) is built but not configured**: same shape as the analytics
   row below — nothing is registered without credentials, and both doors draw no provider button at
   all, so production looks unchanged until Marty creates the Google OAuth client and runs
@@ -88,5 +96,5 @@ see them.
   only. **Committed to master as `3b93004`, not deployed.**
   `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
   from the one on the droplet — which the previous pair of deploys could not do.
-- Active branch: `codex/ui-feedback-pass`; the UI feedback pass is committed locally and is not deployed. `showcase_menu_and_layout` and the `UI_V2` port remain merged into `master`.
+- Active branch: `claude/backlog-sweep` (above). `codex/ui-feedback-pass` holds the UI feedback pass, committed locally and not deployed. `showcase_menu_and_layout` and the `UI_V2` port remain merged into `master`.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.
