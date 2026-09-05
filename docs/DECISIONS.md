@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-09-01
+last_verified: 2026-09-05
 source_of_truth_for: ADR index — which decisions exist and where their texts live
 guard: none
 ---
@@ -267,3 +267,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-265 — `cedar test` builds the front end, and the deploy preflight warns about a stale backup](adr/ADR-265.md)
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
+- [ADR-263 — Only the active language ships in the initial bundle](adr/ADR-263.md)

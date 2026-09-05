@@ -1,9 +1,10 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { PreloadAllModules, provideRouter, withPreloading } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { debugLogInterceptor } from './core/debug-log.interceptor';
 import { sessionExpiryInterceptor } from './core/session-expiry.interceptor';
+import { LocaleService } from './core/i18n/locale.service';
 
 // XHR backend, not withFetch() (28.07.2026) — this app has no SSR (docs/tasks/ROADMAP.md), so fetch's
 // only advantage here didn't apply, and it cost a real one: the Fetch API has no upload-progress
@@ -13,6 +14,16 @@ import { sessionExpiryInterceptor } from './core/session-expiry.interceptor';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    // ADR-263: only English is in the initial bundle. The first paint waits for the active
+    // dictionary's chunk so no screen ever shows a fallback, and the others are fetched once the
+    // browser is idle so a later switch is as instant as it was when every language shipped eagerly.
+    provideAppInitializer(() => {
+      const locale = inject(LocaleService);
+      return locale.ready().then(() => {
+        const idle = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1000));
+        idle(() => void locale.preloadAll());
+      });
+    }),
     // T-092: every route is lazy, and PreloadAllModules fetches the rest in the background as soon
     // as the first one has rendered. Without it the split would trade a smaller first load for a
     // pause on every navigation, which on this app would be felt most opening the editor — the

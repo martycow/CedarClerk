@@ -1,6 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { Dict, en } from './en';
-import { ru } from './ru';
 import { pseudoDict } from './pseudo';
 
 export type UiLang = 'en' | 'ru';
@@ -9,7 +8,12 @@ export type UiLang = 'en' | 'ru';
 // load would paint English until /api/auth/me resolves. See ADR-044.
 const STORAGE_KEY = 'cedar-ui-lang';
 
-const DICTS: Record<UiLang, Dict> = { en, ru };
+// English ships in the initial bundle: it defines Dict's shape and stands in while another
+// dictionary is still on its way. Every other language is its own lazy chunk (ADR-263), and the
+// app initializer holds the first paint until the active one has arrived.
+const LOADERS: Record<Exclude<UiLang, 'en'>, () => Promise<Dict>> = {
+    ru: () => import('./ru').then(m => m.ru),
+};
 
 // T-051 — the pseudo-locale switch. A development flag, not a language: it never appears in the
 // picker and never reaches the profile, so an account cannot end up stuck in it. `?pseudo=1` in
@@ -22,18 +26,34 @@ const PSEUDO_KEY = 'cedar-pseudo';
 export class LocaleService {
     readonly uiLang = signal<UiLang>(this.loadInitial());
     readonly pseudo = signal<boolean>(this.loadPseudo());
-    // Built once per (language, flag) pair rather than per read: `t()` is called in template
+    private readonly dicts = signal<Partial<Record<UiLang, Dict>>>({ en });
+    private readonly pending = new Map<UiLang, Promise<Dict>>();
+    // Built once per (dictionary, flag) pair rather than per read: `t()` is called in template
     // expressions, which run on every change-detection pass.
-    private readonly pseudoDicts = new Map<UiLang, Dict>();
+    private readonly pseudoDicts = new WeakMap<Dict, Dict>();
     readonly t = computed<Dict>(() => {
-        const lang = this.uiLang();
-        if (!this.pseudo()) return DICTS[lang];
-        if (!this.pseudoDicts.has(lang)) this.pseudoDicts.set(lang, pseudoDict(DICTS[lang]));
-        return this.pseudoDicts.get(lang)!;
+        const dict = this.dicts()[this.uiLang()] ?? en;
+        if (!this.pseudo()) return dict;
+        if (!this.pseudoDicts.has(dict)) this.pseudoDicts.set(dict, pseudoDict(dict));
+        return this.pseudoDicts.get(dict)!;
     });
 
     constructor() {
         this.apply(this.uiLang());
+        void this.load(this.uiLang());
+    }
+
+    // Resolves once the active language's dictionary is in memory. The app boots behind it, so
+    // `t()` never paints a fallback on first render.
+    ready(): Promise<void> {
+        return this.load(this.uiLang()).then(() => undefined);
+    }
+
+    // Fetches every other dictionary so a later switch finds it in memory and is instant, the way
+    // route chunks are preloaded once the first screen has rendered.
+    preloadAll(): Promise<void> {
+        const others = Object.keys(LOADERS) as UiLang[];
+        return Promise.all(others.map(lang => this.load(lang))).then(() => undefined);
     }
 
     // Called with the value from the profile once /api/auth/me has resolved. Null means the user
@@ -46,6 +66,29 @@ export class LocaleService {
         this.uiLang.set(lang);
         localStorage.setItem(STORAGE_KEY, lang);
         this.apply(lang);
+        void this.load(lang);
+    }
+
+    private load(lang: UiLang): Promise<Dict> {
+        const have = this.dicts()[lang];
+        if (have) return Promise.resolve(have);
+        let promise = this.pending.get(lang);
+        if (!promise) {
+            promise = LOADERS[lang as keyof typeof LOADERS]()
+                .then(dict => {
+                    this.dicts.update(current => ({ ...current, [lang]: dict }));
+                    return dict;
+                })
+                // A failed chunk leaves English on screen and nothing cached, so the next set()
+                // asks again instead of remembering the failure.
+                .catch((err: unknown) => {
+                    console.warn(`i18n: dictionary "${lang}" failed to load`, err);
+                    return en;
+                })
+                .finally(() => this.pending.delete(lang));
+            this.pending.set(lang, promise);
+        }
+        return promise;
     }
 
     private apply(lang: UiLang) {

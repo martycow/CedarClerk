@@ -253,7 +253,7 @@ function readDetailsPreference(): boolean {
         DocumentFrameComponent, EditorPreviewComponent, PublishMatrixComponent, PreviewChecksComponent,
         DestinationCardComponent, PublishStepperComponent],
     templateUrl: 'editor.component.html',
-    styleUrls: ['editor.component.css']
+    styleUrls: ['editor.component.css', 'editor-toolbar.css', 'editor-workspace.css', 'editor-publish.css', 'editor-dialogs.css']
 })
 export class EditorComponent implements AfterViewInit, OnDestroy {
     auth = inject(AuthService);

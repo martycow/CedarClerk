@@ -1,0 +1,857 @@
+/* ---------- Publish tab (ADR-242): destinations, channels, schedule, toast, progress ---------- */
+.channel-chosen {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+}
+
+.invite-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.invite-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    border-radius: var(--radius-sm);
+    padding: 4px 4px 4px 10px;
+}
+
+.invite-email {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--fs-ui);
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.invite-add-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.invite-add-row .chat-input {
+    flex: 1;
+}
+
+.channel-chosen-title {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--fs-ui);
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Publish / Export (ADR-242) ---------- */
+/* The third tab's body: a stepper across the top, three columns under it — the rack, the active
+   destination's settings, the review — and the utility strip at the foot. One scrolling body: the
+   slot scrolls, the columns take their natural height, the frame's footer stays put. */
+.publish-slot {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    margin-inline: 0;
+    overflow: auto;
+}
+
+.publish-slot.is-hidden { display: none; }
+
+.pub {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-4);
+    width: 100%;
+}
+
+/* On paper, not on the wall: the stepper's inks are the sheet's, in both themes. */
+.pub-stepper {
+    flex: none;
+    padding: var(--space-2) var(--space-4);
+}
+
+.pub-columns {
+    display: grid;
+    grid-template-columns:
+        minmax(var(--pane-list-min), var(--pane-list-max))
+        minmax(0, 1fr)
+        minmax(var(--pane-inspector-min), var(--pane-inspector-max));
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.pub-columns > * { min-width: 0; }
+
+.pub-rack, .pub-main, .pub-summary, .pub-compat, .pub-utility {
+    box-sizing: border-box;
+    padding: var(--space-4);
+}
+
+.pub-rack { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.pub-rack-head { display: flex; align-items: center; justify-content: space-between; }
+
+.pub-rack-count { font-size: var(--fs-13); font-weight: 700; color: var(--t3); font-variant-numeric: tabular-nums; }
+
+.dest-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.pub-select-all {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--hit-target);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-14);
+    cursor: pointer;
+}
+
+.pub-select-all input { accent-color: var(--accent); }
+
+/* The three disclosures — the rack's groups, the compatibility matrix, the file list — share one
+   summary face; only what the caret sits beside differs. */
+.pub-group summary, .pub-compat summary, .pub-files summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--hit-chrome);
+    cursor: pointer;
+    list-style: none;
+}
+
+.pub-group summary::-webkit-details-marker, .pub-compat summary::-webkit-details-marker, .pub-files summary::-webkit-details-marker { display: none; }
+.pub-group[open] summary app-icon, .pub-compat[open] .pub-compat-caret, .pub-files[open] summary app-icon { transform: rotate(180deg); }
+.pub-group[open] summary, .pub-compat[open] summary { margin-bottom: var(--space-2); }
+
+.pub-group { border-top: 1px solid var(--paper-edge); padding-top: var(--space-3); }
+.pub-group summary { justify-content: space-between; }
+
+.pub-main { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+
+.pub-section { display: flex; flex-direction: column; gap: 10px; }
+
+.pub-settings-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-20);
+    font-weight: 700;
+}
+
+.pub-review { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+
+.pub-checks { width: 100%; }
+
+.pub-summary { display: flex; flex-direction: column; gap: var(--space-1); }
+.pub-summary .label { margin-bottom: var(--space-2); }
+
+.pub-compat summary { font-size: var(--fs-14); font-weight: 600; color: var(--text); }
+.pub-compat-caret { margin-left: auto; }
+
+.pub-utility { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.pub-utility-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-4);
+}
+
+.pub-utility-cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.pub-files-body { display: flex; flex-direction: column; gap: 8px; }
+
+/* Between a tablet and a desktop the rack is a strip and the review follows the settings; on a
+   phone everything is one column in reading order. Page rules, not shell rules (ADR-147). */
+@media (max-width: 1320px) {
+    .pub-columns { grid-template-columns: minmax(0, 1fr); }
+    .pub-rack .dest-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+
+@media (max-width: 759px) {
+    .publish-slot { overflow: auto hidden; }
+    .pub-rack .dest-cards { grid-template-columns: minmax(0, 1fr); }
+    .pub-utility-row { grid-template-columns: minmax(0, 1fr); }
+    .pub-rack, .pub-main, .pub-summary, .pub-compat, .pub-utility { padding: var(--space-3); }
+}
+
+/* The settings panels of whatever was ticked above. Two columns where there is room: a blog panel
+   with invitations and a Telegram panel with a schedule are both tall, and stacking them turns
+   step 3 into the long scroll this redesign exists to remove. */
+.export-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+}
+
+/* ADR-096 — "announcement + link" against "the whole post as a thread": two publications, so two
+   buttons carrying their own explanation, not a checkbox whose meaning has to be inferred. */
+.mode-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.mode-toggle button {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: left;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: none;
+    padding: 9px 11px;
+    cursor: pointer;
+    font-family: inherit;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.mode-toggle button.on {
+    border-color: var(--abord);
+    background: var(--asoft);
+}
+
+/* ADR-099: threads are not schedulable, so the mode is refused visibly rather than ignored. */
+.mode-toggle button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.thread-toggle.disabled {
+    opacity: .55;
+}
+
+.mode-name {
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.mode-desc {
+    font-size: var(--fs-caption);
+    color: var(--t2);
+    line-height: 1.35;
+}
+
+/* A destination's settings are a second sheet laid on the shelf's own (ADR-190): one step down in
+   paper stock, so the panels read as objects on the sheet rather than as ruled-off regions of it. */
+.export-section {
+    border: var(--border-paper);
+    border-radius: var(--radius-paper);
+    background-color: var(--surface);
+    background-image: var(--tex-paper);
+    box-shadow: var(--shadow-paper-sm);
+    padding: var(--space-4);
+    margin-bottom: 0;
+}
+
+/* ADR-098: one row per ticked version, each with its own channel. The badge only appears when
+   there is more than one version — with a single one the row is the picker it has always been. */
+.channel-lang-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.channel-lang-row > :not(.channel-lang-badge) {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+}
+
+.channel-lang-badge {
+    flex: none;
+    min-width: 30px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: var(--alt);
+    color: var(--t2);
+    font-size: var(--fs-11);
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: .03em;
+}
+
+/* N4: connected channels are picked by clicking one of these, never by typing an id. */
+.channel-pick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.channel-pick {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 4px 9px 4px 4px;
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}
+
+.channel-pick:hover {
+    border-color: var(--accent);
+}
+
+.channel-pick.on {
+    border-color: var(--accent);
+    background: var(--asoft);
+}
+
+/* Long channel names must not stretch the pick row — the reason nothing here is fixed-width. */
+.channel-pick-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.export-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    margin-bottom: 10px;
+}
+
+/* T-318 — rendered store markup and the share URL use one bounded preview class. */
+.copy-preview { max-height: 240px; overflow: auto; }
+
+.blog-lang-badges {
+    display: flex;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+.blog-lang-badge {
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 3px 12px;
+    font-size: var(--fs-meta);
+    font-weight: 600;
+}
+
+.blog-lang-badge.disabled {
+    pointer-events: none;
+    opacity: .4;
+    border-color: var(--border);
+    background: none;
+    color: var(--t3);
+}
+
+.asset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.asset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 2px;
+    border-bottom: 1px solid var(--border);
+    font-size: var(--fs-ui);
+}
+
+.asset-row:last-child {
+    border-bottom: none;
+}
+
+.asset-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.asset-size {
+    flex: none;
+    color: var(--t2);
+}
+
+.asset-tg-badge {
+    flex: none;
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--asoft);
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+
+/* ---------- Schedule presets ---------- */
+.quick-schedule {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.quick-schedule button {
+    border: 1px solid var(--border);
+    background: var(--sheet);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: var(--fs-meta);
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    height: auto;
+}
+
+.quick-schedule button:hover {
+    background: var(--hover-strong);
+}
+
+.export-result {
+    font-size: var(--fs-meta);
+    color: var(--ok);
+    margin-top: 8px;
+}
+
+.export-result a {
+    margin-left: 6px;
+    color: var(--ok);
+}
+
+.channel-error {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    margin: 4px 0;
+}
+
+.schedule-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.schedule-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.schedule-row button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: var(--fs-meta);
+    color: var(--text);
+    height: auto;
+}
+
+.tz-hint {
+    font-size: var(--fs-caption);
+    color: var(--t2);
+    margin: 2px 0 0;
+}
+
+/* Which version's text a short-post panel is editing. Same picker as Settings' cross-links, and
+   restated here for the same reason it was restated there: `.pill` lives in the posts manager, and
+   emulated encapsulation keeps that stylesheet to that component. */
+.lang-pick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 0;
+}
+
+.lang-pick-row .pill {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--t2);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-family: inherit;
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}
+
+.lang-pick-row .pill:hover {
+    border-color: var(--abord);
+    color: var(--text);
+}
+
+.lang-pick-row .pill.on {
+    background: var(--asoft);
+    border-color: var(--abord);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* FI2.2 — languages as checkboxes; several can go out at once. */
+.lang-check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.lang-check {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--fs-ui);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+/* FI2.11 — the publish confirmation, held for 10 seconds above the modal's action row. */
+.publish-toast {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0 0;
+    padding: 9px 12px;
+    border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--border));
+    background: var(--ok-soft);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-ui);
+    color: var(--text);
+}
+
+.publish-toast .icon-sm {
+    color: var(--ok);
+}
+
+/* The toast waits to be dismissed now, so it needs a way to be dismissed. */
+.toast-close {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.toast-close:hover {
+    background: var(--hover-strong);
+    color: var(--text);
+}
+
+.publish-toast a {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* Sorting the draft's file list (01.08.2026). Chips rather than table headers: the list is three
+   fields wide and lives inside a modal section, where a header row would read as another table. */
+.asset-sort {
+    display: flex;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+}
+
+.asset-sort button {
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--t2);
+    border-radius: 999px;
+    padding: var(--space-1) var(--space-3);
+    font: inherit;
+    font-size: var(--fs-caption);
+    cursor: pointer;
+}
+
+.asset-sort button.on {
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.asset-type {
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+/* The Bluesky post is a short standalone text (ADR-077), so the counter is not decoration — it is
+   the difference between a post and a rejection. */
+.field-hint-inline.over-limit {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+/* T-106 — the thread offer sits with the problem it answers, inside the destination section. */
+.thread-offer {
+    border: 1px solid var(--abord);
+    background: var(--asoft);
+    border-radius: var(--dens-radius);
+    padding: var(--dens-control-y) var(--dens-control-x);
+    margin-bottom: var(--space-2);
+}
+
+.thread-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* The list is what makes the split checkable rather than a promise: a number, what the part opens
+   with, and how heavy it is. */
+.thread-parts {
+    list-style: none;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.thread-parts li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.thread-part-no {
+    flex: none;
+    min-width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+}
+
+.thread-part-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+}
+
+.thread-part-meta {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Publish progress checklist ---------- */
+/* The publication as a test run: one row per phase, part chips for a thread, the error pinned
+   to the step that broke. Statuses colour the leading icon and the chips, nothing else — the
+   list should read as a list, not as a traffic light. */
+.publish-run {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pr-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.pr-status {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+}
+
+.pr-status.pr-done { color: var(--ok); }
+.pr-status.pr-failed { color: var(--danger); }
+.pr-status.pr-running { color: var(--accent); }
+
+.pr-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+}
+
+.pr-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pr-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pr-label {
+    font-size: var(--fs-ui);
+    font-weight: 500;
+    color: var(--text);
+}
+
+/* `--alt` here was a surface token used as a text colour — #EFECE4 on a #FCFBF8 sheet in light,
+   #2F2C23 on #2B2820 in dark. The "7/25" counter was invisible in both themes, which is half of
+   why a long thread looked like it was doing nothing (11.08.2026). */
+.pr-count {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    font-variant-numeric: tabular-nums;
+}
+
+.pr-link {
+    font-size: var(--fs-meta);
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.pr-link:hover { text-decoration: underline; }
+
+/* Numbered chips, one per thread message — the row of green filling up IS the progress bar. */
+.pr-parts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.pr-part {
+    min-width: 22px;
+    height: 20px;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+    color: var(--t2);
+    background: var(--sheet);
+}
+
+.pr-part.pr-running {
+    border-color: var(--abord);
+    color: var(--accent);
+    background: var(--asoft);
+}
+
+.pr-part.pr-done {
+    border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+    color: var(--ok);
+    background: var(--ok-soft);
+}
+
+.pr-part.pr-failed {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+    color: var(--danger);
+    background: var(--danger-soft);
+}
+
+.pr-error {
+    margin: 0;
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    background: var(--danger-soft);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+    border-radius: var(--radius-sm);
+    padding: 6px 9px;
+    overflow-wrap: anywhere;
+}
+
+.pr-summary {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 14px 0 0;
+    font-size: var(--fs-ui);
+    font-weight: 500;
+    color: var(--ok);
+}
+
+.pr-summary.failed { color: var(--danger); }
+.pr-summary.running { color: var(--alt); font-weight: 400; }
+
+/* Wave 1 item 8 — the share-preview popover; hints reuse .field-hint-inline, the URL box reuses
+   .revision-preview and the button row reuses .insp-actions (the popover already clamps width). */
+.preview-share {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 260px;
+}
+
+/* Wave 2 item 17 — the CTA editor rides the panel's own classes (.export-section-title,
+   .invite-add-row, .channel-error): restating them cost real bytes against the component-style
+   budget. .cta-row, .cta-actions and .cta-invalid on the same elements are locator classes only. */
+.cta-row,
+.cta-actions { margin-top: 6px; }
+
+/* T-331 - the export-preset pick at the head of the rack. */
+.pub-rack .dest-preset {
+    max-width: 100%;
+    padding: 4px var(--space-2);
+    font-size: var(--fs-13);
+}

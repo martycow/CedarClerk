@@ -1,0 +1,506 @@
+/* ---------- Workspace: the Write tab's card, inspector, sheet and document links ---------- */
+/* The Write tab: one card holding the strip and the sheet, the inspector card beside it
+   (Editor.png). The frame's body carries the gutters, so this pads nothing. */
+.main {
+    display: grid;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin-inline: 0;
+    gap: var(--pane-gap);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* The shared workspace owns the two-column form while Details is open. This fallback belongs
+   only to the inspector-free state; otherwise equal selector specificity lets this component
+   override the global main/inspector tracks after Angular mounts its scoped stylesheet. */
+.main:not(.split-workspace) { grid-template-columns: minmax(0, 1fr); }
+
+.main.is-hidden,
+.preview-slot.is-hidden,
+.inspector.is-hidden {
+    display: none;
+}
+
+/* On a phone the preview's three columns are one, and nothing may push the page sideways. */
+@media (max-width: 759px) {
+    .inspector { width: auto; }
+    .frame-back, .frame-next {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        min-width: 0;
+    }
+    .frame-back .btn, .frame-next .btn {
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        padding-block: var(--space-2);
+        white-space: normal;
+    }
+}
+
+.preview-slot {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    margin-inline: 0;
+}
+
+/* The strip at the head of the card, the worktop under it; the worktop's own frame is dropped so
+   the card is the one edge. */
+.mid {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--sheet);
+    box-shadow: var(--shadow);
+}
+
+.wt {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.inspector {
+    width: auto;
+    min-width: 0;
+}
+
+.insp-count {
+    margin-left: var(--space-1);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--t3);
+}
+
+.frame-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.frame-next {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* The group heading above a run of spec rows. Small display caps, and the selection heading takes
+   the accent so the panel says out loud which of its two subjects is on show (ADR-159 clause 5).
+   The kit sets it 10.5px; the shelf sheet is paper, whose floor is 14 (ADR-138 item 2), so the
+   heading is told apart by face, tracking and caps instead of by being smaller. */
+[data-surface="paper"] .insp-group {
+    margin: var(--space-3) 0 var(--space-1);
+    font-family: var(--font-display);
+    font-size: var(--fs-14);
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.insp-group:first-child { margin-top: 0; }
+
+.insp-group.is-selection { color: var(--accent); }
+
+.insp-leaves,
+.insp-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: var(--space-1) 0;
+}
+
+.insp-glossary {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.insp-glossary-term {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-ui);
+    cursor: pointer;
+}
+
+.insp-glossary-term:hover { background: var(--alt); }
+
+/* A control projected into a spec row, and so chrome rather than paper: the row declares that
+   surface itself. Since ADR-238 the spec row's `field` draws the sunken box around the whole value
+   slot, so the control inside wears no edge of its own — one box, and it is the one that takes
+   typing. Inputs also carry the global `.field` opt-out class, which is the only way past the
+   six-:not() field face in styles.scss; a select is out-specified by this rule already. */
+[data-surface="chrome"] .insp-input {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--text-chrome-sm);
+}
+
+[data-surface="paper"] .insp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    border: var(--border-paper);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+    box-shadow: var(--shadow-paper-sm);
+    padding: var(--space-1) var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    color: var(--t2);
+    cursor: pointer;
+}
+
+.insp-btn:hover {
+    border-color: var(--abord);
+    background: var(--asoft);
+}
+
+.insp-btn:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+.insp-btn.lang-delete {
+    border-color: transparent;
+    background: none;
+    color: var(--t2);
+}
+
+.insp-btn.lang-delete:hover {
+    color: var(--danger);
+    background: none;
+}
+
+/* The centred column on the worktop: the title line, then the sheet, at the width the Appearance
+   preference gives them. */
+.sheet-column {
+    width: 100%;
+    margin: 0 auto;
+    padding: var(--space-6) clamp(var(--space-3), 2vw, var(--space-5)) var(--space-4);
+    box-sizing: border-box;
+}
+
+[data-surface="chrome"] .state-link {
+    font-size: var(--text-chrome-sm);
+    color: var(--t2);
+    text-decoration: none;
+}
+
+[data-surface="chrome"] .insp-off {
+    color: var(--t2);
+}
+
+.state-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.sheet.en-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.en-empty-title {
+    font-size: var(--fs-17);
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+}
+
+.en-empty-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.translate-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    /* IB2: the re-translate instance is clamped to the sheet width by an inline max-width, but
+       without `auto` side margins that clamp pinned it to the far left of the full-width column
+       instead of over the sheet. */
+    margin: 14px auto 0;
+}
+
+.translate-progress .upload-bar {
+    width: 220px;
+    max-width: 100%;
+    flex: none;
+}
+
+.inline-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.inline-progress .indeterminate-bar {
+    width: 100%;
+}
+
+.inline-progress .translate-status {
+    font-size: var(--fs-meta);
+}
+
+.indeterminate-bar {
+    width: 220px;
+    max-width: 100%;
+    height: 4px;
+    background: var(--alt);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.indeterminate-fill {
+    height: 100%;
+    width: 40%;
+    background: var(--accent);
+    border-radius: 3px;
+    animation: indeterminate-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes indeterminate-slide {
+    0%   { transform: translateX(-150%); }
+    100% { transform: translateX(350%); }
+}
+
+.translate-status {
+    font-size: var(--fs-ui);
+    color: var(--t2);
+    margin: 0;
+}
+
+/* A bright textured page with a hard edge, open at the bottom: it runs off the worktop's lower
+   edge rather than floating on it. */
+.sheet {
+    min-height: 60vh;
+    background-color: var(--paper-bright);
+    background-image: var(--tex-paper);
+    border: 1px solid var(--paper-edge);
+    border-bottom: none;
+    border-radius: var(--radius-paper) var(--radius-paper) 0 0;
+    box-shadow: var(--shadow-sheet);
+    padding: var(--space-6) clamp(var(--space-5), 4vw, var(--space-10));
+    font-family: var(--sheet-typeface, var(--font-serif));
+    font-size: var(--sheet-font-size, var(--fs-read));
+    line-height: var(--sheet-line-height, var(--lh-read));
+}
+
+/* "Sheet without the paper card" (Settings → Appearance) — merges with the canvas instead */
+.sheet.flush {
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+/* Ruler above the sheet (Settings → Appearance) — purely decorative, no snapping/measuring */
+/* The ruler was removed (IB4). It was a decorative 12px strip *above* the sheet, not an overlay
+   on the writing area, so it read as sitting under the sheet and measured nothing — and there are
+   no margins or tab stops in this editor for a real ruler to control. Marty sanctioned deleting
+   it rather than rebuilding it. */
+
+/* Paragraph numbers live in styles.scss, not here — see the note there (B12). Anything that has
+   to match ProseMirror-created nodes cannot be a component-scoped rule. */
+
+/* ---------- RU/EN structural diff gutter ---------- */
+.sheet-wrap {
+    position: relative;
+}
+
+.sheet-wrap .sheet {
+    max-width: none;
+    margin: 0;
+}
+
+.ru-diff-gutter {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    margin-left: 10px;
+    width: 5px;
+    height: 100%;
+}
+
+.export-btn {
+    flex: 0 1 auto;
+    min-width: 44px;
+    overflow: hidden;
+}
+
+.diff-marker {
+    position: absolute;
+    left: 0;
+    width: 5px;
+    border-radius: 3px;
+    min-height: 3px;
+}
+
+.diff-marker.added { background: var(--ok); }
+.diff-marker.changed { background: color-mix(in srgb, var(--accent) 55%, var(--warn) 45%); }
+.diff-marker.removed { background: var(--danger); }
+
+/* ADR-128 — tree breadcrumbs in the state strip. */
+.doc-crumbs {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Projected into an app-spec-row, whose host declares itself chrome — so the crumbs take chrome's
+   numbers rather than the sheet's, and the lint scores them against chrome. */
+[data-surface="chrome"] .doc-crumb {
+    border: none;
+    background: none;
+    color: var(--t2);
+    font-size: var(--text-chrome-sm);
+    font-family: inherit;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.doc-crumb:hover { color: var(--text); background: var(--hover); }
+
+[data-surface="chrome"] .doc-crumb-sep {
+    color: var(--t2);
+    opacity: .5;
+    font-size: var(--text-chrome-sm);
+}
+
+/* ADR-128 — the `[[` wiki-link suggester popover, positioned off the caret's clientRect. */
+.wiki-suggest {
+    position: fixed;
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 220px;
+    max-width: 320px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow);
+    padding: 4px;
+}
+
+.wiki-suggest-item {
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--text);
+    font-size: var(--fs-ui);
+    font-family: inherit;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wiki-suggest-item:hover { background: var(--hover); }
+
+.wiki-suggest-item.active {
+    background: var(--asoft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.wiki-suggest-none {
+    margin: 0;
+    padding: 6px 8px;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+/* ADR-128 — the backlinks chip and its popover. */
+.backlinks-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 200px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+[data-surface="paper"] .backlinks-item {
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--text);
+    font-size: var(--fs-ui);
+    font-family: inherit;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.backlinks-item:hover { background: var(--hover); }
+
+/* ---------- A tablet in landscape (≈1000px): the same page, tighter ---------- */
+/* Not a shell rule (ADR-147): the page decides how its own two columns share a narrow width. The
+   shelf keeps its rows readable at 280px; the toolbar's fit already drops captions and re-rows. */
+@media (max-width: 1180px) {
+    .main { gap: var(--space-3); }
+}
+
+/* On a touch screen the paper floor makes every button 44px (styles.scss), which turns a tag leaf
+   and the "+ Tags" control in the shelf into stacked blocks of the row's whole width. A leaf in a
+   wrapping row keeps the trim box: the hit area is the whole leaf, not a floor under its ×. */
+@media (pointer: coarse) {
+    .insp-sheet app-tag-picker app-leaf-tag[data-surface],
+    .insp-sheet app-tag-picker app-button[data-surface] {
+        --hit-surface: var(--hit-trim);
+    }
+}
