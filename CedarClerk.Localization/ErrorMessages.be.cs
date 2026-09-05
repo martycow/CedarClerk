@@ -28,6 +28,7 @@ public static partial class ErrorMessages
         [nameof(UnknownAdminPaymentStatusFilter)] = "Невядомы фільтр стану плацяжоў.",
         [nameof(UnknownAdminPaymentSortKey)] = "Невядомы крытэрый сартавання плацяжоў.",
         [nameof(UnknownAdminSortDirection)] = "Невядомы кірунак сартавання ў Admin.",
+        [nameof(UnknownStatSource)] = "Невядомая крыніца статыстыкі.",
         [nameof(BothTagsRequired)] = "Патрэбныя і стары, і новы тэг.",
         [nameof(InvalidEmail)] = "Увядзіце сапраўдны адрас электроннай пошты.",
         [nameof(ImportFileNotFound)] = "Файл не знойдзены ў каталогу import-tmp.",

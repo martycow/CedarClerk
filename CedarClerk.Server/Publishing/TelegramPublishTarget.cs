@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Bot;
@@ -247,6 +247,7 @@ public class TelegramPublishTarget(
         draft.LastTelegramChatId = chatId;
         draft.LastTelegramMessageId = msg.MessageId;
         draft.LastTelegramUsername = username;
+        draft.LastTelegramSentAt = DateTime.UtcNow;
         if (request.Target.ChannelId is { } channelId)
             db.ChannelPosts.Add(new ChannelPost { ChannelId = channelId, OwnerId = draft.OwnerId, DraftId = request.DraftId, TelegramMessageId = msg.MessageId });
 

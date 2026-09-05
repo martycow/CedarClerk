@@ -28,6 +28,7 @@ public static partial class ErrorMessages
         [nameof(UnknownAdminPaymentStatusFilter)] = "不明な支払い状態フィルターです。",
         [nameof(UnknownAdminPaymentSortKey)] = "不明な支払いの並び替えキーです。",
         [nameof(UnknownAdminSortDirection)] = "不明な管理画面の並び替え方向です。",
+        [nameof(UnknownStatSource)] = "不明な統計ソースです。",
         [nameof(BothTagsRequired)] = "古いタグと新しいタグの両方を指定してください。",
         [nameof(InvalidEmail)] = "有効なメールアドレスを入力してください。",
         [nameof(ImportFileNotFound)] = "import-tmp ディレクトリにファイルが見つかりません。",

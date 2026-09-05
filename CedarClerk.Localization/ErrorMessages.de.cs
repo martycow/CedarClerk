@@ -28,6 +28,7 @@ public static partial class ErrorMessages
         [nameof(UnknownAdminPaymentStatusFilter)] = "Unbekannter Filter für den Zahlungsstatus.",
         [nameof(UnknownAdminPaymentSortKey)] = "Unbekanntes Sortierkriterium für Zahlungen.",
         [nameof(UnknownAdminSortDirection)] = "Unbekannte Sortierrichtung im Admin-Bereich.",
+        [nameof(UnknownStatSource)] = "Unbekannte Statistikquelle.",
         [nameof(BothTagsRequired)] = "Alter und neuer Tag sind beide erforderlich.",
         [nameof(InvalidEmail)] = "Geben Sie eine gültige E-Mail-Adresse ein.",
         [nameof(ImportFileNotFound)] = "Datei im Verzeichnis import-tmp nicht gefunden.",

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -36,6 +36,22 @@ public static partial class BlogEndpoints
     // NotifySubscribers is the export modal's opt-in toggle: mailing the blog-wide list is a
     // decision per post, never a side effect of publishing.
     public record PublishBlogRequest(Dictionary<string, string>? ConfirmedFingerprints = null, bool NotifySubscribers = false);
+
+    public static async Task EnsureTodayBlogSnapshotAsync(CedarDbContext db, string uid)
+    {
+        var today = DateTime.UtcNow.Date;
+        var hasToday = await db.BlogStatSnapshots.AnyAsync(s => s.OwnerId == uid && s.TakenAt.Date == today);
+        if (hasToday) return;
+
+        var ownDraftIds = await db.Drafts.Where(d => d.OwnerId == uid).Select(d => d.Id).ToListAsync();
+        if (ownDraftIds.Count == 0) return;
+
+        var viewCount = await db.Drafts.Where(d => d.OwnerId == uid).SumAsync(d => d.ViewCount);
+        var likeCount = await db.Reactions.CountAsync(r => ownDraftIds.Contains(r.DraftId) && r.Kind == "like");
+        var commentCount = await db.Comments.CountAsync(c => ownDraftIds.Contains(c.DraftId));
+        db.BlogStatSnapshots.Add(new BlogStatSnapshot { OwnerId = uid, ViewCount = viewCount, LikeCount = likeCount, CommentCount = commentCount });
+        await db.SaveChangesAsync();
+    }
 
     public static void MapBlogEndpoints(this WebApplication app)
     {
@@ -156,20 +172,7 @@ public static partial class BlogEndpoints
             // ChannelEndpoints.cs), there's no "connect" moment for the blog — take today's snapshot
             // on demand here if the nightly job (SnapshotChannelStatsJob) hasn't run yet today, so
             // opening this tab for the first time doesn't just show "—" until tomorrow.
-            var today = DateTime.UtcNow.Date;
-            var hasToday = await db.BlogStatSnapshots.AnyAsync(s => s.OwnerId == uid && s.TakenAt.Date == today);
-            if (!hasToday)
-            {
-                var ownDraftIds = await db.Drafts.Where(d => d.OwnerId == uid).Select(d => d.Id).ToListAsync();
-                if (ownDraftIds.Count > 0)
-                {
-                    var viewCount = await db.Drafts.Where(d => d.OwnerId == uid).SumAsync(d => d.ViewCount);
-                    var likeCount = await db.Reactions.CountAsync(r => ownDraftIds.Contains(r.DraftId) && r.Kind == "like");
-                    var commentCount = await db.Comments.CountAsync(c => ownDraftIds.Contains(c.DraftId));
-                    db.BlogStatSnapshots.Add(new BlogStatSnapshot { OwnerId = uid, ViewCount = viewCount, LikeCount = likeCount, CommentCount = commentCount });
-                    await db.SaveChangesAsync();
-                }
-            }
+            await EnsureTodayBlogSnapshotAsync(db, uid);
 
             var snapshots = await db.BlogStatSnapshots
                 .Where(s => s.OwnerId == uid)

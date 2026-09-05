@@ -28,6 +28,7 @@ public static partial class ErrorMessages
         [nameof(UnknownAdminPaymentStatusFilter)] = "Filtro de estado de pagos desconocido.",
         [nameof(UnknownAdminPaymentSortKey)] = "Criterio de ordenación de pagos desconocido.",
         [nameof(UnknownAdminSortDirection)] = "Dirección de ordenación desconocida en Admin.",
+        [nameof(UnknownStatSource)] = "Fuente de estadísticas desconocida.",
         [nameof(BothTagsRequired)] = "Se necesitan tanto la etiqueta antigua como la nueva.",
         [nameof(InvalidEmail)] = "Escribe una dirección de correo válida.",
         [nameof(ImportFileNotFound)] = "Archivo no encontrado en el directorio import-tmp.",

@@ -28,6 +28,7 @@ public static partial class ErrorMessages
         [nameof(UnknownAdminPaymentStatusFilter)] = "Filtre de statut des paiements inconnu.",
         [nameof(UnknownAdminPaymentSortKey)] = "Critère de tri des paiements inconnu.",
         [nameof(UnknownAdminSortDirection)] = "Sens de tri inconnu dans l'administration.",
+        [nameof(UnknownStatSource)] = "Source de statistiques inconnue.",
         [nameof(BothTagsRequired)] = "L'ancien et le nouveau tag sont tous deux requis.",
         [nameof(InvalidEmail)] = "Saisissez une adresse e-mail valide.",
         [nameof(ImportFileNotFound)] = "Fichier introuvable dans le répertoire import-tmp.",

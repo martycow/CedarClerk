@@ -28,6 +28,7 @@ public static partial class ErrorMessages
         [nameof(UnknownAdminPaymentStatusFilter)] = "გადახდების სტატუსის უცნობი ფილტრი.",
         [nameof(UnknownAdminPaymentSortKey)] = "გადახდების დალაგების უცნობი კრიტერიუმი.",
         [nameof(UnknownAdminSortDirection)] = "ადმინ-პანელში დალაგების უცნობი მიმართულება.",
+        [nameof(UnknownStatSource)] = "უცნობი სტატისტიკის წყარო.",
         [nameof(BothTagsRequired)] = "საჭიროა როგორც ძველი, ისე ახალი ტეგი.",
         [nameof(InvalidEmail)] = "შეიყვანეთ სწორი ელფოსტის მისამართი.",
         [nameof(ImportFileNotFound)] = "ფაილი import-tmp საქაღალდეში ვერ მოიძებნა.",

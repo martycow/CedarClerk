@@ -28,6 +28,7 @@ public static partial class ErrorMessages
         [nameof(UnknownAdminPaymentStatusFilter)] = "Неизвестный фильтр состояния платежей.",
         [nameof(UnknownAdminPaymentSortKey)] = "Неизвестный критерий сортировки платежей.",
         [nameof(UnknownAdminSortDirection)] = "Неизвестное направление сортировки в Admin.",
+        [nameof(UnknownStatSource)] = "Неизвестный источник статистики.",
         [nameof(BothTagsRequired)] = "Нужны и старый, и новый тег.",
         [nameof(InvalidEmail)] = "Введите корректный адрес почты.",
         [nameof(ImportFileNotFound)] = "Файл не найден в каталоге import-tmp.",

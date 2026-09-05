@@ -46,6 +46,7 @@ public static partial class ErrorMessages
     public static string UnknownAdminPaymentStatusFilter => T("Unknown admin payment status filter.");
     public static string UnknownAdminPaymentSortKey => T("Unknown admin payment sort key.");
     public static string UnknownAdminSortDirection => T("Unknown admin sort direction.");
+    public static string UnknownStatSource => T("Unknown stats source.");
     public static string BothTagsRequired => T("Both the old and the new tag are required");
     public static string InvalidEmail => T("Enter a valid email address");
     public static string ImportFileNotFound => T("File not found in import-tmp directory.");
