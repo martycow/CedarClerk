@@ -42,8 +42,9 @@ times went 40/40, which closes T-317 and T-173.
 publish revision records the source document rather than the wire copy with Telegram's media paths,
 so the next diff shows only what the author changed (ADR-269, T-104). `POST /api/posts/{id}/telegram-sync`
 edits the one message the last send left and answers with Telegram's own verdict; `Draft.LastTelegramSentAt`
-is what "edited since" is measured against, and a thread answers 409 (ADR-275/278 — the server half
-of T-180; the editor button and the live check remain on the row). The link probe checks every
+is what "edited since" is measured against, and a thread answers 409; the editor's Telegram state
+row carries the Sync button (ADR-275/278 — T-180 keeps only the live check against a post older
+than 48 h). The link probe checks every
 redirect hop against the private ranges and dials only the address it resolved (ADR-268, T-324).
 `article:modified_time` is clamped like the JSON-LD date (T-319); `GET …/preview-link` reads an
 existing token back so the editor can show it in a later session (T-320); a post older than the
