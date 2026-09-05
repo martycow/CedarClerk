@@ -23,11 +23,13 @@ public class PublishJobRunnerTests
         public string Network { get; } = network;
         public PublishCapabilities Capabilities { get; } = new() { Network = network };
         public int Calls;
+        public PublishRequest? Last;
         public Func<PublishOutcome> Next = () => PublishOutcome.Ok(new PublishReceipt("1", null));
 
         public Task<PublishOutcome> PublishAsync(PublishRequest request, CancellationToken ct = default)
         {
             Calls++;
+            Last = request;
             return Task.FromResult(Next());
         }
     }
@@ -66,7 +68,8 @@ public class PublishJobRunnerTests
         return (draft.Id, target.Id);
     }
 
-    private static async Task<PublishJob> QueueAsync(ServiceProvider provider, Guid draftId, Guid targetId)
+    private static async Task<PublishJob> QueueAsync(ServiceProvider provider, Guid draftId, Guid targetId,
+        bool silent = false, bool pin = false)
     {
         using var scope = provider.CreatePlatformScope();
         var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
@@ -74,6 +77,7 @@ public class PublishJobRunnerTests
         {
             OwnerId = "owner-1", DraftId = draftId, TargetId = targetId,
             Network = PublishNetworks.Telegram, Language = Languages.Russian,
+            Silent = silent, PinAfterSend = pin,
         };
         db.PublishJobs.Add(job);
         await db.SaveChangesAsync();
@@ -110,6 +114,21 @@ public class PublishJobRunnerTests
         Assert.Equal(PublishJobStatus.Succeeded, stored.Status);
         Assert.Equal(1, target.Calls);
         Assert.Equal(1, stored.Attempts);
+    }
+
+    [Fact]
+    public async Task A_job_carries_silent_and_pin_to_the_target()
+    {
+        var (provider, connection, target) = Build();
+        using var _ = connection;
+        var (draftId, targetId) = await SeedAsync(provider);
+        await QueueAsync(provider, draftId, targetId, silent: true, pin: true);
+
+        await Runner(provider).SweepAsync(CancellationToken.None);
+
+        Assert.NotNull(target.Last);
+        Assert.True(target.Last!.Silent);
+        Assert.True(target.Last.PinAfterSend);
     }
 
     [Fact]

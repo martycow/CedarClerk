@@ -154,7 +154,8 @@ public class PublishJobRunner(
 
         var part = job.PartCount > 1 ? new ThreadPartRef(job.PartIndex, job.PartCount, replyTo, rootRemoteId) : null;
         var result = await PostEndpoints.PublishToTargetAsync(
-            job.DraftId, job.TargetId, job.OwnerId, db, targets, job.Language, logger, part: part, ct: ct);
+            job.DraftId, job.TargetId, job.OwnerId, db, targets, job.Language, logger, part: part,
+            silent: job.Silent, pin: job.PinAfterSend, ct: ct);
 
         job.FinishedAt = DateTime.UtcNow;
         if (result.Success)

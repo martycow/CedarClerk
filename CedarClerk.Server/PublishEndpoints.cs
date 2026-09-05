@@ -23,7 +23,7 @@ public static class PublishEndpoints
 {
     public record ConnectBlueskyRequest(string Handle, string AppPassword, string? Service);
     public record ConnectDiscordRequest(string WebhookUrl);
-    public record QueuePublishRequest(Guid DraftId, List<Guid>? TargetIds, string? Language = null, string? ConfirmedFingerprint = null, bool SplitIntoThread = false);
+    public record QueuePublishRequest(Guid DraftId, List<Guid>? TargetIds, string? Language = null, string? ConfirmedFingerprint = null, bool SplitIntoThread = false, bool Silent = false, bool Pin = false);
     public record TargetTextRequest(string Network, string Language, string Text);
 
     private sealed record XConnectState(string OwnerId, string Verifier, DateTime CreatedAt);
@@ -493,6 +493,8 @@ public static class PublishEndpoints
                         ThreadId = threadId,
                         PartIndex = i,
                         PartCount = partCount,
+                        Silent = req.Silent,
+                        PinAfterSend = req.Pin,
                     });
                 }
             }
