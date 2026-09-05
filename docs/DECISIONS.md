@@ -271,3 +271,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
 - [ADR-271 — The invite shelf draws the day series it already has](adr/ADR-271.md)
 - [ADR-286 — One skeleton, held for 300 ms, marking the region busy](adr/ADR-286.md)
+- [ADR-287 — View transitions: the router cross-fades except around the editor, the blog carries a cover into the post](adr/ADR-287.md)

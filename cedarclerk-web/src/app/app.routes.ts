@@ -54,6 +54,7 @@ export const routes: Routes = [
                 path: 'editor',
                 loadComponent: () => import('./pages/editor.component').then(m => m.EditorComponent),
                 canActivate: [authGuard],
+                data: { viewTransition: false },
             },
             {
                 path: 'drafts',

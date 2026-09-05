@@ -1,5 +1,5 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { PreloadAllModules, provideRouter, withPreloading } from '@angular/router';
+import { ActivatedRouteSnapshot, PreloadAllModules, provideRouter, withPreloading, withViewTransitions } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { debugLogInterceptor } from './core/debug-log.interceptor';
@@ -11,6 +11,19 @@ import { LocaleService } from './core/i18n/locale.service';
 // mechanism in browsers at all, so DraftsService.importMarkdown$'s reportProgress:true silently
 // never fired a single UploadProgress event — the bar sat at 0% and the new stall timeout (which
 // only resets on a progress tick) killed even a healthy multi-minute upload at 60s.
+// ADR-287 — a route can opt out of the cross-fade with `data: { viewTransition: false }`. Either
+// end of the navigation counts: the editor is the one screen whose DOM is not Angular's to snapshot
+// (TipTap owns it), and that holds whether it is being entered or left.
+function optsOut(root: ActivatedRouteSnapshot): boolean {
+  for (let node: ActivatedRouteSnapshot | null = root; node; node = node.firstChild)
+    if (node.routeConfig?.data?.['viewTransition'] === false) return true;
+  return false;
+}
+
+export function skipViewTransition(from: ActivatedRouteSnapshot, to: ActivatedRouteSnapshot, reducedMotion: boolean): boolean {
+  return reducedMotion || optsOut(from) || optsOut(to);
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -28,7 +41,13 @@ export const appConfig: ApplicationConfig = {
     // as the first one has rendered. Without it the split would trade a smaller first load for a
     // pause on every navigation, which on this app would be felt most opening the editor — the
     // heaviest chunk and the one people go to. With it, the chunk is usually already there.
-    provideRouter(routes, withPreloading(PreloadAllModules)),
+    provideRouter(routes, withPreloading(PreloadAllModules), withViewTransitions({
+      skipInitialTransition: true,
+      onViewTransitionCreated: ({ transition, from, to }) => {
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (skipViewTransition(from, to, reduced)) transition.skipTransition();
+      },
+    })),
     provideHttpClient(withInterceptors([debugLogInterceptor, sessionExpiryInterceptor])),
   ]
 };
