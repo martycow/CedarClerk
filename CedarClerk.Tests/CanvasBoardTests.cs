@@ -2,6 +2,7 @@ using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server;
 using CedarClerk.Server.Modules.IndieDev;
+using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Tests;
 
@@ -194,5 +195,120 @@ public class CanvasBoardTests
         await using var db = fx.As(owner);
         var (error, _) = await CanvasWrites.AddAsync(db, access, board, owner, [flat]);
         Assert.Equal(ErrorMessages.CanvasGeometryInvalid, error);
+    }
+
+    // T-307 — the branch SaveAsync exists for: a row that another writer deleted between this
+    // call's SELECT and its UPDATE. EF reports it by throwing on zero rows affected, and the write
+    // path treats the deletion as the newer fact rather than as an error.
+
+    [Fact]
+    public async Task An_update_racing_a_delete_answers_with_the_survivors_and_no_error()
+    {
+        using var fx = new CanvasFixture();
+        var owner = fx.User("owner");
+        var project = fx.Project(owner);
+        var board = fx.Board(owner, project);
+        var access = await fx.AccessAsync(project, owner);
+
+        var kept = Guid.NewGuid();
+        var doomed = Guid.NewGuid();
+        await using (var seed = fx.As(owner))
+            await CanvasWrites.AddAsync(seed, access, board, owner, [CanvasFixture.Note(kept), CanvasFixture.Note(doomed)]);
+
+        await using var db = fx.As(owner, race: async () =>
+        {
+            await using var other = fx.Platform();
+            await other.CanvasItems.Where(i => i.Id == doomed).ExecuteDeleteAsync();
+        });
+
+        var (error, items) = await CanvasWrites.UpdateAsync(db, access, board, owner,
+            [new CanvasItemPatch(kept, 10, null, null, null, null, null, null),
+             new CanvasItemPatch(doomed, 20, null, null, null, null, null, null)]);
+
+        Assert.Null(error);
+        Assert.Equal([kept], items.Select(i => i.Id));
+        // The failed save rolled everything back, so the survivor comes back as the database holds
+        // it — the client learns the deletion from itemsDeleted and re-sends what it still wants.
+        Assert.Equal(0, items.Single().X);
+        await using var read = fx.Platform();
+        Assert.Equal([kept], (await CanvasWrites.ItemsAsync(read, board)).Select(i => i.Id));
+    }
+
+    [Fact]
+    public async Task Bring_to_front_racing_a_delete_answers_with_the_survivors()
+    {
+        using var fx = new CanvasFixture();
+        var owner = fx.User("owner");
+        var project = fx.Project(owner);
+        var board = fx.Board(owner, project);
+        var access = await fx.AccessAsync(project, owner);
+
+        var kept = Guid.NewGuid();
+        var doomed = Guid.NewGuid();
+        await using (var seed = fx.As(owner))
+            await CanvasWrites.AddAsync(seed, access, board, owner, [CanvasFixture.Note(kept), CanvasFixture.Note(doomed)]);
+
+        await using var db = fx.As(owner, race: async () =>
+        {
+            await using var other = fx.Platform();
+            await other.CanvasItems.Where(i => i.Id == doomed).ExecuteDeleteAsync();
+        });
+
+        var (error, items) = await CanvasWrites.BringToFrontAsync(db, access, board, owner, [doomed, kept]);
+
+        Assert.Null(error);
+        Assert.Equal([kept], items.Select(i => i.Id));
+    }
+
+    [Fact]
+    public async Task A_delete_racing_the_same_delete_still_answers_with_the_ids()
+    {
+        using var fx = new CanvasFixture();
+        var owner = fx.User("owner");
+        var project = fx.Project(owner);
+        var board = fx.Board(owner, project);
+        var access = await fx.AccessAsync(project, owner);
+
+        var id = Guid.NewGuid();
+        await using (var seed = fx.As(owner))
+            await CanvasWrites.AddAsync(seed, access, board, owner, [CanvasFixture.Note(id)]);
+
+        await using var db = fx.As(owner, race: async () =>
+        {
+            await using var other = fx.Platform();
+            await other.CanvasItems.Where(i => i.Id == id).ExecuteDeleteAsync();
+        });
+
+        // Somebody else deleting it first is this call's own outcome arriving early: the client
+        // still gets itemsDeleted for what it asked to delete.
+        var (error, ids) = await CanvasWrites.DeleteAsync(db, access, board, owner, [id]);
+
+        Assert.Null(error);
+        Assert.Equal([id], ids);
+    }
+
+    [Fact]
+    public async Task An_add_racing_the_deletion_of_the_board_is_refused_as_unknown_board()
+    {
+        using var fx = new CanvasFixture();
+        var owner = fx.User("owner");
+        var project = fx.Project(owner);
+        var board = fx.Board(owner, project);
+        var access = await fx.AccessAsync(project, owner);
+
+        await using var db = fx.As(owner, race: async () =>
+        {
+            await using var other = fx.Platform();
+            await other.CanvasBoards.Where(b => b.Id == board).ExecuteDeleteAsync();
+        });
+
+        var id = Guid.NewGuid();
+        var (error, items) = await CanvasWrites.AddAsync(db, access, board, owner, [CanvasFixture.Note(id)]);
+
+        Assert.Equal(ErrorMessages.UnknownBoard, error);
+        Assert.Empty(items);
+        // Rolled back together with the board's own stamp: the item was in the same save.
+        await using var read = fx.Platform();
+        Assert.False(await read.CanvasItems.AnyAsync(i => i.Id == id));
     }
 }
