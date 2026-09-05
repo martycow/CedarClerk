@@ -36,6 +36,7 @@ flowchart TB
         PRD["docs/product/PRD.md<br/>requirements"]
         ARCH["docs/tech/ARCHITECTURE.md<br/>system design"]
         QA["docs/tech/QA.md<br/>permanent verification checklist<br/>by surface, re-checked on change"]
+        SEC["docs/tech/SECURITY.md<br/>threat model: assets, boundaries,<br/>STRIDE table, gaps"]
         DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
         UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
         STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
@@ -114,7 +115,7 @@ flowchart TB
     class OWNER,INPUTP,CODE source
     class BACKLOG,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
-    class PRODUCT,PRD,ARCH,QA,DESIGN,UIINV,STACK,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
+    class PRODUCT,PRD,ARCH,QA,SEC,DESIGN,UIINV,STACK,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
     class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT,BPROMPT mod
 ```
 
@@ -171,7 +172,7 @@ The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DEC
 | **`product/`** | The highest-level product context: the product as a whole, the business model, requirements | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV, COMPETITORS |
 | **`tasks/`** | Everything related to tasks | TASKS (short horizon), BACKLOG (board), CHANGELOG (history by date) |
 | **`design/`** | Design, UI, UX | DESIGN (tokens), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt, bench-board-prompt |
-| **`tech/`** | The technical side | ARCHITECTURE, DESKTOP, QA |
+| **`tech/`** | The technical side | ARCHITECTURE, DESKTOP, QA, SECURITY |
 | **`adr/`** | Decision texts, one file per ADR (+ ownership-audit) | 205 ADRs. The index is in the root; its own folder rather than `tech/adr/`, because ADRs can be product decisions (ADR-092, ADR-101) as well as technical ones |
 | **`fleet/`** | Agent orchestration (Cowtext / FleetView) | so far only `docs/fleet/README.md` — agent definitions live in `.claude/agents/` |
 | **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026) |

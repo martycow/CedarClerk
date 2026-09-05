@@ -79,6 +79,7 @@ no deploy path touches it.
 - `docs/for_user/integrations-setup.md` — payment/translation provider setup runbook
 - `docs/INPUT_PROMPT.md` — the dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; rewritten at will) — check its mtime against the last "Input sweep" note in `docs/tasks/CHANGELOG.md`. Content may predate the code — verify against it
 - `docs/product/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
+- `docs/tech/SECURITY.md` — the threat model: assets, trust boundaries, a STRIDE table with each mitigation cited, and the gaps still open before registration opens
 - `docs/tech/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
 - `docs/design/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens (delivered 10.08; remaining ask — screens 10–11). Since 18.08 it carries **no verbatim token copy** — paste fresh values from `styles.scss` into its marked block before each run
 
