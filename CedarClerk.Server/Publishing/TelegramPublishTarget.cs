@@ -16,11 +16,9 @@ namespace CedarClerk.Server.Publishing;
 /// before a second network exists (ADR-070/078): the abstraction has to be shaped by the code
 /// that already works, and then proved unchanged by the smoke suite.
 ///
-/// One inherited oddity is preserved deliberately and recorded rather than fixed here: the
-/// revision this writes holds the document with media paths rewritten to their Telegram-safe
-/// derivatives, not the original. It does not affect the publish guard (which fingerprints the
-/// current document on both sides) but it does make the diff on the next publish show every
-/// compressed image as changed. Fixing it is a behaviour change, so it is a backlog row (T-104).
+/// The revision this writes is the source document, not the one sent: media paths are rewritten
+/// to Telegram-safe derivatives for the wire only, and a revision holding those would make the
+/// next publish diff show every compressed image as changed (ADR-269).
 /// </summary>
 public class TelegramPublishTarget(
     CedarDbContext db,
@@ -65,7 +63,7 @@ public class TelegramPublishTarget(
             return PublishOutcome.Fail(ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
 
         var chatId = request.Target.RemoteId;
-        var cedarJson = request.CedarJson;
+        var sendJson = request.CedarJson;
         var mainHost = cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost;
 
         // Telegram rejects a photo fetched by URL above ~TelegramSafeImageBytes (confirmed
@@ -74,7 +72,7 @@ public class TelegramPublishTarget(
         // original, untouched. Generated lazily here (not just at upload time) so assets uploaded
         // before this feature existed still get a derivative instead of failing forever.
         var compressionTargetBytes = PostEndpoints.ResolveCompressionTargetBytes(request.CompressionLevel);
-        var referencedNames = CedarPackage.FindReferencedMediaPaths(cedarJson);
+        var referencedNames = CedarPackage.FindReferencedMediaPaths(sendJson);
         if (referencedNames.Count > 0)
         {
             // T-359 (audit finding 3) — owner-scoped: the queue runs under a platform context with
@@ -89,12 +87,12 @@ public class TelegramPublishTarget(
             var rewrites = referencedAssets.Where(a => a.TelegramLocalPath is not null)
                 .ToDictionary(a => a.LocalPath, a => a.TelegramLocalPath!);
             if (rewrites.Count > 0)
-                cedarJson = CedarPackage.RewriteMediaPaths(cedarJson, rewrites);
+                sendJson = CedarPackage.RewriteMediaPaths(sendJson, rewrites);
         }
 
         // Bot API 10.3: Blocks is the only mode that reliably embeds media with a real, natively
         // styled caption (verified 16.07.2026 against @testingandfun) — see docs/DECISIONS.md.
-        var blocks = CedarToTelegramBlocksRenderer.Render(cedarJson, mainHost).ToList();
+        var blocks = CedarToTelegramBlocksRenderer.Render(sendJson, mainHost).ToList();
 
         if (blocks.Count == 0)
             return PublishOutcome.Fail(ErrorMessages.DraftIsEmpty);
@@ -281,7 +279,7 @@ public class TelegramPublishTarget(
         // per publication — on the last part, when the whole document has actually gone out.
         if (isLastPart)
         {
-            await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title, cedarJson,
+            await DraftRevisionService.RecordAsync(db, request.DraftId, request.Language, request.Title, request.CedarJson,
                 DraftRevisionService.Kinds.Telegram, chatId, ct);
         }
 

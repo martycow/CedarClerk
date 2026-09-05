@@ -1133,6 +1133,9 @@ public class PublishJob
     public int PartIndex { get; set; }
     public int PartCount { get; set; } = 1;
 
+    public bool Silent { get; set; }
+    public bool PinAfterSend { get; set; }
+
     public int Attempts { get; set; }
     public string? Error { get; set; }
     /// <summary>What the network called the thing it created — a message id, an at:// URI.</summary>

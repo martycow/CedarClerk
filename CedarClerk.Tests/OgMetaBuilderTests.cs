@@ -61,6 +61,31 @@ public class OgMetaBuilderTests
     }
 
     [Fact]
+    public void Modified_time_never_precedes_published_time()
+    {
+        var published = new DateTime(2026, 8, 1, 12, 0, 0, DateTimeKind.Utc);
+        var input = Input() with { PublishedUtc = published, ModifiedUtc = published.AddDays(-3) };
+
+        var html = OgMetaBuilder.Build(input, OgMetaPolicy.Full);
+
+        Assert.Contains("article:published_time\" content=\"2026-08-01T12:00:00Z", html);
+        Assert.Contains("article:modified_time\" content=\"2026-08-01T12:00:00Z", html);
+        Assert.DoesNotContain("2026-07-29", html);
+    }
+
+    [Fact]
+    public void Modified_time_without_a_published_time_is_emitted_as_is()
+    {
+        var modified = new DateTime(2026, 8, 18, 9, 30, 0, DateTimeKind.Utc);
+        var input = Input() with { PublishedUtc = null, ModifiedUtc = modified };
+
+        var html = OgMetaBuilder.Build(input, OgMetaPolicy.Full);
+
+        Assert.DoesNotContain("article:published_time", html);
+        Assert.Contains("article:modified_time\" content=\"2026-08-18T09:30:00Z", html);
+    }
+
+    [Fact]
     public void A_page_without_image_emits_no_image_tags()
     {
         var html = OgMetaBuilder.Build(Input(imageUrl: null), OgMetaPolicy.Full);

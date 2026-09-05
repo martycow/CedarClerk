@@ -23,6 +23,22 @@ public static class ProjectEndpoints
     // title in one pick, and anything the caller states outright still wins over it — the dialog
     // lets a preset be chosen and then edited before Create.
     public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null, Guid? PresetId = null);
+
+    /// <summary>Count is every build of the project; LatestVersion is the newest *released* one, null
+    /// while nothing has shipped — a planned build is a plan, not a version anyone can play.</summary>
+    public sealed record BuildSummary(int Count, string? LatestVersion);
+
+    public static async Task<Dictionary<Guid, BuildSummary>> BuildSummariesAsync(CedarDbContext db, string ownerId)
+    {
+        var builds = await db.Builds
+            .Where(b => b.OwnerId == ownerId)
+            .Select(b => new { b.ProjectId, b.Version, b.ReleasedAt })
+            .ToListAsync();
+
+        return builds.GroupBy(b => b.ProjectId).ToDictionary(g => g.Key, g => new BuildSummary(
+            g.Count(),
+            g.Where(b => b.ReleasedAt != null).OrderByDescending(b => b.ReleasedAt).Select(b => b.Version).FirstOrDefault()));
+    }
     public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
         string? TrailerUrl, string? CustomDomain,
         string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
@@ -94,6 +110,8 @@ public static class ProjectEndpoints
                 .Select(g => new { ProjectId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.ProjectId, g => g.Count);
 
+            var builds = await BuildSummariesAsync(db, uid);
+
             return Results.Ok(projects.Select(p => new
             {
                 p.Id,
@@ -107,6 +125,8 @@ public static class ProjectEndpoints
                 documentCount = stats.GetValueOrDefault(p.Id)?.Count ?? 0,
                 openTaskCount = openTasks.GetValueOrDefault(p.Id),
                 assetCount = assetCounts.GetValueOrDefault(p.Id),
+                buildCount = builds.GetValueOrDefault(p.Id)?.Count ?? 0,
+                latestBuildVersion = builds.GetValueOrDefault(p.Id)?.LatestVersion,
                 // Falls back to the project's own creation for the moment between the two writes
                 // of a create — there is no state in which a project has no documents (ADR-103),
                 // but a null here would still render as an empty cell rather than a date.

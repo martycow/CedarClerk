@@ -158,7 +158,7 @@ public class CanvasBoardTests
 
         await using var db = fx.As(owner);
         var (error, _) = await CanvasWrites.AddAsync(db, access, board, owner, batch);
-        Assert.NotNull(error);
+        Assert.Equal(ErrorMessages.CanvasBatchLimitReached(CanvasWrites.MaxItemsPerCall), error);
         Assert.Empty(await CanvasWrites.ItemsAsync(db, board));
     }
 

@@ -472,6 +472,9 @@ public static class ErrorMessages
     public static string CanvasItemLimitReached(int max) =>
         Ru($"На доске не больше {max} объектов.", $"A board holds at most {max} items.");
 
+    public static string CanvasBatchLimitReached(int max) =>
+        Ru($"В одном запросе не больше {max} объектов.", $"One request may carry at most {max} items.");
+
     public static string UnknownCanvasItemKind(string kind) =>
         Ru($"Неизвестный объект доски «{kind}».", $"Unknown canvas item '{kind}'.");
 

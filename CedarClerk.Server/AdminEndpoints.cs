@@ -157,6 +157,26 @@ public static partial class AdminEndpoints
     /// </summary>
     public record AdjustCreditsRequest(int Amount, string? Note);
 
+    /// <summary>
+    /// How loudly the audit log draws an action: "warn" for what takes something away from an
+    /// account or the platform, "ok" for what gives it back or opens a door, "info" for the rest.
+    /// Computed, not stored — the row records what happened, and a later change of opinion about
+    /// how grave an action is must not rewrite history.
+    /// </summary>
+    public static string SeverityOf(string action) => action switch
+    {
+        "lock" or "delete-account" or "purge-orphans" or "grant-admin" or "revoke-admin" => AuditSeverity.Warn,
+        "unlock" or "reset-trial" or "invite-create" or "invite-enable" => AuditSeverity.Ok,
+        _ => AuditSeverity.Info,
+    };
+
+    public static class AuditSeverity
+    {
+        public const string Ok = "ok";
+        public const string Warn = "warn";
+        public const string Info = "info";
+    }
+
     private static void Audit(CedarDbContext db, ApplicationUser actor, string action,
         ApplicationUser? target = null, string? details = null)
     {
@@ -643,7 +663,11 @@ public static partial class AdminEndpoints
             var hasMore = page.Count > Consts.Admin.AuditPageSize;
             return Results.Ok(new
             {
-                Entries = hasMore ? page.Take(Consts.Admin.AuditPageSize) : page,
+                Entries = page.Take(Consts.Admin.AuditPageSize).Select(a => new
+                {
+                    a.Id, a.ActorEmail, a.Action, a.TargetEmail, a.Details, a.CreatedAt,
+                    Severity = SeverityOf(a.Action),
+                }),
                 HasMore = hasMore,
             });
         });

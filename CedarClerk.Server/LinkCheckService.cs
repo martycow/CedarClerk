@@ -15,17 +15,51 @@ public sealed record DeadLink(string Url, string Status);
 /// The probe runs from the droplet, where Kestrel listens on loopback and nothing else is meant
 /// to be reachable — so any URL whose host lands in a loopback/private/link-local range is
 /// refused before a request is built, reported as "blocked". The address check happens on what
-/// the host resolves to, not on how it is spelled.
+/// the host resolves to, not on how it is spelled, and it is repeated for every redirect hop
+/// (ADR-268): the handler never follows a redirect by itself, and the socket is opened to the
+/// exact address that passed the check, so a second DNS answer cannot swap the destination.
 /// </summary>
-public class LinkCheckService(HttpClient http, Func<string, CancellationToken, Task<IPAddress[]>> resolveHost)
+public class LinkCheckService(HttpClient http, Func<string, CancellationToken, Task<IPAddress[]>> resolveHost,
+    TimeSpan? perLinkTimeout = null)
 {
     [ActivatorUtilitiesConstructor]
     public LinkCheckService(HttpClient http) : this(http, Dns.GetHostAddressesAsync) { }
 
     public const int MaxLinks = 10;
+    public const int MaxRedirects = 5;
     public const string Unreachable = "unreachable";
     public const string Blocked = "blocked";
     public static readonly TimeSpan PerLinkTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>The address the host resolved to when it was checked; the connect callback dials this and nothing else.</summary>
+    public static readonly HttpRequestOptionsKey<IPAddress> PinnedAddress = new("CedarClerk.LinkCheck.PinnedAddress");
+
+    private readonly TimeSpan timeout = perLinkTimeout ?? PerLinkTimeout;
+
+    public static SocketsHttpHandler CreateHandler() => new()
+    {
+        AllowAutoRedirect = false,
+        PooledConnectionLifetime = TimeSpan.FromMinutes(1),
+        ConnectCallback = ConnectPinnedAsync,
+    };
+
+    private static async ValueTask<Stream> ConnectPinnedAsync(SocketsHttpConnectionContext context, CancellationToken ct)
+    {
+        if (!context.InitialRequestMessage.Options.TryGetValue(PinnedAddress, out var address))
+            throw new HttpRequestException("Link check request carries no checked address");
+
+        var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+        try
+        {
+            await socket.ConnectAsync(new IPEndPoint(address, context.DnsEndPoint.Port), ct);
+            return new NetworkStream(socket, ownsSocket: true);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
 
     /// <summary>The links that answered 4xx/5xx, were refused, or did not answer at all. Healthy links are omitted.</summary>
     public async Task<IReadOnlyList<DeadLink>> CheckAsync(IReadOnlyCollection<string> urls, CancellationToken ct = default)
@@ -37,27 +71,27 @@ public class LinkCheckService(HttpClient http, Func<string, CancellationToken, T
 
     private async Task<DeadLink?> ProbeAsync(string url, CancellationToken ct)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !IsHttp(uri))
             return new DeadLink(url, Unreachable);
 
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(PerLinkTimeout);
+            cts.CancelAfter(timeout);
 
-            if (await PointsInsideAsync(uri, cts.Token))
-                return new DeadLink(url, Blocked);
+            for (var hop = 0; ; hop++)
+            {
+                if (await ResolveOutsideAsync(uri, cts.Token) is not { } address)
+                    return new DeadLink(url, Blocked);
 
-            using var head = await http.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri),
-                HttpCompletionOption.ResponseHeadersRead, cts.Token);
-            // Plenty of servers refuse HEAD outright while serving the page fine.
-            if (head.StatusCode != HttpStatusCode.MethodNotAllowed)
-                return Verdict(url, head);
+                using var response = await SendAsync(uri, address, cts.Token);
+                if (!IsRedirect(response))
+                    return Verdict(url, response);
 
-            using var get = await http.SendAsync(new HttpRequestMessage(HttpMethod.Get, uri),
-                HttpCompletionOption.ResponseHeadersRead, cts.Token);
-            return Verdict(url, get);
+                if (hop >= MaxRedirects || !Uri.TryCreate(uri, response.Headers.Location, out var next) || !IsHttp(next))
+                    return new DeadLink(url, Unreachable);
+                uri = next;
+            }
         }
         catch (Exception) when (!ct.IsCancellationRequested)
         {
@@ -65,19 +99,45 @@ public class LinkCheckService(HttpClient http, Func<string, CancellationToken, T
         }
     }
 
+    private async Task<HttpResponseMessage> SendAsync(Uri uri, IPAddress address, CancellationToken ct)
+    {
+        var head = await http.SendAsync(Request(HttpMethod.Head, uri, address), HttpCompletionOption.ResponseHeadersRead, ct);
+        // Plenty of servers refuse HEAD outright while serving the page fine.
+        if (head.StatusCode != HttpStatusCode.MethodNotAllowed)
+            return head;
+
+        head.Dispose();
+        return await http.SendAsync(Request(HttpMethod.Get, uri, address), HttpCompletionOption.ResponseHeadersRead, ct);
+    }
+
+    private static HttpRequestMessage Request(HttpMethod method, Uri uri, IPAddress address)
+    {
+        var request = new HttpRequestMessage(method, uri);
+        request.Options.Set(PinnedAddress, address);
+        return request;
+    }
+
+    private static bool IsHttp(Uri uri) => uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+
+    private static bool IsRedirect(HttpResponseMessage response) =>
+        response.Headers.Location is not null && (int)response.StatusCode is 301 or 302 or 303 or 307 or 308;
+
     private static DeadLink? Verdict(string url, HttpResponseMessage response)
     {
         var status = (int)response.StatusCode;
         return status >= 400 ? new DeadLink(url, status.ToString()) : null;
     }
 
-    private async Task<bool> PointsInsideAsync(Uri uri, CancellationToken ct)
+    /// <summary>The one public address the request may connect to, or null when the host points inside.</summary>
+    private async Task<IPAddress?> ResolveOutsideAsync(Uri uri, CancellationToken ct)
     {
         if (IPAddress.TryParse(uri.IdnHost, out var literal))
-            return IsInternal(literal);
+            return IsInternal(literal) ? null : literal;
 
         var addresses = await resolveHost(uri.IdnHost, ct);
-        return addresses.Any(IsInternal);
+        if (addresses.Length == 0)
+            throw new SocketException((int)SocketError.HostNotFound);
+        return addresses.Any(IsInternal) ? null : addresses[0];
     }
 
     private static bool IsInternal(IPAddress ip)
