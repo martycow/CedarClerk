@@ -1,5 +1,6 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { MediaLibraryComponent } from './media-library.component';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
@@ -34,6 +35,10 @@ import { ariaSort, SortDirection } from '../core/collection-query';
 
 const PAGE_SIZE = 60;
 const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
+// The next page is asked for while this many rows are still below the fold, so a steady scroll
+// never reaches a blank bottom. Half a page: less and a fast wheel outruns the request.
+const PREFETCH_ROWS = PAGE_SIZE / 2;
+const FALLBACK_ROW_PX = 44;
 
 // T-122 (ADR-107) — the asset screen, from docs/design_handoff_indiedev_core_loop §9-10.
 //
@@ -54,6 +59,7 @@ const RECENT_FOLDERS_KEY = 'cedar.assetFolders';
     imports: [
         IconComponent, ZonedDatePipe, IndexTabsComponent, PageHeaderComponent, EmptyStateComponent,
         SpecRowComponent, InputComponent, ButtonComponent, MediaLibraryComponent, SortHeaderComponent,
+        CdkVirtualScrollViewport, CdkFixedSizeVirtualScroll, CdkVirtualForOf,
     ],
     templateUrl: 'project-assets.component.html',
     styleUrls: ['project-assets.component.css'],
@@ -82,8 +88,19 @@ export class ProjectAssetsComponent implements OnDestroy {
     refileNote = signal('');
     project = signal<ProjectDetail | null>(null);
     page = signal<AssetPage | null>(null);
+    // T-142 — every row fetched so far for the current query, in server order. `page` keeps the
+    // latest response for its counts; the rows accumulate here one server page at a time, and the
+    // list is drawn from them by a virtual scroll rather than a pager.
+    items = signal<AssetEntry[]>([]);
+    loadingMore = signal(false);
     loading = signal(true);
     loadError = signal<string | null>(null);
+    // The one row height the virtual scroll needs, read from the row token rather than typed here,
+    // so a token change cannot leave the viewport measuring rows it no longer draws.
+    rowHeight = signal(FALLBACK_ROW_PX);
+    private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+    private readonly viewport = viewChild(CdkVirtualScrollViewport);
+    private readonly indexBody = viewChild<ElementRef<HTMLElement>>('indexBody');
 
     view = signal<'grid' | 'list'>(this.loadView());
     kind = signal<AssetKind | null>(null);
@@ -91,7 +108,6 @@ export class ProjectAssetsComponent implements OnDestroy {
     search = signal('');
     sort = signal<AssetSort>('path');
     sortDirection = signal<SortDirection>('asc');
-    skip = signal(0);
 
     /** This machine, when there is one. Null in a browser, which is what makes everything a fingerprint. */
     thisMachine = signal<{ id: string; name: string } | null>(null);
@@ -160,6 +176,10 @@ export class ProjectAssetsComponent implements OnDestroy {
     });
 
     constructor() {
+        afterNextRender(() => {
+            const token = parseFloat(getComputedStyle(this.host.nativeElement).getPropertyValue('--hit-touch'));
+            if (Number.isFinite(token) && token > 0) this.rowHeight.set(token);
+        });
         void this.loadMachine();
         this.route.paramMap.subscribe(params => {
             const id = params.get('id');
@@ -167,6 +187,7 @@ export class ProjectAssetsComponent implements OnDestroy {
             this.projectId.set(id);
             this.project.set(null);
             this.page.set(null);
+            this.items.set([]);
             this.clearSelection();
             void this.load();
         });
@@ -195,7 +216,7 @@ export class ProjectAssetsComponent implements OnDestroy {
         if (!id) return;
         const projectRequest = ++this.projectRequestSequence;
         const listRequest = ++this.listRequestSequence;
-        const query = this.query();
+        const query = this.query(0);
         this.loading.set(true);
         this.loadError.set(null);
         const [projectResult, pageResult] = await Promise.allSettled([
@@ -212,35 +233,46 @@ export class ProjectAssetsComponent implements OnDestroy {
             else error = projectResult.reason;
         }
         if (listIsCurrent) {
-            if (pageResult.status === 'fulfilled') this.page.set(pageResult.value);
+            if (pageResult.status === 'fulfilled') this.acceptPage(pageResult.value, 0);
             else error ??= pageResult.reason;
         }
         if (error !== null) this.loadError.set(httpErrorMessage(error, this.t().projects.assets.loadFailed));
         if (listIsCurrent) this.loading.set(false);
     }
 
-    private query() {
+    private query(skip: number) {
         return {
             kind: this.kind(),
             search: this.search().trim() || undefined,
             missing: this.missingOnly(),
             sort: this.sort(),
             direction: this.sortDirection(),
-            skip: this.skip(),
+            skip,
             take: PAGE_SIZE,
         };
+    }
+
+    private acceptPage(page: AssetPage, skip: number) {
+        this.page.set(page);
+        this.items.update(list => skip === 0 ? page.items : [...list.slice(0, skip), ...page.items]);
+        // A page shorter than asked for is the end whatever `total` says: the index may have shrunk
+        // under a sweep since the count was taken, and trusting the count would ask forever.
+        this.exhausted = page.items.length < PAGE_SIZE;
+        this.fillAfterRender();
     }
 
     private async reloadList() {
         const id = this.projectId();
         if (!id) return;
         const request = ++this.listRequestSequence;
-        const query = this.query();
+        const query = this.query(0);
         this.loadError.set(null);
+        this.loadingMore.set(false);
         try {
             const page = await this.api.list(id, query);
             if (request !== this.listRequestSequence || id !== this.projectId()) return;
-            this.page.set(page);
+            this.acceptPage(page, 0);
+            this.viewport()?.scrollToIndex(0);
         } catch (e) {
             if (request !== this.listRequestSequence || id !== this.projectId()) return;
             this.loadError.set(httpErrorMessage(e, this.t().projects.assets.loadFailed));
@@ -249,10 +281,81 @@ export class ProjectAssetsComponent implements OnDestroy {
         }
     }
 
+    // ---- infinite append (T-142) ------------------------------------------
+
+    private exhausted = false;
+
+    hasMore() {
+        return !this.exhausted && this.items().length < (this.page()?.total ?? 0);
+    }
+
+    async loadMore() {
+        const id = this.projectId();
+        if (!id || this.loading() || this.loadingMore() || !this.hasMore()) return;
+        const request = this.listRequestSequence;
+        const skip = this.items().length;
+        this.loadingMore.set(true);
+        try {
+            const page = await this.api.list(id, this.query(skip));
+            if (request !== this.listRequestSequence || id !== this.projectId()) return;
+            this.acceptPage(page, skip);
+        } catch (e) {
+            if (request !== this.listRequestSequence || id !== this.projectId()) return;
+            this.loadError.set(httpErrorMessage(e, this.t().projects.assets.loadFailed));
+        } finally {
+            if (request === this.listRequestSequence && id === this.projectId()) this.loadingMore.set(false);
+        }
+    }
+
+    /** The virtual list scrolled: ask for the next page once the rendered window nears the end. */
+    onScrolledIndex() {
+        const viewport = this.viewport();
+        if (!viewport) return;
+        if (viewport.getRenderedRange().end >= this.items().length - PREFETCH_ROWS) void this.loadMore();
+    }
+
+    /** The grid is not virtualised — a tile has no fixed height — so it appends on plain scroll. */
+    onGridScroll(el: HTMLElement) {
+        if (el.scrollHeight - el.scrollTop - el.clientHeight <= this.rowHeight() * PREFETCH_ROWS / 4) void this.loadMore();
+    }
+
+    // A tall window can show a whole page with nothing left to scroll, and a scroll event that never
+    // comes would leave the rest unloaded; after each page, check whether the bottom is already in view.
+    private fillAfterRender() {
+        if (!this.hasMore()) return;
+        setTimeout(() => {
+            if (this.view() === 'list') this.onScrolledIndex();
+            else {
+                const body = this.indexBody()?.nativeElement;
+                if (body) this.onGridScroll(body);
+            }
+        });
+    }
+
+    /** Arrow keys walk the rows; a row scrolled out of the rendered window is brought back first. */
+    onListKeydown(event: KeyboardEvent) {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        const current = (event.target as HTMLElement).closest<HTMLElement>('[aria-rowindex]');
+        if (!current) return;
+        const index = Number(current.getAttribute('aria-rowindex')) - 2 + (event.key === 'ArrowDown' ? 1 : -1);
+        if (index < 0 || index >= this.items().length) return;
+        event.preventDefault();
+        this.focusRow(index);
+    }
+
+    private focusRow(index: number, attempt = 0) {
+        const viewport = this.viewport();
+        const row = viewport?.elementRef.nativeElement
+            .querySelector<HTMLElement>(`[aria-rowindex="${index + 2}"] .asset-open`);
+        if (row) { row.focus(); return; }
+        if (!viewport || attempt > 2) return;
+        viewport.scrollToIndex(index);
+        requestAnimationFrame(() => this.focusRow(index, attempt + 1));
+    }
+
     setKind(kind: AssetKind | null) {
         this.kind.set(kind);
         this.missingOnly.set(false);
-        this.skip.set(0);
         this.clearSelection();
         void this.reloadList();
     }
@@ -260,14 +363,12 @@ export class ProjectAssetsComponent implements OnDestroy {
     showMissing() {
         this.kind.set(null);
         this.missingOnly.set(true);
-        this.skip.set(0);
         this.clearSelection();
         void this.reloadList();
     }
 
     onSearch(value: string) {
         this.search.set(value);
-        this.skip.set(0);
         this.clearSelection();
         // Debounced: the index can hold tens of thousands of rows, and a request per keystroke
         // would queue faster than it answers.
@@ -281,7 +382,6 @@ export class ProjectAssetsComponent implements OnDestroy {
         this.kind.set(null);
         this.missingOnly.set(false);
         this.search.set('');
-        this.skip.set(0);
         this.clearSelection();
         void this.reloadList();
     }
@@ -311,7 +411,6 @@ export class ProjectAssetsComponent implements OnDestroy {
         if (!['path', 'type', 'size', 'modified', 'status'].includes(key) || (direction !== 'asc' && direction !== 'desc')) return;
         this.sort.set(key as AssetSort);
         this.sortDirection.set(direction);
-        this.skip.set(0);
         this.clearSelection();
         void this.reloadList();
     }
@@ -323,7 +422,6 @@ export class ProjectAssetsComponent implements OnDestroy {
             this.sort.set(key);
             this.sortDirection.set(key === 'path' || key === 'type' || key === 'status' ? 'asc' : 'desc');
         }
-        this.skip.set(0);
         this.clearSelection();
         void this.reloadList();
     }
@@ -389,6 +487,7 @@ export class ProjectAssetsComponent implements OnDestroy {
     setView(view: 'grid' | 'list') {
         this.view.set(view);
         try { localStorage.setItem('cedar.assetView', view); } catch { /* private mode */ }
+        this.fillAfterRender();
     }
 
     // ---- folder choosing -------------------------------------------------
@@ -553,6 +652,8 @@ export class ProjectAssetsComponent implements OnDestroy {
         return parts.join(' · ');
     }
 
+    readonly trackAsset = (_: number, asset: AssetEntry) => asset.id;
+
     /** Shown only when the file really is here — see `isLocal`. */
     async revealSelected() {
         const path = this.selected()?.fullPath;
@@ -588,27 +689,12 @@ export class ProjectAssetsComponent implements OnDestroy {
         }
     }
 
-    // ---- paging ----------------------------------------------------------
-
-    get canPageBack() { return this.skip() > 0; }
-    get canPageForward() { return this.skip() + PAGE_SIZE < (this.page()?.total ?? 0); }
-
-    pageBack() {
-        this.skip.set(Math.max(0, this.skip() - PAGE_SIZE));
-        void this.reloadList();
-    }
-
-    pageForward() {
-        this.skip.set(this.skip() + PAGE_SIZE);
-        void this.reloadList();
-    }
-
+    /** "60 / 12345" while rows are still to come, the bare count once they are all here. */
     rangeLabel() {
-        const page = this.page();
-        if (!page || page.total === 0) return '';
-        const from = this.skip() + 1;
-        const to = Math.min(this.skip() + page.items.length, page.total);
-        return `${from}–${to} / ${page.total}`;
+        const total = this.page()?.total ?? 0;
+        if (total === 0) return '';
+        const loaded = this.items().length;
+        return loaded < total ? `${loaded} / ${total}` : `${total}`;
     }
 
     // ---- local preferences ----------------------------------------------

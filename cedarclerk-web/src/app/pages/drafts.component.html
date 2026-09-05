@@ -251,10 +251,19 @@ never on a component — several of the components below also appear on comforta
             } @else if (view() === 'tree') {
             <!--ADR-128 — the document tree. Structure, not a filtered list: the status tabs and the
             folder filter deliberately do not apply (search does, and keeps the ancestor path).-->
-            <div class="row-list drafts-tree">
+            <!--ADR-283 — one flat drop list; the row's grip starts a drag, sideways travel picks the
+            depth, and the placeholder is drawn at that depth. Keyboard moves stay on the buttons.-->
+            <div class="row-list drafts-tree" cdkDropList cdkDropListLockAxis="y" (cdkDropListDropped)="onTreeDrop($event)">
                 @for (row of treeRows(); track row.d.id) {
                 <div class="tree-row" [class.busy]="busyId() === row.d.id"
-                     [style.padding-left.px]="8 + row.depth * 22" (click)="openDraft(row.d.id)">
+                     cdkDrag [cdkDragData]="row" [cdkDragDisabled]="busyId() !== null" [cdkDragStartDelay]="treeDragDelay"
+                     (cdkDragStarted)="onTreeDragStart(row)" (cdkDragMoved)="onTreeDragMove($event)" (cdkDragEnded)="onTreeDragEnd()"
+                     [style.padding-left]="treeIndent(row.depth)" (click)="openDraft(row.d.id)">
+                    <div *cdkDragPlaceholder class="tree-drop" [style.margin-left]="treeIndent(dropDepth())"></div>
+                    <span class="tree-grip" cdkDragHandle aria-hidden="true" [title]="t().drafts.tree.drag"
+                          (click)="$event.stopPropagation()">
+                        <app-icon name="dots-three" size="sm"></app-icon>
+                    </span>
                     @if (row.hasChildren) {
                     <button class="tree-caret" [class.closed]="isCollapsed(row.d.id)" (click)="toggleExpanded(row.d.id, $event)"
                             [attr.aria-label]="isCollapsed(row.d.id) ? t().drafts.tree.expand : t().drafts.tree.collapse">

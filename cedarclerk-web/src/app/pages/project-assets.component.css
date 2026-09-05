@@ -91,6 +91,10 @@
     overflow: auto;
 }
 
+/* In list view the virtual viewport owns the vertical scroll (ADR-246 clause 4), so the body
+   must not offer a second one on the same axis. */
+.index-body.virtual { overflow: hidden; }
+
 .search {
     width: 200px;
 }
@@ -474,17 +478,34 @@
 }
 
 /* ---------- List ---------- */
+/* T-142 — the table is head + virtual viewport in a column. Sideways scroll belongs to the table,
+   so the head and the rows move together; the viewport keeps the vertical axis to itself. */
 .asset-table {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
     overflow-x: auto;
 }
 
+.asset-rows {
+    flex: 1;
+    min-height: 0;
+    min-width: 800px;
+    overflow-x: hidden;
+}
+
+/* Every row is exactly the row token tall: a fixed-size virtual scroll measures nothing, it
+   multiplies, so the row may not grow with its content. */
 .asset-row {
     position: relative;
     display: grid;
     grid-template-columns: minmax(240px, 1fr) 100px 100px 170px 140px;
     gap: var(--dens-gap);
     align-items: center;
-    padding: var(--dens-row-y) var(--dens-control-x);
+    box-sizing: border-box;
+    height: var(--hit-touch);
+    padding: 0 var(--dens-control-x);
     border-bottom: 1px solid var(--paper-edge);
     cursor: pointer;
     min-width: 800px;
@@ -492,7 +513,13 @@
     color: var(--t2);
 }
 
-.asset-row:last-child { border-bottom: none; }
+.asset-row > [role="cell"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .asset-row:hover:not(.head-row) { background: var(--alt); }
 
 .head-row {
@@ -538,14 +565,18 @@
     inset: 0;
 }
 
-.pager {
-    display: flex;
+.hint.more {
     flex: none;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    padding: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    text-align: center;
 }
+
+.tile-cell {
+    display: flex;
+    min-width: 0;
+}
+
+.tile-cell > .tile { flex: 1; min-width: 0; }
 
 @media (max-width: 900px) {
     .assets-grid.with-inspector {
@@ -565,4 +596,7 @@
     }
 
     .assets-grid.with-inspector .index-body { flex: none; }
+
+    /* The body stops bounding the height here, and a viewport without one draws nothing. */
+    .assets-grid.with-inspector .asset-rows { height: calc(var(--hit-touch) * 12); }
 }

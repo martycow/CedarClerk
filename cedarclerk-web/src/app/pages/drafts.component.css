@@ -609,7 +609,9 @@
 
 
 /* ---------- Document tree (ADR-128) ---------- */
+/* One level of indent, also read by the drag math (ADR-283) — the number lives here only. */
 .drafts-tree {
+    --tree-indent: var(--space-5);
     display: flex;
     flex-direction: column;
 }
@@ -623,10 +625,51 @@
     border-top: 1px solid var(--paper-edge);
     cursor: pointer;
     min-width: 0;
+    /* cdk shifts the neighbours with a transform while sorting and reads this duration for the
+       settle; the motion token is clamped under prefers-reduced-motion, so the drag is too. */
+    transition: transform var(--motion-base) var(--ease);
 }
 
 .tree-row:hover { background: var(--alt); }
 .tree-row.busy { opacity: .6; pointer-events: none; }
+
+.tree-grip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    min-width: var(--hit-trim);
+    min-height: var(--hit-trim);
+    color: var(--t3);
+    cursor: grab;
+}
+
+.tree-grip app-icon { transform: rotate(90deg); }
+.tree-row:hover .tree-grip { color: var(--t2); }
+
+.tree-row.cdk-drag-preview {
+    box-sizing: border-box;
+    background: var(--surface);
+    border: 1px solid var(--abord);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    cursor: grabbing;
+}
+
+.tree-row.cdk-drag-animating { transition: transform var(--motion-base) var(--ease); }
+
+/* The drop mark: a row-tall slot at the depth the pointer has picked. */
+.tree-drop {
+    box-sizing: border-box;
+    height: var(--hit-touch);
+    margin-right: var(--space-4);
+    border: 1px dashed var(--abord);
+    border-radius: var(--radius-sm);
+    background: var(--asoft);
+    transition: margin-left var(--motion-fast) var(--ease);
+}
+
+.drafts-tree.cdk-drop-list-dragging .tree-row:not(.cdk-drag-placeholder) { cursor: grabbing; }
 
 .tree-caret {
     display: flex;

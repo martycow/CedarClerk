@@ -931,6 +931,7 @@ export const en = {
             nothingToLink: 'Every document in this project is already linked.',
             indexedLabel: 'Indexed',
             missingHint: 'The path is recorded, the file is not there right now. It may be on a drive that is unplugged.',
+            loadingMore: 'Loading more…',
         },
         edit: {
             title: 'Project settings',
@@ -1142,6 +1143,7 @@ export const en = {
             moveDown: 'Move down',
             root: 'Top level',
             moveTitle: (name: string) => `Move "${name}" under:`,
+            drag: 'Drag to move; slide sideways to change the level',
         },
         series: {
             title: 'Series',

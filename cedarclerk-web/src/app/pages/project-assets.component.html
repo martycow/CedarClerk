@@ -154,8 +154,11 @@ because linking it to a document means choosing from a list the modal was coveri
                                         [label]="t().projects.assets.viewStrip" (selected)="setView($any($event))" />
                     </div>
 
-                    <div class="index-body">
-                        @if (p.items.length === 0) {
+                    <!--T-142 — the grid scrolls here and appends a page as the bottom nears; the list
+                    hands the vertical scroll to its virtual viewport instead (ADR-246 clause 4: one
+                    owner per axis), which is why the body stops scrolling in that view.-->
+                    <div class="index-body" #indexBody [class.virtual]="view() === 'list'" (scroll)="onGridScroll(indexBody)">
+                        @if (items().length === 0) {
                             @if (p.totalIndexed === 0) {
                                 <app-empty-state icon="folder-open" [title]="t().projects.assets.empty" [text]="t().projects.assets.emptyHint">
                                     @if (canIndex() && isLocal()) {
@@ -174,8 +177,9 @@ because linking it to a document means choosing from a list the modal was coveri
                                 </app-empty-state>
                             }
                         } @else if (view() === 'grid') {
-                            <div class="asset-grid">
-                                @for (a of p.items; track a.id) {
+                            <div class="asset-grid" role="list">
+                                @for (a of items(); track a.id; let i = $index) {
+                                    <div class="tile-cell" role="listitem" [attr.aria-setsize]="p.total" [attr.aria-posinset]="i + 1">
                                     <button type="button" class="tile" [class.missing]="!!a.missingSince"
                                             [class.is-on]="selected()?.id === a.id"
                                             [attr.aria-pressed]="selected()?.id === a.id" (click)="open(a)">
@@ -207,11 +211,18 @@ because linking it to a document means choosing from a list the modal was coveri
                                         <span class="tile-name" [title]="a.relativePath">{{ a.fileName }}</span>
                                         <span class="tile-meta">{{ detailsOf(a) }} · {{ a.modifiedAt | zonedDate:'d MMM' }}</span>
                                     </button>
+                                    </div>
                                 }
                             </div>
                         } @else {
-                            <div class="asset-table" role="table" [attr.aria-label]="t().projects.assets.title">
-                                <div class="asset-row head-row" role="row">
+                            <!--The head row stays outside the viewport so it never scrolls away; the
+                            viewport is the second row group, drawing only the rows in view at the
+                            row token's fixed height. Row indices count from the head, so a reader
+                            hears the true position in an index it has not fully loaded.-->
+                            <div class="asset-table" role="table" [attr.aria-label]="t().projects.assets.title"
+                                 [attr.aria-rowcount]="p.total + 1" (keydown)="onListKeydown($event)">
+                                <div role="rowgroup">
+                                <div class="asset-row head-row" role="row" aria-rowindex="1">
                                     <div role="columnheader" [attr.aria-sort]="columnSort('path')">
                                         <app-sort-header [label]="t().projects.assets.colFile" [active]="sort() === 'path'"
                                             [direction]="sortDirection()" [sortByLabel]="t().common.sortBy"
@@ -243,8 +254,12 @@ because linking it to a document means choosing from a list the modal was coveri
                                             (sorted)="setSort('status')" />
                                     </div>
                                 </div>
-                                @for (a of p.items; track a.id) {
-                                    <div class="asset-row" role="row" [class.is-on]="selected()?.id === a.id">
+                                </div>
+                                <cdk-virtual-scroll-viewport class="asset-rows" role="rowgroup" [itemSize]="rowHeight()"
+                                                             [minBufferPx]="rowHeight() * 8" [maxBufferPx]="rowHeight() * 16"
+                                                             (scrolledIndexChange)="onScrolledIndex()">
+                                    <div *cdkVirtualFor="let a of items(); trackBy: trackAsset; let i = index"
+                                         class="asset-row" role="row" [attr.aria-rowindex]="i + 2" [class.is-on]="selected()?.id === a.id">
                                         <div class="file-cell" role="cell">
                                             <button type="button" class="asset-open" [title]="a.relativePath"
                                                     [attr.aria-pressed]="selected()?.id === a.id" (click)="open(a)">
@@ -267,20 +282,12 @@ because linking it to a document means choosing from a list the modal was coveri
                                             }
                                         </div>
                                     </div>
-                                }
+                                </cdk-virtual-scroll-viewport>
                             </div>
                         }
 
-                        @if (p.total > 0) {
-                            <div class="pager">
-                                <app-button variant="paper" size="sm" [disabled]="!canPageBack" [title]="t().common.pageBack" (clicked)="pageBack()">
-                                    <app-icon name="caret-left" size="sm" [label]="t().common.pageBack" />
-                                </app-button>
-                                <span class="hint">{{ rangeLabel() }}</span>
-                                <app-button variant="paper" size="sm" [disabled]="!canPageForward" [title]="t().common.pageForward" (clicked)="pageForward()">
-                                    <app-icon name="caret-right" size="sm" [label]="t().common.pageForward" />
-                                </app-button>
-                            </div>
+                        @if (loadingMore()) {
+                            <p class="hint more" role="status">{{ t().projects.assets.loadingMore }}</p>
                         }
                     </div>
                 </section>

@@ -1,4 +1,7 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
+import {
+    CdkDrag, CdkDragDrop, CdkDragHandle, CdkDragMove, CdkDragPlaceholder, CdkDropList,
+} from '@angular/cdk/drag-drop';
 import { formatInZone } from '../core/display-time';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { NgTemplateOutlet } from '@angular/common';
@@ -36,6 +39,42 @@ import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
 import { ariaSort } from '../core/collection-query';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
+
+export interface TreeRow { d: DraftMeta; depth: number; hasChildren: boolean; }
+
+// The template's indent token, for the one place it has to be a number: turning a drag's
+// horizontal travel into a depth. Read off the list at drag start; this is only for a test DOM
+// that computes no styles.
+const TREE_INDENT_FALLBACK_PX = 24;
+// ADR-128 caps the tree at ten levels; the drop math stops one short so a drop never asks the
+// server for the level it refuses.
+const TREE_MAX_DEPTH = 9;
+
+/**
+ * ADR-283 — where a dragged tree row lands. `rows` is the visible tree without the dragged row,
+ * `index` is where the placeholder sits in it, and `wantedDepth` is what the pointer's sideways
+ * travel asked for. The depth is clamped to what the neighbours allow — no deeper than one level
+ * under the row above, no shallower than the row below — and the parent and the next sibling
+ * follow from the depth alone, so the same rows and the same index always give the same answer.
+ */
+export function treeDropTarget(rows: TreeRow[], index: number, wantedDepth: number) {
+    const at = Math.max(0, Math.min(rows.length, index));
+    const above = at > 0 ? rows[at - 1] : undefined;
+    const below = rows[at];
+    const deepest = Math.min(TREE_MAX_DEPTH, above ? above.depth + 1 : 0);
+    const shallowest = below ? below.depth : 0;
+    const depth = Math.max(shallowest, Math.min(deepest, wantedDepth));
+    let parentId: string | null = null;
+    for (let i = at - 1; i >= 0 && depth > 0; i--) {
+        if (rows[i].depth === depth - 1) { parentId = rows[i].d.id; break; }
+    }
+    let beforeId: string | undefined;
+    for (let i = at; i < rows.length; i++) {
+        if (rows[i].depth < depth) break;
+        if (rows[i].depth === depth) { beforeId = rows[i].d.id; break; }
+    }
+    return { depth, parentId, beforeId };
+}
 export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'activity' | 'updated' | 'created';
 
 // Widths of the six fixed columns between Title (1fr) and the actions column (N1). Title keeps
@@ -144,7 +183,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
         FolderPickerComponent, TagPickerComponent, SeriesPickerComponent, IndexTabsComponent,
         SpecRowComponent, InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
         PageHeaderComponent, EmptyStateComponent, RouterLink,
-        SortHeaderComponent,
+        SortHeaderComponent, CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder,
     ],
     templateUrl: 'drafts.component.html',
     styleUrls: ['drafts.component.css'],
@@ -490,10 +529,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         return visible;
     }
 
-    treeRows(): { d: DraftMeta; depth: number; hasChildren: boolean }[] {
+    treeRows(): TreeRow[] {
         const pool = this.treePool();
         const visible = this.treeVisibleIds(pool);
-        const rows: { d: DraftMeta; depth: number; hasChildren: boolean }[] = [];
+        const rows: TreeRow[] = [];
         const walk = (parentId: string | null, depth: number) => {
             if (depth > 12) return;
             for (const d of this.treeChildrenOf(pool, parentId)) {
@@ -567,6 +606,76 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         ev.stopPropagation();
         if (d.parentDraftId === parentId) return;
         void this.applyMove(d.id, parentId);
+    }
+
+    // ---- drag&drop moves (ADR-283) --------------------------------------------------------------
+    // One flat drop list; the depth comes from how far the pointer travelled sideways, in indent
+    // widths, and the placeholder is drawn at that depth so the drop is visible before it happens.
+    // The keyboard path stays the menu and the up/down buttons above.
+
+    private readonly treeList = viewChild(CdkDropList);
+    readonly treeDragDelay = { touch: 200, mouse: 0 };
+    dropDepth = signal(0);
+    private treeDrag: { row: TreeRow; indent: number; reExpand: boolean; dropped: boolean } | null = null;
+
+    treeIndent(depth: number) {
+        return `calc(var(--space-2) + var(--tree-indent) * ${depth})`;
+    }
+
+    onTreeDragStart(row: TreeRow) {
+        const list = this.treeList()?.element.nativeElement;
+        const indent = parseFloat(list ? getComputedStyle(list).getPropertyValue('--tree-indent') : '');
+        // The subtree travels with its parent by data, not by position: folding it away for the
+        // drag keeps its rows from being sorted around separately from the row being moved.
+        const reExpand = row.hasChildren && !this.isCollapsed(row.d.id);
+        if (reExpand) this.collapsed.update(set => new Set(set).add(row.d.id));
+        this.treeDrag = {
+            row, reExpand, dropped: false,
+            indent: Number.isFinite(indent) && indent > 0 ? indent : TREE_INDENT_FALLBACK_PX,
+        };
+        this.dropDepth.set(row.depth);
+    }
+
+    private treeDropAt(index: number, distanceX: number) {
+        const drag = this.treeDrag!;
+        const others = this.treeRows().filter(r => r.d.id !== drag.row.d.id);
+        return treeDropTarget(others, index, drag.row.depth + Math.round(distanceX / drag.indent));
+    }
+
+    onTreeDragMove(event: CdkDragMove<TreeRow>) {
+        const list = this.treeList();
+        if (!this.treeDrag || !list) return;
+        const index = list.getSortedItems().indexOf(event.source);
+        if (index >= 0) this.dropDepth.set(this.treeDropAt(index, event.distance.x).depth);
+    }
+
+    // `ended` fires before `dropped`; the microtask lets a drop claim the drag first, so only a
+    // drag that ended without one (released outside the list) is unwound here.
+    onTreeDragEnd() {
+        queueMicrotask(() => { if (this.treeDrag && !this.treeDrag.dropped) this.finishTreeDrag(); });
+    }
+
+    private finishTreeDrag() {
+        const drag = this.treeDrag;
+        this.treeDrag = null;
+        if (!drag?.reExpand) return;
+        this.collapsed.update(set => {
+            const next = new Set(set);
+            next.delete(drag.row.d.id);
+            return next;
+        });
+    }
+
+    async onTreeDrop(event: CdkDragDrop<unknown, unknown, TreeRow>) {
+        const drag = this.treeDrag;
+        if (!drag) return;
+        drag.dropped = true;
+        const { parentId, beforeId } = this.treeDropAt(event.currentIndex, event.distance.x);
+        const d = drag.row.d;
+        const siblings = this.treeChildrenOf(this.treePool(), d.parentDraftId);
+        const currentBefore = siblings[siblings.findIndex(x => x.id === d.id) + 1]?.id;
+        if (parentId !== d.parentDraftId || beforeId !== currentBefore) await this.applyMove(d.id, parentId, beforeId);
+        this.finishTreeDrag();
     }
 
     moveUp(d: DraftMeta, ev: Event) {

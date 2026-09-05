@@ -876,6 +876,7 @@ export const ru: Dict = {
             nothingToLink: 'Все документы проекта уже связаны.',
             indexedLabel: 'Проиндексирован',
             missingHint: 'Путь записан, но файла сейчас там нет. Возможно, диск отключён.',
+            loadingMore: 'Загружаем ещё…',
         },
         edit: {
             title: 'Настройки проекта',
@@ -1079,6 +1080,7 @@ export const ru: Dict = {
             moveDown: 'Ниже',
             root: 'Верхний уровень',
             moveTitle: (name: string) => `Переместить «${name}» под:`,
+            drag: 'Перетащите, чтобы переместить; сдвиг вбок меняет уровень',
         },
         series: {
             title: 'Серия',
