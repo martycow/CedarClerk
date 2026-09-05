@@ -178,13 +178,13 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/media-library.component.html",
             "pages/posts-manager.component.html",
             "pages/project-assets.component.html",
-            "pages/project-boards.component.html",
             "pages/project-tasks.component.html",
             "pages/stats.component.html",
             "shared/debug-console.component.html",
             "shared/folder-picker.component.html",
             "shared/glossary-term-form.component.ts",
             "shared/modal.component.html",
+            "shared/project-members-panel.component.html",
             "shared/publish-matrix.component.ts",
             "shared/series-picker.component.html",
             "shared/tag-picker.component.html"
@@ -274,7 +274,8 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/project-assets.component.html",
             "pages/project-boards.component.html",
             "pages/project-dialogue.component.html",
-            "pages/project-dialogues.component.html"
+            "pages/project-dialogues.component.html",
+            "shared/project-members-panel.component.html"
         ]
     },
     {
@@ -291,10 +292,10 @@ export const ICON_USAGE: IconUsageRow[] = [
         "files": [
             "pages/editor.component.html",
             "pages/project-assets.component.html",
-            "pages/project-boards.component.html",
             "pages/project-canvas.component.html",
             "pages/project-tasks.component.html",
-            "pages/stats.component.html"
+            "pages/stats.component.html",
+            "shared/project-members-panel.component.html"
         ]
     },
     {
@@ -473,9 +474,9 @@ export const ICON_USAGE: IconUsageRow[] = [
         ],
         "files": [
             "pages/editor.component.html",
-            "pages/project-boards.component.html",
             "pages/settings.component.html",
-            "pages/teams.component.html"
+            "pages/teams.component.html",
+            "shared/project-members-panel.component.html"
         ]
     },
     {
