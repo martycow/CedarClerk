@@ -8,10 +8,10 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
         <div class="card reactions-card" [class.has-new]="reactions().newLikes || reactions().newDislikes"
              (pointerenter)="markReactionsSeen()">
             <span class="reactions-summary">
-                👍 {{ reactions().likes }}
+                <app-icon name="thumbs-up" size="sm" [label]="t().feedback.likes"></app-icon> {{ reactions().likes }}
                 @if (reactions().newLikes) { <span class="new-delta">+{{ reactions().newLikes }}</span> }
                 ·
-                👎 {{ reactions().dislikes }}
+                <app-icon name="thumbs-down" size="sm" [label]="t().feedback.dislikes"></app-icon> {{ reactions().dislikes }}
                 @if (reactions().newDislikes) { <span class="new-delta">+{{ reactions().newDislikes }}</span> }
             </span>
             <span class="reactions-hint">{{ t().feedback.acrossDrafts }}</span>
@@ -40,9 +40,9 @@ list of every post. Feedback is grouped per post: a flat stream answered "what's
                     }
                     @if (g.reactions; as r) {
                     <span class="feedback-group-reactions" [class.has-new]="r.newLikes || r.newDislikes">
-                        👍 {{ r.likes }}@if (r.newLikes) { <span class="new-delta">+{{ r.newLikes }}</span> }
+                        <app-icon name="thumbs-up" size="xs" [label]="t().feedback.likes"></app-icon> {{ r.likes }}@if (r.newLikes) { <span class="new-delta">+{{ r.newLikes }}</span> }
                         ·
-                        👎 {{ r.dislikes }}@if (r.newDislikes) { <span class="new-delta">+{{ r.newDislikes }}</span> }
+                        <app-icon name="thumbs-down" size="xs" [label]="t().feedback.dislikes"></app-icon> {{ r.dislikes }}@if (r.newDislikes) { <span class="new-delta">+{{ r.newDislikes }}</span> }
                     </span>
                     }
                     <span class="spacer"></span>

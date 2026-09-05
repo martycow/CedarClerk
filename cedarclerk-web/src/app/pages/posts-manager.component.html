@@ -442,6 +442,9 @@ so it stays addressable by the name the smoke suite binds.-->
                 time you open one.-->
                 <details class="detail-group" [open]="isOpen('growth')" (toggle)="rememberOpen('growth', $event); loadHistory(d.id)">
                     <summary>{{ t().manager.groups.growth }}</summary>
+                    @if (predatesHistory(d.blogPublishedAt)) {
+                    <p class="field-hint-inline">{{ t().manager.groups.growthSince }}</p>
+                    }
                     @if (historyLoading()) {
                     <p class="field-hint-inline">{{ t().common.loading }}</p>
                     } @else {

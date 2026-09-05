@@ -1242,13 +1242,13 @@
                     } @else {
                     <div class="asset-sort">
                         <button (click)="sortAssetsBy('name')" [class.on]="assetSort().key === 'name'" [attr.aria-pressed]="assetSort().key === 'name'">
-                            {{ t().editor.exportModal.sortName }} {{ assetSortMark('name') }}
+                            {{ t().editor.exportModal.sortName }}@if (assetSortMark('name'); as mark) { <app-icon [name]="mark" size="xs"></app-icon> }
                         </button>
                         <button (click)="sortAssetsBy('type')" [class.on]="assetSort().key === 'type'" [attr.aria-pressed]="assetSort().key === 'type'">
-                            {{ t().editor.exportModal.sortType }} {{ assetSortMark('type') }}
+                            {{ t().editor.exportModal.sortType }}@if (assetSortMark('type'); as mark) { <app-icon [name]="mark" size="xs"></app-icon> }
                         </button>
                         <button (click)="sortAssetsBy('size')" [class.on]="assetSort().key === 'size'" [attr.aria-pressed]="assetSort().key === 'size'">
-                            {{ t().editor.exportModal.sortSize }} {{ assetSortMark('size') }}
+                            {{ t().editor.exportModal.sortSize }}@if (assetSortMark('size'); as mark) { <app-icon [name]="mark" size="xs"></app-icon> }
                         </button>
                     </div>
                     <div class="asset-list">

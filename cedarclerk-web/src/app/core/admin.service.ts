@@ -123,6 +123,8 @@ export interface AdminAuditEntry {
     id: string;
     actorEmail: string;
     action: string;
+    /** Stamped server-side from the action (`AdminEndpoints.SeverityOf`); the journal itself stays a plain record. */
+    severity: 'ok' | 'warn' | 'info';
     targetEmail: string | null;
     details: string | null;
     createdAt: string;

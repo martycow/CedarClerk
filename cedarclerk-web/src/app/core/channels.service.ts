@@ -50,6 +50,15 @@ export interface ChannelInviteLinks {
     organic: { joins: number; leaves: number };
 }
 
+/** One row per (day, link), oldest first; `inviteLinkId: null` is the organic row. `day` is a UTC
+ *  midnight serialised without an offset — key on its date prefix, never on Date parsing. */
+export interface ChannelMemberFlowRow {
+    day: string;
+    inviteLinkId: string | null;
+    joins: number;
+    leaves: number;
+}
+
 export interface ChannelStatSnapshotDto {
     takenAt: string;
     memberCount: number;
@@ -151,6 +160,11 @@ export class ChannelsService {
 
     listInviteLinks(id: string) {
         return firstValueFrom(this.http.get<ChannelInviteLinks>(`/api/channels/${id}/invite-links`));
+    }
+
+    /** Days with no events have no row — the caller fills the window with zeros. `days` is clamped 1..180 server-side. */
+    memberFlow(id: string, days = 30) {
+        return firstValueFrom(this.http.get<ChannelMemberFlowRow[]>(`/api/channels/${id}/member-flow?days=${days}`));
     }
 
     /** 503 with a clear message when the bot is not running — the PostEndpoints pattern.

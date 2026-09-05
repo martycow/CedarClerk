@@ -49,6 +49,8 @@ import { SortDirection } from '../core/collection-query';
 export type ManagerTab = 'posts' | 'stats' | 'forms';
 const MANAGER_TABS: ManagerTab[] = ['posts', 'stats', 'forms'];
 const RETIRED_TABS: Record<string, ManagerTab> = { feedback: 'posts' };
+// The first DraftStatSnapshot night (8.6): a calendar day, compared against the ISO date prefix.
+const STAT_HISTORY_START = '2026-08-01';
 type PostStateFilter = 'all' | 'live' | 'draft' | 'scheduled' | 'archived';
 type PostVisibilityFilter = 'all' | 'public' | 'private';
 type PostSort = 'published' | 'updated' | 'title' | 'activity';
@@ -533,6 +535,11 @@ export class PostsManagerComponent implements OnInit {
         } finally {
             this.historyLoading.set(false);
         }
+    }
+
+    /** Snapshots started on 01.08.2026; a post published before that has no earlier series to draw. */
+    predatesHistory(publishedAt: string | null): boolean {
+        return !!publishedAt && publishedAt.slice(0, 10) < STAT_HISTORY_START;
     }
 
     /** Null with fewer than two snapshots — one point is not a line, and a flat line would lie. */

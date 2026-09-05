@@ -433,6 +433,73 @@
     :host([data-surface="paper"]) .invite-query { flex-direction: column; }
 }
 
+/* T-327 — the day series above the totals table. Two bars a day, scaled to the window's tallest;
+   the height is data, so it is the one inline style the card carries. */
+:host([data-surface="paper"]) .flow { padding: var(--space-2) var(--space-2) 0; }
+
+:host([data-surface="paper"]) .flow-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    font-size: var(--fs-ui);
+    color: var(--t2);
+}
+
+:host([data-surface="paper"]) .flow-legend { display: inline-flex; gap: var(--space-3); }
+
+:host([data-surface="paper"]) .flow-swatch {
+    display: inline-block;
+    width: var(--icon-xs);
+    height: var(--icon-xs);
+    margin-right: var(--space-1);
+    border-radius: var(--radius-sm);
+    vertical-align: middle;
+}
+
+:host([data-surface="paper"]) .flow-swatch.joins,
+:host([data-surface="paper"]) .flow-bar.joins { background: var(--ok); }
+
+:host([data-surface="paper"]) .flow-swatch.leaves,
+:host([data-surface="paper"]) .flow-bar.leaves { background: var(--danger); }
+
+:host([data-surface="paper"]) .flow-bars {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: end;
+    gap: var(--space-1);
+    height: var(--space-8);
+    margin-top: var(--space-2);
+    border-bottom: 1px solid var(--border);
+}
+
+:host([data-surface="paper"]) .flow-day {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+    min-width: 0;
+}
+
+:host([data-surface="paper"]) .flow-bar {
+    flex: 1;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+:host([data-surface="paper"]) .flow-axis {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: var(--fs-ui);
+    color: var(--t3);
+}
+
+:host([data-surface="paper"]) .flow-summary {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-ui);
+    color: var(--t2);
+}
+
 :host([data-surface="paper"]) .invite-error {
     margin: 0;
     padding: 0 var(--space-2) var(--space-2);
