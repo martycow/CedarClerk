@@ -3,6 +3,7 @@ using System;
 using CedarClerk.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CedarClerk.Server.Migrations
 {
     [DbContext(typeof(CedarDbContext))]
-    partial class CedarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260905095827_AddPublishTargetStatSnapshot")]
+    partial class AddPublishTargetStatSnapshot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.30");
@@ -1264,9 +1267,6 @@ namespace CedarClerk.Server.Migrations
                     b.Property<int?>("LastTelegramMessageId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("LastTelegramSentAt")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("LastTelegramUsername")
                         .HasColumnType("TEXT");
 
@@ -2178,10 +2178,6 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("other");
 
-                    b.Property<string>("Engine")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -2238,10 +2234,6 @@ namespace CedarClerk.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ShowcaseTrailerUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TargetPlatforms")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("TeamId")

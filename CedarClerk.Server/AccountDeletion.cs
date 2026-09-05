@@ -1,4 +1,4 @@
-using CedarClerk.Server.Tenancy;
+﻿using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -34,6 +34,7 @@ public static class AccountDeletion
         // whose pictures have vanished.
         await db.ChannelPosts.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.ChannelStatSnapshots.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
+        await db.PublishTargetStatSnapshots.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Comments.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.DraftGlossaryExclusions.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.DraftRevisions.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
