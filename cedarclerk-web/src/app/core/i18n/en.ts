@@ -2046,6 +2046,15 @@ export const en = {
             readyTelegram: (channel: string) => `Telegram · ${channel}`,
             readyNetwork: (name: string, account: string) => `${name} · ${account}`,
         },
+        telegramSync: {
+            button: 'Sync to Telegram',
+            busy: 'Syncing…',
+            title: (lang: string) => `Edit the message in the channel to match the ${lang} version — no new post`,
+            stale: 'Edited since the last send',
+            done: 'Updated on Telegram',
+            unchanged: 'Already up to date',
+            failed: 'Could not update the Telegram post',
+        },
     },
     debug: {
         console: 'Console',

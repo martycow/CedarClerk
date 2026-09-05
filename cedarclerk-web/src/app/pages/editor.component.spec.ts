@@ -1,5 +1,6 @@
 import { NO_ERRORS_SCHEMA, Type, signal, type WritableSignal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
@@ -12,7 +13,7 @@ import { BillingService } from '../core/billing.service';
 import { ChannelsService } from '../core/channels.service';
 import { CommentsService } from '../core/comments.service';
 import { CurrentProjectService } from '../core/current-project.service';
-import { DraftsService } from '../core/drafts.service';
+import { DraftMeta, DraftsService } from '../core/drafts.service';
 import { FormPresetsService } from '../core/form-presets.service';
 import { GlossaryService } from '../core/glossary.service';
 import { en } from '../core/i18n/en';
@@ -145,5 +146,74 @@ describe('editor UI contract', () => {
             .replace(/\[_ng(?:content|host)-%COMP%\]/g, '');
         expect(css).toMatch(/\.main:not\(\.split-workspace\)\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);\s*\}/);
         expect(css).not.toMatch(/\.main\s*\{[^}]*grid-template-columns:/s);
+    });
+
+    // T-180 — the Telegram row's sync command: absent without a message, a stale hint once the
+    // sheet moved past the last send, and Telegram's own verdict when it answers.
+    describe('Telegram sync', () => {
+        const SENT = '2026-09-05T10:00:00Z';
+        const draft = (over: Partial<DraftMeta> = {}): DraftMeta => ({
+            id: 'd1', title: 'Post', createdAt: SENT, updatedAt: SENT, primaryLanguage: 'ru',
+            blogSlug: null, isBlogPublished: false, blogPublishedAt: null, languages: [], tags: '',
+            documentType: 'post', isArchived: false,
+            lastTelegramMessageId: 42, lastTelegramUsername: 'testingandfun', lastTelegramSentAt: SENT,
+            staleLanguages: [], scheduled: null, folderId: null, seriesId: null, projectId: null,
+            parentDraftId: null, siblingOrder: 0, isPrivate: false, isTemplate: false, disableCopy: false,
+            disableReactions: false, disableComments: false, viewCount: 0, reactionCount: 0,
+            newViewCount: 0, newReactionCount: 0, coverImagePath: null, ...over,
+        });
+        const show = (meta: DraftMeta) => {
+            fixture.componentInstance.drafts.set([meta]);
+            fixture.componentInstance.currentId.set(meta.id);
+            fixture.detectChanges();
+        };
+        const note = () => host.querySelector('.telegram-sync-note');
+        const sync = () => TestBed.inject(PostsService) as unknown as { syncTelegram: ReturnType<typeof vi.fn> };
+
+        it('offers no sync until a message exists', () => {
+            show(draft({ lastTelegramMessageId: null, lastTelegramUsername: null, lastTelegramSentAt: null }));
+            expect(host.querySelector('.telegram-sync')).toBeNull();
+        });
+
+        it('shows the button, and no hint, while the message still says what the sheet says', () => {
+            show(draft());
+            expect(host.querySelector('.telegram-sync app-button')).toBeTruthy();
+            expect(note()).toBeNull();
+        });
+
+        it('marks the post stale once the sheet moved past the last send', () => {
+            show(draft({ updatedAt: '2026-09-05T11:00:00Z' }));
+            expect(note()!.textContent!.trim()).toBe(en.editor.telegramSync.stale);
+            expect(note()!.getAttribute('data-tone')).toBe('warn');
+        });
+
+        it('says the post is already up to date when Telegram found nothing to change', async () => {
+            show(draft({ updatedAt: '2026-09-05T11:00:00Z' }));
+            sync().syncTelegram = vi.fn().mockResolvedValue({
+                messageId: 42, url: 'https://t.me/testingandfun/42', syncedAt: '2026-09-05T12:00:00Z', unchanged: true,
+            });
+
+            await fixture.componentInstance.syncTelegram();
+            fixture.detectChanges();
+
+            expect(sync().syncTelegram).toHaveBeenCalledWith('d1', 'ru');
+            expect(note()!.textContent!.trim()).toBe(en.editor.telegramSync.unchanged);
+            expect(note()!.getAttribute('data-tone')).toBe('ok');
+            expect(fixture.componentInstance.telegramStale()).toBe(false);
+        });
+
+        it('repeats the server\'s refusal when the last send was a thread', async () => {
+            show(draft({ updatedAt: '2026-09-05T11:00:00Z' }));
+            const thread = 'The last send was a thread — syncing threads is not supported yet. Publish again.';
+            sync().syncTelegram = vi.fn().mockRejectedValue(
+                new HttpErrorResponse({ status: 409, error: { error: thread } }));
+
+            await fixture.componentInstance.syncTelegram();
+            fixture.detectChanges();
+
+            expect(note()!.textContent!.trim()).toBe(thread);
+            expect(note()!.getAttribute('data-tone')).toBe('danger');
+            expect(fixture.componentInstance.telegramStale()).toBe(true);
+        });
     });
 });

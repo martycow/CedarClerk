@@ -1957,6 +1957,15 @@ export const ru: Dict = {
             readyTelegram: (channel: string) => `Telegram · ${channel}`,
             readyNetwork: (name: string, account: string) => `${name} · ${account}`,
         },
+        telegramSync: {
+            button: 'Синхронизировать с Telegram',
+            busy: 'Синхронизация…',
+            title: (lang: string) => `Отредактировать сообщение в канале по версии ${lang} — без нового поста`,
+            stale: 'Изменён после последней отправки',
+            done: 'Обновлено в Telegram',
+            unchanged: 'Уже актуально',
+            failed: 'Не удалось обновить пост в Telegram',
+        },
     },
     debug: {
         console: 'Консоль',

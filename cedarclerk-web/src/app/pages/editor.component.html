@@ -1677,6 +1677,20 @@
                     </a>
                     } @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
                 </app-spec-row>
+                @if (telegramPostUrl()) {
+                <!--T-180: the message in the channel is edited to say what the sheet says now.
+                Publish is a new send; this is not, so it is not on the Publish tab (ADR-278).-->
+                <div class="insp-actions telegram-sync">
+                    <app-button variant="paper" size="sm" [disabled]="telegramSyncBusy()"
+                                [title]="t().editor.telegramSync.title(lang().toUpperCase())" (clicked)="syncTelegram()">
+                        <app-icon name="arrow-clockwise" size="xs"></app-icon>
+                        {{ telegramSyncBusy() ? t().editor.telegramSync.busy : t().editor.telegramSync.button }}
+                    </app-button>
+                    @if (telegramSyncLine(); as line) {
+                    <span class="telegram-sync-note" [attr.data-tone]="line.tone" role="status">{{ line.text }}</span>
+                    }
+                </div>
+                }
                 <app-spec-row scope="document" label="X">
                     @if (xAccount(); as a) { <span>{{ a.displayName }}</span> }
                     @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }

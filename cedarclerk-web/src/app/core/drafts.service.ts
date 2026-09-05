@@ -102,6 +102,7 @@ export interface DraftMeta {
     isArchived: boolean;
     lastTelegramMessageId: number | null;
     lastTelegramUsername: string | null;
+    lastTelegramSentAt?: string | null; // stamped by every send and sync; `updatedAt` past it = stale (ADR-278)
     staleLanguages: string[]; // subset of `languages` whose translation predates the last RU edit
     scheduled: ScheduledInfo | null; // most recent Pending/Failed ScheduledPost row, if any
     folderId: string | null; // at most one folder per draft — see the ADR following ADR-038

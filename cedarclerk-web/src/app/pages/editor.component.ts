@@ -1901,6 +1901,50 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             : null;
     }
 
+    // T-180 — the message in the channel is edited in place, never re-sent (ADR-278). The result
+    // line is pinned to the draft *and* the edit it answered, so the next autosave retires it and
+    // the stale hint can come back on its own.
+    telegramSyncBusy = signal(false);
+    telegramSyncNote = signal<{ id: string; updatedAt: string; tone: 'ok' | 'danger'; text: string } | null>(null);
+
+    telegramStale(): boolean {
+        const meta = this.currentMeta();
+        if (!meta?.lastTelegramMessageId || !meta.lastTelegramSentAt) return false;
+        return Date.parse(meta.updatedAt) > Date.parse(meta.lastTelegramSentAt);
+    }
+
+    telegramSyncLine(): { tone: 'ok' | 'warn' | 'danger'; text: string } | null {
+        const meta = this.currentMeta();
+        if (!meta?.lastTelegramMessageId) return null;
+        const note = this.telegramSyncNote();
+        if (note && note.id === meta.id && note.updatedAt === meta.updatedAt) return note;
+        return this.telegramStale() ? { tone: 'warn', text: this.t().editor.telegramSync.stale } : null;
+    }
+
+    async syncTelegram() {
+        const meta = this.currentMeta();
+        if (!meta || this.telegramSyncBusy()) return;
+        const copy = this.t().editor.telegramSync;
+        // Pinned to the edit that was sent: an autosave that lands mid-flight retires the answer.
+        const note = (tone: 'ok' | 'danger', text: string) =>
+            this.telegramSyncNote.set({ id: meta.id, updatedAt: meta.updatedAt, tone, text });
+        this.telegramSyncBusy.set(true);
+        this.telegramSyncNote.set(null);
+        try {
+            const res = await this.posts.syncTelegram(meta.id, this.lang());
+            this.drafts.update(list => list.map(d => d.id === meta.id
+                ? { ...d, lastTelegramMessageId: res.messageId, lastTelegramSentAt: res.syncedAt }
+                : d));
+            note('ok', res.unchanged ? copy.unchanged : copy.done);
+        } catch (e) {
+            // 409 is Telegram's verdict (a thread, or a post that is gone) and the server already
+            // says which in words; every other status carries its own reason the same way.
+            note('danger', httpErrorMessage(e, copy.failed));
+        } finally {
+            this.telegramSyncBusy.set(false);
+        }
+    }
+
     isLive(): boolean {
         return !!this.currentBlog()?.isPublished || this.telegramPostUrl() !== null;
     }

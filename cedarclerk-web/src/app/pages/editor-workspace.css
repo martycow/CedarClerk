@@ -227,6 +227,21 @@
     text-decoration: underline;
 }
 
+/* Under the Telegram row: the sync command and, beside it, one line for the state it answers —
+   stale, done, or Telegram's refusal. The ink is the state's, on the paper it stands on. */
+.telegram-sync { gap: var(--space-2); }
+
+[data-surface="paper"] .telegram-sync-note {
+    min-width: 0;
+    font-size: var(--fs-ui);
+    color: var(--t2);
+    overflow-wrap: anywhere;
+}
+
+.telegram-sync-note[data-tone="ok"] { color: var(--ok); }
+.telegram-sync-note[data-tone="warn"] { color: var(--warn); }
+.telegram-sync-note[data-tone="danger"] { color: var(--danger); }
+
 .sheet.en-empty {
     display: flex;
     flex-direction: column;

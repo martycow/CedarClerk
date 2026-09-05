@@ -62,9 +62,23 @@ export interface UpdatePreview {
 // now asks the same "you are about to overwrite a live post" question before it sends.
 export type PublishTarget = 'telegram' | 'blog' | 'bluesky' | 'x' | 'discord';
 
+// T-180 — the answer to editing the last single-message send in place. `unchanged` is Telegram's
+// own "message is not modified"; the timestamp is stamped either way.
+export interface TelegramSyncResult {
+    messageId: number;
+    url: string;
+    syncedAt: string;
+    unchanged: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PostsService {
     private http = inject(HttpClient);
+
+    /** Sync means an edit of the message already in the channel, never a new send (ADR-278). */
+    syncTelegram(draftId: string, language?: string) {
+        return firstValueFrom(this.http.post<TelegramSyncResult>(`/api/posts/${draftId}/telegram-sync`, { language }));
+    }
 
     export(draftId: string, chatId: string, format: PostFormat, language: PostLanguage, compressionLevel: CompressionLevel = 'standard',
            confirmedFingerprint?: string) {
