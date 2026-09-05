@@ -4,9 +4,19 @@ import { Page, BrowserContext, expect } from '@playwright/test';
 // the launcher and this file must agree, so both read like the same fact.
 export const ADMIN = { email: 'e2e-admin@local.test', password: 'E2e-passw0rd!' };
 export const INVITE_CODE = 'e2e-invite';
+
+// The two knobs an isolated stack turns: `E2E_BASE_URL` is the dev server the tests drive (the
+// same value playwright.config.ts reads), `E2E_API_PORT` the Kestrel port behind it. Both are
+// exported by `Scripts/e2e.ps1`; unset, they name the ordinary 4200/8080 pair. The blog host is
+// the base URL's hostname under the seeded username, because `Cedar__TenantHost` is that hostname.
+const BASE_URL = new URL(process.env['E2E_BASE_URL'] ?? 'http://localhost:4200');
+export const API_PORT = process.env['E2E_API_PORT'] ?? '8080';
+// Server-rendered pages (the landing, the blog) live on Kestrel's own port, not the dev server's.
+export const MAIN_ORIGIN = `${BASE_URL.protocol}//${BASE_URL.hostname}:${API_PORT}`;
 // Blogs are tenant-hosted since the multitenancy work: the seeded admin's lives on a subdomain
 // named by its username, not on a shared blog host.
-export const BLOG_ORIGIN = 'http://e2e-admin.localhost:8080';
+export const BLOG_HOST = `e2e-admin.${BASE_URL.hostname}`;
+export const BLOG_ORIGIN = `${BASE_URL.protocol}//${BLOG_HOST}:${API_PORT}`;
 
 // Sign in through the API rather than the form, because the form is what several tests are *for*
 // — driving it as a setup step in the other twelve would make an unrelated failure look like a
@@ -103,5 +113,5 @@ export async function expectSynced(page: Page, timeout = 10_000) {
 // Node's DNS does not resolve *.localhost — only Chromium special-cases it — so anything going
 // through `context.request` has to reach the blog branch by address and name the host in a header.
 // Page navigations are unaffected and keep using BLOG_ORIGIN.
-export const BLOG_API = 'http://127.0.0.1:8080';
-export const BLOG_HEADERS = { Host: 'e2e-admin.localhost' };
+export const BLOG_API = `http://127.0.0.1:${API_PORT}`;
+export const BLOG_HEADERS = { Host: BLOG_HOST };

@@ -35,6 +35,13 @@ works.
 never runs it. Anyone who has only ever typed the bare command has a whole suite they have never
 triggered — run `cedar test --smoke` before a deploy that touches a critical path.
 
+The smoke suite has two environment variables, both exported by `Scripts/e2e.ps1` from its
+`-WebPort` / `-ApiPort` parameters: `E2E_BASE_URL` (the Angular dev server; `playwright.config.ts`
+reads the port off it) and `E2E_API_PORT` (Kestrel; `e2e/helpers.ts` builds the blog and landing
+origins from it). Unset, they mean `http://localhost:4200` and `8080`, so a plain run is unchanged.
+A second stack on other ports also needs the dev server's `proxy.conf.json` retargeted — it pins
+8080 on its own.
+
 Three drift guards inside the backend phase fail the build rather than waiting to be remembered:
 `SchemaDriftGuardTests` (`Entities.cs` moved without a migration), `UiInventoryDriftTests` (a screen
 or `sec-*` settings section absent from `docs/design/UI-INVENTORY.md`), `DocsFlowGraphTests` (a doc

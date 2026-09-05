@@ -22,7 +22,13 @@ param(
     [string]$Grep,
     # Seed the environment and leave it running instead of starting Playwright — the same isolated
     # database, for walking the screens by hand (Phase 10 Block D). Ctrl+C stops the server.
-    [switch]$Serve
+    [switch]$Serve,
+    # An isolated stack: Kestrel on -ApiPort, the Angular dev server on -WebPort. Exported as
+    # E2E_API_PORT / E2E_BASE_URL, which playwright.config.ts and e2e/helpers.ts read; left alone,
+    # both name the ordinary 8080/4200 pair. The dev server's own proxy (proxy.conf.json) still
+    # points at 8080, so a different -ApiPort also needs that proxy retargeted.
+    [int]$ApiPort = 8080,
+    [int]$WebPort = 4200
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,9 +37,13 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $webRoot = Join-Path $repoRoot 'cedarclerk-web'
 $dataDir = Join-Path $repoRoot '.e2e-data'
 
+$apiOrigin = "http://localhost:$ApiPort"
+
 $env:CEDAR_DATA_DIR = $dataDir
 $env:ASPNETCORE_ENVIRONMENT = 'E2E'
-$env:ASPNETCORE_URLS = 'http://localhost:8080'
+$env:ASPNETCORE_URLS = $apiOrigin
+$env:E2E_API_PORT = "$ApiPort"
+$env:E2E_BASE_URL = "http://localhost:$WebPort"
 $env:Cedar__InviteCode = 'e2e-invite'
 $env:Cedar__AdminEmail = 'e2e-admin@local.test'
 # *.localhost resolves to 127.0.0.1 in Chromium without a hosts entry, so the tenant blogs and
@@ -41,7 +51,7 @@ $env:Cedar__AdminEmail = 'e2e-admin@local.test'
 # at <username>.<TenantHost> since the multitenancy work — the seeded account's is
 # e2e-admin.localhost, which e2e/helpers.ts must agree on.
 $env:Cedar__TenantHost = 'localhost'
-$env:Cedar__MainHost = 'http://localhost:8080'
+$env:Cedar__MainHost = $apiOrigin
 
 $server = $null
 
@@ -64,7 +74,7 @@ function Start-Server {
     $deadline = (Get-Date).AddSeconds(90)
     while ((Get-Date) -lt $deadline) {
         try {
-            $health = Invoke-RestMethod -Uri 'http://localhost:8080/api/health' -TimeoutSec 3
+            $health = Invoke-RestMethod -Uri "$apiOrigin/api/health" -TimeoutSec 3
             Write-Host "→ server up (v$($health.version))" -ForegroundColor DarkGray
             return
         }
@@ -95,7 +105,7 @@ try {
         username   = 'e2e-admin'
     } | ConvertTo-Json
     try {
-        Invoke-RestMethod -Uri 'http://localhost:8080/api/auth/register' -Method Post `
+        Invoke-RestMethod -Uri "$apiOrigin/api/auth/register" -Method Post `
             -ContentType 'application/json' -Body $body -SessionVariable seedSession | Out-Null
         Write-Host '→ account registered' -ForegroundColor DarkGray
         # T-328 — a display name is the onboarded mark; without it every guarded route bounces
@@ -104,7 +114,7 @@ try {
             authorDisplayName = 'E2E Admin'; profileUrl = ''; profileLocation = ''
             headerSlot1Type = $null; headerSlot2Type = $null; headerSlot3Type = $null
         } | ConvertTo-Json
-        Invoke-RestMethod -Uri 'http://localhost:8080/api/auth/profile' -Method Post `
+        Invoke-RestMethod -Uri "$apiOrigin/api/auth/profile" -Method Post `
             -ContentType 'application/json' -Body $profileBody -WebSession $seedSession | Out-Null
         Write-Host '→ profile seeded (onboarding passed)' -ForegroundColor DarkGray
     }
@@ -120,8 +130,8 @@ try {
 
     if ($Serve) {
         Write-Host '=== 4/4 serving ===' -ForegroundColor Cyan
-        Write-Host "  app   http://localhost:8080  (run 'ng serve' separately for :4200)" -ForegroundColor Green
-        Write-Host "  blog  http://e2e-admin.localhost:8080" -ForegroundColor Green
+        Write-Host "  app   $apiOrigin  (run 'ng serve' separately for :$WebPort)" -ForegroundColor Green
+        Write-Host "  blog  http://e2e-admin.localhost:$ApiPort" -ForegroundColor Green
         Write-Host "  login $($env:Cedar__AdminEmail) / E2e-passw0rd!" -ForegroundColor Green
         Write-Host '  Ctrl+C to stop.' -ForegroundColor DarkGray
         Wait-Process -Id $script:server.Id
