@@ -265,3 +265,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-250 — Author social links appear at the public blog header](adr/ADR-250.md)
 - [ADR-251 — The initial-bundle ceiling follows the measured bilingual shell](adr/ADR-251.md)
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
+- [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
