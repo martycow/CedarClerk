@@ -88,6 +88,8 @@ export interface ProjectSummary {
     latestBuildVersion: string | null;
     /** Newest edit to any of the project's documents — the project row itself never moves. */
     lastActivityAt: string;
+    /** T-166 — the newest blog, Telegram or network publish of any document here; null = never. */
+    lastPublishedAt: string | null;
 }
 
 export interface ProjectDocument {
@@ -99,7 +101,7 @@ export interface ProjectDocument {
     isBlogPublished: boolean;
 }
 
-export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'buildCount' | 'latestBuildVersion' | 'lastActivityAt'> {
+export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'buildCount' | 'latestBuildVersion' | 'lastActivityAt' | 'lastPublishedAt'> {
     /** T-358 — the team whose people reach this project, or null for the owner's alone. */
     teamId: string | null;
     /** T-159 (ADR-134) — null means no public page. */

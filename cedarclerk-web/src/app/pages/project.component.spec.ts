@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { ProjectComponent, journalLevel, journalLink } from './project.component';
+import { ProjectComponent, daysSince, journalLevel, journalLink } from './project.component';
 import { ActivityItem, ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
 import { Channel, ChannelsService } from '../core/channels.service';
 import { en } from '../core/i18n/en';
@@ -13,6 +13,7 @@ const SUMMARY: ProjectSummary = {
     createdAt: '2026-08-01T09:00:00', archivedAt: null,
     documentCount: 3, openTaskCount: 8, assetCount: 2481, buildCount: 2, latestBuildVersion: '0.3.1',
     lastActivityAt: '2026-08-19T11:00:00',
+    lastPublishedAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
 };
 
 const OTHER: ProjectSummary = { ...SUMMARY, id: 'p2', name: 'Night Lanterns', assetCount: 0 };
@@ -85,7 +86,12 @@ class FakeProjects {
 
 class FakeChannels {
     channels: Channel[] | null = CHANNELS;
+    streak: number | null = 5;
     async list() { if (!this.channels) throw new Error('nope'); return structuredClone(this.channels); }
+    async publishingStats() {
+        if (this.streak === null) throw new Error('nope');
+        return { currentStreakWeeks: this.streak, longestStreakWeeks: 9, weeks: [] };
+    }
 }
 
 class FakeAssets {
@@ -139,6 +145,7 @@ describe('project hub', () => {
     it('says what the project is in the header: state tag, kind, documents, last edit', () => {
         expect(meta()).toEqual([
             t.stateActive, t.projectTypes.fullgame.name, t.documentCount(4), expect.stringContaining(t.hub.lastEdit),
+            t.hub.sinceLastPublish(3),
         ]);
         expect(el().querySelector('app-page-header .page-meta .tag')?.classList.contains('ok')).toBe(true);
     });
@@ -310,6 +317,62 @@ describe('project hub', () => {
         fixture.detectChanges();
         expect(el().querySelectorAll('.journal app-log-line').length).toBe(0);
         expect(el().querySelector('.journal app-empty-state')?.textContent).toContain(t.hub.journalEmpty);
+    });
+
+    // T-166 — the days since the last post: plain under a week, a muted tag from seven, warn from
+    // fourteen, and "nothing published yet" when there never was one. No score, nothing to lose.
+    it('counts whole days since a publish', () => {
+        const now = Date.parse('2026-09-05T10:00:00Z');
+        expect(daysSince('2026-09-05T02:00:00Z', now)).toBe(0);
+        expect(daysSince('2026-09-04T10:00:01Z', now)).toBe(0);
+        expect(daysSince('2026-09-04T10:00:00Z', now)).toBe(1);
+        expect(daysSince('2026-08-22T10:00:00Z', now)).toBe(14);
+        expect(daysSince('2026-09-06T10:00:00Z', now)).toBe(0);
+    });
+
+    it('nudges quietly in the header: a sentence under a week, a tag from seven days, warn from fourteen', () => {
+        const tags = () => [...el().querySelectorAll('app-page-header .page-meta .tag')].map(x => ({
+            text: x.textContent?.trim(), warn: x.classList.contains('warn'), muted: x.classList.contains('muted'),
+        }));
+        const publishedDaysAgo = (n: number | null) => {
+            const at = n === null ? null : new Date(Date.now() - n * 86_400_000 - 60_000).toISOString();
+            fixture.componentInstance.projects.set([{ ...SUMMARY, lastPublishedAt: at }, OTHER]);
+            fixture.detectChanges();
+        };
+
+        publishedDaysAgo(3);
+        expect(meta().at(-1)).toBe(t.hub.sinceLastPublish(3));
+        expect(tags().map(x => x.text)).toEqual([t.stateActive]);
+
+        publishedDaysAgo(7);
+        expect(tags().at(-1)).toEqual({ text: t.hub.sinceLastPublish(7), warn: false, muted: true });
+
+        publishedDaysAgo(14);
+        expect(tags().at(-1)).toEqual({ text: t.hub.sinceLastPublish(14), warn: true, muted: false });
+
+        publishedDaysAgo(null);
+        expect(tags().at(-1)).toEqual({ text: t.hub.neverPublished, warn: false, muted: true });
+    });
+
+    // ADR-281 — the one account number on a project screen, labelled as the account's.
+    it('prints the account streak as one labelled row, and no row for zero or a failed call', async () => {
+        expect(kvValue(t.hub.streakLabel)?.textContent?.trim()).toBe(t.hub.streak(5));
+
+        fixture.componentInstance.streakWeeks.set(null);
+        fixture.detectChanges();
+        expect(kvValue(t.hub.streakLabel)).toBeNull();
+
+        channels.streak = 0;
+        fixture.componentInstance.streakWeeks.set(7);
+        await fixture.componentInstance['loadStreak']();
+        fixture.detectChanges();
+        expect(kvValue(t.hub.streakLabel)).toBeNull();
+
+        channels.streak = null;
+        fixture.componentInstance.streakWeeks.set(7);
+        await fixture.componentInstance['loadStreak']();
+        fixture.detectChanges();
+        expect(kvValue(t.hub.streakLabel)).toBeNull();
     });
 
     // T-353 — the logo comes out of the one asset window now, so the picked asset IS the answer

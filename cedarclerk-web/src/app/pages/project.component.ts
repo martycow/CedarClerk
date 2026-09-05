@@ -39,6 +39,15 @@ type DocFilter = 'all' | 'live' | 'drafts' | 'archived';
 
 const MS_PER_DAY = 86_400_000;
 
+// T-166 — the hub's two nudges. Seven days is where a quiet week becomes a sentence in the
+// header, fourteen where the sentence turns warn; there is no score and nothing to lose.
+const NUDGE_TAG_DAYS = 7;
+const NUDGE_WARN_DAYS = 14;
+
+export function daysSince(at: string, now = Date.now()): number {
+    return Math.max(0, Math.floor((now - new Date(at).getTime()) / MS_PER_DAY));
+}
+
 const JOURNAL_PAGE = 12;
 const JOURNAL_MAX = 100;
 
@@ -134,6 +143,8 @@ export class ProjectComponent {
     editTeamId = signal<string>('');
     /** T-296/T-297 — the public page's counters; null until they arrive, and on a page with none. */
     showcaseStats = signal<ShowcaseStats | null>(null);
+    /** T-166 — the account's publishing streak in ISO weeks (ADR-281); null when unknown or zero. */
+    streakWeeks = signal<number | null>(null);
     actionError = signal<string | null>(null);
     busy = signal(false);
     // Deleting a project is two clicks on the same button rather than a second modal on top of the
@@ -177,6 +188,12 @@ export class ProjectComponent {
         return Math.max(0, Math.round((endDay - today) / MS_PER_DAY));
     });
 
+    /** Whole days since the last publish of anything in this project; null while the list has not answered or nothing was ever published. */
+    daysSinceLastPublish = computed(() => {
+        const at = this.summary()?.lastPublishedAt;
+        return at ? daysSince(at) : null;
+    });
+
     headerMeta = computed<HeaderMeta[]>(() => {
         const p = this.project();
         if (!p) return [];
@@ -186,8 +203,15 @@ export class ProjectComponent {
             { text: t.projectTypes[p.projectType].name },
             { text: t.documentCount(p.documents.length) },
         ];
-        const at = this.summary()?.lastActivityAt;
+        const summary = this.summary();
+        const at = summary?.lastActivityAt;
         if (at) meta.push({ text: `${t.hub.lastEdit} ${formatInZone(at, 'd MMM')}` });
+        if (summary) {
+            const days = this.daysSinceLastPublish();
+            if (days === null) meta.push({ text: t.hub.neverPublished, tag: true, tone: 'muted' });
+            else if (days >= NUDGE_TAG_DAYS) meta.push({ text: t.hub.sinceLastPublish(days), tag: true, tone: days >= NUDGE_WARN_DAYS ? 'warn' : 'muted' });
+            else meta.push({ text: t.hub.sinceLastPublish(days) });
+        }
         return meta;
     });
 
@@ -199,6 +223,17 @@ export class ProjectComponent {
 
         void this.loadProjects();
         void this.loadChannels();
+        void this.loadStreak();
+    }
+
+    /** The one account figure the hub prints (ADR-281): a zero and a failed call read the same — no row. */
+    private async loadStreak() {
+        try {
+            const stats = await this.channelsApi.publishingStats();
+            this.streakWeeks.set(stats.currentStreakWeeks > 0 ? stats.currentStreakWeeks : null);
+        } catch {
+            this.streakWeeks.set(null);
+        }
     }
 
     async load(id: string) {

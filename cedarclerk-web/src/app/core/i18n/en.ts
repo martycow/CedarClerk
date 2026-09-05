@@ -444,6 +444,11 @@ export const en = {
             noChannel: 'no channel connected',
             filesCount: (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`,
             versionsCount: (n: number) => `${n} ${n === 1 ? 'version' : 'versions'}`,
+            // T-166 — the nudges: a quiet sentence, never a score.
+            sinceLastPublish: (n: number) => n === 0 ? 'published today' : `${n} ${n === 1 ? 'day' : 'days'} since the last post`,
+            neverPublished: 'nothing published yet',
+            streakLabel: 'Your streak',
+            streak: (n: number) => `${n} ${n === 1 ? 'week' : 'weeks'} in a row, across every project`,
             // T-249 — the journal. The stamped word is the kind, one or two words at most.
             journal: 'Journal',
             journalEmpty: 'Nothing has happened here yet — the first document, task or build starts the journal.',

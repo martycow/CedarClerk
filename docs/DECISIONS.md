@@ -270,3 +270,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
 - [ADR-271 — The invite shelf draws the day series it already has](adr/ADR-271.md)
+- [ADR-281 — The hub nudges with a sentence, and prints one account number it names as the account's](adr/ADR-281.md)

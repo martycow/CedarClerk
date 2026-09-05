@@ -240,6 +240,13 @@
                         } @else {
                             <span class="kv-none">—</span>
                         }
+
+                        <!--T-166 / ADR-281 — the account's streak, said to be the account's, and
+                        only while there is one: a zero would be a reproach dressed as a number.-->
+                        @if (streakWeeks(); as weeks) {
+                            <b>{{ t().projects.hub.streakLabel }}</b>
+                            <span class="kv-streak">{{ t().projects.hub.streak(weeks) }}</span>
+                        }
                     </div>
                 </div>
             </aside>
