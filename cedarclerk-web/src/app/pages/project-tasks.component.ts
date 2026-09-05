@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -67,6 +68,7 @@ type Tone = 'ok' | 'warn' | 'muted' | 'danger';
     styleUrls: ['project-tasks.component.css'],
 })
 export class ProjectTasksComponent {
+    private readonly confirmation = inject(ConfirmationService);
     private api = inject(TasksService);
     private assets = inject(AssetsService);
     private projects = inject(ProjectsService);
@@ -400,7 +402,7 @@ export class ProjectTasksComponent {
     }
 
     async remove(task: GameTask) {
-        if (!confirm(this.t().projects.tasks.deleteConfirm)) return;
+        if (!await this.confirmation.confirm(this.t().projects.tasks.deleteConfirm)) return;
         this.close();
         await this.run(() => this.api.remove(task.id));
     }
@@ -410,7 +412,8 @@ export class ProjectTasksComponent {
         await this.run(() => this.api.link(task.id, 'document', documentId));
     }
 
-    removeLink(task: GameTask, type: LinkTarget, id: string) {
+    async removeLink(task: GameTask, type: LinkTarget, id: string) {
+        if (!await this.confirmation.confirm(this.t().common.removeLinkConfirm)) return;
         return this.run(() => this.api.unlink(task.id, type, id));
     }
 

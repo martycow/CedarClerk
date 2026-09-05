@@ -164,14 +164,17 @@ export class DocumentOutlineComponent {
     });
 
     constructor() {
-        // Following the caret with the scrollbar, never with the selection: this reads state and
-        // moves a scroll offset, so it cannot feed anything back into the document. Skipped while
-        // the panel has focus, because arrow keys scroll by focusing and would fight this.
+        // Scroll only the shelf: scrollIntoView also moves the writing pane when the shelf stacks below it.
         effect(() => {
             const active = this.active();
             if (this.browsing() !== null) return;
             const row = this.rows()[active + 1]?.nativeElement;
-            row?.scrollIntoView({ block: 'nearest' });
+            const shelf = row?.closest<HTMLElement>('.sp-sheet');
+            if (!row || !shelf || shelf.scrollHeight <= shelf.clientHeight) return;
+            const bounds = shelf.getBoundingClientRect();
+            const item = row.getBoundingClientRect();
+            if (item.top < bounds.top) shelf.scrollTop += item.top - bounds.top;
+            else if (item.bottom > bounds.bottom) shelf.scrollTop += item.bottom - bounds.bottom;
         });
     }
 

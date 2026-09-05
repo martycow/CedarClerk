@@ -3,6 +3,8 @@
    to the tighter set here; the tokens are never read for a literal value in this file. The shell
    owns the ground under the page (ADR-239), so nothing here paints one; the layout classes are the
    paper-first vocabulary in styles.scss and this file only adds the page's own columns. */
+:host { display: flex; flex: 1; min-width: 0; min-height: 0; }
+
 .drafts-page {
     gap: var(--space-3);
 }
@@ -68,6 +70,15 @@
     flex: none;
     min-height: var(--hit-touch);
     padding: var(--space-2) var(--space-4);
+}
+
+.doc-head { flex-wrap: wrap; }
+.doc-head app-index-tabs { min-width: 0; max-width: 100%; }
+.doc-head .search { flex: 1 1 200px; max-width: 100%; }
+
+@media (max-width: 1600px) {
+    .drafts-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(280px, 1fr) auto; overflow: auto; }
+    .aside { max-height: 200px; }
 }
 
 .doc-name {

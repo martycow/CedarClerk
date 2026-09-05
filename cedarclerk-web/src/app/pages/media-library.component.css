@@ -123,7 +123,7 @@
 
 .collection-sort select {
     box-sizing: border-box;
-    min-height: var(--hit-surface);
+    min-height: var(--hit-surface, var(--hit-chrome));
     padding: 0 var(--dens-control-x);
     border: var(--border-field);
     border-radius: var(--radius-stamp);

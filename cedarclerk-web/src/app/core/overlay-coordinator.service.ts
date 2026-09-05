@@ -100,6 +100,10 @@ export class OverlayCoordinatorService {
         return () => this.peerDismissers.delete(dismiss);
     }
 
+    dismissPopovers(): void {
+        this.dismissPeers(this.activeElement());
+    }
+
     focusFirst(container: HTMLElement, preferred?: HTMLElement | null): void {
         (preferred ?? this.focusableWithin(container)[0] ?? container).focus();
     }
@@ -139,7 +143,8 @@ export class OverlayCoordinatorService {
     private dismissPeers(activeElement: HTMLElement | null): HTMLElement | null {
         let returnFocus: HTMLElement | null = null;
         for (const dismiss of this.peerDismissers) {
-            returnFocus ??= dismiss(activeElement);
+            const candidate = dismiss(activeElement);
+            returnFocus ??= candidate;
         }
         return returnFocus;
     }

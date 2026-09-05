@@ -45,7 +45,7 @@
     flex-direction: column;
     min-height: 0;
     min-width: 0;
-    overflow: hidden;
+    overflow: auto;
 }
 
 .cal-dows {
@@ -68,7 +68,7 @@
     display: grid;
     flex: 1;
     grid-auto-rows: minmax(0, 1fr);
-    min-height: 0;
+    min-height: 240px;
 }
 
 .cal-week {
@@ -107,6 +107,7 @@
     border-bottom: 1px solid var(--paper-edge);
     background: var(--sheet);
     overflow: auto;
+    overflow-x: hidden;
 }
 
 .cal-week > .cal-cell:last-child { border-right: none; }
@@ -186,11 +187,22 @@ button.chip[draggable="true"] {
 }
 
 .cal-empty {
-    position: absolute;
-    z-index: 1;
-    inset: var(--space-4);
-    max-height: max-content;
-    margin: auto;
+    --empty-title-size: var(--fs-15);
+    flex: none;
+    margin: var(--space-2);
+}
+
+.cal-empty ::ng-deep .empty-state { min-height: 0; padding: var(--space-3); gap: var(--space-1); }
+.cal-empty ::ng-deep .es-icon { display: none; }
+.cal-empty ::ng-deep .empty-state .es-title { font-size: var(--fs-15); }
+.cal-empty ::ng-deep .es-text { max-width: 64ch; }
+
+@media (max-width: 700px) {
+    app-page-header ::ng-deep .page-title { white-space: normal; overflow-wrap: anywhere; }
+    .cal-dow { justify-content: center; padding: 0; }
+    .cal-cell, .cal-card.is-week .cal-cell { padding: var(--space-1) 2px; }
+    .cal-d { max-width: 100%; }
+    .cal-cell .chip { padding-inline: 2px; gap: 2px; min-width: 0; }
 }
 
 /* ── Queue card ── */

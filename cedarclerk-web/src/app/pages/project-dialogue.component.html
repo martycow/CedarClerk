@@ -153,7 +153,7 @@
         <span modal-title>{{ node.title || t().projects.dialogues.untitledNode }}</span>
         <p class="hint">{{ t().projects.dialogues.deleteNodeConfirm }}</p>
         <ng-container modal-actions>
-            <app-button variant="paper" size="sm" (clicked)="confirmDeleteNode.set(null)">{{ t().common.cancel }}</app-button>
+            <app-button data-modal-autofocus variant="paper" size="sm" (clicked)="confirmDeleteNode.set(null)">{{ t().common.cancel }}</app-button>
             <app-button variant="danger" size="sm" (clicked)="removeNode()">
                 {{ t().projects.dialogues.deleteNode }}
             </app-button>

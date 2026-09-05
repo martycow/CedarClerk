@@ -14,7 +14,7 @@
        computed in the component from the trigger's bounding rect. */
     position: fixed;
     z-index: 50;
-    min-width: 240px;
+    min-width: min(240px, calc(100vw - 24px));
     max-width: calc(100vw - 24px);
     box-sizing: border-box;
     overflow-y: auto;
@@ -26,4 +26,5 @@
     box-shadow: var(--shadow-paper);
     padding: var(--space-2);
     color: var(--text);
+    overflow-wrap: anywhere;
 }

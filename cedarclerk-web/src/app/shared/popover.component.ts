@@ -49,6 +49,7 @@ export class PopoverComponent implements OnDestroy {
     }
 
     open(focusPanel = false) {
+        this.overlays.dismissPopovers();
         this.updatePosition();
         this.isOpen.set(true);
         document.addEventListener('scroll', this.onAncestorScroll, { capture: true, passive: true });
@@ -108,8 +109,9 @@ export class PopoverComponent implements OnDestroy {
         // viewport, and the 120 floor only matters when the whole viewport is shorter than that.
         this.panelMaxHeight.set(Math.min(Math.max(120, opensAbove ? above : below), window.innerHeight - edge * 2));
         if (this.align() === 'right') {
+            const width = this.panelRef?.nativeElement.offsetWidth ?? 240;
             this.panelLeft.set(null);
-            this.panelRight.set(Math.max(edge, window.innerWidth - rect.right));
+            this.panelRight.set(Math.max(edge, Math.min(window.innerWidth - rect.right, window.innerWidth - width - edge)));
         } else {
             // Before the panel exists its width is a guess; the second pass from open() reads the
             // real one (a share panel is 278px outside — the old literal 252 lost that difference).

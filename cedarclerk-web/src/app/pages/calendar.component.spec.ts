@@ -232,7 +232,8 @@ describe('content calendar', () => {
         expect(page().legendNetworks()).toEqual([]);
 
         const root = fixture.nativeElement as HTMLElement;
-        const empty = root.querySelector('.cal-card .cal-weeks app-empty-state.cal-empty')!;
+        const empty = root.querySelector('.cal-card > app-empty-state.cal-empty')!;
+        expect(root.querySelector('.cal-weeks')!.contains(empty)).toBe(false);
         expect(empty.textContent).toContain(page().t().calendar.emptyPeriodTitle);
         expect(root.querySelector('app-page-header app-button[primary]')).toBeNull();
         const scheduleActions = [...root.querySelectorAll('app-button')]

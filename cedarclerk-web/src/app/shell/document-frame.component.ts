@@ -44,6 +44,7 @@ export interface DocumentTabItem {
                 <div class="frame-tabs" role="tablist" [attr.aria-label]="tabsLabel() || null">
                     @for (item of tabs(); track item.id) {
                         <button type="button" class="frame-tab" role="tab" [class.is-on]="item.id === tab()"
+                                [attr.aria-label]="item.label"
                                 [attr.aria-selected]="item.id === tab()" [attr.tabindex]="item.id === tab() ? 0 : -1"
                                 [attr.id]="'frame-tab-' + item.id" [attr.aria-controls]="'frame-panel-' + item.id"
                                 (click)="pick(item.id)" (keydown)="onTabKey($event, item.id)">
@@ -189,6 +190,7 @@ export interface DocumentTabItem {
 
         @media (max-width: 420px) {
             .frame-tab app-icon { display: none; }
+            .frame-tab-label::after { font-size: var(--fs-13); }
         }
 
         .frame-body {

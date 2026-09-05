@@ -131,7 +131,7 @@
             </div>
             <div class="field">
                 <label>{{ t().projects.builds.fieldReleased }}</label>
-                <input type="date" [ngModel]="draftReleased()" (ngModelChange)="draftReleased.set($event)">
+                <input type="date" [attr.aria-label]="t().projects.builds.fieldReleased" [ngModel]="draftReleased()" (ngModelChange)="draftReleased.set($event)">
                 <p class="field-hint">{{ t().projects.builds.releasedHint }}</p>
             </div>
             <div class="field">

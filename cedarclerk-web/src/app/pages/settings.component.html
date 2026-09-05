@@ -601,19 +601,12 @@
                                     }
                                 </span>
                                 <span class="spacer"></span>
-                                @if (auth.telegramLinked() && !askUnlinkTelegram()) {
-                                <app-button variant="danger" size="sm" (clicked)="askUnlinkTelegram.set(true)">{{ t().settings.integrations.unlink }}</app-button>
+                                @if (auth.telegramLinked()) {
+                                <app-button variant="danger" size="sm" (clicked)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</app-button>
                                 }
                             </div>
 
                             @if (auth.telegramLinked()) {
-                            @if (askUnlinkTelegram()) {
-                            <div class="inline-confirm">
-                                <span>{{ t().settings.integrations.sure }}</span>
-                                <app-button variant="danger" size="sm" (clicked)="unlinkTelegram()" [disabled]="telegramBusy()">{{ t().settings.integrations.unlink }}</app-button>
-                                <app-button variant="paper" size="sm" (clicked)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</app-button>
-                            </div>
-                            }
                             <app-checkbox [label]="t().settings.integrations.notifyOnEngagement" [value]="auth.notifyOnEngagement()"
                                           (valueChange)="toggleNotifyOnEngagement()" [disabled]="notifyBusy()" />
                             } @else {

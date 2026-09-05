@@ -328,3 +328,26 @@ Once each, no rush: DeepL's uk/be/ka refusal with a clear message; the translate
 and delete; audit paging past page one; the emoji panel; the paragraph-mark toggle; the two form field
 types on a real gate; the Posts Manager submission modal and "mark all as read"; the Appearance panel's
 Apply-gated autosave; folder delete.
+
+## Destructive confirmation and narrow layouts
+
+1. Open a destructive action on a disposable test item.
+2. Check that the dialog names the item or consequence before a request starts.
+3. Check that Cancel receives focus and Tab stays inside the dialog.
+4. Press Escape. Check that the item remains and focus returns to its action.
+5. Repeat inside an editing dialog. Check that only the confirmation closes.
+6. Accept deletion of the test item. Check the response and the resulting list.
+7. At 390px, check footer wrapping and the close control of tall dialogs.
+8. Open the editor with Details visible. Check that the writing sheet remains visible during input.
+9. Check calendar dates against the empty message in Month and Week views.
+10. Check task column widths and horizontal board scrolling on a phone viewport.
+11. Check collection filters in both themes and both interface languages.
+
+The confirmation unit suite covers navigation cancellation, concurrent requests and nested focus.
+`18-interface-safety.spec.ts` covers task deletion and the mobile writing workspace through the browser.
+
+### First-entry save baseline
+
+Register a fresh scratch account, complete its profile and open the initial editor document.
+Type a paragraph, wait for Synced, then reload. The paragraph must remain without a save-conflict dialog.
+`e2e/18-interface-safety.spec.ts` exercises this path against the server.

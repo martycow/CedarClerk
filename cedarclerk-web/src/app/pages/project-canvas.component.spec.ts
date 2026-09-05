@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { ConfirmationService } from '../core/confirmation.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
@@ -355,12 +356,27 @@ describe('project canvas', () => {
             page.setSelection(new Set(['n1', 'f1']));
             page.toggleLock();
             page.setSelection(new Set(['n1', 'f1', 'l1']));
-            await page.deleteSelected();
+            const removing = page.deleteSelected();
+            expect(hub.deleted).toEqual([]);
+            const confirm = document.querySelector('app-confirmation-dialog .danger') as HTMLButtonElement;
+            expect(confirm).not.toBeNull();
+            confirm.click();
+            await removing;
             fixture.detectChanges();
 
             expect(hub.deleted).toEqual([['l1']]);
             expect(items().length).toBe(2);
             expect(page.selection().size).toBe(0);
+        });
+
+        it('keeps selection and content when deletion is cancelled', async () => {
+            await create(h => { h.snapshot.items = THREE; });
+            vi.spyOn(TestBed.inject(ConfirmationService), 'confirm').mockResolvedValue(false);
+            page.setSelection(new Set(['n1']));
+            await page.deleteSelected();
+            expect(hub.deleted).toEqual([]);
+            expect(page.selection().has('n1')).toBe(true);
+            expect(hub.items()).toHaveLength(3);
         });
 
         it('answers the surface keys', async () => {

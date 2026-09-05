@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -89,6 +90,7 @@ function utcDate(iso: string): Date {
     styleUrls: ['calendar.component.css'],
 })
 export class CalendarComponent implements OnInit {
+    private readonly confirmation = inject(ConfirmationService);
     t = inject(LocaleService).t;
     private locale = inject(LocaleService);
     private postsApi = inject(PostsService);
@@ -591,6 +593,7 @@ export class CalendarComponent implements OnInit {
 
     async removeSlot(slot: QueueSlot) {
         if (this.slotBusy()) return;
+        if (!await this.confirmation.confirm(this.t().common.removeQueueConfirm(slot.name || slot.targetName))) return;
         this.slotBusy.set(true);
         this.slotError.set('');
         try {

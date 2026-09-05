@@ -80,10 +80,7 @@ export type SortKey = 'title' | 'state' | 'languages' | 'folder' | 'tags' | 'act
 // Widths of the six fixed columns between Title (1fr) and the actions column (N1). Title keeps
 // the leftover space, so it isn't in here — dragging any handle grows/shrinks Title, which is
 // what makes the table feel like it resizes rather than scrolls.
-// DB2.3 — Title is the 1fr column, so it soaked up all the slack and started far wider than a
-// post title ever needs. Widening the fixed columns is the safe way to give it less without
-// restructuring the grid (and each is still individually resizable).
-const DEFAULT_COL_WIDTHS = [200, 120, 170, 190, 140, 140];
+const DEFAULT_COL_WIDTHS = [130, 70, 110, 100, 80, 100];
 const MIN_COL_WIDTH = 60;
 const COL_STORAGE_KEY = 'cedar-drafts-cols';
 

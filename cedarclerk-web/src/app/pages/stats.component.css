@@ -419,8 +419,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: var(--hit-surface);
-    min-height: var(--hit-surface);
+    min-width: var(--hit-surface, var(--hit-target));
+    min-height: var(--hit-surface, var(--hit-target));
     border: none;
     background: none;
     border-radius: var(--radius-sm);

@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, DestroyRef, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -63,6 +64,7 @@ function availableTimeZones(): string[] {
     styleUrls: ['settings.component.css']
 })
 export class SettingsComponent implements OnInit, OnDestroy {
+    private readonly confirmation = inject(ConfirmationService);
     auth = inject(AuthService);
     locale = inject(LocaleService);
     t = this.locale.t;
@@ -206,7 +208,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     telegramBusy = signal(false);
     notifyBusy = signal(false);
     telegramError = signal<string | null>(null);
-    askUnlinkTelegram = signal(false);
 
     botStatus = signal<{ reachable: boolean; botUsername: string | null } | null>(null);
     channels = signal<Channel[]>([]);
@@ -397,6 +398,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     // Disconnecting a channel does not touch anything already published to it — the posts stay,
     // the bot simply stops being able to send new ones from here.
     async removeChannel(id: string) {
+        if (!await this.confirmation.confirm({ message: this.t().common.disconnectConfirm(this.channels().find(channel => channel.id === id)?.title || 'Telegram'), confirmLabel: this.t().common.confirm })) return;
         this.channelBusy.set(true);
         this.channelError.set(null);
         try {
@@ -445,6 +447,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     async disconnectBluesky(targetId: string) {
+        if (!await this.confirmation.confirm({ message: this.t().common.disconnectConfirm('Bluesky'), confirmLabel: this.t().common.confirm })) return;
         this.blueskyBusy.set(true);
         try {
             await this.publishApi.disconnect(targetId);
@@ -472,6 +475,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     async disconnectDiscord(targetId: string) {
+        if (!await this.confirmation.confirm({ message: this.t().common.disconnectConfirm('Discord'), confirmLabel: this.t().common.confirm })) return;
         this.discordBusy.set(true);
         try {
             await this.publishApi.disconnect(targetId);
@@ -499,6 +503,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     async disconnectX(targetId: string) {
+        if (!await this.confirmation.confirm({ message: this.t().common.disconnectConfirm('X'), confirmLabel: this.t().common.confirm })) return;
         this.xBusy.set(true);
         try {
             await this.publishApi.disconnect(targetId);
@@ -559,6 +564,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     async clearAvatar() {
+        if (!await this.confirmation.confirm(this.t().common.removeAvatarConfirm)) return;
         this.avatarBusy.set(true);
         this.avatarError.set(null);
         try {
@@ -1050,12 +1056,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     async unlinkTelegram() {
+        if (!await this.confirmation.confirm({ message: this.t().common.disconnectConfirm('Telegram'), confirmLabel: this.t().common.confirm })) return;
         this.telegramBusy.set(true);
         this.telegramError.set(null);
         try {
             await this.telegramLink.unlink();
             await this.auth.refresh();
-            this.askUnlinkTelegram.set(false);
         } catch {
             this.telegramError.set(this.t().settings.errors.unlinkTelegram);
         } finally {

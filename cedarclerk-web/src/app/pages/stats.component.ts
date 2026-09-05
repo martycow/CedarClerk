@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { zoneAbbreviation } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
@@ -127,6 +128,7 @@ function sparkPath(points: readonly number[]): string | null {
 })
 // Rendered as the Posts Manager's statistics tab (ADR-148) — no page chrome of its own.
 export class StatsComponent implements OnInit {
+    private readonly confirmation = inject(ConfirmationService);
     private channelsApi = inject(ChannelsService);
     private locale = inject(LocaleService);
     private route = inject(ActivatedRoute);
@@ -576,6 +578,7 @@ export class StatsComponent implements OnInit {
     async revokeInviteLink(link: ChannelInviteLink) {
         const id = this.inviteChannelId();
         if (!id || this.inviteBusy()) return;
+        if (!await this.confirmation.confirm({ message: this.t().common.revokeConfirm, confirmLabel: this.t().common.confirm })) return;
         this.inviteBusy.set(true);
         this.inviteError.set('');
         try {

@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, ElementRef, NgZone, OnDestroy, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -72,6 +73,7 @@ const NUDGE_MS = 200;
     styleUrls: ['project-canvas.component.css'],
 })
 export class ProjectCanvasComponent implements OnDestroy {
+    private readonly confirmation = inject(ConfirmationService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private zone = inject(NgZone);
@@ -409,6 +411,7 @@ export class ProjectCanvasComponent implements OnDestroy {
     async deleteSelected() {
         const ids = [...this.selection()].filter(id => !this.locked().has(id));
         if (!ids.length) return;
+        if (!await this.confirmation.confirm(this.t().common.removeCanvasConfirm(ids.length))) return;
         this.clearSelection();
         await this.hub.deleteItems(ids);
     }

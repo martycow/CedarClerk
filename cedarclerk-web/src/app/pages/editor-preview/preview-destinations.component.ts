@@ -148,6 +148,9 @@ export interface DestinationRow {
         }
 
         @media (max-width: 759px) {
+            :host { flex-direction: column; }
+            .pd-list { flex: none; min-width: 0; }
+            .pd-manage { border-left: 0; border-top: 1px solid var(--paper-edge); white-space: normal; }
             .pd-detail { display: none; }
         }
     `],

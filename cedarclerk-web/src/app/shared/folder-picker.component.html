@@ -58,7 +58,7 @@ modal's own fixed positioning and stacking, which is why the new-draft dialog ne
         @if (f.count > 0) { {{ t().drafts.folders.deleteOrphans(f.count) }} }
         {{ t().drafts.folders.deleteKeepsDrafts }}
     </p>
-    <app-button modal-actions variant="paper" (clicked)="deleteConfirmId.set(null)">{{ t().common.cancel }}</app-button>
+    <app-button data-modal-autofocus modal-actions variant="paper" (clicked)="deleteConfirmId.set(null)">{{ t().common.cancel }}</app-button>
     <app-button modal-actions variant="danger" (clicked)="confirmDelete()">{{ t().drafts.folders.deleteConfirm }}</app-button>
 </app-modal>
 }

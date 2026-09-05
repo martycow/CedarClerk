@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -60,6 +61,7 @@ const STATUS_TONES: Record<GameTask['status'], StampTone> = {
     styleUrls: ['project-planner.component.css'],
 })
 export class ProjectPlannerComponent {
+    private readonly confirmation = inject(ConfirmationService);
     private api = inject(SprintsService);
     private tasksApi = inject(TasksService);
     private projects = inject(ProjectsService);
@@ -232,7 +234,7 @@ export class ProjectPlannerComponent {
     }
 
     async remove(sprint: Sprint) {
-        if (!confirm(this.t().projects.planner.deleteConfirm)) return;
+        if (!await this.confirmation.confirm(this.t().projects.planner.deleteConfirm)) return;
         this.editing.set(null);
         await this.run(() => this.api.remove(sprint.id));
     }

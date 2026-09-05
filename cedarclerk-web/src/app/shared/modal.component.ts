@@ -36,7 +36,8 @@ export class ModalComponent implements AfterViewInit, OnDestroy {
         queueMicrotask(() => {
             if (this.destroyed) return;
             const card = this.card().nativeElement;
-            this.overlays.focusFirst(card, card.querySelector<HTMLElement>('.modal-body')
+            const autofocus = card.querySelector<HTMLElement>('[data-modal-autofocus]');
+            this.overlays.focusFirst(card, autofocus?.querySelector<HTMLElement>('button:not([disabled])') ?? autofocus ?? card.querySelector<HTMLElement>('.modal-body')
                 ?.querySelector<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
         });
     }

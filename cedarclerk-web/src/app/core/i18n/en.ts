@@ -9,6 +9,23 @@
 // verbatim. Plain `string` members are exactly what's wanted — the *keys* are what must match.
 export const en = {
     common: {
+        confirmAction: 'Confirm action',
+        confirm: 'Confirm',
+        removeNamed: (name: string) => `Remove “${name}”? This removes the saved item.`,
+        disconnectConfirm: (name: string) => `Disconnect ${name}? You will need to connect it again to use it here. Published posts are kept.`,
+        revokeConfirm: 'Revoke this access link? Anyone using it will lose access.',
+        removeCommentConfirm: 'Delete this comment? It will be removed permanently.',
+        removeQueueConfirm: (name: string) => `Delete the queue slot “${name}”? It will no longer be used for future scheduling.`,
+        removeCanvasConfirm: (n: number) => `Delete ${n} selected board item(s)? Their content will be removed for everyone on this board.`,
+        removeFormConfirm: 'Remove this document’s registration form? Its saved form configuration will be cleared.',
+        cancelScheduleConfirm: 'Cancel this scheduled publication? The document will be kept, but this scheduled send will be removed.',
+        unpublishConfirm: 'Unpublish this post? Its public blog page will no longer be available. The document will be kept.',
+        removeBlockConfirm: (name: string) => `Remove the “${name}” block and its content? Save the page to apply this change.`,
+        removeEditorContentConfirm: 'Remove this content from the document? You can undo this edit.',
+        removeEditorMediaConfirm: 'Remove every occurrence of this media from the document? The uploaded file will be kept. You can undo this edit.',
+        removeAuthoredContentConfirm: 'Remove this content and its text? Save the form to apply this change.',
+        removeAvatarConfirm: 'Remove your profile picture?',
+        removeLinkConfirm: 'Remove this saved link? The linked item itself will be kept.',
         // T-343 — the (i) dot's accessible name; the hint text itself comes from the section.
         about: 'How this works',
         cancel: 'Cancel',

@@ -34,7 +34,7 @@ let nextId = 0;
             font-weight: 700;
             letter-spacing: .07em;
             text-transform: uppercase;
-            color: var(--t2);
+            color: var(--field-label-ink, var(--surface-ink-soft, var(--t2)));
             margin-bottom: var(--space-1);
         }
 

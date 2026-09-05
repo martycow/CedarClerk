@@ -1,5 +1,4 @@
-[disabled]="revisionBusy() || selected.isCurrent"
-[title]="t().editor.versions.selectedVersion(selected.createdAt | zonedDate:'d MMM yyyy, HH:mm')" (clicked)="restoreRevision()"><div class="app" data-layout="operational">
+<div class="app" data-layout="operational">
 
 
     <!--The publish checklist — a publication runs like a test suite: one row per phase, a thread
@@ -172,11 +171,11 @@
                         @if (isActive('table')) {
                         <button (click)="cmd(c => c.addRowBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowAbove }}</button>
                         <button (click)="cmd(c => c.addRowAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addRowBelow }}</button>
-                        <button (click)="cmd(c => c.deleteRow())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteRow }}</button>
+                        <button (click)="removeTableContent('deleteRow')"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteRow }}</button>
                         <button (click)="cmd(c => c.addColumnBefore())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnLeft }}</button>
                         <button (click)="cmd(c => c.addColumnAfter())"><app-icon name="plus" weight="bold" size="xs"></app-icon> {{ t().editor.tableMenu.addColumnRight }}</button>
-                        <button (click)="cmd(c => c.deleteColumn())"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteColumn }}</button>
-                        <button (click)="cmd(c => c.deleteTable())"><app-icon name="trash" size="xs"></app-icon> {{ t().editor.tableMenu.deleteTable }}</button>
+                        <button (click)="removeTableContent('deleteColumn')"><app-icon name="x" size="xs"></app-icon> {{ t().editor.tableMenu.deleteColumn }}</button>
+                        <button (click)="removeTableContent('deleteTable')"><app-icon name="trash" size="xs"></app-icon> {{ t().editor.tableMenu.deleteTable }}</button>
                         } @else {
                         <button (click)="openTableModal()"><app-icon name="table" size="xs"></app-icon> {{ t().editor.tableMenu.insert }}</button>
                         }
@@ -1454,13 +1453,13 @@
                     </button>
                 </div>
                 <div class="insp-actions">
-                    <button class="insp-btn" (click)="cmd(c => c.deleteRow())" [title]="t().editor.tableMenu.deleteRow">
+                    <button class="insp-btn" (click)="removeTableContent('deleteRow')" [title]="t().editor.tableMenu.deleteRow">
                         <app-icon name="x" size="xs"></app-icon> {{ t().editor.inspector.rows }}
                     </button>
-                    <button class="insp-btn" (click)="cmd(c => c.deleteColumn())" [title]="t().editor.tableMenu.deleteColumn">
+                    <button class="insp-btn" (click)="removeTableContent('deleteColumn')" [title]="t().editor.tableMenu.deleteColumn">
                         <app-icon name="x" size="xs"></app-icon> {{ t().editor.inspector.columns }}
                     </button>
-                    <button class="insp-btn lang-delete" (click)="cmd(c => c.deleteTable())" [title]="t().editor.tableMenu.deleteTable">
+                    <button class="insp-btn lang-delete" (click)="removeTableContent('deleteTable')" [title]="t().editor.tableMenu.deleteTable">
                         <app-icon name="trash" size="xs"></app-icon>
                     </button>
                 </div>

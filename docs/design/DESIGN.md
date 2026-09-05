@@ -289,6 +289,17 @@ Accent-filled = primary action, outlined ghost = secondary — that's the conven
 
 Channel colors are a separate hardcoded array in `editor.component.ts`, not tokenized: `['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF']`.
 
+## Confirmation and empty surfaces (ADR-289)
+
+Destructive actions use `ConfirmationService` or an existing dedicated confirmation modal.
+The dialog names the target or consequence. Cancel receives initial focus.
+The affirmative action uses the Bench danger variant. Escape and Close cancel.
+The scrim does not dismiss a modal. The modal footer wraps long actions.
+
+An empty surface uses `app-empty-state` with paper, an accent icon, a title and one next action.
+Its content does not stretch across the viewport height. Calendar places its message below the dates.
+Task columns retain a readable width through one horizontal board scroller.
+
 ## Editor content styles (`.tiptap` block, `styles.scss`)
 
 Global (not component-scoped, since TipTap content is rendered via `innerHTML` in places): `h1`–`h3` in `--font-display` at `--fs-27`/`--fs-19` (the sheet's own typeface preference moves the body, never the headings), the body size inherited so the editor's zoom control still works (fixed from a past bug — zoom used to be silently overridden by a hardcoded `font-size: 16px`), `blockquote` with a `3px solid var(--abord)` left border, inline `code`/`pre` with `var(--font-mono)`, `tg-spoiler` (spoiler mark → hidden text via `background: var(--t3); color: transparent`, revealed on hover), `.datetime-pill`, `.annotation-block` (comment/reaction anchor), `.toggle-block`, `.media-with-caption`, `.footnote-badge` — one block per custom TipTap node/mark in `tiptap-extensions/`.

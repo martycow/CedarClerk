@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, ElementRef, OnDestroy, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
@@ -65,6 +66,7 @@ const FALLBACK_ROW_PX = 44;
     styleUrls: ['project-assets.component.css'],
 })
 export class ProjectAssetsComponent implements OnDestroy {
+    private readonly confirmation = inject(ConfirmationService);
     private api = inject(AssetIndexService);
     private projects = inject(ProjectsService);
     private route = inject(ActivatedRoute);
@@ -626,6 +628,7 @@ export class ProjectAssetsComponent implements OnDestroy {
     }
 
     async removeLink(draftId: string) {
+        if (!await this.confirmation.confirm(this.t().common.removeLinkConfirm)) return;
         const id = this.projectId();
         const asset = this.selected();
         if (!id || !asset || this.busy()) return;

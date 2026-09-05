@@ -286,3 +286,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-286 — One skeleton, held for 300 ms, marking the region busy](adr/ADR-286.md)
 - [ADR-287 — View transitions: the router cross-fades except around the editor, the blog carries a cover into the post](adr/ADR-287.md)
 - [ADR-288 — A custom accent is gated at 3:1 on the paper; an area preset is a macro over the sheet controls](adr/ADR-288.md)
+- [ADR-289 — Destructive actions use the shared modal before changing data](adr/ADR-289.md)

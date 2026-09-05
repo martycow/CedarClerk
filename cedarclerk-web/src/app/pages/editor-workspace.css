@@ -27,6 +27,9 @@
 /* On a phone the preview's three columns are one, and nothing may push the page sideways. */
 @media (max-width: 759px) {
     .inspector { width: auto; }
+    .insp-sheet app-spec-row { --spec-label-w: 10ch; flex-wrap: wrap; }
+    .insp-sheet app-spec-row ::ng-deep .value { flex-wrap: wrap; overflow-wrap: anywhere; }
+    .insp-sheet app-spec-row ::ng-deep .tag { max-width: 100%; white-space: normal; height: auto; }
     .frame-back, .frame-next {
         flex-direction: column;
         align-items: stretch;
