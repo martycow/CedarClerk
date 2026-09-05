@@ -35,11 +35,11 @@ public static class AssetEndpoints
         app.MapPost("/api/assets", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media, ILogger<Asset> logger) =>
             {
                 if (!Allowed.TryGetValue(file.ContentType, out var allowed))
-                    return Results.BadRequest(new { error = $"Unsupported type: {file.ContentType}" });
+                    return Results.BadRequest(new { error = ErrorMessages.UnsupportedFileType(file.ContentType) });
 
                 var (ext, maxBytes) = allowed;
                 if (file.Length == 0 || file.Length > maxBytes)
-                    return Results.BadRequest(new { error = $"File is too large ({maxBytes / (1024 * 1024)}MB Maximum)" });
+                    return Results.BadRequest(new { error = ErrorMessages.FileTooLarge(maxBytes / (1024 * 1024)) });
 
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
                 var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
@@ -50,7 +50,7 @@ public static class AssetEndpoints
                     var planLimitMb = PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024);
 
                     return Results.Json(
-                        new { error = $"Storage limit of your plan ({planLimitMb}MB) exceeded. Upgrade for more." },
+                        new { error = ErrorMessages.StorageLimitExceeded(planLimitMb) },
                         statusCode: StatusCodes.Status403Forbidden);
                 }
 

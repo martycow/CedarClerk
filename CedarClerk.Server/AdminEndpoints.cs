@@ -284,7 +284,7 @@ public static partial class AdminEndpoints
             ClaimsPrincipal principal, UserManager<ApplicationUser> users, CedarDbContext db) =>
         {
             if (!Enum.TryParse<PlanTiers>(req.Tier, ignoreCase: true, out var tier))
-                return Results.BadRequest(new { error = $"Unknown tier '{req.Tier}'" });
+                return Results.BadRequest(new { error = ErrorMessages.UnknownTier(req.Tier) });
 
             var actor = (await users.GetUserAsync(principal))!;
             var target = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
@@ -467,7 +467,7 @@ public static partial class AdminEndpoints
         {
             var value = req.Code?.Trim() ?? "";
             if (value.Length < Consts.Admin.MinInviteCodeLength)
-                return Results.BadRequest(new { error = $"Code must be at least {Consts.Admin.MinInviteCodeLength} characters" });
+                return Results.BadRequest(new { error = ErrorMessages.InviteCodeTooShort(Consts.Admin.MinInviteCodeLength) });
             if (await db.InviteCodes.AnyAsync(c => c.Code.ToLower() == value.ToLower()))
                 return Results.BadRequest(new { error = ErrorMessages.InviteCodeExists });
 

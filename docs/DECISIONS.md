@@ -275,3 +275,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-283 — Document tree drag&drop: a flat drop list, depth from sideways travel](adr/ADR-283.md)
 - [ADR-285 — A dialog leaves through Escape, the ✕ or an action; the scrim is not a button](adr/ADR-285.md)
 - [ADR-277 — The project journal is a union of timestamps the module already writes, and the nudge is one date on the list](adr/ADR-277.md)
+- [ADR-284 — Server errors speak every UI language, from one table per language keyed by member name](adr/ADR-284.md)

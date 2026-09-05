@@ -86,7 +86,7 @@ public static class FormPresetEndpoints
             ProductAnalytics analytics, CancellationToken ct) =>
         {
             if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
-                return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(req.TargetLanguage) });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var preset = await db.FormPresets.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid, ct);
@@ -147,7 +147,7 @@ public static class FormPresetEndpoints
     {
         var name = req.Name.Trim();
         if (name.Length == 0 || name.Length > PresetNameMaxLength)
-            return Results.Json(new { error = $"Preset name must be 1-{PresetNameMaxLength} characters" }, statusCode: StatusCodes.Status400BadRequest);
+            return Results.Json(new { error = ErrorMessages.PresetNameLength(PresetNameMaxLength) }, statusCode: StatusCodes.Status400BadRequest);
 
         if (string.IsNullOrWhiteSpace(req.FormJson))
             return Results.Json(new { error = ErrorMessages.PresetHasNoForm }, statusCode: StatusCodes.Status400BadRequest);

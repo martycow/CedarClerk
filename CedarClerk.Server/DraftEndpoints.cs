@@ -423,7 +423,7 @@ public static class DraftEndpoints
             if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to))
                 return Results.BadRequest(new { error = ErrorMessages.BothTagsRequired });
             if (to.Length > TagMaxLength)
-                return Results.BadRequest(new { error = $"Tag is too long ({TagMaxLength} characters maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.TagTooLong(TagMaxLength) });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var drafts = await db.Drafts.Where(d => d.OwnerId == uid && d.Tags != "").ToListAsync();
@@ -830,7 +830,7 @@ public static class DraftEndpoints
 
             var title = req.ArticleTitle?.Trim();
             if (title is { Length: > Consts.ArticleTitle.MaxLength })
-                return Results.BadRequest(new { error = $"Title is too long ({Consts.ArticleTitle.MaxLength} characters maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.TitleTooLong(Consts.ArticleTitle.MaxLength) });
 
             draft.ArticleTitle = string.IsNullOrWhiteSpace(title) ? null : title;
             await db.SaveChangesAsync();
@@ -1012,7 +1012,7 @@ public static class DraftEndpoints
         groupBuilder.MapPut("/{id:guid}/translations/{lang}", async (Guid id, string lang, SaveTranslationRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             if (!Languages.IsContentLanguage(lang))
-                return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedTranslationLanguage(lang) });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
@@ -1065,7 +1065,7 @@ public static class DraftEndpoints
             ProductAnalytics analytics) =>
         {
             if (!Languages.IsContentLanguage(lang))
-                return Results.BadRequest(new { error = $"Unsupported translation language: {lang}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedTranslationLanguage(lang) });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
@@ -1203,14 +1203,14 @@ public static class DraftEndpoints
             ProductAnalytics analytics) =>
         {
             if (!Languages.IsContentLanguage(lang))
-                return Results.BadRequest(new { error = $"Unsupported language: {lang}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(lang) });
 
             AiEditKind editKind;
             switch (kind)
             {
                 case "fix-errors": editKind = AiEditKind.FixErrors; break;
                 case "schizo": editKind = AiEditKind.Schizo; break;
-                default: return Results.BadRequest(new { error = $"Unknown AI edit kind: {kind}" });
+                default: return Results.BadRequest(new { error = ErrorMessages.UnknownAiEditKind(kind) });
             }
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -1234,7 +1234,7 @@ public static class DraftEndpoints
             else
             {
                 var existingTranslation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == lang);
-                if (existingTranslation is null) return Results.NotFound(new { error = $"No {lang} version to edit yet" });
+                if (existingTranslation is null) return Results.NotFound(new { error = ErrorMessages.NoVersionToEditYet(lang) });
                 sourceTitle = existingTranslation.Title;
                 sourceCedarJson = existingTranslation.CedarJson;
             }
@@ -1401,7 +1401,7 @@ public static class DraftEndpoints
         groupBuilder.MapPost("/{id:guid}/primary-language", async (Guid id, ChangePrimaryLanguageRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             if (!Languages.IsContentLanguage(req.Language))
-                return Results.BadRequest(new { error = $"Unsupported language: {req.Language}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(req.Language) });
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
@@ -1619,7 +1619,7 @@ public static class DraftEndpoints
             {
                 var translation = await db.DraftTranslations.FirstOrDefaultAsync(t => t.DraftId == id && t.Language == language);
                 if (translation is null)
-                    return Results.BadRequest(new { error = $"No {language.ToUpperInvariant()} version of this draft" });
+                    return Results.BadRequest(new { error = ErrorMessages.NoVersionInLanguage(language) });
                 title = translation.Title;
                 cedarJson = translation.CedarJson;
             }
@@ -1707,7 +1707,7 @@ public static class DraftEndpoints
         groupBuilder.MapPost("/import", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             if (file.Length == 0 || file.Length > CedarZipMaxBytes)
-                return Results.BadRequest(new { error = $"File is too large ({CedarZipMaxBytes / (1024 * 1024)}MB maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.FileTooLarge(CedarZipMaxBytes / (1024 * 1024)) });
 
             CedarPackageContents pkg;
             await using (var stream = file.OpenReadStream())
@@ -1723,7 +1723,7 @@ public static class DraftEndpoints
             }
 
             if (pkg.Assets.Count > CedarMaxAssetCount)
-                return Results.BadRequest(new { error = $"Too many assets in package ({CedarMaxAssetCount} maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.PackageTooManyAssets(CedarMaxAssetCount) });
 
             using (var docCheck = JsonDocument.Parse(pkg.DocumentJson))
             {
@@ -1741,7 +1741,7 @@ public static class DraftEndpoints
             var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
             var incomingBytes = pkg.Assets.Sum(kv => (long)kv.Value.Length);
             if (!PlanLimitations.HasStorageRoom(tier, usedBytes, incomingBytes))
-                return Results.Json(new { error = $"Storage limit of your plan ({PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)}MB) exceeded. Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.StorageLimitExceeded(PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)) }, statusCode: StatusCodes.Status403Forbidden);
 
             var pathRewrites = new Dictionary<string, string>();
 
@@ -1749,9 +1749,9 @@ public static class DraftEndpoints
             {
                 var contentType = ImageContentSniffer.DetectContentType(rawBytes);
                 if (contentType is null || !ImportImageExtensions.TryGetValue(contentType, out var ext))
-                    return Results.BadRequest(new { error = $"Unsupported or invalid asset: {originalName}" });
+                    return Results.BadRequest(new { error = ErrorMessages.PackageAssetInvalid(originalName) });
                 if (rawBytes.Length > Consts.FileSizes.ImageMaxBytes)
-                    return Results.BadRequest(new { error = $"Asset too large: {originalName}" });
+                    return Results.BadRequest(new { error = ErrorMessages.PackageAssetTooLarge(originalName) });
 
                 var bytes = ImageMetadataStripper.Strip(rawBytes, contentType);
                 var newName = $"asset_{Guid.NewGuid()}{ext}";
@@ -1781,7 +1781,7 @@ public static class DraftEndpoints
         groupBuilder.MapPost("/import-markdown", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             if (file.Length == 0 || file.Length > MarkdownZipMaxBytes)
-                return Results.BadRequest(new { error = $"File is too large ({MarkdownZipMaxBytes / (1024 * 1024)}MB maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.FileTooLarge(MarkdownZipMaxBytes / (1024 * 1024)) });
 
             // ZipArchive needs a seekable stream; IFormFile's underlying stream may not be.
             using var uploadCopy = new MemoryStream();
@@ -1813,7 +1813,7 @@ public static class DraftEndpoints
 
             var fileInfo = new FileInfo(fullPath);
             if (fileInfo.Length == 0 || fileInfo.Length > MarkdownZipMaxBytes)
-                return Results.BadRequest(new { error = $"File is too large ({MarkdownZipMaxBytes / (1024 * 1024)}MB maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.FileTooLarge(MarkdownZipMaxBytes / (1024 * 1024)) });
 
             var owner = await users.FindByEmailAsync(req.OwnerEmail);
             if (owner is null)
@@ -1859,7 +1859,7 @@ public static class DraftEndpoints
                 .ToList();
 
             if (imageEntries.Count > MarkdownMaxImageCount)
-                return Results.BadRequest(new { error = $"Too many images in the zip ({MarkdownMaxImageCount} maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.ZipTooManyImages(MarkdownMaxImageCount) });
 
             var docJson = MarkdownToCedarConverter.Convert(markdownText, out var titleFromHeading);
             var referencedNames = CedarPackage.FindReferencedMediaPaths(docJson);
@@ -1912,7 +1912,7 @@ public static class DraftEndpoints
             }
 
             if (!PlanLimitations.HasStorageRoom(tier, usedBytes, incomingBytes))
-                return Results.Json(new { error = $"Storage limit of your plan ({PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)}MB) exceeded. Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.StorageLimitExceeded(PlanLimitations.StorageLimitBytes(tier) / (1024 * 1024)) }, statusCode: StatusCodes.Status403Forbidden);
 
             var pathRewrites = new Dictionary<string, string>();
             foreach (var (originalName, bytes, contentType, ext) in pending)

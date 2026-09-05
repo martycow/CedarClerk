@@ -113,7 +113,7 @@ public static class BillingEndpoints
             var response = await http.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
-                return Results.Json(new { error = $"Stripe API error ({(int)response.StatusCode}) — check server logs" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.StripeApiError((int)response.StatusCode) }, statusCode: StatusCodes.Status502BadGateway);
 
             using var doc = JsonDocument.Parse(json);
             return Results.Ok(new { url = doc.RootElement.GetProperty("url").GetString() });
@@ -189,7 +189,7 @@ public static class BillingEndpoints
         {
             var secretKey = cfg[Consts.Stripe.SecretKeyCfg];
             if (!SubscriptionPlanHelper.IsValid(req.Plan))
-                return Results.BadRequest(new { error = $"Unknown plan '{req.Plan}'" });
+                return Results.BadRequest(new { error = ErrorMessages.UnknownPlan(req.Plan) });
             var priceId = req.Plan switch
             {
                 Consts.Plans.Pro => cfg[Consts.Stripe.ProPriceIdCfg],
@@ -240,7 +240,7 @@ public static class BillingEndpoints
             var response = await http.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
-                return Results.Json(new { error = $"Stripe API error ({(int)response.StatusCode}) — check server logs" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.StripeApiError((int)response.StatusCode) }, statusCode: StatusCodes.Status502BadGateway);
 
             using var doc = JsonDocument.Parse(json);
             return Results.Ok(new { url = doc.RootElement.GetProperty("url").GetString() });
@@ -447,7 +447,7 @@ public static class BillingEndpoints
             var response = await http.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
-                return Results.Json(new { error = $"Stripe API error ({(int)response.StatusCode}) — check server logs" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.StripeApiError((int)response.StatusCode) }, statusCode: StatusCodes.Status502BadGateway);
 
             using var doc = JsonDocument.Parse(json);
             return Results.Ok(new { url = doc.RootElement.GetProperty("url").GetString() });
@@ -460,7 +460,7 @@ public static class BillingEndpoints
         group.MapPost("/telegram-stars/invoice", async (CheckoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, TelegramBotService bot) =>
         {
             if (!SubscriptionPlanHelper.IsValid(req.Plan))
-                return Results.BadRequest(new { error = $"Unknown plan '{req.Plan}'" });
+                return Results.BadRequest(new { error = ErrorMessages.UnknownPlan(req.Plan) });
             
             if (!bot.IsRunning)
                 return Results.Json(new { error = ErrorMessages.BotNotRunning }, statusCode: StatusCodes.Status503ServiceUnavailable);
@@ -508,7 +508,7 @@ public static class BillingEndpoints
         group.MapPost("/paypal/checkout", async (CheckoutRequest req, ClaimsPrincipal principal, UserManager<ApplicationUser> users, IConfiguration cfg, IHttpClientFactory httpFactory) =>
         {
             if (!SubscriptionPlanHelper.IsValid(req.Plan))
-                return Results.BadRequest(new { error = $"Unknown plan '{req.Plan}'" });
+                return Results.BadRequest(new { error = ErrorMessages.UnknownPlan(req.Plan) });
             
             var clientId = cfg[Consts.PayPal.ClientIdCfg];
             var secret = cfg[Consts.PayPal.SecretKeyCfg];
@@ -558,7 +558,7 @@ public static class BillingEndpoints
             var orderResp = await http.SendAsync(orderReq);
             var orderJson = await orderResp.Content.ReadAsStringAsync();
             if (!orderResp.IsSuccessStatusCode)
-                return Results.Json(new { error = $"PayPal API error ({(int)orderResp.StatusCode}) — check server logs" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.PayPalApiError((int)orderResp.StatusCode) }, statusCode: StatusCodes.Status502BadGateway);
 
             using var orderDoc = JsonDocument.Parse(orderJson);
             var approveUrl = orderDoc.RootElement.GetProperty("links").EnumerateArray()

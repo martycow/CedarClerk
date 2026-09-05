@@ -60,8 +60,8 @@ public static class ChannelEndpoints
 
             if (!BotChatAccess.CanPost(chat.Type, member))
                 return Results.BadRequest(new { error = chat.Type == ChatType.Channel
-                    ? "Bot must have an Admin with the right to send messages OR Creator."
-                    : "Bot must be an Admin or Creator of the Group/Supergroup." });
+                    ? ErrorMessages.BotMustBeChannelAdmin
+                    : ErrorMessages.BotMustBeGroupAdmin });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var account = await db.Users.FirstAsync(u => u.Id == uid);
@@ -81,14 +81,14 @@ public static class ChannelEndpoints
             var tier = SubscriptionPlanHelper.CheckPlanExpiration(account.PlanTier, account.PlanExpiresAt, DateTime.UtcNow);
             var channelCount = await db.Channels.CountAsync(c => c.OwnerId == uid);
             if (!PlanLimitations.CanConnectAnotherChannel(tier, channelCount))
-                return Results.Json(new { error = $"Your plan allows {PlanLimitations.MaxChannels(tier)} connected channel(s). Upgrade for more." }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.ChannelLimitReached(PlanLimitations.MaxChannels(tier)) }, statusCode: StatusCodes.Status403Forbidden);
 
             // Anti channel-cycling on Free: after deleting a channel, a DIFFERENT one can only be
             // connected after the cooldown (reconnecting the same channel is always fine).
             if (tier == PlanTiers.Free
                 && account.FreeChannelCooldownUntil is { } cooldown && cooldown > DateTime.UtcNow
                 && account.LastDeletedTelegramChatId != chat.Id)
-                return Results.Json(new { error = $"On the Free plan you can switch to a different channel after {cooldown:d MMM yyyy}. Upgrade to Pro to connect more channels." }, statusCode: StatusCodes.Status403Forbidden);
+                return Results.Json(new { error = ErrorMessages.ChannelSwitchCooldown(cooldown) }, statusCode: StatusCodes.Status403Forbidden);
 
             var channel = new Channel
             {
