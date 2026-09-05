@@ -1,6 +1,6 @@
-<div class="modal-overlay" (click)="closed.emit()">
+<div class="modal-overlay">
     <div #card class="modal-card" role="dialog" aria-modal="true" [attr.aria-labelledby]="titleId"
-         tabindex="-1" [style.width.px]="width" (click)="$event.stopPropagation()">
+         tabindex="-1" [style.width.px]="width">
         <div class="modal-head">
             <ng-content select="[modal-icon]"></ng-content>
             <span class="modal-title" [id]="titleId"><ng-content select="[modal-title]"></ng-content></span>

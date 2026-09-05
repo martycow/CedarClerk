@@ -54,6 +54,20 @@ describe('ModalComponent', () => {
         opener.remove();
     });
 
+    it('ignores a click on the scrim and closes on Escape', () => {
+        const fixture = TestBed.createComponent(ModalComponent);
+        const closed = vi.fn();
+        fixture.componentInstance.closed.subscribe(closed);
+        fixture.detectChanges();
+
+        (fixture.nativeElement.querySelector('.modal-overlay') as HTMLElement).click();
+        expect(closed).not.toHaveBeenCalled();
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        expect(closed).toHaveBeenCalledOnce();
+        fixture.destroy();
+    });
+
     it('lets only the top registered modal consume Escape', async () => {
         const first = TestBed.createComponent(ModalComponent);
         const second = TestBed.createComponent(ModalComponent);

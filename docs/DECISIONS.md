@@ -270,3 +270,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
 - [ADR-271 — The invite shelf draws the day series it already has](adr/ADR-271.md)
+- [ADR-285 — A dialog leaves through Escape, the ✕ or an action; the scrim is not a button](adr/ADR-285.md)
