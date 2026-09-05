@@ -58,7 +58,7 @@
         },
         "test": {
           "label": "Run all local tests",
-          "description": "Rust, backend, frontend and design contracts.",
+          "description": "Rust, backend, frontend and design contracts, then the production build the deploy ships.",
           "continueOnError": true,
           "steps": [
             { "type": "exec", "name": "Rust console tests", "command": "pwsh", "args": ["-NoProfile", "-File", "Scripts/rust-cli.ps1", "test", "--locked"] },
@@ -66,7 +66,8 @@
             { "type": "exec", "name": "Frontend tests", "command": "npm", "args": ["run", "test"], "cwd": "cedarclerk-web" },
             { "type": "exec", "name": "Icon inventory", "command": "npm", "args": ["run", "check:icons"], "cwd": "cedarclerk-web" },
             { "type": "exec", "name": "Contrast contract", "command": "npm", "args": ["run", "check:contrast"], "cwd": "cedarclerk-web" },
-            { "type": "exec", "name": "Density contract", "command": "npm", "args": ["run", "check:density"], "cwd": "cedarclerk-web" }
+            { "type": "exec", "name": "Density contract", "command": "npm", "args": ["run", "check:density"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Angular production build", "command": "npm", "args": ["run", "build"], "cwd": "cedarclerk-web" }
           ]
         },
         "test-backend": {
@@ -80,7 +81,8 @@
             { "type": "exec", "name": "Frontend tests", "command": "npm", "args": ["run", "test"], "cwd": "cedarclerk-web" },
             { "type": "exec", "name": "Icon inventory", "command": "npm", "args": ["run", "check:icons"], "cwd": "cedarclerk-web" },
             { "type": "exec", "name": "Contrast", "command": "npm", "args": ["run", "check:contrast"], "cwd": "cedarclerk-web" },
-            { "type": "exec", "name": "Density", "command": "npm", "args": ["run", "check:density"], "cwd": "cedarclerk-web" }
+            { "type": "exec", "name": "Density", "command": "npm", "args": ["run", "check:density"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Angular production build", "command": "npm", "args": ["run", "build"], "cwd": "cedarclerk-web" }
           ]
         },
         "test-cli": {
