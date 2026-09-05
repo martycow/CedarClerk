@@ -1,4 +1,4 @@
-using CedarClerk.Core;
+﻿using CedarClerk.Core;
 using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +25,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<ScheduledPost> ScheduledPosts => Set<ScheduledPost>();
     public DbSet<ChannelStatSnapshot> ChannelStatSnapshots => Set<ChannelStatSnapshot>();
+    public DbSet<PublishTargetStatSnapshot> PublishTargetStatSnapshots => Set<PublishTargetStatSnapshot>();
     public DbSet<BlogStatSnapshot> BlogStatSnapshots => Set<BlogStatSnapshot>();
     public DbSet<BlogViewGeoDaily> BlogViewGeoDailies => Set<BlogViewGeoDaily>();
     public DbSet<ChannelPost> ChannelPosts => Set<ChannelPost>();
@@ -177,6 +178,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<PostRegistration>().HasIndex(r => new { r.OwnerId, r.DraftId });
         builder.Entity<ChannelPost>().HasIndex(p => new { p.OwnerId, p.ChannelId });
         builder.Entity<ChannelStatSnapshot>().HasIndex(s => new { s.OwnerId, s.ChannelId });
+        builder.Entity<PublishTargetStatSnapshot>().HasIndex(s => new { s.OwnerId, s.TargetId, s.TakenAt });
         builder.Entity<DraftRevision>()
             .HasIndex(r => new { r.DraftId, r.Language, r.Kind, r.Destination, r.CreatedAt });
         builder.Entity<AiUsage>()
@@ -493,6 +495,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<ChannelMemberDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ChannelPost>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<ChannelStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<PublishTargetStatSnapshot>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<TrackedLink>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<TrackedLinkClickDaily>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Comment>().HasQueryFilter(e => e.OwnerId == TenantId);

@@ -1,4 +1,4 @@
-using CedarClerk.Core;
+﻿using CedarClerk.Core;
 using CedarClerk.Localization;
 using Microsoft.AspNetCore.Identity;
 
@@ -306,6 +306,8 @@ public class Draft
     public string? LastTelegramChatId { get; set; }
     public int? LastTelegramMessageId { get; set; }
     public string? LastTelegramUsername { get; set; }
+    // When that send (or a later sync of it) went out — what "edited since" is measured against.
+    public DateTime? LastTelegramSentAt { get; set; }
 
     // /drafts screen (ADR-035, docs/DECISIONS.md) — the only new *content* flag added for the
     // editor redesign; everything else there is a user preference, not draft state.
@@ -840,6 +842,25 @@ public class ChannelStatSnapshot
     public int TelegramReactionCount { get; set; }
     public int TelegramCommentCount { get; set; }
 
+    public DateTime TakenAt { get; set; } = DateTime.UtcNow;
+}
+
+// One nightly reading of an X or Bluesky account (T-241). Its own table rather than more columns
+// on ChannelStatSnapshot: that one keys off the Telegram detail row and its views/likes carry
+// ADR-025's blog attribution, and a second meaning under the same column name is the cliff ADR-205
+// refused. Likes/comments/reposts are summed over Cedar Clerk's own posts on the account, and null
+// where the network does not hand them out.
+public class PublishTargetStatSnapshot
+{
+    public string OwnerId { get; set; } = default!;
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TargetId { get; set; }
+    public string Network { get; set; } = "";
+    public int FollowerCount { get; set; }
+    public int PostCount { get; set; }
+    public int? LikeCount { get; set; }
+    public int? CommentCount { get; set; }
+    public int? RepostCount { get; set; }
     public DateTime TakenAt { get; set; } = DateTime.UtcNow;
 }
 

@@ -1,4 +1,4 @@
-namespace CedarClerk.Server;
+﻿namespace CedarClerk.Server;
 
 // Entities of the indie-gamedev module (Phase 13, ADR-101). A second file rather than more rows in
 // Entities.cs: the "one flat file" convention exists to avoid a file per entity, and a file per
@@ -49,6 +49,18 @@ public class Project
     /// serving as ApplicationUser.AvatarUrl and GlossaryTerm.ImageUrl. Null = no cover.
     /// </summary>
     public string? CoverUrl { get; set; }
+
+    /// <summary>One of <see cref="CedarClerk.Core.ProjectEngines"/>, or empty for unset. Separate from
+    /// <see cref="PressEngine"/>, which is the press page's free text.</summary>
+    public string Engine { get; set; } = "";
+
+    /// <summary>
+    /// Comma-delimited keys from <see cref="CedarClerk.Core.ProjectPlatforms"/>, in that list's order,
+    /// no spaces (<c>"windows,switch"</c>). Not JSON: the keys carry no commas, so <c>Split(',')</c>
+    /// round-trips and a SQLite <c>LIKE</c> can filter on one — the same shape as ShowcaseLinks and
+    /// Draft.Tags.
+    /// </summary>
+    public string TargetPlatforms { get; set; } = "";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
