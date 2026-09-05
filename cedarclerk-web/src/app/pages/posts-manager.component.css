@@ -520,7 +520,7 @@
 
 .action-row .chat-input { flex: 1; min-width: 0; }
 
-.action-row + .btn-ghost { margin-top: var(--space-3); }
+.action-row + .unpublish { margin-top: var(--space-3); }
 
 .detail-field {
     margin-bottom: 12px;
@@ -576,58 +576,6 @@
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 14px;
-}
-
-.btn-accent {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--radius-md);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-ui);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-accent:hover {
-    filter: brightness(1.08);
-}
-
-.btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--fs-ui);
-    cursor: pointer;
-    font-family: inherit;
-    text-decoration: none;
-}
-
-.btn-ghost:hover {
-    color: var(--text);
-}
-
-/* One of these opens the post in the editor and is therefore an anchor (ADR-163). The global
-   coarse-pointer floor reaches buttons and roles, not bare links, so the row states it for both
-   tags and still spends whatever its nearest surface declares. */
-@media (pointer: coarse) {
-    [data-surface] .btn-ghost {
-        min-height: var(--hit-surface);
-    }
-}
-
-.btn-ghost.danger:hover {
-    color: var(--danger);
-    border-color: var(--danger);
 }
 
 /* ---------- Forms tab ---------- */

@@ -25,6 +25,7 @@ import { FormPresetsService, FormPreset } from '../core/form-presets.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { GlossaryTermFormComponent } from '../shared/glossary-term-form.component';
+import { ButtonComponent } from '../bench/forms/button.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LocationInputComponent } from '../shared/location-input.component';
 import { LanguageMenuComponent } from '../shared/language-menu.component';
@@ -251,7 +252,7 @@ function readDetailsPreference(): boolean {
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
         DocumentOutlineComponent, PlanLockComponent, LocationInputComponent, LanguageMenuComponent,
         DocumentFrameComponent, EditorPreviewComponent, PublishMatrixComponent, PreviewChecksComponent,
-        DestinationCardComponent, PublishStepperComponent],
+        DestinationCardComponent, PublishStepperComponent, ButtonComponent],
     templateUrl: 'editor.component.html',
     styleUrls: ['editor.component.css', 'editor-toolbar.css', 'editor-workspace.css', 'editor-publish.css', 'editor-dialogs.css']
 })

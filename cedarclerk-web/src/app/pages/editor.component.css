@@ -101,40 +101,6 @@
     color: var(--sheet);
 }
 
-.btn-accent {
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--radius-sm);
-    padding: 7px 16px;
-    font-size: var(--fs-ui);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-accent:hover {
-    filter: brightness(1.08);
-}
-
-.btn-ghost {
-    width: auto;
-    height: auto;
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--radius-sm);
-    padding: 7px 14px;
-    font-size: var(--fs-ui);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.btn-ghost:hover {
-    color: var(--text);
-    border-color: var(--t2);
-}
-
 .stale-dot {
     width: 6px;
     height: 6px;
