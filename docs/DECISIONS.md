@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-09-01
+last_verified: 2026-09-05
 source_of_truth_for: ADR index — which decisions exist and where their texts live
 guard: none
 ---
@@ -264,3 +264,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-249 — The editor starts with the document, not its chrome](adr/ADR-249.md)
 - [ADR-250 — Author social links appear at the public blog header](adr/ADR-250.md)
 - [ADR-251 — The initial-bundle ceiling follows the measured bilingual shell](adr/ADR-251.md)
+- [ADR-263 — Only the active language ships in the initial bundle](adr/ADR-263.md)
