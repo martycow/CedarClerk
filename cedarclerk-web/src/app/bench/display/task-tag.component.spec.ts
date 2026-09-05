@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Params, Router, provideRouter } from '@angular/router';
+import { Params, QueryParamsHandling, Router, provideRouter } from '@angular/router';
 import { TaskTagComponent } from './task-tag.component';
 
 function sheetFor(marker: string): string {
@@ -17,6 +17,7 @@ function sheetFor(marker: string): string {
     imports: [TaskTagComponent],
     template: `<app-task-tag [prio]="prio" [due]="due" [overdue]="overdue" [done]="done"
                              [rotate]="rotate" [link]="link" [queryParams]="queryParams"
+                             [queryParamsHandling]="queryParamsHandling"
                              (activated)="hits = hits + 1">
                    <span hook>hook</span><span stamp>IN WORK</span>Fix the save-on-exit crash
                </app-task-tag>`,
@@ -29,6 +30,7 @@ class Host {
     rotate = -0.8;
     link: string | readonly unknown[] | null = null;
     queryParams: Params | null = null;
+    queryParamsHandling: QueryParamsHandling | null = null;
     hits = 0;
 }
 
@@ -49,7 +51,7 @@ describe('TaskTagComponent', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [Host],
-            providers: [provideRouter([])],
+            providers: [provideRouter([{ path: '**', children: [] }])],
         }).compileComponents();
         fixture = TestBed.createComponent(Host);
         host = fixture.componentInstance;
@@ -125,6 +127,21 @@ describe('TaskTagComponent', () => {
         expect(fixture.nativeElement.querySelector('button')).toBeNull();
         expect(plate().getAttribute('role')).toBeNull();
         expect(plate().getAttribute('tabindex')).toBeNull();
+    });
+
+    // T-254. A board card replaces the query set, which is what every consumer does today; the
+    // screen that hangs a tag beside a filter asks for the merge, and gets an href that keeps it.
+    it('replaces the query set unless told to merge it', async () => {
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/projects/p1/tasks?filter=open');
+        host.link = ['/projects', 'p1', 'tasks'];
+        host.queryParams = { task: 't1' };
+        render();
+        expect(plate().getAttribute('href')).toBe('/projects/p1/tasks?task=t1');
+
+        host.queryParamsHandling = 'merge';
+        render();
+        expect(plate().getAttribute('href')).toBe('/projects/p1/tasks?filter=open&task=t1');
     });
 
     it('navigates through the router and does not also emit activated', () => {

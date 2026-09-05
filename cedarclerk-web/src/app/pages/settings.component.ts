@@ -17,6 +17,10 @@ import { pseudoProgress } from '../core/pseudo-progress.util';
 import { IconComponent } from '../shared/icon.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
 import { ButtonComponent } from '../bench/forms/button.component';
+import { InputComponent } from '../bench/forms/input.component';
+import { BenchSelectOption, SelectComponent } from '../bench/forms/select.component';
+import { TextareaComponent } from '../bench/forms/textarea.component';
+import { CheckboxComponent } from '../bench/forms/checkbox.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { SpecRowComponent } from '../bench/worktop/spec-row.component';
@@ -50,7 +54,8 @@ function availableTimeZones(): string[] {
     selector: 'app-settings',
     imports: [
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
-        ButtonComponent, IndexTabsComponent, LeafTagComponent,
+        ButtonComponent, InputComponent, SelectComponent, TextareaComponent, CheckboxComponent,
+        IndexTabsComponent, LeafTagComponent,
         SpecRowComponent, PlanLockComponent, LocationInputComponent,
         LanguageMenuComponent, PageHeaderComponent, EmptyStateComponent, AppearancePanelComponent,
     ],
@@ -101,6 +106,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
     headerSlot1: string | null = null;
     headerSlot2: string | null = null;
     headerSlot3: string | null = null;
+    headerSlotOptions = computed<BenchSelectOption[]>(() => {
+        const s = this.t().settings.headerSlots;
+        return [
+            { value: null, label: s.none },
+            { value: 'AuthorSignature', label: s.typeAuthorSignature },
+            { value: 'Url', label: s.typeUrl },
+            { value: 'MapLocation', label: s.typeMapLocation },
+            { value: 'PublishedDate', label: s.typePublishedDate },
+            { value: 'Length', label: s.typeLength },
+            { value: 'TimeToRead', label: s.typeTimeToRead },
+            { value: 'WordCount', label: s.typeWordCount },
+            { value: 'ViewCount', label: s.typeViewCount },
+        ];
+    });
     profileBusy = signal(false);
     profileSaved = signal(false);
     profileError = signal<string | null>(null);

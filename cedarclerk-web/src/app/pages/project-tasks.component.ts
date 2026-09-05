@@ -25,6 +25,9 @@ import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component'
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
+import { BenchSelectOption, SelectComponent } from '../bench/forms/select.component';
+import { TextareaComponent } from '../bench/forms/textarea.component';
+import { CheckboxComponent } from '../bench/forms/checkbox.component';
 import { AssetsService } from '../core/assets.service';
 import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
 import { ariaSort } from '../core/collection-query';
@@ -56,6 +59,7 @@ type Tone = 'ok' | 'warn' | 'muted' | 'danger';
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, ModalComponent, RouterLink,
         PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent,
+        SelectComponent, TextareaComponent, CheckboxComponent,
         CdkDropListGroup, CdkDropList, CdkDrag,
         SortHeaderComponent,
     ],
@@ -81,6 +85,18 @@ export class ProjectTasksComponent {
     tasks = signal<GameTask[]>([]);
     sprints = signal<Sprint[]>([]);
     builds = signal<Build[]>([]);
+    statusOptions = computed<BenchSelectOption[]>(() =>
+        this.statuses.map(status => ({ value: status, label: this.t().projects.tasks.status[status] })));
+    priorityOptions = computed<BenchSelectOption[]>(() =>
+        this.priorities.map(p => ({ value: p, label: this.t().projects.tasks.priorityFull(p) })));
+    sprintOptions = computed<BenchSelectOption[]>(() => [
+        { value: '', label: this.t().projects.planner.unassigned },
+        ...this.sprints().map(s => ({ value: s.id, label: `S${s.number} — ${s.name}` })),
+    ]);
+    buildOptions = computed<BenchSelectOption[]>(() => [
+        { value: '', label: this.t().projects.builds.unassigned },
+        ...this.builds().map(b => ({ value: b.id, label: b.version })),
+    ]);
     /** null = every sprint; '' = the tasks in none of them. */
     sprintFilter = signal<string | null>(null);
     loading = signal(true);
