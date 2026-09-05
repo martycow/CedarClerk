@@ -577,10 +577,11 @@ so it stays addressable by the name the smoke suite binds.-->
                 <!--T-035: the row is a summary, the modal is the answer. Inline was fine while
                 every answer was one line; a long answer (T-032) runs to 2000 characters.-->
                 @for (r of registrations(); track r.id) {
-                <div class="registration-item">
+                <div class="registration-item" [class.is-revoked]="r.isRevoked">
                     <button type="button" class="registration-row" (click)="selectedRegistration.set(r)">
                         <div class="registration-head">
                             <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
+                            @if (r.isRevoked) { <span class="tag muted">{{ t().manager.forms.revokedTag }}</span> }
                             <span class="field-hint-inline">{{ r.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
                         </div>
                         <div class="field-hint-inline">
@@ -592,6 +593,21 @@ so it stays addressable by the name the smoke suite binds.-->
                         <div class="field-hint-inline">{{ t().manager.forms.answerCount(answered) }}</div>
                         }
                     </button>
+                    <!--T-108 (ADR-084) — the grant travels with the row: revoke keeps the list
+                    entry and stops the link, restore lets the reader back in.-->
+                    @if (r.isRevoked) {
+                    <button type="button" class="mini registration-revoke" [disabled]="registrationRevoking()"
+                            (click)="restoreRegistration(r); $event.stopPropagation()"
+                            [title]="t().manager.forms.restoreAccess" [attr.aria-label]="t().manager.forms.restoreAccess">
+                        <app-icon name="arrow-counter-clockwise" size="sm"></app-icon>
+                    </button>
+                    } @else {
+                    <button type="button" class="mini registration-revoke"
+                            (click)="revokeRegistrationTarget.set(r); $event.stopPropagation()"
+                            [title]="t().manager.forms.revokeAccess" [attr.aria-label]="t().manager.forms.revokeAccess">
+                        <app-icon name="prohibit" size="sm"></app-icon>
+                    </button>
+                    }
                     <!--The owner's own test answers pollute the distribution charts — every
                     submission is deletable, behind the same confirm pattern as posts/presets.-->
                     <button type="button" class="mini-remove registration-remove"
@@ -1039,7 +1055,10 @@ so it stays addressable by the name the smoke suite binds.-->
     <app-modal [width]="520" (closed)="selectedRegistration.set(null)">
         <h2 modal-title>{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</h2>
         <div modal-body>
-            <p class="field-hint-inline">{{ r.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</p>
+            <p class="field-hint-inline">
+                {{ r.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}
+                @if (r.isRevoked) { <span class="tag muted">{{ t().manager.forms.revokedTag }}</span> }
+            </p>
             @if (r.name) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldName }}:</span> {{ r.name }}</p> }
             @if (r.nickname) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldNickname }}:</span> {{ r.nickname }}</p> }
             @if (r.email) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldEmail }}:</span> {{ r.email }}</p> }
@@ -1054,8 +1073,32 @@ so it stays addressable by the name the smoke suite binds.-->
             <p class="hint">{{ t().manager.forms.noAnswers }}</p>
             }
         </div>
+        @if (r.isRevoked) {
+        <app-button modal-actions class="registration-access" variant="paper" size="sm" [disabled]="registrationRevoking()"
+                    (clicked)="restoreRegistration(r)">{{ t().manager.forms.restoreAccess }}</app-button>
+        } @else {
+        <app-button modal-actions class="registration-access" variant="paper" size="sm" [disabled]="registrationRevoking()"
+                    (clicked)="revokeRegistrationTarget.set(r)">{{ t().manager.forms.revokeAccess }}</app-button>
+        }
         <button modal-actions class="btn-ghost" (click)="deleteRegistrationTarget.set(r)">{{ t().common.delete }}</button>
         <button modal-actions class="btn-ghost" (click)="selectedRegistration.set(null)">{{ t().common.close }}</button>
+    </app-modal>
+    }
+
+    <!--T-108 — revoking throws out a reader who may be mid-read, so it gets the delete confirm.
+    The body says what survives: the list entry and its answers stay, only the link stops.-->
+    @if (revokeRegistrationTarget(); as target) {
+    <app-modal (closed)="revokeRegistrationTarget.set(null)">
+        <app-icon modal-icon name="prohibit" size="sm"></app-icon>
+        <span modal-title>{{ t().manager.forms.revokeAccess }}</span>
+        <p>{{ t().manager.forms.revokeAccessBody(target.name || target.nickname || target.email || t().manager.forms.anonymous) }}</p>
+        <ng-container modal-actions>
+            <app-button variant="paper" size="sm" (clicked)="revokeRegistrationTarget.set(null)">{{ t().common.cancel }}</app-button>
+            <app-button variant="danger" size="sm" [disabled]="registrationRevoking()" (clicked)="confirmRevokeRegistration()">
+                @if (registrationRevoking()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                {{ t().manager.forms.revokeAccess }}
+            </app-button>
+        </ng-container>
     </app-modal>
     }
 

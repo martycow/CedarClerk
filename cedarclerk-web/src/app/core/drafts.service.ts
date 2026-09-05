@@ -212,6 +212,8 @@ export interface RegistrationForm {
 export interface PostRegistration {
     id: string; name: string | null; nickname: string | null; email: string | null;
     socialLink: string | null; answersJson: string | null; createdAt: string;
+    /** T-108 — the row stays, the reader's link stops opening the post (ADR-084). */
+    isRevoked: boolean;
 }
 
 // One language's text out of a v1 plain string or a v2 per-language dictionary, with the same
@@ -453,6 +455,15 @@ export class DraftsService {
     /** Deletes one submission — and with it that reader's access, since the row carries the grant. */
     deleteRegistration(id: string, registrationId: string) {
         return firstValueFrom(this.http.delete<void>(`/api/drafts/${id}/registrations/${registrationId}`));
+    }
+
+    /** T-108 — both idempotent; the answer is the row's new state. */
+    revokeRegistration(id: string, registrationId: string) {
+        return firstValueFrom(this.http.post<{ id: string; isRevoked: boolean }>(`/api/drafts/${id}/registrations/${registrationId}/revoke`, {}));
+    }
+
+    restoreRegistration(id: string, registrationId: string) {
+        return firstValueFrom(this.http.post<{ id: string; isRevoked: boolean }>(`/api/drafts/${id}/registrations/${registrationId}/restore`, {}));
     }
 
     listInvites(id: string) {

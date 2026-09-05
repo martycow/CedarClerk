@@ -74,8 +74,24 @@ const SNAPSHOTS = [
     { viewCount: 150, likeCount: 9, dislikeCount: 0, commentCount: 2, takenAt: '2026-08-11T03:30:00Z' },
 ];
 
+const REGISTRATIONS = [
+    { id: 'r1', name: 'Alice', nickname: null, email: null, socialLink: null, answersJson: null, createdAt: '2026-08-02T09:00:00', isRevoked: false },
+    { id: 'r2', name: null, nickname: 'bob', email: null, socialLink: null, answersJson: null, createdAt: '2026-08-03T09:00:00', isRevoked: true },
+];
+
 class FakeDrafts {
+    static access: { id: string; revoked: boolean }[] = [];
+    static failRevoke = false;
     async list() { return structuredClone([LIVE, EARLIER, DRAFTED, OLD]); }
+    async revokeRegistration(_id: string, regId: string) {
+        if (FakeDrafts.failRevoke) throw new Error('nope');
+        FakeDrafts.access.push({ id: regId, revoked: true });
+        return { id: regId, isRevoked: true };
+    }
+    async restoreRegistration(_id: string, regId: string) {
+        FakeDrafts.access.push({ id: regId, revoked: false });
+        return { id: regId, isRevoked: false };
+    }
     async listFolders() { return []; }
     async get(id: string) {
         return {
@@ -91,7 +107,7 @@ class FakeDrafts {
             }),
         } as never;
     }
-    async listRegistrations() { return []; }
+    async listRegistrations() { return structuredClone(REGISTRATIONS); }
 }
 
 class FakePosts {
@@ -353,6 +369,71 @@ describe('posts manager', () => {
             'https://bsky.app/p/1',
         ]);
         expect(sheet().querySelectorAll('a[href^="http"]').length).toBe(0);
+    });
+
+    // T-108 (ADR-084) — the grant travels with the row: revoke confirms and keeps the entry,
+    // restore is one click, and the chip says which rows are out.
+    it('revokes a reader behind a confirm, marks the row, and restores in one click', async () => {
+        FakeDrafts.access = [];
+        card('Notes').click();
+        await settle();
+
+        const items = () => [...el().querySelectorAll('.registration-item')] as HTMLElement[];
+        expect(items().length).toBe(2);
+        expect(items()[0].querySelector('.tag.muted')).toBeNull();
+        expect(items()[1].querySelector('.tag.muted')?.textContent?.trim()).toBe(t.forms.revokedTag);
+        expect(items()[0].querySelector('.registration-revoke')?.getAttribute('aria-label')).toBe(t.forms.revokeAccess);
+        expect(items()[1].querySelector('.registration-revoke')?.getAttribute('aria-label')).toBe(t.forms.restoreAccess);
+
+        (items()[0].querySelector('.registration-revoke') as HTMLButtonElement).click();
+        await settle();
+        expect(FakeDrafts.access).toEqual([]);
+        expect(page().revokeRegistrationTarget()?.id).toBe('r1');
+        expect(el().querySelector('app-modal')?.textContent).toContain(t.forms.revokeAccessBody('Alice'));
+
+        await page().confirmRevokeRegistration();
+        await settle();
+        expect(FakeDrafts.access).toEqual([{ id: 'r1', revoked: true }]);
+        expect(page().revokeRegistrationTarget()).toBeNull();
+        expect(items()[0].querySelector('.tag.muted')?.textContent?.trim()).toBe(t.forms.revokedTag);
+        expect(items()[0].classList.contains('is-revoked')).toBe(true);
+
+        (items()[1].querySelector('.registration-revoke') as HTMLButtonElement).click();
+        await settle();
+        expect(FakeDrafts.access.at(-1)).toEqual({ id: 'r2', revoked: false });
+        expect(items()[1].querySelector('.tag.muted')).toBeNull();
+    });
+
+    it('offers revoke or restore inside the submission modal and patches the open row', async () => {
+        FakeDrafts.access = [];
+        card('Notes').click();
+        await settle();
+
+        page().selectedRegistration.set(page().registrations()[1]);
+        await settle();
+        const access = () => el().querySelector('app-modal .registration-access') as HTMLElement;
+        expect(access().textContent?.trim()).toBe(t.forms.restoreAccess);
+
+        await page().restoreRegistration(page().registrations()[1]);
+        await settle();
+        expect(page().selectedRegistration()?.isRevoked).toBe(false);
+        expect(access().textContent?.trim()).toBe(t.forms.revokeAccess);
+    });
+
+    it('keeps the confirm open and names the failure when revoking is refused', async () => {
+        FakeDrafts.failRevoke = true;
+        try {
+            card('Notes').click();
+            await settle();
+            page().revokeRegistrationTarget.set(page().registrations()[0]);
+            await page().confirmRevokeRegistration();
+            await settle();
+            expect(page().revokeRegistrationTarget()?.id).toBe('r1');
+            expect(page().registrations()[0].isRevoked).toBe(false);
+            expect(page().error()).toBe(t.forms.revokeFailed);
+        } finally {
+            FakeDrafts.failRevoke = false;
+        }
     });
 
     it('resolves submission questions and options in the current UI language', async () => {

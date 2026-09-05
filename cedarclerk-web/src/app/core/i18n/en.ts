@@ -2326,6 +2326,12 @@ export const en = {
             noPresetsTitle: 'No forms yet',
             deleteSubmission: 'Delete submission',
             deleteSubmissionBody: (who: string) => `Delete the submission from “${who}”? It disappears from the list and the charts, and its access link to the post stops working.`,
+            // T-108 — the grant can be taken back without losing the answers.
+            revokeAccess: 'Revoke access',
+            restoreAccess: 'Restore access',
+            revokedTag: 'revoked',
+            revokeAccessBody: (who: string) => `Revoke access for “${who}”? They keep the list entry and their answers — the link stops opening the post. You can restore it later.`,
+            revokeFailed: 'Failed to change access',
             noAnswers: 'No form questions were answered.',
             answerCount: (n: number) => `${n} answers — open`,
             anonymous: 'Anonymous',

@@ -642,7 +642,13 @@
     margin-bottom: 6px;
 }
 
-.registration-item .registration-remove { margin-top: 8px; }
+.registration-item .registration-remove,
+.registration-item .registration-revoke { margin-top: 8px; }
+
+/* A revoked row is still a row — the chip says so; the fade only keeps it from reading as live. */
+.registration-item.is-revoked .registration-row { opacity: .7; }
+
+.registration-head .tag { flex: none; }
 
 .registration-row {
     display: block;
