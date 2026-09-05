@@ -59,35 +59,9 @@ export interface ChannelMemberFlowRow {
     leaves: number;
 }
 
-export interface ChannelStatSnapshotDto {
-    takenAt: string;
-    memberCount: number;
-    viewCount: number;
-    likeCount: number;
-    commentCount: number;
-}
-
-export interface ChannelStats {
-    current: number | null;
-    deltaWeek: number | null;
-    currentViews: number | null;
-    deltaWeekViews: number | null;
-    currentLikes: number | null;
-    deltaWeekLikes: number | null;
-    currentComments: number | null;
-    deltaWeekComments: number | null;
-    snapshots: ChannelStatSnapshotDto[];
-    // Wave 2 item 13 — this channel's ChannelPost.PublishedAt values inside the window, for the
-    // chart's publish-event markers. Optional until the server change lands.
-    publishDates?: string[];
-}
-
-export interface BlogStatSnapshotDto {
-    takenAt: string;
-    viewCount: number;
-    likeCount: number;
-    commentCount: number;
-}
+export type StatMetricKey = 'memberCount' | 'viewCount' | 'likeCount' | 'commentCount';
+export type StatSourceKind = 'blog' | 'channel' | 'target';
+export type StatSourceNetwork = 'blog' | 'telegram' | 'x' | 'bluesky';
 
 // Views summed over the selected range, split by reader country / reader language. '??' is the
 // server's bucket for "couldn't tell" — a real share of the audience, not a missing row.
@@ -96,16 +70,39 @@ export interface AudienceSlice {
     views: number;
 }
 
-export interface BlogStats {
-    currentViews: number | null;
-    deltaWeekViews: number | null;
-    currentLikes: number | null;
-    deltaWeekLikes: number | null;
-    currentComments: number | null;
-    deltaWeekComments: number | null;
-    snapshots: BlogStatSnapshotDto[];
-    countries: AudienceSlice[];
-    languages: AudienceSlice[];
+/** Every source the account has, selected or not — the leaf strip is built from this list, so a
+ *  source is offered only once the server can name it (ADR-161 rule 4). `firstDay` is null until
+ *  the first reading. */
+export interface StatSourceInfo {
+    id: string;
+    kind: StatSourceKind;
+    network: StatSourceNetwork;
+    name: string;
+    tracked: StatMetricKey[];
+    firstDay: string | null;
+}
+
+/** One selected source with at least one reading. `values` are dense over `StatsSeries.days`,
+ *  carried forward by the server; a metric the source does not track is null. `delta` is the
+ *  window's last value minus its first — the only delta the tab shows. */
+export interface StatSourceSeries {
+    id: string;
+    values: Partial<Record<StatMetricKey, number[] | null>>;
+    current: Partial<Record<StatMetricKey, number>>;
+    delta: Partial<Record<StatMetricKey, number>>;
+    publishDays: string[];
+}
+
+/** `GET /api/stats/series` — every selected source over one aligned window (ADR-279). Day keys are
+ *  calendar days in `zone`; the window starts at the latest first reading among the selected
+ *  sources, so nothing before a source's first reading is ever invented. */
+export interface StatsSeries {
+    zone: string;
+    requestedDays: number;
+    days: string[];
+    available: StatSourceInfo[];
+    series: StatSourceSeries[];
+    audience: { countries: AudienceSlice[]; languages: AudienceSlice[] };
 }
 
 export interface KnownChat {
@@ -114,6 +111,8 @@ export interface KnownChat {
     username: string | null;
     type: string;
 }
+
+const seriesQuery = (days: number, sources: readonly string[]) => `?days=${days}&sources=${sources.join(',')}`;
 
 @Injectable({ providedIn: 'root' })
 export class ChannelsService {
@@ -131,14 +130,15 @@ export class ChannelsService {
         return firstValueFrom(this.http.delete(`/api/channels/${id}`));
     }
 
-    getStats(id: string, days?: number) {
-        const query = days ? `?days=${days}` : '';
-        return firstValueFrom(this.http.get<ChannelStats>(`/api/channels/${id}/stats${query}`));
+    /** Selection reaches the server: `sources` are the selected ids (`blog`, `channel:{id}`,
+     *  `target:{id}`); unknown or unowned ids are silently omitted, never 404. */
+    series(days: number, sources: readonly string[]) {
+        return firstValueFrom(this.http.get<StatsSeries>(`/api/stats/series${seriesQuery(days, sources)}`));
     }
 
-    getBlogStats(days?: number) {
-        const query = days ? `?days=${days}` : '';
-        return firstValueFrom(this.http.get<BlogStats>(`/api/blog/stats${query}`));
+    /** The same matrix as `series()` as a file — an `<a download>` target, cookie-authenticated. */
+    seriesCsvUrl(days: number, sources: readonly string[]) {
+        return `/api/stats/series.csv${seriesQuery(days, sources)}`;
     }
 
     listKnown() {

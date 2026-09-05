@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { formatInZone, zoneAbbreviation } from '../core/display-time';
+import { zoneAbbreviation } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
 import {
-    ChannelsService, Channel, ChannelStats, BlogStats, AudienceSlice,
-    PublishingStats, ChannelInviteLink, ChannelMemberFlowRow,
+    ChannelsService, Channel, AudienceSlice, StatsSeries, StatSourceKind, StatSourceNetwork,
+    StatSourceSeries, PublishingStats, ChannelInviteLink, ChannelMemberFlowRow,
 } from '../core/channels.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -12,6 +12,7 @@ import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.com
 import { ButtonComponent } from '../bench/forms/button.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { IconComponent } from '../shared/icon.component';
+import { BrandIconComponent, BrandIconName } from '../shared/brand-icon.component';
 import { GrowthChartComponent, GrowthSeries, SeriesSlot, seriesColor } from '../bench/worktop/growth-chart.component';
 import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
 import { SortDirection, ariaSort } from '../core/collection-query';
@@ -22,17 +23,16 @@ type PanelView = 'chart' | 'table';
 type InviteLinkState = 'all' | 'active' | 'revoked';
 type InviteLinkSort = 'name' | 'joins' | 'leaves' | 'net';
 
+/** One entry of the response's `available[]`, with its slot and — when selected and read — its series. */
 interface Source {
     id: string;
     name: string;
+    kind: StatSourceKind;
+    network: StatSourceNetwork;
     slot: SeriesSlot;
     tracked: readonly MetricKey[];
-    /** Calendar days in the display zone, ascending. */
-    days: readonly string[];
-    labels: ReadonlyMap<string, string>;
-    values: ReadonlyMap<string, Partial<Record<MetricKey, number>>>;
-    current: Partial<Record<MetricKey, number | null>>;
-    delta: Partial<Record<MetricKey, number | null>>;
+    hasReadings: boolean;
+    series: StatSourceSeries | null;
 }
 
 interface AudienceRow {
@@ -65,33 +65,25 @@ interface FlowDay {
 }
 
 const BLOG_ID = 'blog';
-const BLOG_METRICS: readonly MetricKey[] = ['viewCount', 'likeCount', 'commentCount'];
-// ADR-205 — no viewCount: a channel post's view counter is not in the Bot API at all, so a
-// Telegram source has nothing honest to draw under that metric and says "not tracked"
-// rather than showing the blog's number under its name.
-const CHANNEL_METRICS: readonly MetricKey[] = ['memberCount', 'likeCount', 'commentCount'];
 
-// Every metric the strip can offer, in the order it offers them. Separate from the two lists
-// above, which say what a KIND of source answers: the strip is the union, and reading it off
-// CHANNEL_METRICS made a metric only the blog answers disappear from it entirely.
+// Every metric the strip can offer, in the order it offers them. What a given source answers is
+// the server's `tracked` list; the strip is the union over the sources it lists.
 const ALL_METRICS: readonly MetricKey[] = ['memberCount', 'viewCount', 'likeCount', 'commentCount'];
 
 // A slot belongs to the entity, not to its place in the list, so switching a source off cannot
-// repaint the survivors (ADR-158). The blog holds ink blue; channels take the rest in list order
-// and wrap past the palette's capacity, where the chart's end labels are what tells them apart.
+// repaint the survivors (ADR-158). The blog holds ink blue; channels, then targets, take the rest
+// in `available` order and wrap past the palette's capacity, where the chart's end labels are what
+// tells them apart.
 const BLOG_SLOT: SeriesSlot = 2;
 const CHANNEL_SLOTS: readonly SeriesSlot[] = [1, 3, 4, 5, 6];
 
-const DAY_KEY = 'yyyy-MM-dd';
-const DAY_LABEL = 'MM/dd';
+// A network's mark on its leaf. The blog is the one source with no brand — it is this app's own.
+const BRAND_ICONS: Partial<Record<StatSourceNetwork, BrandIconName>> = { telegram: 'telegram', x: 'twitter', bluesky: 'bluesky' };
 
 const group = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
-interface Normalized {
-    days: string[];
-    labels: Map<string, string>;
-    values: Map<string, Partial<Record<MetricKey, number>>>;
-}
+// Day keys are `yyyy-MM-dd` calendar days in the display zone already; the label is the same day, shorter.
+const dayLabel = (day: string) => `${day.slice(5, 7)}/${day.slice(8, 10)}`;
 
 /**
  * T-338 — a readout tile's sparkline: the metric's readings across the window, as one polyline in a
@@ -105,12 +97,7 @@ const SPARK_W = 64;
 const SPARK_H = 18;
 const SPARK_MIN_POINTS = 3;
 
-function sparkPath(source: Source, metric: MetricKey): string | null {
-    const points: number[] = [];
-    for (const day of source.days) {
-        const value = source.values.get(day)?.[metric];
-        if (value !== undefined) points.push(value);
-    }
+function sparkPath(points: readonly number[]): string | null {
     if (points.length < SPARK_MIN_POINTS) return null;
 
     const min = Math.min(...points);
@@ -127,31 +114,11 @@ function sparkPath(source: Source, metric: MetricKey): string | null {
         .join(' ');
 }
 
-// Snapshots are one reading per day, but the blog takes today's on demand while the nightly job
-// takes the rest, so two readings can land on one display-zone day; the later one wins.
-function normalize(snapshots: readonly unknown[], tracked: readonly MetricKey[]): Normalized {
-    const labels = new Map<string, string>();
-    const values = new Map<string, Partial<Record<MetricKey, number>>>();
-    for (const snapshot of snapshots) {
-        const row = snapshot as Record<string, string | number>;
-        const day = formatInZone(row['takenAt'] as string, DAY_KEY);
-        if (!day) continue;
-        labels.set(day, formatInZone(row['takenAt'] as string, DAY_LABEL));
-        const point: Partial<Record<MetricKey, number>> = {};
-        for (const metric of tracked) {
-            const value = row[metric];
-            if (typeof value === 'number') point[metric] = value;
-        }
-        values.set(day, point);
-    }
-    return { days: [...values.keys()].sort(), labels, values };
-}
-
 @Component({
     selector: 'app-stats',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [FormsModule, LeafTagComponent, IndexTabsComponent, GrowthChartComponent,
-              EmptyStateComponent, ButtonComponent, IconComponent, SortHeaderComponent],
+    imports: [FormsModule, LeafTagComponent, IndexTabsComponent, GrowthChartComponent, EmptyStateComponent,
+              ButtonComponent, IconComponent, BrandIconComponent, SortHeaderComponent],
     // The tab body is the reading surface the shell hands over (ADR-154); the two shelves declare
     // their own chrome from inside.
     host: { 'data-surface': 'paper' },
@@ -169,8 +136,8 @@ export class StatsComponent implements OnInit {
     loading = signal(true);
     pending = signal(false);
     channels = signal<Channel[]>([]);
-    blogStats = signal<BlogStats | null>(null);
-    channelStats = signal<ReadonlyMap<string, ChannelStats>>(new Map());
+    /** The last answer of `GET /api/stats/series`; a failed refetch leaves it exactly as it was. */
+    data = signal<StatsSeries | null>(null);
     selected = signal<ReadonlySet<string>>(new Set([BLOG_ID]));
     metric = signal<MetricKey>('viewCount');
     view = signal<PanelView>('chart');
@@ -180,8 +147,9 @@ export class StatsComponent implements OnInit {
     readonly ariaSort = ariaSort;
 
     // Geography only exists for the blog: Telegram's Bot API reports no per-country breakdown,
-    // so the shelf names the source it is answering about (ADR-097, ADR-149 item 4).
-    countryRows = computed(() => this.audienceRows(this.blogStats()?.countries ?? [], 'region'));
+    // so the shelf names the source it is answering about (ADR-097, ADR-149 item 4). It rides
+    // every series response whether or not the blog line is drawn.
+    countryRows = computed(() => this.audienceRows(this.data()?.audience.countries ?? [], 'region'));
 
     // A reading language is what a browser volunteers in Accept-Language, and a great many clients
     // volunteer nothing — a link preview fetcher, a feed reader, an in-app webview. Ranked among
@@ -189,10 +157,10 @@ export class StatsComponent implements OnInit {
     // one thing it is not. It is stated underneath instead, as the share of views the question was
     // never answered for.
     languageRows = computed(() => this.audienceRows(
-        (this.blogStats()?.languages ?? []).filter(s => s.code !== UNKNOWN_GEO), 'language'));
+        (this.data()?.audience.languages ?? []).filter(s => s.code !== UNKNOWN_GEO), 'language'));
 
     unreportedLanguageShare = computed(() => {
-        const slices = this.blogStats()?.languages ?? [];
+        const slices = this.data()?.audience.languages ?? [];
         const total = slices.reduce((sum, s) => sum + s.views, 0);
         if (!total) return 0;
         const unknown = slices.filter(s => s.code === UNKNOWN_GEO).reduce((sum, s) => sum + s.views, 0);
@@ -201,60 +169,57 @@ export class StatsComponent implements OnInit {
 
     hasAudience = computed(() => this.countryRows().length > 0);
 
-    // The newest reading over every source, so the strip says how fresh the whole board is.
+    /** The aligned window the server answered with — dense, ascending calendar days in its zone. */
+    days = computed(() => this.data()?.days ?? []);
+    labels = computed(() => this.days().map(dayLabel));
+
+    // The window's last day and the display zone, so the strip says how far the board reads.
     updatedAt = computed(() => {
-        const taken = [
-            ...(this.blogStats()?.snapshots ?? []),
-            ...[...this.channelStats().values()].flatMap(s => s.snapshots),
-        ].map(s => s.takenAt);
-        const latest = taken.reduce((max, at) => (at > max ? at : max), '');
-        return latest ? `${formatInZone(latest, 'HH:mm')} ${zoneAbbreviation(latest)}` : '';
+        const days = this.days();
+        return days.length ? `${dayLabel(days[days.length - 1])} ${zoneAbbreviation(new Date())}` : '';
     });
 
     readonly group = group;
     readonly otherCode = OTHER_CODE;
     readonly rangeNotches = RANGE_NOTCHES;
 
+    // The leaf strip is `available` verbatim: a source is offered only once the server lists it
+    // (ADR-161 rule 4), and it is joined to its series when the server drew one.
     sources = computed<Source[]>(() => {
-        const out: Source[] = [];
-        const blog = this.blogStats();
-        out.push({
-            id: BLOG_ID,
-            name: this.t().stats.blog,
-            slot: BLOG_SLOT,
-            tracked: BLOG_METRICS,
-            ...normalize(blog?.snapshots ?? [], BLOG_METRICS),
-            current: { viewCount: blog?.currentViews ?? null, likeCount: blog?.currentLikes ?? null, commentCount: blog?.currentComments ?? null },
-            delta: { viewCount: blog?.deltaWeekViews ?? null, likeCount: blog?.deltaWeekLikes ?? null, commentCount: blog?.deltaWeekComments ?? null },
-        });
+        const data = this.data();
+        if (!data) return [];
+        const drawn = new Map(data.series.map(s => [s.id, s]));
+        let next = 0;
+        return data.available.map(a => ({
+            id: a.id,
+            name: a.kind === 'blog' ? this.t().stats.blog : a.name,
+            kind: a.kind,
+            network: a.network,
+            slot: a.kind === 'blog' ? BLOG_SLOT : CHANNEL_SLOTS[next++ % CHANNEL_SLOTS.length],
+            tracked: a.tracked,
+            hasReadings: a.firstDay !== null,
+            series: drawn.get(a.id) ?? null,
+        }));
+    });
 
-        const stats = this.channelStats();
-        this.channels().forEach((channel, index) => {
-            const s = stats.get(channel.id);
-            out.push({
-                id: channel.id,
-                name: channel.title,
-                slot: CHANNEL_SLOTS[index % CHANNEL_SLOTS.length],
-                tracked: CHANNEL_METRICS,
-                ...normalize(s?.snapshots ?? [], CHANNEL_METRICS),
-                current: { memberCount: s?.current ?? null, viewCount: s?.currentViews ?? null, likeCount: s?.currentLikes ?? null, commentCount: s?.currentComments ?? null },
-                delta: { memberCount: s?.deltaWeek ?? null, viewCount: s?.deltaWeekViews ?? null, likeCount: s?.deltaWeekLikes ?? null, commentCount: s?.deltaWeekComments ?? null },
-            });
-        });
-        return out;
+    /** Selected ids in `available` order — what the next request and the CSV link carry. */
+    selectedIds = computed(() => {
+        const selected = this.selected();
+        const known = this.sources().map(s => s.id);
+        return known.length ? known.filter(id => selected.has(id)) : [...selected];
     });
 
     drawable = computed(() => this.sources().filter(s =>
-        this.selected().has(s.id) && s.tracked.includes(this.metric()) && s.days.length > 0));
+        this.selected().has(s.id) && s.tracked.includes(this.metric()) && Array.isArray(s.series?.values[this.metric()])));
 
     anySelected = computed(() => this.sources().some(s => this.selected().has(s.id)));
 
     private hiddenDrawableSource = computed(() => this.sources().some(s =>
-        !this.selected().has(s.id) && s.tracked.includes(this.metric()) && s.days.length > 0));
+        !this.selected().has(s.id) && s.tracked.includes(this.metric()) && s.hasReadings));
 
     chartEmptyState = computed(() => {
         const copy = this.t().stats.sources;
-        if (!this.anySelected()) {
+        if (this.sources().length && !this.anySelected()) {
             return { title: copy.noneSelectedTitle, text: copy.noneSelected, action: 'show-all' as const };
         }
         if (this.hiddenDrawableSource()) {
@@ -263,68 +228,59 @@ export class StatsComponent implements OnInit {
         return { title: copy.nothingToDrawTitle, text: copy.nothingToDraw, action: 'documents' as const };
     });
 
-    /**
-     * The days every drawn line has a reading for. It starts at the latest first reading among
-     * them, because there is no honest value for a source before it had one, and it moves with the
-     * selection — which is why the panel counter states the window instead of leaving it to the
-     * axis (ADR-161).
-     */
-    axis = computed(() => {
-        const drawn = this.drawable();
-        if (!drawn.length) return { days: [] as string[], labels: [] as string[] };
-        const start = drawn.reduce((latest, s) => (s.days[0] > latest ? s.days[0] : latest), drawn[0].days[0]);
-        const union = new Set<string>();
-        for (const s of drawn) for (const day of s.days) if (day >= start) union.add(day);
-        const days = [...union].sort();
-        const labels = days.map(day => drawn.find(s => s.labels.has(day))?.labels.get(day) ?? day);
-        return { days, labels };
-    });
-
     series = computed<(GrowthSeries & { id: string })[]>(() => {
-        const drawn = this.drawable();
-        const { days } = this.axis();
         const metric = this.metric();
-        return drawn.map(source => ({
+        return this.drawable().map(source => ({
             id: source.id,
             slot: source.slot,
             name: source.name,
             // The wash belongs to one entity (ADR-158 clause 6): the blog, first in sources(),
             // keeps it however many lines are drawn and takes it away when it is switched off.
             wash: source.id === BLOG_ID,
-            points: this.carryForward(source, days, metric),
+            points: source.series!.values[metric] as number[],
         }));
     });
 
+    // The card and the chart read one answer: `current` is the window's last value and `delta`
+    // its last minus its first, both computed by the server over the same aligned days (ADR-279).
     readouts = computed(() => {
         const metric = this.metric();
         return this.drawable().map(source => ({
             id: source.id,
             name: source.name,
             color: seriesColor(source.slot),
-            value: source.current[metric] ?? null,
-            delta: source.delta[metric] ?? null,
+            value: source.series!.current[metric] ?? null,
+            delta: source.series!.delta[metric] ?? null,
             // T-338 — the tile's own shape of the window it reports. Drawn from the series the
             // chart already holds, so it costs no request and cannot disagree with the chart.
-            spark: sparkPath(source, metric),
+            spark: sparkPath(source.series!.values[metric] as number[]),
         }));
     });
+
+    // A switched-off source is not in the response, so the number its leaf showed while it was
+    // drawn is kept here — the current value is the latest reading, which no window changes.
+    private lastCurrent = signal<ReadonlyMap<string, Partial<Record<MetricKey, number>>>>(new Map());
 
     leaves = computed(() => {
         const metric = this.metric();
         const strings = this.t().stats.sources;
+        const remembered = this.lastCurrent();
         return this.sources().map(source => {
             const tracked = source.tracked.includes(metric);
-            const hasReadings = source.days.length > 0;
-            const dried = !tracked || !hasReadings;
+            const dried = !tracked || !source.hasReadings;
             const state: LeafState = dried ? 'dried' : this.selected().has(source.id) ? 'active' : 'idle';
+            const current = source.series?.current[metric] ?? remembered.get(source.id)?.[metric];
             return {
                 id: source.id,
                 name: source.name,
+                brand: BRAND_ICONS[source.network] ?? null,
+                network: source.network === 'x' || source.network === 'bluesky' ? strings.network[source.network] : '',
                 state,
                 // A dried leaf keeps a swatch so the strip stays one shape, but not the series ink:
                 // nothing is drawn in that colour while it is dried.
                 swatch: dried ? 'var(--t3)' : seriesColor(source.slot),
-                note: !tracked ? strings.notTracked : !hasReadings ? strings.noData : group(source.current[metric] ?? 0),
+                note: !tracked ? strings.notTracked : !source.hasReadings ? strings.noData
+                    : current === undefined ? '' : group(current),
             };
         });
     });
@@ -355,15 +311,21 @@ export class StatsComponent implements OnInit {
     ]);
 
     windowLabel = computed(() => {
-        const { days, labels } = this.axis();
-        if (!days.length) return '';
-        return this.t().stats.window(days.length, labels[0], labels[labels.length - 1]);
+        const labels = this.labels();
+        if (!labels.length) return '';
+        return this.t().stats.window(labels.length, labels[0], labels[labels.length - 1]);
     });
 
     chartLabel = computed(() => `${this.t().stats.bySource} — ${this.t().stats.metrics[this.metric()]}`);
 
+    // T-243 — the same matrix as a file. Disabled while the server drew nothing: an empty
+    // selection would download a header row and nothing else.
+    canExport = computed(() => (this.data()?.series.length ?? 0) > 0);
+    csvUrl = computed(() => this.channelsApi.seriesCsvUrl(this.rangeDays(), this.selectedIds()));
+
     tableRows = computed(() => {
-        const { days, labels } = this.axis();
+        const days = this.days();
+        const labels = this.labels();
         const series = this.series();
         const rows = labels.map((label, index) => ({
             day: days[index],
@@ -404,20 +366,29 @@ export class StatsComponent implements OnInit {
         try {
             const channels = await this.channelsApi.list();
             this.channels.set(channels);
-            await this.load(this.rangeDays());
-            const available = this.sources().map(source => source.id);
             const requested = this.route.snapshot.queryParamMap.get('statsSources');
+            // The server owns the source list, and it is only known once it has answered. With no
+            // saved selection the first request names what the client can — the blog and every
+            // channel — and a source it could not name (an X or Bluesky account) is switched on
+            // with one more request, so a fresh open still draws every line.
             this.selected.set(requested === 'none'
                 ? new Set()
                 : requested
-                    ? new Set(requested.split(',').filter(id => available.includes(id)))
-                    : new Set(available));
-            this.normalizeTableSort();
+                    ? new Set(requested.split(','))
+                    : new Set([BLOG_ID, ...channels.map(c => `channel:${c.id}`)]));
+            await this.load();
+            if (!requested) {
+                const all = this.sources().map(source => source.id);
+                if (all.some(id => !this.selected().has(id))) {
+                    this.selected.set(new Set(all));
+                    await this.load();
+                }
+            }
         } finally {
             this.loading.set(false);
         }
-        // Wave 2 — the streak card and the invite-links shelf, both best-effort: a 404 while the
-        // server lanes land leaves the board exactly as it was.
+        // The streak card and the invite-links shelf, both best-effort: a failure leaves the
+        // board exactly as it was.
         this.channelsApi.publishingStats()
             .then(stats => this.publishing.set(stats))
             .catch(() => this.publishing.set(null));
@@ -433,17 +404,16 @@ export class StatsComponent implements OnInit {
     publishing = signal<PublishingStats | null>(null);
 
     /**
-     * Publish-event markers for the chart: any selected channel's publish days, mapped onto the
-     * axis. Days the axis does not carry (outside the window) simply do not mark.
+     * Publish-event markers for the chart: every drawn series' publish days, as read off the
+     * response, mapped onto the axis. The server already clipped them to the window.
      */
     publishMarkers = computed<number[]>(() => {
-        const { days } = this.axis();
+        const days = this.days();
         if (!days.length) return [];
         const marks = new Set<number>();
-        for (const [id, s] of this.channelStats()) {
-            if (!this.selected().has(id)) continue;
-            for (const at of s.publishDates ?? []) {
-                const index = days.indexOf(formatInZone(at, DAY_KEY));
+        for (const source of this.drawable()) {
+            for (const day of source.series!.publishDays) {
+                const index = days.indexOf(day);
                 if (index >= 0) marks.add(index);
             }
         }
@@ -625,43 +595,50 @@ export class StatsComponent implements OnInit {
         } catch { /* the URL is visible in the row's tooltip either way */ }
     }
 
+    private loadSeq = 0;
+
     /**
-     * One request per source, in parallel: the API has no multi-source endpoint and this port does
-     * not invent one (ADR-161). Blog stats are fetched whether or not the blog line is drawn —
-     * the audience shelf is blog data, and it must not blank when the reader looks at a channel.
+     * One request for every selected source over one aligned window (ADR-279): the server owns
+     * the window, the carry-forward and the delta, so what arrives is drawn as it is. A failure
+     * keeps the previous answer on the board; a stale answer overtaken by a newer request is
+     * dropped rather than drawn.
      */
-    private async load(days: number) {
+    private async load() {
+        const seq = ++this.loadSeq;
         this.pending.set(true);
         try {
-            const channels = this.channels();
-            const results = await Promise.allSettled([
-                this.channelsApi.getBlogStats(days),
-                ...channels.map(c => this.channelsApi.getStats(c.id, days)),
-            ]);
-            const [blog, ...perChannel] = results;
-            if (blog.status === 'fulfilled') this.blogStats.set(blog.value as BlogStats);
-            const stats = new Map(this.channelStats());
-            perChannel.forEach((result, index) => {
-                if (result.status === 'fulfilled') stats.set(channels[index].id, result.value as ChannelStats);
+            const data = await this.channelsApi.series(this.rangeDays(), this.selectedIds());
+            if (seq !== this.loadSeq) return;
+            this.data.set(data);
+            this.lastCurrent.update(map => {
+                const next = new Map(map);
+                for (const s of data.series) next.set(s.id, s.current);
+                return next;
             });
-            this.channelStats.set(stats);
+            this.normalizeTableSort();
+        } catch {
+            // The board keeps what it had; `pending` clears below either way.
         } finally {
-            this.pending.set(false);
+            if (seq === this.loadSeq) this.pending.set(false);
         }
     }
 
+    // Selection reaches the server: a leaf toggling is one cheap request, and the window moves
+    // with it on the server's side rather than in here.
     toggle(id: string) {
         const next = new Set(this.selected());
         if (!next.delete(id)) next.add(id);
         this.selected.set(next);
         this.normalizeTableSort();
         this.syncCollectionQuery();
+        void this.load();
     }
 
     showAllSources() {
         this.selected.set(new Set(this.sources().map(source => source.id)));
         this.normalizeTableSort();
         this.syncCollectionQuery();
+        void this.load();
     }
 
     setMetric(id: string) {
@@ -679,7 +656,7 @@ export class StatsComponent implements OnInit {
         const days = RANGE_NOTCHES.includes(raw) ? raw : 90;
         this.rangeDays.set(days);
         this.syncCollectionQuery();
-        await this.load(days);
+        await this.load();
     }
 
     private restoreCollectionQuery() {
@@ -739,25 +716,6 @@ export class StatsComponent implements OnInit {
 
     rangeLabel(d = this.rangeDays()): string {
         return d % 30 === 0 && d >= 30 ? this.t().stats.months(d / 30) : this.t().stats.days(d);
-    }
-
-    /**
-     * A day with no snapshot takes the source's previous reading. The series are running totals,
-     * so the last reading is what is known until the next one is taken; the window's start is what
-     * guarantees there is one to carry (ADR-161).
-     */
-    private carryForward(source: Source, days: readonly string[], metric: MetricKey): number[] {
-        let last = 0;
-        for (const day of source.days) {
-            if (day > days[0]) break;
-            const value = source.values.get(day)?.[metric];
-            if (value !== undefined) last = value;
-        }
-        return days.map(day => {
-            const value = source.values.get(day)?.[metric];
-            if (value !== undefined) last = value;
-            return last;
-        });
     }
 
     // Built per (UI language, kind) rather than per row: the list re-renders on every change
