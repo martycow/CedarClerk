@@ -7,12 +7,11 @@ namespace CedarClerk.Cli.Commands;
 
 // Reports what backup actually exists (ADR-118 decision 6).
 //
-// A nightly sqlite3 copy came back on 12.08.2026 (T-071): Marty's `~/bin/backup.sh` writes fourteen
-// dated copies into {RemoteDataDir}/backups. This command reads that directory — so the path here and
-// the path in the script are one fact in two places, and moving either alone makes the tool report an
-// absence over a full directory. What it still names is what those copies are not: off the droplet,
-// and never more than the database. `backup now` is deliberately not built: making a copy is server
-// behaviour, and the tool wraps behaviour that exists rather than adding its own.
+// The droplet's `~/bin/backup.sh` writes fourteen dated copies into {RemoteDataDir}/backups, and this
+// command reads that directory through the glob ServerProbe holds for every reader of it. What it
+// still names is what those copies are not: off the droplet, and never more than the database.
+// `backup now` is deliberately not built: making a copy is server behaviour, and the tool wraps
+// behaviour that exists rather than adding its own.
 public sealed class BackupVerifyCommand : AsyncCommand<CedarSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, CedarSettings settings, CancellationToken cancellationToken) =>
@@ -29,11 +28,9 @@ public sealed class BackupVerifyCommand : AsyncCommand<CedarSettings>
         var script = string.Join('\n', new[]
         {
             "echo '=== files ==='",
-            // cedar-*.db.gz only — backup.log lives in the same directory and is written after each
-            // run, so a bare glob counts it as a copy and reports it as the newest one.
-            $"ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -5",
+            $"ls -1t {ServerProbe.BackupCopies(data)} 2>/dev/null | head -5",
             "echo '=== newest ==='",
-            $"stat -c '%Y %s %n' $(ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -1) 2>/dev/null",
+            $"stat -c '%Y %s %n' {ServerProbe.NewestBackup(data)} 2>/dev/null",
             "echo '=== cron ==='",
             "crontab -l 2>/dev/null | grep -v '^#' | grep -c . || true",
             "echo '=== scripts ==='",

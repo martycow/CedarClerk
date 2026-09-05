@@ -22,6 +22,16 @@ public sealed class ServerProbe
         _config = config;
     }
 
+    // The one place the backup directory is spelled out for `status`, `backup verify` and the deploy
+    // preflight. The script's DEST on the droplet and this path are one fact in two places, and they
+    // disagreed for a day once — a third copy of the path would be a third way to disagree. Copies
+    // are counted by name, never by a bare glob: backup.log shares the directory and is touched after
+    // every run, so a bare glob reports the log as the newest backup.
+    public static string BackupCopies(string dataDir) => $"{dataDir}/backups/cedar-*.db.gz";
+
+    public static string NewestBackup(string dataDir) =>
+        $"$(ls -1t {BackupCopies(dataDir)} 2>/dev/null | head -1)";
+
     public string BuildScript()
     {
         var root = _config.RemoteRoot;
@@ -45,10 +55,8 @@ public sealed class ServerProbe
             "echo '=== deploy ==='",
             $"stat -c '%Y %n' {root}/app 2>/dev/null",
             "echo '=== backup ==='",
-            // Only the copies: cron writes backup.log into the same directory, and it is touched
-            // after every run, so a bare glob would report the log as the newest backup.
-            $"ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -1",
-            $"stat -c '%Y %n' $(ls -1t {data}/backups/cedar-*.db.gz 2>/dev/null | head -1) 2>/dev/null",
+            $"ls -1t {BackupCopies(data)} 2>/dev/null | head -1",
+            $"stat -c '%Y %n' {NewestBackup(data)} 2>/dev/null",
             "echo '=== cron ==='",
             "crontab -l 2>/dev/null | grep -cv '^#' || true",
             "echo '=== cpu ==='",

@@ -46,6 +46,10 @@ public sealed class DeployPipeline
     public const string StagePublishInstaller = "Publish installer";
     public const string StageRollback = "Rollback";
 
+    // The nightly copy lands at 03:30 UTC, so anything older than this means last night's run was
+    // missed: one missed night plus slack.
+    public static readonly TimeSpan BackupMaxAge = TimeSpan.FromHours(36);
+
     private readonly ICommandRunner _runner;
     private readonly IHealthProbe _health;
     private readonly CliConfig _config;
@@ -338,12 +342,15 @@ echo SWAPPED", ct);
 
             if (options.Desktop) DesktopPreflight(version);
 
-            // One round trip for everything that decides whether it is worth starting.
+            // One round trip for everything that decides whether it is worth starting. Reads only:
+            // the backup is looked at, never made, from here.
             var probe = await _runner.RunRemoteAsync($@"mkdir -p '{_config.RemoteStagingDir}'
 echo ""ACTIVE=$(systemctl is-active {CliConsts.ServiceName} 2>/dev/null)""
 echo ""FREEKB=$(df -Pk '{_config.RemoteRoot}' | awk 'NR==2{{print $4}}')""
 echo ""APPFILES=$(find '{_config.RemoteAppDir}' -type f 2>/dev/null | wc -l)""
-echo ""PREV=$(test -d '{_config.RemotePrevDir}' && echo yes || echo no)""", ct);
+echo ""PREV=$(test -d '{_config.RemotePrevDir}' && echo yes || echo no)""
+echo ""NOW=$(date +%s)""
+echo ""BACKUPTS=$(stat -c %Y {ServerProbe.NewestBackup(_config.RemoteDataDir)} 2>/dev/null)""", ct);
 
             if (!probe.Ok)
                 throw new PipelineStop($"Cannot reach {_config.Host} - nothing has been touched.",
@@ -361,9 +368,33 @@ echo ""PREV=$(test -d '{_config.RemotePrevDir}' && echo yes || echo no)""", ct);
             if (freeKb < 400_000) step.Warn("less than 400 MB free on the server - the swap keeps two copies of the app");
             if (active != "active") step.Warn($"the service is {active} right now, so production is already down - this deploy brings it back");
 
+            // A warning and never a stop, like the tag check above: a stale copy is cron's failure,
+            // not the release's, and the deploy never touches data/ - a stop would keep a hotfix off
+            // production without making the backup any fresher.
+            var serverNow = RemoteFiles.Number(probe.StdOut, "NOW");
+            var backupTs = RemoteFiles.Number(probe.StdOut, "BACKUPTS");
+            var backupWarning = BackupWarning(serverNow, backupTs);
+            if (backupWarning is not null)
+                step.Warn(backupWarning);
+            else
+                step.Note($"newest backup {Format.Age(DateTimeOffset.FromUnixTimeSeconds(backupTs), DateTimeOffset.FromUnixTimeSeconds(serverNow))}");
+
             step.Done($"{branch}, {(dirty.Count == 0 ? "clean" : dirty.Count + " dirty")}, server {active}");
             return probe.StdOut;
         });
+
+    // Both stamps come from the droplet's own clock, so a skewed laptop cannot age a fresh copy. The
+    // directory and the glob are the ones `cedar status` and `cedar backup verify` read.
+    internal static string? BackupWarning(long nowEpoch, long backupEpoch)
+    {
+        if (backupEpoch <= 0)
+            return $"no cedar-*.db.gz in data/backups - the nightly copy has not run; {CliConsts.BinaryName} backup verify";
+
+        var age = TimeSpan.FromSeconds(Math.Max(0, nowEpoch - backupEpoch));
+        return age > BackupMaxAge
+            ? $"newest backup is {Format.Duration(age)} old - nightly copy runs 03:30 UTC; {CliConsts.BinaryName} backup verify"
+            : null;
+    }
 
     private async Task NoteLiveTagAsync(StageStep step, string liveVersion, CancellationToken ct)
     {

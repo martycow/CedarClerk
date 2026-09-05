@@ -2,6 +2,7 @@ using CedarClerk.Cli.Configuration;
 using CedarClerk.Cli.Execution;
 using CedarClerk.Cli.Pipelines;
 using CedarClerk.Cli.Rendering;
+using CedarClerk.Cli.Server;
 using Spectre.Console.Testing;
 
 namespace CedarClerk.Cli.Tests;
@@ -220,15 +221,27 @@ public class PipelineTests
 
     // ------------------------------------------------------------------ the deploy preflight
 
-    private static FakeCommandRunner Healthy(string branch = "master", string dirty = "") =>
+    // What the one preflight round trip answers. Both stamps are the droplet's clock; the backup
+    // defaults to a few hours old - the shape of a machine whose nightly copy ran - so that every
+    // other preflight test is about the thing it names and not about the backup rule.
+    private static readonly long ServerNow = new DateTimeOffset(2026, 9, 5, 18, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds();
+
+    private static string ServerProbeOutput(TimeSpan? backupAge) =>
+        $"ACTIVE=active\nFREEKB=44796252\nAPPFILES=174\nPREV=yes\nNOW={ServerNow}\nBACKUPTS=" +
+        (backupAge is null ? "" : (ServerNow - (long)backupAge.Value.TotalSeconds).ToString());
+
+    private static FakeCommandRunner Healthy(string branch = "master", string dirty = "", TimeSpan? backupAge = null) =>
         new FakeCommandRunner()
             .Answer("rev-parse --abbrev-ref HEAD", branch)
             .Answer("status --porcelain", dirty)
             .Answer("tag --points-at HEAD", CedarClerk.Core.Consts.CurrentVersion)
             .Answer("refs/tags/LIVE^{commit}", "")
-            .Answer("mkdir -p", "ACTIVE=active\nFREEKB=44796252\nAPPFILES=174\nPREV=yes");
+            .Answer("mkdir -p", ServerProbeOutput(backupAge ?? TimeSpan.FromHours(5)));
 
-    private static async Task<PipelineStop?> Preflight(FakeCommandRunner runner, DeployOptions options)
+    private static async Task<PipelineStop?> Preflight(FakeCommandRunner runner, DeployOptions options) =>
+        (await PreflightWithBoard(runner, options)).Stop;
+
+    private static async Task<(PipelineStop? Stop, Stage Stage)> PreflightWithBoard(FakeCommandRunner runner, DeployOptions options)
     {
         var console = new TestConsole();
         var board = Board(console, DeployPipeline.StagePreflight);
@@ -241,11 +254,11 @@ public class PipelineTests
                 await pipeline.PreflightAsync(board, options, CedarClerk.Core.Consts.CurrentVersion, "", CancellationToken.None);
                 return 0;
             }, CancellationToken.None);
-            return null;
+            return (null, board.Stages[0]);
         }
         catch (PipelineStop stop)
         {
-            return stop;
+            return (stop, board.Stages[0]);
         }
     }
 
@@ -306,6 +319,69 @@ public class PipelineTests
         runner.Answer("tag --points-at HEAD", "");
 
         Assert.Null(await Preflight(runner, new DeployOptions()));
+    }
+
+    // ------------------------------------------------------------------ backup freshness (T-195)
+
+    [Fact]
+    public async Task A_backup_older_than_the_limit_warns_and_names_the_nightly_hour_without_stopping()
+    {
+        // A warning, never a stop: cron's failure is not the release's, and the deploy leaves data/
+        // alone - a stop would keep a hotfix off production without making the copy any fresher.
+        var (stop, stage) = await PreflightWithBoard(Healthy(backupAge: TimeSpan.FromHours(40)), new DeployOptions());
+
+        Assert.Null(stop);
+        Assert.Equal(StageState.Warned, stage.State);
+        Assert.Contains(stage.Lines, line => line.Contains("newest backup is 1d 16h old") && line.Contains("03:30 UTC"));
+    }
+
+    [Fact]
+    public async Task A_server_with_no_backup_at_all_warns_the_same_way()
+    {
+        // An empty or absent directory answers with an empty BACKUPTS=, which is the shape of a cron
+        // job that never ran - the preflight must not read that as "nothing to worry about".
+        var runner = Healthy().Answer("mkdir -p", ServerProbeOutput(backupAge: null));
+
+        var (stop, stage) = await PreflightWithBoard(runner, new DeployOptions());
+
+        Assert.Null(stop);
+        Assert.Equal(StageState.Warned, stage.State);
+        Assert.Contains(stage.Lines, line => line.Contains("no cedar-*.db.gz in data/backups"));
+    }
+
+    [Fact]
+    public async Task A_backup_inside_the_limit_is_noted_and_not_warned_about()
+    {
+        // 03:30 UTC yesterday, looked at early this evening: the nightly copy did its job.
+        var (stop, stage) = await PreflightWithBoard(Healthy(backupAge: TimeSpan.FromHours(30)), new DeployOptions());
+
+        Assert.Null(stop);
+        Assert.Equal(StageState.Done, stage.State);
+        Assert.Contains(stage.Lines, line => line.Contains("newest backup 1d 06h ago"));
+    }
+
+    [Fact]
+    public async Task The_preflight_reads_the_backup_through_the_status_glob_and_never_makes_one()
+    {
+        var runner = Healthy();
+        await Preflight(runner, new DeployOptions());
+
+        var probe = Assert.Single(runner.RemoteCalls, call => call.Contains("BACKUPTS="));
+        Assert.Contains(ServerProbe.BackupCopies(Config().RemoteDataDir), probe);
+        Assert.Contains("NOW=$(date +%s)", probe);
+        Assert.DoesNotContain(runner.RemoteCalls, call => call.Contains("backup.sh"));
+    }
+
+    [Fact]
+    public void The_freshness_rule_turns_at_exactly_the_limit_and_reads_the_server_clock()
+    {
+        var limit = (long)DeployPipeline.BackupMaxAge.TotalSeconds;
+
+        Assert.Null(DeployPipeline.BackupWarning(ServerNow, ServerNow - limit));
+        Assert.NotNull(DeployPipeline.BackupWarning(ServerNow, ServerNow - limit - 60));
+        Assert.NotNull(DeployPipeline.BackupWarning(ServerNow, 0));
+        // A copy stamped in the future is a clock quirk, not a stale backup.
+        Assert.Null(DeployPipeline.BackupWarning(ServerNow, ServerNow + 600));
     }
 
     [Fact]

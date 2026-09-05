@@ -108,6 +108,19 @@ public class ProbeTests
     }
 
     [Fact]
+    public void The_status_screen_reads_the_backups_through_the_one_shared_glob()
+    {
+        // `status`, `backup verify` and the deploy preflight look in the same place, by name -
+        // backup.log lives there too and is touched after every run, so a bare glob would report
+        // the log as the newest copy.
+        var script = Probe(new FakeCommandRunner()).BuildScript();
+
+        Assert.Contains(ServerProbe.BackupCopies(new CliConfig().RemoteDataDir), script);
+        Assert.EndsWith("/backups/cedar-*.db.gz", ServerProbe.BackupCopies("/data"));
+        Assert.DoesNotContain("backups/*", script);
+    }
+
+    [Fact]
     public void Sections_split_on_their_markers_and_keep_their_bodies()
     {
         var sections = ServerProbe.Split("=== a ===\none\ntwo\n=== b ===\nthree\n=== end ===");

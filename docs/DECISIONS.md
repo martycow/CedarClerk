@@ -264,4 +264,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-249 — The editor starts with the document, not its chrome](adr/ADR-249.md)
 - [ADR-250 — Author social links appear at the public blog header](adr/ADR-250.md)
 - [ADR-251 — The initial-bundle ceiling follows the measured bilingual shell](adr/ADR-251.md)
-- [ADR-265 — The production Angular build is a `cedar test` phase](adr/ADR-265.md)
+- [ADR-265 — `cedar test` builds the front end, and the deploy preflight warns about a stale backup](adr/ADR-265.md)
