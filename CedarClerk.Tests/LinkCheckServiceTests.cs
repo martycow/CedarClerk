@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
 using CedarClerk.Server;
 
@@ -68,32 +67,202 @@ public class LinkCheckServiceTests
         Assert.Equal(LinkCheckService.Unreachable, dead.Status);
     }
 
+    // The handler never completes on its own, so the only way the probe returns is the per-link
+    // cap firing; that the cancellation reached the handler is the proof, not a stopwatch — the
+    // wall-clock version of this test raced the cap under a loaded runner (T-364).
     [Fact]
-    public async Task A_hanging_link_times_out_within_the_cap_and_reports_unreachable()
+    public async Task A_hanging_link_is_cut_off_by_the_cap_and_reports_unreachable()
     {
-        var watch = Stopwatch.StartNew();
-        var cancelledAt = new ConcurrentBag<TimeSpan>();
+        var cancelled = 0;
         var handler = new StubHandler((_, ct) =>
         {
             var completion = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
             ct.Register(() =>
             {
-                cancelledAt.Add(watch.Elapsed);
+                Interlocked.Increment(ref cancelled);
                 completion.TrySetCanceled(ct);
             });
             return completion.Task;
         });
+        var service = new LinkCheckService(new HttpClient(handler), PublicResolver, TimeSpan.FromMilliseconds(200));
 
-        var dead = await Service(handler)
+        var dead = await service
             .CheckAsync(["https://tarpit.example/a", "https://tarpit.example/b"])
-            .WaitAsync(TimeSpan.FromSeconds(20));
+            .WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Equal(2, dead.Count);
         Assert.All(dead, d => Assert.Equal(LinkCheckService.Unreachable, d.Status));
-        Assert.Equal(2, cancelledAt.Count);
-        // Measure the timer callback, not a continuation that a loaded test runner may schedule late.
-        Assert.All(cancelledAt, elapsed =>
-            Assert.True(elapsed < TimeSpan.FromSeconds(8), $"cancelled after {elapsed}"));
+        Assert.Equal(2, cancelled);
+    }
+
+    private static Task<IPAddress[]> PublicResolver(string host, CancellationToken ct) =>
+        Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+
+    private static HttpResponseMessage RedirectTo(string location, HttpStatusCode status = HttpStatusCode.Found) =>
+        new(status) { Headers = { Location = new Uri(location, UriKind.RelativeOrAbsolute) } };
+
+    [Fact]
+    public async Task A_redirect_into_private_space_is_blocked_and_not_followed()
+    {
+        var handler = new StubHandler((request, _) => Task.FromResult(
+            request.RequestUri!.Host == "public.example"
+                ? RedirectTo("http://10.0.0.5/admin")
+                : new HttpResponseMessage(HttpStatusCode.OK)));
+
+        var dead = Assert.Single(await Service(handler).CheckAsync(["https://public.example/"]));
+
+        Assert.Equal(LinkCheckService.Blocked, dead.Status);
+        Assert.Equal("https://public.example/", dead.Url);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task A_redirect_hop_whose_name_resolves_inside_is_blocked()
+    {
+        var handler = new StubHandler((request, _) => Task.FromResult(
+            request.RequestUri!.Host == "public.example"
+                ? RedirectTo("https://intranet.example/")
+                : new HttpResponseMessage(HttpStatusCode.OK)));
+        var service = new LinkCheckService(new HttpClient(handler), (host, _) => Task.FromResult(new[]
+        {
+            IPAddress.Parse(host == "intranet.example" ? "192.168.1.10" : "93.184.216.34"),
+        }));
+
+        var dead = Assert.Single(await service.CheckAsync(["https://public.example/"]));
+
+        Assert.Equal(LinkCheckService.Blocked, dead.Status);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task A_redirect_chain_is_followed_to_its_verdict()
+    {
+        var handler = new StubHandler((request, _) => Task.FromResult(request.RequestUri!.ToString() switch
+        {
+            "https://a.example/" => RedirectTo("https://b.example/moved", HttpStatusCode.MovedPermanently),
+            "https://b.example/moved" => RedirectTo("/final", HttpStatusCode.PermanentRedirect),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        }));
+
+        var dead = Assert.Single(await Service(handler).CheckAsync(["https://a.example/"]));
+
+        Assert.Equal("404", dead.Status);
+        Assert.Equal("https://a.example/", dead.Url);
+        Assert.Equal(
+            ["https://a.example/", "https://b.example/moved", "https://b.example/final"],
+            handler.Requests.Select(r => r.RequestUri!.ToString()));
+    }
+
+    [Fact]
+    public async Task A_redirect_loop_stops_at_the_hop_cap_and_reports_unreachable()
+    {
+        var handler = new StubHandler((request, _) => Task.FromResult(RedirectTo(request.RequestUri!.ToString() + "x")));
+
+        var dead = Assert.Single(await Service(handler).CheckAsync(["https://loop.example/"]));
+
+        Assert.Equal(LinkCheckService.Unreachable, dead.Status);
+        Assert.Equal(LinkCheckService.MaxRedirects + 1, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task A_redirect_off_http_is_unreachable_rather_than_followed()
+    {
+        var handler = new StubHandler((_, _) => Task.FromResult(RedirectTo("file:///etc/passwd")));
+
+        var dead = Assert.Single(await Service(handler).CheckAsync(["https://odd.example/"]));
+
+        Assert.Equal(LinkCheckService.Unreachable, dead.Status);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task A_3xx_without_a_location_is_a_healthy_answer()
+    {
+        var service = Service(Answering(HttpStatusCode.NotModified));
+
+        Assert.Empty(await service.CheckAsync(["https://cached.example/"]));
+    }
+
+    [Fact]
+    public async Task Every_request_is_pinned_to_the_address_that_passed_the_check()
+    {
+        var resolved = new ConcurrentDictionary<string, int>();
+        var handler = new StubHandler((request, _) => Task.FromResult(
+            request.RequestUri!.Host == "a.example"
+                ? RedirectTo("https://b.example/")
+                : new HttpResponseMessage(HttpStatusCode.OK)));
+        var service = new LinkCheckService(new HttpClient(handler), (host, _) =>
+        {
+            resolved.AddOrUpdate(host, 1, (_, n) => n + 1);
+            return Task.FromResult(new[] { IPAddress.Parse(host == "a.example" ? "93.184.216.34" : "203.0.113.7") });
+        });
+
+        Assert.Empty(await service.CheckAsync(["https://a.example/"]));
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.True(handler.Requests[0].Options.TryGetValue(LinkCheckService.PinnedAddress, out var first));
+        Assert.True(handler.Requests[1].Options.TryGetValue(LinkCheckService.PinnedAddress, out var second));
+        Assert.Equal(IPAddress.Parse("93.184.216.34"), first);
+        Assert.Equal(IPAddress.Parse("203.0.113.7"), second);
+        Assert.Equal(1, resolved["a.example"]);
+        Assert.Equal(1, resolved["b.example"]);
+    }
+
+    [Fact]
+    public async Task A_literal_address_is_pinned_as_spelled()
+    {
+        var handler = Answering(HttpStatusCode.OK);
+
+        Assert.Empty(await Service(handler).CheckAsync(["http://93.184.216.34/"]));
+
+        Assert.True(handler.Requests.Single().Options.TryGetValue(LinkCheckService.PinnedAddress, out var pinned));
+        Assert.Equal(IPAddress.Parse("93.184.216.34"), pinned);
+    }
+
+    [Fact]
+    public void The_production_handler_never_follows_redirects_on_its_own()
+    {
+        using var handler = LinkCheckService.CreateHandler();
+
+        Assert.False(handler.AllowAutoRedirect);
+        Assert.NotNull(handler.ConnectCallback);
+    }
+
+    // The request names a host that no resolver answers for; the only way it can reach the
+    // listener is through the pinned address, which is the whole point of the connect callback.
+    [Fact]
+    public async Task The_production_handler_dials_the_pinned_address_not_the_host_name()
+    {
+        using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var serve = Task.Run(async () =>
+        {
+            using var socket = await listener.AcceptSocketAsync();
+            var buffer = new byte[4096];
+            var read = await socket.ReceiveAsync(buffer, System.Net.Sockets.SocketFlags.None);
+            var requestLine = System.Text.Encoding.ASCII.GetString(buffer, 0, read).Split("\r\n")[0];
+            await socket.SendAsync(System.Text.Encoding.ASCII.GetBytes(
+                "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"), System.Net.Sockets.SocketFlags.None);
+            return requestLine;
+        });
+
+        using var http = new HttpClient(LinkCheckService.CreateHandler());
+        var request = new HttpRequestMessage(HttpMethod.Head, $"http://pinned.invalid:{port}/probe");
+        request.Options.Set(LinkCheckService.PinnedAddress, IPAddress.Loopback);
+        using var response = await http.SendAsync(request).WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("HEAD /probe HTTP/1.1", await serve.WaitAsync(TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
+    public async Task The_production_handler_refuses_a_request_without_a_pin()
+    {
+        using var http = new HttpClient(LinkCheckService.CreateHandler());
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            http.SendAsync(new HttpRequestMessage(HttpMethod.Head, "http://unpinned.invalid/")));
     }
 
     [Fact]

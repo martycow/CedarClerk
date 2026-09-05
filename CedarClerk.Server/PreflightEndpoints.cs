@@ -24,7 +24,7 @@ public static class PreflightEndpoints
         {
             c.Timeout = TimeSpan.FromSeconds(8);
             c.DefaultRequestHeaders.UserAgent.ParseAdd("CedarClerk-LinkCheck/1.0");
-        });
+        }).ConfigurePrimaryHttpMessageHandler(LinkCheckService.CreateHandler);
         return services;
     }
 
