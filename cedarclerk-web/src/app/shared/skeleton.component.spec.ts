@@ -33,7 +33,7 @@ describe('app-skeleton', () => {
         expect(region().getAttribute('aria-busy')).toBe('true');
         const status = el().querySelector('app-skeleton')!;
         expect(status.getAttribute('role')).toBe('status');
-        expect(status.getAttribute('aria-label')).toBe('Loading…');
+        expect(status.getAttribute('aria-label')).toBe(TestBed.inject(LocaleService).t().common.loading);
 
         fixture.componentInstance.show.set(false);
         fixture.detectChanges();

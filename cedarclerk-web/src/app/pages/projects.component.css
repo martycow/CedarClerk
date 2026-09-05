@@ -34,19 +34,21 @@
 }
 
 .toolbar {
+    --field-label-ink: var(--wood-ink);
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
     flex: none;
     margin-bottom: var(--space-5);
 }
 
-.search { width: 240px; }
+.search { width: 240px; max-width: 100%; }
 
 /* ---------- The card grid ---------- */
 .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 360px));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 360px));
     gap: var(--space-5);
     align-content: start;
 }

@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, OnDestroy, OnInit, inject, input, signal } from '@angular/core';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { CommentsService, AllCommentsComment, DraftReactions } from '../core/comments.service';
@@ -22,6 +23,7 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
     styleUrls: ['comments.component.css']
 })
 export class CommentsComponent implements OnInit, OnDestroy {
+    private readonly confirmation = inject(ConfirmationService);
     private commentsApi = inject(CommentsService);
     t = inject(LocaleService).t;
 
@@ -180,6 +182,7 @@ export class CommentsComponent implements OnInit, OnDestroy {
     }
 
     async deleteComment(id: string) {
+        if (!await this.confirmation.confirm(this.t().common.removeCommentConfirm)) return;
         this.error.set('');
         try {
             await this.commentsApi.remove(id);

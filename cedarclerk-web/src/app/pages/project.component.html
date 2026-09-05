@@ -375,11 +375,10 @@
                 {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}
             </app-button>
             <app-button variant="danger" size="sm" [disabled]="busy()"
-                        (clicked)="confirmDelete ? deleteProject() : (confirmDelete = true)">
-                {{ confirmDelete ? t().common.delete : t().projects.edit.remove }}
+                        (clicked)="deleteProject()">
+                {{ t().projects.edit.remove }}
             </app-button>
         </div>
-        @if (confirmDelete) { <p class="hint danger-hint">{{ t().projects.edit.removeConfirm }}</p> }
 
         @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
 

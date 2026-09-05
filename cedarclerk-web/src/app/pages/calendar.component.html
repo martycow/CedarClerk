@@ -75,6 +75,7 @@
                             }
                         </div>
                     }
+                </div>
                     @if (isVisiblePeriodEmpty()) {
                     <app-empty-state class="cal-empty" icon="calendar-blank"
                                      [title]="isEmptyBoard() ? t().calendar.emptyTitle : t().calendar.emptyPeriodTitle"
@@ -84,7 +85,6 @@
                         </app-button>
                     </app-empty-state>
                     }
-                </div>
             </div>
 
             @if (queueOpen()) {

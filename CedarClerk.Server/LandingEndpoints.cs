@@ -536,6 +536,12 @@ public static class LandingEndpoints
                 .discover-preview { grid-template-columns: 1fr; }
             }
             @media (max-width: 720px) {
+                .rail { height: auto; min-height: var(--bench-rail-h); flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+                .rail-name { white-space: nowrap; }
+                .rail-chip { margin-left: auto; }
+                .rail > .spacer { flex: 0 0 100%; }
+                .rail > .lang, .rail > .btn { flex-shrink: 0; }
+                .rail > .btn { min-height: 34px; }
                 .rail-nav { display: none; }
                 .hero { padding-top: 36px; }
                 section { padding-top: 44px; }

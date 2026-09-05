@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import {
     AfterViewInit, Component, ElementRef, OnDestroy,
     ViewChild, computed, effect, inject, signal, untracked
@@ -257,6 +258,7 @@ function readDetailsPreference(): boolean {
     styleUrls: ['editor.component.css', 'editor-toolbar.css', 'editor-workspace.css', 'editor-publish.css', 'editor-dialogs.css']
 })
 export class EditorComponent implements AfterViewInit, OnDestroy {
+    private readonly confirmation = inject(ConfirmationService);
     auth = inject(AuthService);
     appearance = inject(AppearanceService);
     private draftsApi = inject(DraftsService);
@@ -1336,7 +1338,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.ctaButtons.update(list => [...list, { text: '', url: '' }]);
     }
 
-    removeCtaButton(index: number) {
+    async removeCtaButton(index: number) {
+        if (!await this.confirmation.confirm({ message: this.t().common.removeAuthoredContentConfirm })) return;
         this.ctaButtons.update(list => list.filter((_, i) => i !== index));
     }
 
@@ -1743,6 +1746,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async revokePreviewLink() {
         const id = this.currentId();
         if (!id || this.previewLinkBusy()) return;
+        if (!await this.confirmation.confirm({ message: this.t().common.revokeConfirm, confirmLabel: this.t().common.confirm })) return;
         this.previewLinkBusy.set(true);
         this.previewLinkError.set(null);
         try {
@@ -3278,7 +3282,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const id = this.currentId();
         const lang = this.lang();
         if (!id || lang === this.primaryLanguage || !this.translationOf(lang)) return;
-        if (!window.confirm(this.t().editor.lang.deleteEnglishConfirm)) return;
+        if (!await this.confirmation.confirm(this.t().editor.lang.deleteEnglishConfirm)) return;
         clearTimeout(this.saveTimer);
         this.saveState.set('saved'); // discard pending EN edits so nothing re-creates the row
         await this.draftsApi.removeTranslation(id, lang);
@@ -3397,10 +3401,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 languages = ['en'];
             }
 
+            const stored = await this.draftsApi.get(created.id);
             const meta: DraftMeta = {
                 id: created.id, title,
-                createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-                primaryLanguage: this.primaryLanguage,
+                createdAt: stored.createdAt, updatedAt: stored.updatedAt,
+                primaryLanguage: stored.primaryLanguage,
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
@@ -3413,12 +3418,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.drafts.update(l => [meta, ...l]);
             this.currentId.set(created.id);
             this.title = title;
-            this.primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
+            this.primaryLanguage = stored.primaryLanguage || DEFAULT_PRIMARY_LANGUAGE;
             this.lang.set(this.primaryLanguage);
             this.exportLangs.set([this.primaryLanguage]);
             this.ruUpdatedAt.set(meta.updatedAt);
-            this.translations.set(Object.fromEntries(
-                languages.filter(l => l !== DEFAULT_PRIMARY_LANGUAGE).map(l => [l, { language: l, title, updatedAt: meta.updatedAt }])));
+            this.translations.set(Object.fromEntries((stored.translations ?? []).map(translation => [translation.language, translation])));
             this.activeSourceSnapshot.set(null);
             this.ruDiffMarkers.set([]);
             this.ruSnapshot = null;
@@ -3489,6 +3493,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.blogBusy.set(false);
             clearInterval(this.blogTicker);
         }
+    }
+
+    async removeTableContent(action: 'deleteRow' | 'deleteColumn' | 'deleteTable') {
+        if (!this.editor?.isActive('table')) return;
+        if (!await this.confirmation.confirm({ title: this.t().editor.tableMenu[action], message: this.t().common.removeEditorContentConfirm })) return;
+        this.cmd(chain => chain[action]());
     }
 
     cmd(fn: (chain: any) => any) {
@@ -3670,6 +3680,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     async revokeInvite(inviteId: string) {
         const id = this.currentId();
         if (!id || this.inviteBusy()) return;
+        if (!await this.confirmation.confirm({ message: this.t().common.revokeConfirm, confirmLabel: this.t().common.confirm })) return;
         this.inviteBusy.set(true);
         try {
             await this.draftsApi.revokeInvite(id, inviteId);
@@ -3751,12 +3762,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 
-    // "Remove from draft" only detaches the media node(s) from the current document — it does not
-    // delete the underlying Asset/file (no delete-asset endpoint exists; the same upload could in
-    // principle be referenced elsewhere), so this is a safe, reversible-via-undo edit rather than
-    // a destructive storage operation.
-    removeAssetFromDraft(asset: DraftAsset) {
+    async removeAssetFromDraft(asset: DraftAsset) {
         if (!this.editor) return;
+        if (!await this.confirmation.confirm({ title: this.t().editor.exportModal.detachAsset, message: this.t().common.removeEditorMediaConfirm })) return;
         const targetSrc = '/media/' + asset.localPath;
         const mediaNodeTypes = new Set(['image', 'video', 'audio']);
         const { state } = this.editor;

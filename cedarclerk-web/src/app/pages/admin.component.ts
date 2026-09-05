@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
@@ -63,6 +64,7 @@ function sortRows<T>(rows: readonly T[], direction: SortDirection,
     styleUrls: ['admin.component.css'],
 })
 export class AdminComponent implements OnInit, OnDestroy {
+    private readonly confirmation = inject(ConfirmationService);
     auth = inject(AuthService);
     t = inject(LocaleService).t;
     private api = inject(AdminService);
@@ -827,12 +829,14 @@ export class AdminComponent implements OnInit, OnDestroy {
 
     // Two separate acts, deliberately: taking a screenshot off the page is an edit you undo by not
     // saving, while deleting the file is not.
-    removeShot(index: number) {
+    async removeShot(index: number) {
+        if (!await this.confirmation.confirm(this.t().common.removeAuthoredContentConfirm)) return;
         this.shots = this.shots.filter((_, i) => i !== index);
         this.landingSaved.set(false);
     }
 
-    deleteShotFile(file: string) {
+    async deleteShotFile(file: string) {
+        if (!await this.confirmation.confirm(this.t().common.removeNamed(file))) return;
         return this.run(async () => {
             await this.api.deleteLandingFile(file);
             this.shots = this.shots.filter(s => s.file !== file);
@@ -845,7 +849,8 @@ export class AdminComponent implements OnInit, OnDestroy {
             { titleEn: '', titleRu: '', mark: 'next', itemsEn: '', itemsRu: '' }];
     }
 
-    removeRoadmapColumn(index: number) {
+    async removeRoadmapColumn(index: number) {
+        if (!await this.confirmation.confirm(this.t().common.removeAuthoredContentConfirm)) return;
         this.roadmapCols = this.roadmapCols.filter((_, i) => i !== index);
     }
 
@@ -854,7 +859,8 @@ export class AdminComponent implements OnInit, OnDestroy {
             { whenEn: '', whenRu: '', titleEn: '', titleRu: '', textEn: '', textRu: '' }];
     }
 
-    removeStoryStep(index: number) {
+    async removeStoryStep(index: number) {
+        if (!await this.confirmation.confirm(this.t().common.removeAuthoredContentConfirm)) return;
         this.storySteps = this.storySteps.filter((_, i) => i !== index);
     }
 

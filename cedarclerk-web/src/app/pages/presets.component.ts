@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -51,6 +52,7 @@ interface PresetForm {
     styleUrls: ['presets.component.css'],
 })
 export class PresetsComponent {
+    private readonly confirmation = inject(ConfirmationService);
     private api = inject(PresetsService);
     t = inject(LocaleService).t;
 
@@ -216,7 +218,7 @@ export class PresetsComponent {
     }
 
     async remove(p: Preset) {
-        if (!confirm(this.t().presets.deleteConfirm(p.name))) return;
+        if (!await this.confirmation.confirm(this.t().presets.deleteConfirm(p.name))) return;
         this.busy.set(true);
         try { await this.api.remove(p.id); await this.load(); }
         catch (e) { this.error.set(httpErrorMessage(e, this.t().presets.saveFailed)); }

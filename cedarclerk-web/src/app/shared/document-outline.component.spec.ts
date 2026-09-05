@@ -170,4 +170,30 @@ describe('DocumentOutlineComponent', () => {
         fixture.detectChanges();
         expect(rows(fixture)[2].getAttribute('tabindex')).toBe('0');
     });
+
+    it('tracks the caret inside the shelf without scrolling the surrounding workspace', () => {
+        const fixture = create(buildOutline(DOC), 0);
+        const workspace = document.createElement('div');
+        const shelf = document.createElement('div');
+        shelf.className = 'sp-sheet';
+        document.body.append(workspace);
+        workspace.append(shelf);
+        shelf.append(fixture.nativeElement);
+        workspace.scrollTop = 40;
+        Object.defineProperties(shelf, { scrollHeight: { value: 800 }, clientHeight: { value: 200, configurable: true } });
+        vi.spyOn(shelf, 'getBoundingClientRect').mockReturnValue({ top: 100, bottom: 300 } as DOMRect);
+        vi.spyOn(rows(fixture)[2], 'getBoundingClientRect').mockReturnValue({ top: 350, bottom: 380 } as DOMRect);
+        const ancestorScroll = vi.spyOn(rows(fixture)[2], 'scrollIntoView');
+        fixture.componentRef.setInput('active', 2);
+        fixture.detectChanges();
+        expect(shelf.scrollTop).toBe(80);
+        expect(workspace.scrollTop).toBe(40);
+        expect(ancestorScroll).not.toHaveBeenCalled();
+        Object.defineProperty(shelf, 'clientHeight', { value: 800 });
+        fixture.componentRef.setInput('active', 3);
+        fixture.detectChanges();
+        expect(shelf.scrollTop).toBe(80);
+        fixture.destroy();
+        workspace.remove();
+    });
 });

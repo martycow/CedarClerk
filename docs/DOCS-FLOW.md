@@ -39,6 +39,7 @@ flowchart TB
         SEC["docs/tech/SECURITY.md<br/>threat model: assets, boundaries,<br/>STRIDE table, gaps"]
         DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
         UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
+        UIAUDIT["docs/design/UI-AUDIT-2026-09-05.md<br/>layout findings and verification coverage"]
         STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
         RESEARCH["docs/knowledge_base/RESEARCH-2026-09.md<br/>API research: IndieDB, LinkedIn,<br/>IGDB, Telegram comments, events"]
         BIZ["docs/product/BUSINESS.md<br/>money: gates, metrics, rituals"]

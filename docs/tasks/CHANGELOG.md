@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-05 — Interface layout and confirmation audit (ADR-289)
+
+Destructive actions now open a shared confirmation dialog before changing data or access.
+This includes projects, tasks, builds, presets, authored blocks, integrations, preview links and invitations.
+Existing dedicated deletion dialogs retain their context and use the danger action style.
+Cancel receives focus in the shared dialog. Escape cancels, navigation cancels, and nested dialogs restore focus to their trigger.
+
+The editor no longer prints stray template attributes or scrolls the writing sheet toward its outline on phones.
+Its first document uses server timestamps, preventing a false save-conflict dialog immediately after onboarding.
+Task columns retain a readable width. Calendar empty text sits below the dates.
+Document controls wrap, table defaults fit the desktop work area, and empty collections use bounded paper surfaces.
+Input labels respect their background. Collection controls retain their desktop height.
+Preview destinations, modal actions and the public landing header fit narrow screens.
+
+The audit uses local scratch data, English and Russian, both themes, desktop widths and a 390px phone viewport.
+The [audit report](../design/UI-AUDIT-2026-09-05.md) records findings, captures, verification and coverage limits.
+Verification: 30 Rust, 1952 backend, 766 frontend and 62 browser tests passed.
+The production frontend build, icon inventory, contrast and density checks passed. The 18 skipped browser cases are opt-in screenshot capture jobs.
+After the first-entry correction, all frontend checks and three targeted browser scenarios passed, including the first-account save.
+
 ## 2026-09-05 — Backlog sweep (ADR-260…288)
 
 One session, many lanes, fifty-five board rows closed. Everything below came in on `claude/backlog-sweep`

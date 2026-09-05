@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -38,6 +39,7 @@ import {
     styleUrls: ['project-showcase.component.css'],
 })
 export class ProjectShowcaseComponent {
+    private readonly confirmation = inject(ConfirmationService);
     private api = inject(ProjectsService);
     private route = inject(ActivatedRoute);
     auth = inject(AuthService);
@@ -213,9 +215,10 @@ export class ProjectShowcaseComponent {
         this.saved.set(false);
     }
 
-    removeSelected() {
+    async removeSelected() {
         const selected = this.selectedBlock();
         if (!selected || selected.kind === 'hero') return;
+        if (!await this.confirmation.confirm(this.t().common.removeBlockConfirm(this.blockTitle(selected)))) return;
         this.blocks.update(blocks => blocks.filter(block => block.id !== selected.id));
         this.selectedBlockId.set(this.blocks()[0]?.id ?? 'hero');
         this.saved.set(false);

@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
@@ -74,6 +75,7 @@ type PresetSort = 'created' | 'name' | 'questions';
     styleUrls: ['posts-manager.component.css'],
 })
 export class PostsManagerComponent implements OnInit {
+    private readonly confirmation = inject(ConfirmationService);
     auth = inject(AuthService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
@@ -595,6 +597,7 @@ export class PostsManagerComponent implements OnInit {
     }
 
     async cancelScheduled(id: string) {
+        if (!await this.confirmation.confirm({ message: this.t().common.cancelScheduleConfirm, confirmLabel: this.t().common.confirm })) return;
         try {
             await this.postsApi.cancelScheduled(id);
             this.scheduled.update(list => list.filter(p => p.id !== id));
@@ -607,6 +610,7 @@ export class PostsManagerComponent implements OnInit {
 
     async unpublish(d: DraftMeta) {
         if (this.busy()) return;
+        if (!await this.confirmation.confirm({ message: this.t().common.unpublishConfirm, confirmLabel: this.t().common.confirm })) return;
         this.busy.set(true);
         this.unpublishing.set(true);
         this.error.set('');
@@ -1038,6 +1042,7 @@ export class PostsManagerComponent implements OnInit {
     }
 
     async clearPostForm() {
+        if (!await this.confirmation.confirm(this.t().common.removeFormConfirm)) return;
         await this.persistFormJson(null);
     }
 
@@ -1193,7 +1198,8 @@ export class PostsManagerComponent implements OnInit {
 
     // The first language is the skeleton's fallback — everything else may go. Removing one also
     // strips its texts so a re-added language starts clean instead of resurrecting stale copy.
-    removePresetLanguage(lang: string) {
+    async removePresetLanguage(lang: string) {
+        if (!await this.confirmation.confirm(this.t().common.removeAuthoredContentConfirm)) return;
         const form = this.presetForm();
         if (!form || form.languages[0] === lang) return;
         const strip = (map: Record<string, string>) => {
@@ -1303,7 +1309,8 @@ export class PostsManagerComponent implements OnInit {
         this.editPreset({ ...form, questions: form.questions.map(q => q.id === id ? { ...q, ...patch } : q) });
     }
 
-    removeQuestion(id: string) {
+    async removeQuestion(id: string) {
+        if (!await this.confirmation.confirm(this.t().common.removeAuthoredContentConfirm)) return;
         const form = this.presetForm();
         if (!form) return;
         this.editPreset({ ...form, questions: form.questions.filter(q => q.id !== id) });
@@ -1344,7 +1351,8 @@ export class PostsManagerComponent implements OnInit {
         this.updateQuestion(qId, { options: [...q.options, { id: newOptionId(), label: {} }] });
     }
 
-    removeOption(qId: string, optId: string) {
+    async removeOption(qId: string, optId: string) {
+        if (!await this.confirmation.confirm(this.t().common.removeAuthoredContentConfirm)) return;
         const q = this.presetForm()?.questions.find(x => x.id === qId);
         if (!q) return;
         this.updateQuestion(qId, { options: q.options.filter(o => o.id !== optId) });

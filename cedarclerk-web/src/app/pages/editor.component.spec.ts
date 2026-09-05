@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ConfirmationService } from '../core/confirmation.service';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EditorComponent } from './editor.component';
@@ -45,6 +46,7 @@ describe('editor UI contract', () => {
                 { provide: AuthService, useValue: { indieDev: () => false, hasAiPlan: () => false, blogUrl: () => null } },
                 { provide: AppearanceService, useValue: { prefs: signal(DEFAULT_APPEARANCE) } },
                 { provide: LocaleService, useValue: { t: signal(en) } },
+                { provide: ConfirmationService, useValue: { confirm: async () => false } },
                 { provide: ActivatedRoute, useValue: { queryParamMap: of(routeParams), snapshot: { queryParamMap: routeParams } } },
                 { provide: Router, useValue: { navigate: vi.fn() } },
                 { provide: CurrentProjectService, useValue: { id: currentProjectId, name: signal('') } },
@@ -70,6 +72,11 @@ describe('editor UI contract', () => {
     afterEach(() => {
         fixture.destroy();
         vi.restoreAllMocks();
+    });
+
+    it('does not print template bindings above the document frame', () => {
+        expect(host.textContent).not.toContain('[disabled]=');
+        expect(host.textContent).not.toContain('(clicked)=');
     });
 
     it('exposes formatting, alignment and block selection through aria-pressed', () => {

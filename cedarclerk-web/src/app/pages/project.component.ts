@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -160,7 +161,7 @@ export class ProjectComponent {
     busy = signal(false);
     // Deleting a project is two clicks on the same button rather than a second modal on top of the
     // first: the explanation of what survives is what matters here, and it fits under the button.
-    confirmDelete = false;
+    private readonly confirmation = inject(ConfirmationService);
 
     /** This project's row in the list — `assetCount` and `lastActivityAt` live on the summary. */
     summary = computed(() => {
@@ -417,7 +418,6 @@ export class ProjectComponent {
         // Loaded when the dialog opens rather than with the screen: most visits never edit.
         void this.loadTeams();
         this.actionError.set(null);
-        this.confirmDelete = false;
         this.editing.set(true);
     }
 
@@ -486,7 +486,8 @@ export class ProjectComponent {
         this.coverPickerOpen.set(false);
     }
 
-    removeCover() {
+    async removeCover() {
+        if (!await this.confirmation.confirm({ message: this.t().common.removeAuthoredContentConfirm })) return;
         this.editCoverUrl.set(null);
     }
 
@@ -510,6 +511,7 @@ export class ProjectComponent {
     async deleteProject() {
         const project = this.project();
         if (!project || this.busy()) return;
+        if (!await this.confirmation.confirm({ title: project.name, message: this.t().projects.edit.removeConfirm })) return;
 
         this.busy.set(true);
         this.actionError.set(null);

@@ -1,3 +1,4 @@
+import { ConfirmationService } from '../core/confirmation.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -41,6 +42,7 @@ function compareText(a: string, b: string): number {
     styleUrls: ['teams.component.css'],
 })
 export class TeamsComponent {
+    private readonly confirmation = inject(ConfirmationService);
     private api = inject(TeamsService);
     t = inject(LocaleService).t;
 
@@ -297,7 +299,7 @@ export class TeamsComponent {
     async remove() {
         const team = this.selected();
         if (!team || this.busy()) return;
-        if (!confirm(this.t().teams.deleteConfirm(team.name, team.projectCount))) return;
+        if (!await this.confirmation.confirm(this.t().teams.deleteConfirm(team.name, team.projectCount))) return;
         this.busy.set(true);
         try {
             await this.api.remove(team.id);
@@ -365,7 +367,7 @@ export class TeamsComponent {
     async setStatus(member: TeamMember, status: string) {
         const team = this.selected();
         if (!team || this.busy()) return;
-        if (status === 'banned' && !confirm(this.t().teams.banConfirm(member.email))) return;
+        if (status === 'banned' && !await this.confirmation.confirm(this.t().teams.banConfirm(member.email))) return;
         this.busy.set(true);
         try {
             await this.api.setStatus(team.id, member.id, status as TeamMemberStatus);
@@ -380,7 +382,7 @@ export class TeamsComponent {
     async removeMember(member: TeamMember) {
         const team = this.selected();
         if (!team || this.busy()) return;
-        if (!confirm(this.t().teams.removeConfirm(member.email))) return;
+        if (!await this.confirmation.confirm(this.t().teams.removeConfirm(member.email))) return;
         this.busy.set(true);
         try {
             await this.api.removeMember(team.id, member.id);

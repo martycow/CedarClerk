@@ -79,7 +79,7 @@
         <p class="hint">{{ t().projects.dialogues.deleteConfirm }}</p>
         @if (actionError(); as e) { <p class="error-line">{{ e }}</p> }
         <ng-container modal-actions>
-            <app-button variant="paper" size="sm" (clicked)="confirmDelete.set(null)">{{ t().common.cancel }}</app-button>
+            <app-button data-modal-autofocus variant="paper" size="sm" (clicked)="confirmDelete.set(null)">{{ t().common.cancel }}</app-button>
             <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="removeScript()">
                 {{ t().projects.dialogues.deleteScript }}
             </app-button>

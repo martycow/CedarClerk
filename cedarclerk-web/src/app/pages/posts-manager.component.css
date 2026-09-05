@@ -315,7 +315,7 @@
 .post-filter-panel select {
     box-sizing: border-box;
     width: 100%;
-    min-height: var(--hit-surface);
+    min-height: var(--hit-surface, var(--hit-chrome));
     padding: 0 var(--dens-control-x);
     border: var(--border-field);
     border-radius: var(--radius-stamp);
@@ -331,7 +331,7 @@
     justify-content: center;
     gap: var(--space-1);
     box-sizing: border-box;
-    min-height: var(--hit-surface);
+    min-height: var(--hit-surface, var(--hit-chrome));
     padding: 0 var(--dens-control-x);
     border: var(--border-paper);
     border-radius: var(--radius-sm);

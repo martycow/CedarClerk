@@ -19,6 +19,10 @@
 }
 
 .modal-card {
+    --surface-ink: var(--text);
+    --surface-ink-soft: var(--t2);
+    box-sizing: border-box;
+    min-width: 0;
     max-width: 100%;
     max-height: 100%;
     display: flex;
@@ -49,6 +53,9 @@
 }
 
 .modal-close {
+    flex: none;
+    min-width: var(--hit-target);
+    min-height: var(--hit-target);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -66,6 +73,8 @@
 }
 
 .modal-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
     min-height: 0;
     padding: 18px 20px;
     overflow-y: auto;
@@ -77,6 +86,7 @@
 
 .modal-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
     padding: 14px 20px;
@@ -86,4 +96,15 @@
 
 .modal-actions:empty {
     display: none;
+}
+
+.modal-title { min-width: 0; overflow-wrap: anywhere; }
+
+.modal-actions ::ng-deep [modal-actions] { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.modal-actions ::ng-deep app-button { max-width: 100%; }
+.modal-actions ::ng-deep .btn { white-space: normal; overflow-wrap: anywhere; padding-block: var(--space-2); }
+
+@media (max-width: 480px) {
+    .modal-overlay { padding: var(--space-2); }
+    .modal-head, .modal-body, .modal-actions { padding: var(--space-3); }
 }
