@@ -5,12 +5,19 @@ at the filter strip.-->
 } @else {
 <div class="stats-tab">
     <div class="stats-main">
-        <!--The legend IS the filter (ADR-149): one leaf per source, its swatch the ink of its line.-->
+        <!--The legend IS the filter (ADR-149): one leaf per source, its swatch the ink of its line.
+        The strip is the server's `available` list (ADR-161 rule 4, ADR-279) — an X or Bluesky
+        account is a leaf the day the server names it, with its brand mark and network word.-->
         <div class="card filter-strip" role="group" [attr.aria-label]="t().stats.sources.legend">
             @for (leaf of leaves(); track leaf.id) {
             <app-leaf-tag [state]="leaf.state" [interactive]="leaf.state !== 'dried'"
                           [swatch]="leaf.swatch" (activated)="toggle(leaf.id)">
-                {{ leaf.name }}<span class="leaf-note">{{ leaf.note }}</span>
+                @if (leaf.brand; as brand) {
+                <span class="leaf-brand" aria-hidden="true"><app-brand-icon [name]="brand" [size]="10" /></span>
+                }
+                {{ leaf.name }}
+                @if (leaf.network) { <span class="leaf-network">{{ leaf.network }}</span> }
+                @if (leaf.note) { <span class="leaf-note">{{ leaf.note }}</span> }
             </app-leaf-tag>
             }
 
@@ -56,9 +63,11 @@ at the filter strip.-->
                 </span>
                 <span class="ro-line">
                     <span class="ro-value">{{ r.value === null ? '—' : group(r.value) }}</span>
+                    <!--The window's last value minus its first, from the same response the chart is
+                    drawn from — never a delta over some other span (ADR-279).-->
                     @if (r.delta !== null) {
                     <span class="ro-delta" [class.up]="r.delta! > 0" [class.down]="r.delta! < 0">
-                        {{ r.delta! > 0 ? '+' : '' }}{{ r.delta }} {{ t().stats.perWeek }}
+                        {{ r.delta! > 0 ? '+' : '' }}{{ r.delta }} {{ t().stats.readouts.deltaWindow }}
                     </span>
                     }
                     <!--T-338 — the window's shape beside its number. Decorative to a reader of the
@@ -87,6 +96,14 @@ at the filter strip.-->
                                 [label]="t().stats.metricStrip" (selected)="setMetric($event)" />
                 <app-index-tabs [items]="viewTabs()" [value]="view()"
                                 [label]="t().stats.viewStrip" (selected)="setView($event)" />
+                <!--T-243 — the panel's own command in its header (ADR-148 §4): the drawn matrix as
+                a file, by the same parameters as the request. An anchor, so the browser saves it
+                with the session cookie and no fetch; with nothing drawn the address goes, not the
+                element (ADR-169).-->
+                <a class="btn sm export-csv" download [attr.href]="canExport() ? csvUrl() : null"
+                   [attr.aria-disabled]="canExport() ? null : 'true'" [title]="t().stats.exportCsvHint">
+                    <app-icon name="download-simple" size="xs" />{{ t().stats.exportCsv }}
+                </a>
             </div>
             <div class="card-body chart-body">
             @if (!drawable().length) {
@@ -104,9 +121,9 @@ at the filter strip.-->
             <!--A running total is complete the moment it is read, so no bucket is left unfinished
             here; a per-day delta series would answer openTail differently (ADR-161).-->
             <!--The slip rests on the latest day; hover and the arrow keys still take over (ADR-158).-->
-            <!--[markers]: a brass tick per publish day of the selected Telegram sources (item 13).-->
+            <!--[markers]: a brass tick per publish day the response carries for each drawn source.-->
             <app-growth-chart class="chart" [label]="chartLabel()" [series]="series()" [openTail]="false"
-                              [xLabels]="axis().labels" [markerIndex]="axis().days.length - 1"
+                              [xLabels]="labels()" [markerIndex]="days().length - 1"
                               [markers]="publishMarkers()"
                               [strings]="t().stats.chart" [pending]="pending()" />
             } @else {

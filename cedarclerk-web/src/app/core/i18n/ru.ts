@@ -2568,9 +2568,17 @@ export const ru: Dict = {
             nothingToDrawTitle: 'Пока нечего рисовать',
             nothingToDraw: 'Цифры появятся со дня публикации — загляните, когда пост выйдет.',
             nothingToDrawAction: 'К документам',
+            network: {
+                x: 'X',
+                bluesky: 'Bluesky',
+            },
         },
         window: (points: number, from: string, to: string) => `точек ${points} · ${from} — ${to}`,
-        perWeek: '/ 7 дн',
+        readouts: {
+            deltaWindow: 'за период',
+        },
+        exportCsv: 'CSV',
+        exportCsvHint: 'Скачать нарисованные ряды файлом CSV — те же дни и числа, что на графике.',
         updated: (time: string) => `обновлено ${time}`,
         stepDay: 'шаг 1 день',
         chart: {

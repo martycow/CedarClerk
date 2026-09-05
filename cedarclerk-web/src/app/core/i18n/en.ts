@@ -2660,9 +2660,17 @@ export const en = {
             nothingToDrawTitle: 'Nothing to chart yet',
             nothingToDraw: 'The numbers fill in from the day you publish — come back once a post is live.',
             nothingToDrawAction: 'Go to documents',
+            network: {
+                x: 'X',
+                bluesky: 'Bluesky',
+            },
         },
         window: (points: number, from: string, to: string) => `${points} points · ${from} — ${to}`,
-        perWeek: '/ 7d',
+        readouts: {
+            deltaWindow: 'over the window',
+        },
+        exportCsv: 'CSV',
+        exportCsvHint: 'Download the drawn series as a CSV file — the same days and numbers as the chart.',
         updated: (time: string) => `updated ${time}`,
         stepDay: 'step 1 day',
         chart: {
