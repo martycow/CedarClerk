@@ -2525,6 +2525,8 @@ export const ru: Dict = {
         showAll: (n: number) => `Показать все (ещё ${n})`,
         showLess: 'Свернуть',
         reactionsOnly: 'Только реакции — комментариев к этому посту пока нет.',
+        likes: 'Лайки',
+        dislikes: 'Дизлайки',
         noCommentsHint: 'Комментарии читателей со страницы блога собираются здесь.',
     },
     stats: {

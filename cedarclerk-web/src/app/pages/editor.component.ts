@@ -1683,9 +1683,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         });
     }
 
-    assetSortMark(key: 'name' | 'type' | 'size'): string {
+    assetSortMark(key: 'name' | 'type' | 'size'): IconName | null {
         const { key: active, desc } = this.assetSort();
-        return active === key ? (desc ? '↓' : '↑') : '';
+        return active === key ? (desc ? 'arrow-down' : 'arrow-up') : null;
     }
 
     draftAssetsLoading = signal(false);

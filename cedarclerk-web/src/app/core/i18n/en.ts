@@ -2615,6 +2615,8 @@ export const en = {
         showAll: (n: number) => `Show all (${n} more)`,
         showLess: 'Show less',
         reactionsOnly: 'Reactions only — no comments on this post yet.',
+        likes: 'Likes',
+        dislikes: 'Dislikes',
         noCommentsHint: 'Comments readers leave on the blog page collect here.',
     },
     stats: {
