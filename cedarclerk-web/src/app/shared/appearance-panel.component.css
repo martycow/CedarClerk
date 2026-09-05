@@ -79,6 +79,28 @@
     border-radius: 50%;
 }
 
+/* The user's own colour sits at the end of the swatch row as one more swatch: the native picker
+   is the disc itself, drawn with the same ring and check as a preset. */
+.ap-accent-custom {
+    display: inline-block;
+}
+
+.ap-swatch-input {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    background: none;
+    cursor: pointer;
+}
+
+.ap-swatch-input::-webkit-color-swatch-wrapper { padding: 0; }
+.ap-swatch-input::-webkit-color-swatch { border: none; border-radius: 50%; }
+.ap-swatch-input::-moz-color-swatch { border: none; border-radius: 50%; }
+
+.ap-accent-refused { margin: 6px 0 0; }
+
 .ap-accent-check {
     position: absolute;
     top: 50%;

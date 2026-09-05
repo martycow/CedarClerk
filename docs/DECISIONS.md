@@ -274,3 +274,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-287 — View transitions: the router cross-fades except around the editor, the blog carries a cover into the post](adr/ADR-287.md)
 - [ADR-283 — Document tree drag&drop: a flat drop list, depth from sideways travel](adr/ADR-283.md)
 - [ADR-285 — A dialog leaves through Escape, the ✕ or an action; the scrim is not a button](adr/ADR-285.md)
+- [ADR-288 — A custom accent is gated at 3:1 on the paper; an area preset is a macro over the sheet controls](adr/ADR-288.md)

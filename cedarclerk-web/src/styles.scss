@@ -93,6 +93,9 @@
 
     --asoft: color-mix(in srgb, var(--accent) 13%, var(--surface));
     --abord: color-mix(in srgb, var(--accent) 38%, var(--border));
+    /* The ink over an accent fill. Paper ink for every shipped preset; appearance.service.ts
+       restates it as --text beside a user's own accent bright enough that light ink would fail. */
+    --accent-ink: var(--sheet);
 
     /* The state equivalents of --asoft, and the reason they are tokens: a badge that means "failed"
        was written twenty times as a hand-picked percentage of --danger over whichever paper the
