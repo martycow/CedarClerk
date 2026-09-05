@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Analytics;
@@ -209,6 +209,12 @@ builder.Services.AddQuartz(q =>
     var statsJobKey = new JobKey("SnapshotChannelStats");
     q.AddJob<SnapshotChannelStatsJob>(opts => opts.WithIdentity(statsJobKey));
     q.AddTrigger(t => t.ForJob(statsJobKey).WithCronSchedule("0 0 4 * * ?"));
+
+    // T-241 — X/Bluesky readings, after the Telegram job and not inside it: that one returns
+    // early while the bot is down, and these networks do not depend on the bot.
+    var targetStatsJobKey = new JobKey("SnapshotPublishTargetStats");
+    q.AddJob<SnapshotPublishTargetStatsJob>(opts => opts.WithIdentity(targetStatsJobKey));
+    q.AddTrigger(t => t.ForJob(targetStatsJobKey).WithCronSchedule("0 10 4 * * ?"));
 
     // T-090 — the durable publish queue's backstop.
     var publishJobKey = new JobKey("RunPublishJobs");

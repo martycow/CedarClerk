@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -184,6 +184,19 @@ public class XPublishTarget(
             logger.LogError(ex, "Unexpected failure publishing draft {DraftId} to X", request.DraftId);
             return PublishOutcome.Fail($"Publish failed: {ex.GetType().Name}: {ex.Message}", StatusCodes.Status500InternalServerError);
         }
+    }
+
+    /// <summary>
+    /// The stored credentials, refreshed (and saved) first when they are about to expire — the
+    /// same save-before-use rule the publish path follows. Null means reconnect.
+    /// </summary>
+    public async Task<XCredentials?> FreshCredentialsAsync(PublishTarget target, CancellationToken ct)
+    {
+        var credentials = ReadCredentials(target);
+        if (credentials is null) return null;
+        return credentials.AccessExpiresAt - ExpirySkew < DateTime.UtcNow
+            ? await RefreshAsync(target, credentials, ct)
+            : credentials;
     }
 
     /// <summary>
