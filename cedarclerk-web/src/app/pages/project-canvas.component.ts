@@ -132,18 +132,37 @@ export class ProjectCanvasComponent implements OnDestroy {
     zoomPercent = computed(() => Math.round(this.view().z * 100));
     background = computed(() => this.hub.board()?.background ?? 'grid');
 
-    /** The former rule readouts: the zoom, the item count, the connection word as a tag. */
+    /** The former rule readouts: the zoom, the item count, the connection word as a tag — which
+        reads "Saving…" while a write is on the wire, the one save readout this screen has. */
     headerMeta = computed<HeaderMeta[]>(() => {
         const t = this.t().projects.canvas;
         const status = this.hub.status();
+        const settled = status === 'live' && !this.hub.saving();
         return [
             { text: t.zoomLevel(this.zoomPercent()) },
             { text: t.itemCount(this.hub.items().length) },
-            { text: this.statusWord(), tag: true, tone: status === 'live' ? 'ok' : status === 'connecting' || status === 'idle' ? 'muted' : 'warn' },
+            { text: this.statusWord(), tag: true, tone: settled ? 'ok' : status === 'live' || status === 'connecting' || status === 'idle' ? 'muted' : 'warn' },
         ];
     });
 
     readonly corners: readonly string[] = ['nw', 'ne', 'sw', 'se'];
+
+    /** Every key `onStageKey` answers, in the order a reader meets them; the gestures are prose. */
+    surfaceKeys = computed(() => {
+        const c = this.t().projects.canvas;
+        return [
+            { key: 'Tab', does: c.keyTab },
+            { key: c.keyArrowsName, does: c.keyArrows },
+            { key: 'Delete', does: c.keyDelete },
+            { key: 'N', does: c.keyNote },
+            { key: 'Ctrl+A', does: c.selectAll },
+            { key: 'Escape', does: c.keyEscape },
+            { key: '+', does: c.zoomIn },
+            { key: '-', does: c.zoomOut },
+            { key: '0', does: c.zoomReset },
+            { key: '1', does: c.zoomFit },
+        ];
+    });
 
     constructor() {
         this.route.paramMap.subscribe(params => {
@@ -219,7 +238,8 @@ export class ProjectCanvasComponent implements OnDestroy {
         const status = this.hub.status();
         if (status === 'reconnecting') return t.reconnecting;
         if (status === 'connecting' || status === 'idle') return t.connecting;
-        return status === 'live' ? t.live : t.offline;
+        if (status !== 'live') return t.offline;
+        return this.hub.saving() ? this.t().common.saving : t.live;
     }
 
     // ——— items ———————————————————————————————————————————————————————————————

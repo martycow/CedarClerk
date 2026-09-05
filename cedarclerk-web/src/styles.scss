@@ -146,6 +146,9 @@
     --avatar-5: #4B79A3;
     --avatar-6: #8168B3;
     --avatar-ink: #FFFFFF;
+    /* One seeded face, one size — a board's peers, the People card, the admin user list — so the
+       same person is not three different circles on three screens. */
+    --avatar-size: 26px;
 
     /* T-349 — the two metals of the plan locks: silver marks a Pro gate, gold a Pro+ one. One set
        for both themes, same reasoning as the avatars: paper stays cream at night, and a badge that

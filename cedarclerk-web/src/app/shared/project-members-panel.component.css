@@ -1,0 +1,135 @@
+/* The host draws nothing of its own: the aside is the grid item of whatever page places it, so the
+   page's columns see the card and not a wrapper around it. */
+:host { display: contents; }
+
+/* Bounded with the page, so a long people list scrolls inside its card. */
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: 0;
+    padding: var(--space-4);
+    overflow: auto;
+}
+
+.side-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.side-count {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    color: var(--t3);
+}
+
+.hint {
+    margin: 0;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+}
+
+.error-line {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--fs-ui);
+}
+
+.people {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.person {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+/* The seeded fill is bound from the component, so the colour never passes through a stylesheet —
+   same rule as the account avatar. */
+.face {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    border-radius: 50%;
+    color: var(--avatar-ink);
+    font-family: var(--font-sans);
+    font-size: var(--fs-12);
+    font-weight: 700;
+}
+
+.person-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.person-name {
+    font-size: var(--fs-ui);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.you { color: var(--t2); }
+
+.person-meta {
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.person-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.invite {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--rule-ink);
+}
+
+.invite app-input { width: 100%; }
+
+/* The address is on screen and selectable whether or not the clipboard answered — the copy button
+   is the shortcut, not the only way out. */
+.invite-link {
+    margin: 0;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+    word-break: break-all;
+    color: var(--t2);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.field-label {
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--t2);
+}

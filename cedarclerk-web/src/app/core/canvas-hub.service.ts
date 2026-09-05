@@ -73,8 +73,11 @@ export class CanvasHubService implements OnDestroy {
     readonly role = signal<CanvasRole>('viewer');
     /** The board was deleted under us — the page routes back to the list. */
     readonly gone = signal(false);
-    /** A write is in flight. The rail's resin drop is the only save indicator (ADR-159). */
+    /** At least one write is in flight. Counted, not flagged: the first of two to land must not
+        report "saved" over the second still on the wire, nor wipe the second's refusal. */
     readonly saving = signal(false);
+    private inFlight = 0;
+    private failedInFlight = false;
 
     ngOnDestroy(): void {
         this.forgetGhosts();
@@ -168,18 +171,23 @@ export class CanvasHubService implements OnDestroy {
 
     private async write(method: string, payload: unknown): Promise<void> {
         if (!this.connection) return;
+        this.inFlight++;
         this.saving.set(true);
         try {
             await this.connection.invoke(method, this.boardId, payload);
-            this.lastError.set('');
         } catch (e) {
+            this.failedInFlight = true;
             this.lastError.set(hubMessage(e));
             // One reconciliation path, not two: a refused write and a reconnect both end with the
             // snapshot replacing local state, so an optimistic row that never landed disappears
             // by the same mechanism that repairs a dropped socket.
             await this.reconcile();
         } finally {
-            this.saving.set(false);
+            if (--this.inFlight === 0) {
+                if (!this.failedInFlight) this.lastError.set('');
+                this.failedInFlight = false;
+                this.saving.set(false);
+            }
         }
     }
 
