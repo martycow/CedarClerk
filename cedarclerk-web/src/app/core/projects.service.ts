@@ -157,6 +157,28 @@ export interface ShowcaseStats {
     pendingFollowerCount: number;
 }
 
+/** Mirrors ProjectEndpoints.ActivityKinds — the journal's closed vocabulary of things that happened. */
+export type ActivityKind =
+    | 'document-created' | 'document-updated'
+    | 'task-created' | 'task-completed'
+    | 'build-created' | 'build-released'
+    | 'blog-published' | 'telegram-published' | 'published' | 'publish-failed';
+
+export const ACTIVITY_KINDS: ActivityKind[] = [
+    'document-created', 'document-updated', 'task-created', 'task-completed', 'build-created', 'build-released',
+    'blog-published', 'telegram-published', 'published', 'publish-failed',
+];
+
+/** One journal line: an in-app path or an absolute URL in `href`, or nothing to open at all. */
+export interface ActivityItem {
+    at: string;
+    kind: ActivityKind;
+    title: string;
+    subtitle: string | null;
+    href: string | null;
+    actor: string | null;
+}
+
 export interface CreateProjectInput {
     name: string;
     description?: string;
@@ -207,6 +229,11 @@ export class ProjectsService {
             result: { suggestion: string } | null;
             error: string | null;
         }>(`/api/ai-jobs/${jobId}`));
+    }
+
+    /** T-249 — the project's journal, newest first; `take` is 1…100 and the server clamps it. */
+    activity(id: string, take: number) {
+        return firstValueFrom(this.http.get<{ items: ActivityItem[] }>(`/api/projects/${id}/activity?take=${take}`));
     }
 
     /** T-296/T-297 — the public page's own counters, for the owner. */

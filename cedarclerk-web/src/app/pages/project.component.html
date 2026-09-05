@@ -95,6 +95,46 @@
                         }
                     </div>
                 </div>
+
+                <!--T-249 — what happened in the project, newest first. Each line is a stamp, a
+                word and one sentence; the address a line carries goes on the title, never into
+                the sentence (log-line's own rule).-->
+                <div class="card journal">
+                    <div class="docs-head">
+                        <h2 class="docs-title">{{ t().projects.hub.journal }}</h2>
+                    </div>
+                    <div class="journal-list">
+                        @for (item of journal(); track item.at + item.kind + item.title) {
+                            <app-log-line [level]="journalLevel(item.kind)" [word]="t().projects.hub.journalKinds[item.kind]"
+                                          [time]="journalTime(item)" [at]="journalDay(item)">
+                                @if (item.href; as href) {
+                                    @if (journalLink(href); as link) {
+                                        @if (link.external) {
+                                            <a class="jl-title" [href]="link.url" target="_blank" rel="noopener">{{ item.title }}</a>
+                                        } @else {
+                                            <a class="jl-title" [routerLink]="link.path" [queryParams]="link.query">{{ item.title }}</a>
+                                        }
+                                    }
+                                } @else {
+                                    <span class="jl-title">{{ item.title }}</span>
+                                }
+                                @if (item.subtitle) { <span class="jl-sub"><span class="sep">·</span>{{ item.subtitle }}</span> }
+                                @if (item.actor) { <span class="jl-sub"><span class="sep">·</span>{{ item.actor }}</span> }
+                            </app-log-line>
+                        } @empty {
+                            @if (!journalLoading()) {
+                                <app-empty-state [icon]="null" [text]="t().projects.hub.journalEmpty" />
+                            }
+                        }
+                    </div>
+                    @if (journalHasMore()) {
+                        <div class="journal-foot">
+                            <app-button variant="paper" size="sm" [disabled]="journalLoading()" (clicked)="showMoreJournal()">
+                                {{ t().projects.hub.journalMore }}
+                            </app-button>
+                        </div>
+                    }
+                </div>
             </section>
 
             <aside class="hub-side">

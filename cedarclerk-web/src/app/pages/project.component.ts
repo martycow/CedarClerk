@@ -6,6 +6,8 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { formatInZone } from '../core/display-time';
 import {
+    ActivityItem,
+    ActivityKind,
     DOCUMENT_TYPES,
     DOCUMENT_TYPE_ICONS,
     DocumentType,
@@ -28,6 +30,7 @@ import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component'
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
+import { LogLevel, LogLineComponent } from '../bench/worktop/log-line.component';
 import { AssetsService, LibraryAsset } from '../core/assets.service';
 import { Team, TeamsService } from '../core/teams.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
@@ -35,6 +38,34 @@ import { MediaPickerComponent } from '../shared/media-picker.component';
 type DocFilter = 'all' | 'live' | 'drafts' | 'archived';
 
 const MS_PER_DAY = 86_400_000;
+
+const JOURNAL_PAGE = 12;
+const JOURNAL_MAX = 100;
+
+// The stamp is the severity the kind carries, so a reader scanning the column sees finished things
+// in pine and the one failure in rust without reading a word (log-line's own rule).
+const JOURNAL_LEVELS: Partial<Record<ActivityKind, LogLevel>> = {
+    'blog-published': 'ok',
+    'telegram-published': 'ok',
+    'published': 'ok',
+    'build-released': 'ok',
+    'task-completed': 'ok',
+    'build-created': 'build',
+    'publish-failed': 'warn',
+};
+
+export function journalLevel(kind: ActivityKind): LogLevel {
+    return JOURNAL_LEVELS[kind] ?? 'info';
+}
+
+/** An absolute URL opens outside the app; anything else is a route with its query split off. */
+export function journalLink(href: string): { external: true; url: string } | { external: false; path: string; query: Record<string, string> } {
+    if (/^https?:\/\//i.test(href)) return { external: true, url: href };
+    const [path, search = ''] = href.split('?', 2);
+    const query: Record<string, string> = {};
+    for (const [k, v] of new URLSearchParams(search)) query[k] = v;
+    return { external: false, path, query };
+}
 
 // T-223 (ADR-160) — the hub: one project's dashboard. Main.png (ADR-239): a header with the
 // state, kind, count and last edit; the most recent document as a "continue writing" card over a
@@ -46,6 +77,7 @@ const MS_PER_DAY = 86_400_000;
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
         PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent, MediaPickerComponent,
+        LogLineComponent,
     ],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
@@ -75,6 +107,14 @@ export class ProjectComponent {
     channels = signal<readonly Channel[]>([]);
     loading = signal(true);
     loadError = signal<string | null>(null);
+
+    // T-249 — the journal is its own request beside the detail: a feed is not part of the page
+    // that loaded, and a failed one prints its empty sentence rather than breaking the hub.
+    journal = signal<ActivityItem[]>([]);
+    journalTake = signal(JOURNAL_PAGE);
+    journalLoading = signal(false);
+    readonly journalLevel = journalLevel;
+    readonly journalLink = journalLink;
 
     docFilter = signal<DocFilter>('all');
     docSearch = signal('');
@@ -174,8 +214,35 @@ export class ProjectComponent {
         }
 
         this.showcaseStats.set(null);
+        this.journal.set([]);
+        this.journalTake.set(JOURNAL_PAGE);
+        if (this.project()) void this.loadJournal(id);
         if (this.project()?.showcaseSlug) await this.loadShowcaseStats(id);
     }
+
+    private async loadJournal(id: string) {
+        this.journalLoading.set(true);
+        try {
+            this.journal.set((await this.api.activity(id, this.journalTake())).items);
+        } catch {
+            this.journal.set([]);
+        } finally {
+            this.journalLoading.set(false);
+        }
+    }
+
+    /** A full page means there may be more; a short one is the whole story, and 100 is the server's ceiling. */
+    journalHasMore = computed(() => this.journal().length >= this.journalTake() && this.journalTake() < JOURNAL_MAX);
+
+    showMoreJournal() {
+        const id = this.project()?.id;
+        if (!id || this.journalLoading()) return;
+        this.journalTake.set(Math.min(JOURNAL_MAX, this.journalTake() * 2));
+        void this.loadJournal(id);
+    }
+
+    journalTime(item: ActivityItem): string { return formatInZone(item.at, 'HH:mm'); }
+    journalDay(item: ActivityItem): string { return formatInZone(item.at, 'd MMM'); }
 
     /** Beside the detail rather than before it: counters are one group of rows, not the page (ADR-160 rule 4). */
     private async loadShowcaseStats(id: string) {

@@ -166,6 +166,39 @@
     gap: var(--space-2);
 }
 
+/* The journal is a fixed-height stack like the document card: the page keeps its height and
+   the lines scroll under the pinned head. */
+.journal {
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    max-height: 360px;
+    min-height: 120px;
+}
+
+.journal-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.jl-title {
+    color: var(--text);
+    text-decoration: none;
+}
+
+a.jl-title:hover { color: var(--accent); text-decoration: underline; }
+
+.jl-sub { color: var(--t2); }
+
+.journal-foot {
+    display: flex;
+    justify-content: center;
+    padding-top: var(--space-2);
+}
+
 /* ---------- The right column ---------- */
 .side-card {
     display: flex;

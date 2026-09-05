@@ -444,6 +444,22 @@ export const en = {
             noChannel: 'no channel connected',
             filesCount: (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`,
             versionsCount: (n: number) => `${n} ${n === 1 ? 'version' : 'versions'}`,
+            // T-249 — the journal. The stamped word is the kind, one or two words at most.
+            journal: 'Journal',
+            journalEmpty: 'Nothing has happened here yet — the first document, task or build starts the journal.',
+            journalMore: 'Show more',
+            journalKinds: {
+                'document-created': 'written',
+                'document-updated': 'edited',
+                'task-created': 'task',
+                'task-completed': 'done',
+                'build-created': 'build',
+                'build-released': 'released',
+                'blog-published': 'blog',
+                'telegram-published': 'telegram',
+                'published': 'published',
+                'publish-failed': 'failed',
+            },
         },
         // T-123 — the task tracker.
         tasks: {

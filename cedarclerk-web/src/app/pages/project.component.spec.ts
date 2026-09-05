@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { ProjectComponent } from './project.component';
-import { ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
+import { ProjectComponent, journalLevel, journalLink } from './project.component';
+import { ActivityItem, ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
 import { Channel, ChannelsService } from '../core/channels.service';
 import { en } from '../core/i18n/en';
 import { formatInZone } from '../core/display-time';
@@ -49,6 +49,14 @@ const DETAIL: ProjectDetail = {
     openTaskCount: 8,
 };
 
+const JOURNAL: ActivityItem[] = [
+    { at: '2026-08-19T11:00:00Z', kind: 'document-updated', title: 'Devlog #12', subtitle: 'post', href: '/editor?draft=d-new', actor: null },
+    { at: '2026-08-18T09:00:00Z', kind: 'publish-failed', title: 'Devlog #11', subtitle: 'x · rate limited', href: null, actor: null },
+    { at: '2026-08-17T09:00:00Z', kind: 'blog-published', title: 'Devlog #11', subtitle: 'blog', href: 'https://blog.example/devlog-11', actor: null },
+    { at: '2026-08-16T09:00:00Z', kind: 'build-created', title: '0.3.1', subtitle: null, href: '/projects/p1/builds', actor: null },
+    { at: '2026-08-15T09:00:00Z', kind: 'task-completed', title: 'Fix saves on quit', subtitle: 'done', href: '/projects/p1/tasks', actor: 'Marty' },
+];
+
 const CHANNELS: Channel[] = [
     { id: 'c1', title: 'Dev Dairy', telegramChatId: 1, username: 'devdairy', avatarUrl: null },
 ];
@@ -57,6 +65,13 @@ class FakeProjects {
     detail: ProjectDetail | null = DETAIL;
     list_: ProjectSummary[] | null = [SUMMARY, OTHER];
     updates: unknown[] = [];
+    journal: ActivityItem[] | null = JOURNAL;
+    takes: number[] = [];
+    async activity(_id: string, take: number) {
+        this.takes.push(take);
+        if (!this.journal) throw new Error('nope');
+        return { items: this.journal.slice(0, take) };
+    }
     async get() { if (!this.detail) throw new Error('nope'); return structuredClone(this.detail); }
     async list() { if (!this.list_) throw new Error('nope'); return structuredClone(this.list_); }
     async update(id: string, name: string, description: string, coverUrl: string | null) {
@@ -225,6 +240,76 @@ describe('project hub', () => {
         fixture.componentInstance.channels.set([]);
         fixture.detectChanges();
         expect(kvValue(t.hub.telegram)?.textContent?.trim()).toBe(t.hub.noChannel);
+    });
+
+    // T-249 — the journal: one stamped line per thing that happened, the address on the title.
+    it('journals what happened, newest first, with the kind stamped and the title linked', () => {
+        const lines = [...el().querySelectorAll('.journal app-log-line')] as HTMLElement[];
+        expect(lines.length).toBe(5);
+        expect(lines.map(l => l.querySelector('app-stamp-badge')?.textContent?.trim())).toEqual([
+            t.hub.journalKinds['document-updated'], t.hub.journalKinds['publish-failed'], t.hub.journalKinds['blog-published'],
+            t.hub.journalKinds['build-created'], t.hub.journalKinds['task-completed'],
+        ]);
+        expect(lines[0].querySelector('a.jl-title')?.getAttribute('href')).toBe('/editor?draft=d-new');
+        expect(lines[1].querySelector('a.jl-title')).toBeNull();
+        expect(lines[1].querySelector('.jl-title')?.textContent?.trim()).toBe('Devlog #11');
+        expect(lines[2].querySelector('a.jl-title')?.getAttribute('href')).toBe('https://blog.example/devlog-11');
+        expect(lines[2].querySelector('a.jl-title')?.getAttribute('target')).toBe('_blank');
+        expect(lines[4].textContent).toContain('Marty');
+        expect(lines[0].querySelector('.ll-time')?.textContent?.trim()).toBe(formatInZone(JOURNAL[0].at, 'HH:mm'));
+        expect(lines[0].querySelector('.ll-at')?.textContent?.trim()).toBe(formatInZone(JOURNAL[0].at, 'd MMM'));
+    });
+
+    it('stamps a kind by what it means: finished is ok, a cut version is build, a failure warns, the rest inform', () => {
+        expect(journalLevel('blog-published')).toBe('ok');
+        expect(journalLevel('telegram-published')).toBe('ok');
+        expect(journalLevel('published')).toBe('ok');
+        expect(journalLevel('build-released')).toBe('ok');
+        expect(journalLevel('task-completed')).toBe('ok');
+        expect(journalLevel('build-created')).toBe('build');
+        expect(journalLevel('publish-failed')).toBe('warn');
+        expect(journalLevel('document-created')).toBe('info');
+        expect(journalLevel('document-updated')).toBe('info');
+        expect(journalLevel('task-created')).toBe('info');
+    });
+
+    it('splits an in-app address into a route and its query, and leaves an absolute URL alone', () => {
+        expect(journalLink('/editor?draft=d-new')).toEqual({ external: false, path: '/editor', query: { draft: 'd-new' } });
+        expect(journalLink('/projects/p1/tasks')).toEqual({ external: false, path: '/projects/p1/tasks', query: {} });
+        expect(journalLink('https://t.me/devdairy/12')).toEqual({ external: true, url: 'https://t.me/devdairy/12' });
+    });
+
+    it('asks for twelve lines, offers more only when the page came back full, and doubles the ask', async () => {
+        expect(projects.takes).toEqual([12]);
+        expect(el().querySelector('.journal-foot')).toBeNull();
+
+        projects.journal = Array.from({ length: 30 }, (_, i) => ({ ...JOURNAL[0], title: `Line ${i}` }));
+        await fixture.componentInstance.load('p1');
+        for (let i = 0; i < 4; i++) await Promise.resolve();
+        fixture.detectChanges();
+        expect(el().querySelectorAll('.journal app-log-line').length).toBe(12);
+        expect(el().querySelector('.journal-foot app-button')?.textContent?.trim()).toBe(t.hub.journalMore);
+
+        fixture.componentInstance.showMoreJournal();
+        for (let i = 0; i < 4; i++) await Promise.resolve();
+        fixture.detectChanges();
+        expect(projects.takes.at(-1)).toBe(24);
+        expect(el().querySelectorAll('.journal app-log-line').length).toBe(24);
+    });
+
+    it('prints the empty sentence when nothing happened, and when the journal could not be asked', async () => {
+        projects.journal = [];
+        await fixture.componentInstance.load('p1');
+        for (let i = 0; i < 4; i++) await Promise.resolve();
+        fixture.detectChanges();
+        expect(el().querySelector('.journal app-empty-state')?.textContent).toContain(t.hub.journalEmpty);
+
+        projects.journal = null;
+        await fixture.componentInstance.load('p1');
+        for (let i = 0; i < 4; i++) await Promise.resolve();
+        fixture.detectChanges();
+        expect(el().querySelectorAll('.journal app-log-line').length).toBe(0);
+        expect(el().querySelector('.journal app-empty-state')?.textContent).toContain(t.hub.journalEmpty);
     });
 
     // T-353 — the logo comes out of the one asset window now, so the picked asset IS the answer
