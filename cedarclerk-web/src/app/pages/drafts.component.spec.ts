@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { DraftsPageComponent } from './drafts.component';
+import { DraftsPageComponent, TreeRow, treeDropTarget } from './drafts.component';
 import { DraftMeta, DraftsService, FolderMeta, SeriesMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
 import { SeriesService } from '../core/series.service';
@@ -35,10 +35,40 @@ const FOLDERS: FolderMeta[] = [{ id: 'f1', name: 'Devlogs', count: 1 }];
 const SERIES: SeriesMeta[] = [{ id: 's1', name: 'Season one', slug: 'season-one', description: null, count: 1 }];
 
 class FakeDrafts {
+    moves: { id: string; parentId: string | null; beforeId?: string }[] = [];
     async list() { return structuredClone(DRAFTS); }
     async listFolders() { return structuredClone(FOLDERS); }
     async listSeries() { return structuredClone(SERIES); }
+    async setDraftParent(id: string, parentId: string | null, beforeId?: string) {
+        this.moves.push({ id, parentId, beforeId });
+        return { parentDraftId: parentId, siblingOrder: 0 };
+    }
 }
+
+// ADR-283 — the drop math over a visible tree with the dragged row already taken out.
+describe('tree drop target', () => {
+    const row = (id: string, depth: number): TreeRow => ({ d: draft(id), depth, hasChildren: false });
+    // A, its child A1, then C at the top level.
+    const rows = [row('A', 0), row('A1', 1), row('C', 0)];
+
+    it('lands under the row above when the pointer asks for one level deeper', () => {
+        expect(treeDropTarget(rows, 2, 1)).toEqual({ depth: 1, parentId: 'A', beforeId: undefined });
+    });
+
+    it('goes no deeper than one level under the row above', () => {
+        expect(treeDropTarget(rows, 2, 5)).toEqual({ depth: 2, parentId: 'A1', beforeId: undefined });
+        expect(treeDropTarget(rows, 0, 3)).toEqual({ depth: 0, parentId: null, beforeId: 'A' });
+    });
+
+    it('goes no shallower than the row below', () => {
+        expect(treeDropTarget(rows, 1, 0)).toEqual({ depth: 1, parentId: 'A', beforeId: 'A1' });
+    });
+
+    it('at the top level the next root row is the sibling to go before', () => {
+        expect(treeDropTarget(rows, 2, 0)).toEqual({ depth: 0, parentId: null, beforeId: 'C' });
+        expect(treeDropTarget(rows, 3, 0)).toEqual({ depth: 0, parentId: null, beforeId: undefined });
+    });
+});
 
 describe('drafts page', () => {
     let fixture: ComponentFixture<DraftsPageComponent>;
@@ -217,6 +247,37 @@ describe('drafts page', () => {
 
         expect(panel(t.inspector.title)).toBeUndefined();
         expect(panel(t.folders.title)).toBeDefined();
+    });
+
+    it('tree rows drag from a grip and a drop calls the same move the menu uses', async () => {
+        const drafts = TestBed.inject(DraftsService) as unknown as FakeDrafts;
+        tiles(t.viewStrip)[2].click();
+        fixture.detectChanges();
+
+        const treeRows = [...el().querySelectorAll<HTMLElement>('.drafts-tree .tree-row')];
+        expect(el().querySelector('.drafts-tree')!.hasAttribute('cdkdroplist')).toBe(true);
+        expect(treeRows.map(r => r.querySelector('.tree-title')!.textContent!.trim())).toEqual(['alpha', 'beta']);
+        expect(treeRows.every(r => r.classList.contains('cdk-drag') && !!r.querySelector('.tree-grip'))).toBe(true);
+        expect(treeRows[1].style.paddingLeft).toContain('* 0');
+
+        // Beta, dragged to just below alpha and an indent to the right, becomes alpha's child.
+        const page = fixture.componentInstance;
+        const beta = page.treeRows()[1];
+        page.onTreeDragStart(beta);
+        expect(page.dropDepth()).toBe(0);
+        await page.onTreeDrop({ currentIndex: 1, distance: { x: 30, y: 0 } } as never);
+        await settle(fixture);
+        fixture.detectChanges();
+
+        expect(drafts.moves).toEqual([{ id: 'beta', parentId: 'alpha', beforeId: undefined }]);
+        const after = [...el().querySelectorAll<HTMLElement>('.drafts-tree .tree-row')];
+        expect(after[1].style.paddingLeft).toContain('* 1');
+        expect(after[0].querySelector('.tree-caret')).not.toBeNull();
+
+        // Dropping back where it already sits sends nothing.
+        page.onTreeDragStart(page.treeRows()[1]);
+        await page.onTreeDrop({ currentIndex: 1, distance: { x: 0, y: 0 } } as never);
+        expect(drafts.moves.length).toBe(1);
     });
 
     it('tree view keeps no shelf even with a draft picked', () => {

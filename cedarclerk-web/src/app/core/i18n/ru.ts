@@ -1123,6 +1123,7 @@ export const ru: Dict = {
             moveDown: 'Ниже',
             root: 'Верхний уровень',
             moveTitle: (name: string) => `Переместить «${name}» под:`,
+            drag: 'Перетащите, чтобы переместить; сдвиг вбок меняет уровень',
         },
         series: {
             title: 'Серия',

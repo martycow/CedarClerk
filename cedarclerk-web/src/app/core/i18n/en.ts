@@ -1186,6 +1186,7 @@ export const en = {
             moveDown: 'Move down',
             root: 'Top level',
             moveTitle: (name: string) => `Move "${name}" under:`,
+            drag: 'Drag to move; slide sideways to change the level',
         },
         series: {
             title: 'Series',
