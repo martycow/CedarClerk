@@ -1,6 +1,6 @@
 import { booleanAttribute, Component, computed, input, numberAttribute, output } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { Params, RouterLink } from '@angular/router';
+import { Params, QueryParamsHandling, RouterLink } from '@angular/router';
 
 // A luggage tag hanging from a brass hook: clipped top corners, a wood-and-brass eyelet, a
 // priority chip, an optional stamp and a due date on the right. This is a task everywhere in the
@@ -23,7 +23,7 @@ import { Params, RouterLink } from '@angular/router';
     template: `
         @if (link(); as route) {
             <a class="tt-plate" [routerLink]="route" [queryParams]="queryParams()"
-               [attr.title]="hint() || null">
+               [queryParamsHandling]="queryParamsHandling()" [attr.title]="hint() || null">
                 <ng-container [ngTemplateOutlet]="face" />
             </a>
         } @else {
@@ -213,6 +213,8 @@ export class TaskTagComponent {
     readonly link = input<string | readonly unknown[] | null>(null);
     /** A task is addressed by a query everywhere in the app, never by a path segment. */
     readonly queryParams = input<Params | null>(null);
+    /** Unset, the tag replaces the query set; `'merge'` keeps a filter the screen already carries beside it (ADR-260). */
+    readonly queryParamsHandling = input<QueryParamsHandling | null>(null);
 
     /** Silent in link form — there the anchor is the navigation. */
     readonly activated = output<void>();

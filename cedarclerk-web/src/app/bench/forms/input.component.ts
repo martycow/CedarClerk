@@ -20,6 +20,7 @@ let nextId = 0;
         @if (label()) { <label class="label" [attr.for]="fieldId()">{{ label() }}</label> }
         <input class="field" [class.serif]="serif()" [id]="fieldId()" [attr.type]="type()"
                [attr.placeholder]="placeholder() || null" [attr.autocomplete]="autocomplete() || null"
+               [attr.maxlength]="maxlength() || null" [attr.aria-label]="ariaLabel() || null"
                [disabled]="isDisabled()"
                [value]="text()" (input)="onInput($event)" (blur)="onBlur()">
         @if (hint()) { <p class="hint">{{ hint() }}</p> }
@@ -91,6 +92,9 @@ export class InputComponent implements ControlValueAccessor {
      * makes: one asks to fill, the other to generate.
      */
     autocomplete = input('');
+    maxlength = input<number | string | null>(null);
+    /** The name a screen reader announces when no visible label is drawn — a search box named by its placeholder. */
+    ariaLabel = input('');
     /** Long-form field (a draft title) — switches to the reading serif. */
     serif = input(false, { transform: booleanAttribute });
     /** Chrome density: mono, 11px, for an inspector row inside a ShelfPanel only. */

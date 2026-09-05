@@ -6,25 +6,13 @@
 }
 
 .switch-row {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
+    display: block;
     padding: var(--space-3);
     border: 1px solid var(--rule-ink-soft);
     border-radius: var(--radius-paper);
     background: var(--alt);
-    cursor: pointer;
 }
 
-.switch-row input {
-    flex: none;
-    width: 20px;
-    height: 20px;
-    margin-top: 2px;
-    accent-color: var(--accent);
-}
-
-.switch-row span,
 .switch-row b,
 .switch-row small {
     display: block;
@@ -250,9 +238,7 @@
     grid-column: 2;
 }
 
-.field-group > input,
-.field-group > select,
-.field-group > textarea {
+.field-group > input {
     width: 100%;
     box-sizing: border-box;
 }
@@ -296,11 +282,6 @@
     border: none;
     background: none;
     padding: 0;
-}
-
-.field-group select:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
 }
 
 .field-actions {
@@ -765,12 +746,6 @@
     color: var(--t2);
     font-size: var(--fs-caption);
     font-weight: 600;
-}
-
-.field-control > input {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
 }
 
 .connect-row .field-control { flex: 1 1 var(--pane-list-min); }

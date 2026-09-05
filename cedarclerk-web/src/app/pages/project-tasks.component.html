@@ -229,20 +229,12 @@
 
             <div class="field-grid">
                 <div class="field">
-                    <label for="task-status">{{ t().projects.tasks.fieldStatus }}</label>
-                    <select id="task-status" [ngModel]="draftStatus()" (ngModelChange)="draftStatus.set($event)" [disabled]="busy()">
-                        @for (status of statuses; track status) {
-                            <option [value]="status">{{ t().projects.tasks.status[status] }}</option>
-                        }
-                    </select>
+                    <app-select inputId="task-status" [label]="t().projects.tasks.fieldStatus" [options]="statusOptions()"
+                                [value]="draftStatus()" (valueChange)="draftStatus.set($any($event))" [disabled]="busy()" />
                 </div>
                 <div class="field">
-                    <label for="task-priority">{{ t().projects.tasks.fieldPriority }}</label>
-                    <select id="task-priority" [ngModel]="draftPriority()" (ngModelChange)="draftPriority.set($event)" [disabled]="busy()">
-                        @for (p of priorities; track p) {
-                            <option [value]="p">{{ t().projects.tasks.priorityFull(p) }}</option>
-                        }
-                    </select>
+                    <app-select inputId="task-priority" [label]="t().projects.tasks.fieldPriority" [options]="priorityOptions()"
+                                [value]="draftPriority()" (valueChange)="draftPriority.set($any($event))" [disabled]="busy()" />
                 </div>
                 <div class="field">
                     <app-input type="date" [label]="t().projects.tasks.fieldDue"
@@ -254,47 +246,32 @@
                                [value]="draftAssignee()" (valueChange)="draftAssignee.set($any($event) ?? '')" />
                 </div>
                 <div class="field">
-                    <label for="task-sprint">{{ t().projects.planner.assignSprint }}</label>
-                    <select id="task-sprint" [ngModel]="draftSprintId()" (ngModelChange)="draftSprintId.set($event)"
-                            [disabled]="busy()">
-                        <option value="">{{ t().projects.planner.unassigned }}</option>
-                        @for (s of sprints(); track s.id) {
-                            <option [value]="s.id">S{{ s.number }} — {{ s.name }}</option>
-                        }
-                    </select>
+                    <app-select inputId="task-sprint" [label]="t().projects.planner.assignSprint" [options]="sprintOptions()"
+                                [value]="draftSprintId()" (valueChange)="draftSprintId.set($any($event) ?? '')" [disabled]="busy()" />
                 </div>
                 <!--T-126 — which version this shipped in. Rendered only once versions exist: a
                 picker with one empty option is a control with nothing to control.-->
                 @if (builds().length) {
                 <div class="field">
-                    <label for="task-build">{{ t().projects.builds.assignBuild }}</label>
-                    <select id="task-build" [ngModel]="draftBuildId()" (ngModelChange)="draftBuildId.set($event)"
-                            [disabled]="busy()">
-                        <option value="">{{ t().projects.builds.unassigned }}</option>
-                        @for (b of builds(); track b.id) {
-                            <option [value]="b.id">{{ b.version }}</option>
-                        }
-                    </select>
+                    <app-select inputId="task-build" [label]="t().projects.builds.assignBuild" [options]="buildOptions()"
+                                [value]="draftBuildId()" (valueChange)="draftBuildId.set($any($event) ?? '')" [disabled]="busy()" />
                 </div>
                 }
                 <!--T-159 (ADR-134) — opt-in onto the public roadmap; only the title and status
                 ever leave the account. It is part of the same explicit Save as the card fields.-->
                 <div class="field roadmap-field">
                     <label>{{ t().projects.tasks.fieldPublicRoadmap }}</label>
-                    <label class="roadmap-toggle">
-                        <input type="checkbox" [ngModel]="draftPublicRoadmap()"
-                               (ngModelChange)="draftPublicRoadmap.set($event)" [disabled]="busy()">
-                        <span>{{ t().projects.tasks.publicRoadmapHint }}</span>
-                    </label>
+                    <app-checkbox inputId="task-public-roadmap" [label]="t().projects.tasks.publicRoadmapHint"
+                                  [value]="draftPublicRoadmap()" (valueChange)="draftPublicRoadmap.set($event)" [disabled]="busy()" />
                 </div>
             </div>
 
             <div class="field">
-                <label for="task-description">{{ t().projects.tasks.fieldDescription }}</label>
                 <!-- Plain text on purpose (ADR-106): a task that needs tables and media is really a
                      document, and should be created as one and linked. -->
-                <textarea id="task-description" rows="5" [ngModel]="draftDescription()" (ngModelChange)="draftDescription.set($event)"
-                          [placeholder]="t().projects.tasks.descriptionPlaceholder"></textarea>
+                <app-textarea inputId="task-description" rows="5" [label]="t().projects.tasks.fieldDescription"
+                              [value]="draftDescription()" (valueChange)="draftDescription.set($event)"
+                              [placeholder]="t().projects.tasks.descriptionPlaceholder" />
             </div>
 
             <div class="field">
@@ -393,28 +370,19 @@
                        (keydown.enter)="create()" />
 
             <div class="field">
-                <label for="new-task-description">{{ t().projects.tasks.fieldDescription }}</label>
-                <textarea id="new-task-description" rows="4" [ngModel]="newDescription()"
-                          (ngModelChange)="newDescription.set($event)"
-                          [placeholder]="t().projects.tasks.descriptionPlaceholder"></textarea>
+                <app-textarea inputId="new-task-description" rows="4" [label]="t().projects.tasks.fieldDescription"
+                              [value]="newDescription()" (valueChange)="newDescription.set($event)"
+                              [placeholder]="t().projects.tasks.descriptionPlaceholder" />
             </div>
 
             <div class="field-grid">
                 <div class="field">
-                    <label for="new-task-status">{{ t().projects.tasks.fieldStatus }}</label>
-                    <select id="new-task-status" [ngModel]="newStatus()" (ngModelChange)="newStatus.set($event)">
-                        @for (status of statuses; track status) {
-                            <option [value]="status">{{ t().projects.tasks.status[status] }}</option>
-                        }
-                    </select>
+                    <app-select inputId="new-task-status" [label]="t().projects.tasks.fieldStatus" [options]="statusOptions()"
+                                [value]="newStatus()" (valueChange)="newStatus.set($any($event))" />
                 </div>
                 <div class="field">
-                    <label for="new-task-priority">{{ t().projects.tasks.fieldPriority }}</label>
-                    <select id="new-task-priority" [ngModel]="newPriority()" (ngModelChange)="newPriority.set($event)">
-                        @for (p of priorities; track p) {
-                            <option [value]="p">{{ t().projects.tasks.priorityFull(p) }}</option>
-                        }
-                    </select>
+                    <app-select inputId="new-task-priority" [label]="t().projects.tasks.fieldPriority" [options]="priorityOptions()"
+                                [value]="newPriority()" (valueChange)="newPriority.set($any($event))" />
                 </div>
             </div>
 

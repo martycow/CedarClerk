@@ -90,6 +90,18 @@ describe('bench Input', () => {
         expect(field().getAttribute('placeholder')).toBe('at least ten characters');
     });
 
+    // T-251 — the two holes that kept Settings on native fields: a limit, and a name for a field
+    // whose only visible label is its placeholder.
+    it('passes the limit and the accessible name through, and omits both when none is given', () => {
+        expect(field().hasAttribute('maxlength')).toBe(false);
+        expect(field().hasAttribute('aria-label')).toBe(false);
+        fixture.componentRef.setInput('maxlength', 80);
+        fixture.componentRef.setInput('ariaLabel', 'Find a project');
+        fixture.detectChanges();
+        expect(field().getAttribute('maxlength')).toBe('80');
+        expect(field().getAttribute('aria-label')).toBe('Find a project');
+    });
+
     it('disables the native field', () => {
         fixture.componentRef.setInput('disabled', true);
         fixture.detectChanges();

@@ -88,11 +88,11 @@
                 values a post's subtitle shows. These three used to sit among the slots.-->
                 <div class="field-group">
                     <label for="cc-author-name">{{ t().settings.headerSlots.authorName }}</label>
-                    <input id="cc-author-name" [(ngModel)]="authorDisplayNameText" [placeholder]="t().settings.headerSlots.authorNamePlaceholder">
+                    <app-input inputId="cc-author-name" [(ngModel)]="authorDisplayNameText" [placeholder]="t().settings.headerSlots.authorNamePlaceholder" />
                 </div>
                 <div class="field-group">
                     <label for="cc-profile-url">{{ t().settings.headerSlots.profileUrl }}</label>
-                    <input id="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com">
+                    <app-input inputId="cc-profile-url" [(ngModel)]="profileUrlText" placeholder="https://example.com" />
                 </div>
                 <div class="field-group">
                     <label for="cc-profile-location">{{ t().settings.headerSlots.location }}</label>
@@ -124,13 +124,13 @@
                         <app-language-menu [active]="signatureLanguage()" [items]="signatureLanguageItems()"
                                            (picked)="setSignatureLanguage($event)" />
                     </div>
-                    <textarea id="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
-                        [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade"></textarea>
+                    <app-textarea inputId="cc-sig" [(ngModel)]="signatureText" rows="2" [placeholder]="t().settings.profile.signaturePlaceholder"
+                                  [disabled]="!hasProSignature()" [title]="hasProSignature() ? '' : t().settings.profile.signatureUpgrade" />
                     @if (hasProSignature()) {
                     <div class="field-control">
                         <label for="cc-sig-url">{{ t().settings.profile.signatureUrl }}</label>
-                        <input id="cc-sig-url" type="url" [(ngModel)]="signatureUrlText"
-                               [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                        <app-input inputId="cc-sig-url" type="url" [(ngModel)]="signatureUrlText"
+                                   [placeholder]="t().settings.profile.signatureUrlPlaceholder" />
                     </div>
                     }
                     <div class="field-actions">
@@ -183,13 +183,10 @@
             <section id="sec-discovery" class="card settings-card">
                 <h2>{{ t().settings.discovery.title }}</h2>
                 <p class="settings-lead">{{ t().settings.discovery.lead }}</p>
-                <label class="switch-row">
-                    <input type="checkbox" [(ngModel)]="discoveryOptIn">
-                    <span>
-                        <b>{{ t().settings.discovery.toggle }}</b>
-                        <small>{{ t().settings.discovery.hint }}</small>
-                    </span>
-                </label>
+                <app-checkbox class="switch-row" inputId="cc-discovery-opt-in" [(ngModel)]="discoveryOptIn">
+                    <b>{{ t().settings.discovery.toggle }}</b>
+                    <small>{{ t().settings.discovery.hint }}</small>
+                </app-checkbox>
                 <p class="field-hint">
                     {{ t().settings.discovery.publicOnly }}
                     <a href="/discovery" target="_blank" rel="noopener">{{ t().settings.discovery.open }}</a>
@@ -236,46 +233,16 @@
 
                 <div class="field-group">
                     <label for="cc-slot-1">{{ t().settings.headerSlots.slot(1) }}</label>
-                    <select id="cc-slot-1" [(ngModel)]="headerSlot1">
-                        <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
-                        <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
-                        <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
-                        <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
-                        <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
-                        <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
-                        <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
-                        <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
-                        <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
-                    </select>
+                    <app-select inputId="cc-slot-1" [options]="headerSlotOptions()" [(ngModel)]="headerSlot1" />
                 </div>
                 <div class="field-group">
                     <label for="cc-slot-2">{{ t().settings.headerSlots.slot(2) }}</label>
-                    <select id="cc-slot-2" [(ngModel)]="headerSlot2">
-                        <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
-                        <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
-                        <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
-                        <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
-                        <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
-                        <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
-                        <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
-                        <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
-                        <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
-                    </select>
+                    <app-select inputId="cc-slot-2" [options]="headerSlotOptions()" [(ngModel)]="headerSlot2" />
                 </div>
                 <div class="field-group">
                     <label for="cc-slot-3">{{ t().settings.headerSlots.slot(3) }} @if (!hasProHeaderSlot()) { <app-plan-lock tier="pro" /> }</label>
-                    <select id="cc-slot-3" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
-                            [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade">
-                        <option [ngValue]="null">{{ t().settings.headerSlots.none }}</option>
-                        <option value="AuthorSignature">{{ t().settings.headerSlots.typeAuthorSignature }}</option>
-                        <option value="Url">{{ t().settings.headerSlots.typeUrl }}</option>
-                        <option value="MapLocation">{{ t().settings.headerSlots.typeMapLocation }}</option>
-                        <option value="PublishedDate">{{ t().settings.headerSlots.typePublishedDate }}</option>
-                        <option value="Length">{{ t().settings.headerSlots.typeLength }}</option>
-                        <option value="TimeToRead">{{ t().settings.headerSlots.typeTimeToRead }}</option>
-                        <option value="WordCount">{{ t().settings.headerSlots.typeWordCount }}</option>
-                        <option value="ViewCount">{{ t().settings.headerSlots.typeViewCount }}</option>
-                    </select>
+                    <app-select inputId="cc-slot-3" [options]="headerSlotOptions()" [(ngModel)]="headerSlot3" [disabled]="!hasProHeaderSlot()"
+                                [title]="hasProHeaderSlot() ? '' : t().settings.headerSlots.slotUpgrade" />
                 </div>
 
             </section>
@@ -296,11 +263,11 @@
 
                 <div class="field-group">
                     <label for="cc-blog-link">{{ t().settings.crossLinks.blogLink }}</label>
-                    <input id="cc-blog-link" [(ngModel)]="blogLinkText" [placeholder]="t().settings.crossLinks.blogLinkDefault" maxlength="80">
+                    <app-input inputId="cc-blog-link" [(ngModel)]="blogLinkText" [placeholder]="t().settings.crossLinks.blogLinkDefault" maxlength="80" />
                 </div>
                 <div class="field-group">
                     <label for="cc-tg-link">{{ t().settings.crossLinks.telegramLink }}</label>
-                    <input id="cc-tg-link" [(ngModel)]="telegramLinkText" [placeholder]="t().settings.crossLinks.telegramLinkDefault" maxlength="80">
+                    <app-input inputId="cc-tg-link" [(ngModel)]="telegramLinkText" [placeholder]="t().settings.crossLinks.telegramLinkDefault" maxlength="80" />
                 </div>
                 <!--Saved by the same button as the rest of the profile — these live in the same
                 request, so a second Save here would be a lie about what it does.-->
@@ -316,47 +283,47 @@
 
                 <div class="field-group">
                     <label for="cc-social-twitter"><app-brand-icon name="twitter" [size]="12"></app-brand-icon> Twitter / X</label>
-                    <input id="cc-social-twitter" [(ngModel)]="socialTwitterUrlText" placeholder="https://x.com/yourhandle">
+                    <app-input inputId="cc-social-twitter" [(ngModel)]="socialTwitterUrlText" placeholder="https://x.com/yourhandle" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-instagram"><app-brand-icon name="instagram" [size]="12"></app-brand-icon> Instagram</label>
-                    <input id="cc-social-instagram" [(ngModel)]="socialInstagramUrlText" placeholder="https://instagram.com/yourhandle">
+                    <app-input inputId="cc-social-instagram" [(ngModel)]="socialInstagramUrlText" placeholder="https://instagram.com/yourhandle" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-facebook"><app-brand-icon name="facebook" [size]="12"></app-brand-icon> Facebook</label>
-                    <input id="cc-social-facebook" [(ngModel)]="socialFacebookUrlText" placeholder="https://facebook.com/yourpage">
+                    <app-input inputId="cc-social-facebook" [(ngModel)]="socialFacebookUrlText" placeholder="https://facebook.com/yourpage" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-youtube"><app-brand-icon name="youtube" [size]="14"></app-brand-icon> YouTube</label>
-                    <input id="cc-social-youtube" [(ngModel)]="socialYoutubeUrlText" placeholder="https://youtube.com/@yourchannel">
+                    <app-input inputId="cc-social-youtube" [(ngModel)]="socialYoutubeUrlText" placeholder="https://youtube.com/@yourchannel" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-github"><app-brand-icon name="github" [size]="12"></app-brand-icon> GitHub</label>
-                    <input id="cc-social-github" [(ngModel)]="socialGithubUrlText" placeholder="https://github.com/yourname">
+                    <app-input inputId="cc-social-github" [(ngModel)]="socialGithubUrlText" placeholder="https://github.com/yourname" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-telegram"><app-brand-icon name="telegram" [size]="12"></app-brand-icon> Telegram</label>
-                    <input id="cc-social-telegram" [(ngModel)]="socialTelegramUrlText" placeholder="https://t.me/yourchannel">
+                    <app-input inputId="cc-social-telegram" [(ngModel)]="socialTelegramUrlText" placeholder="https://t.me/yourchannel" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-threads"><app-brand-icon name="threads" [size]="12"></app-brand-icon> Threads</label>
-                    <input id="cc-social-threads" [(ngModel)]="socialThreadsUrlText" placeholder="https://threads.net/@yourhandle">
+                    <app-input inputId="cc-social-threads" [(ngModel)]="socialThreadsUrlText" placeholder="https://threads.net/@yourhandle" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-bluesky"><app-brand-icon name="bluesky" [size]="12"></app-brand-icon> Bluesky</label>
-                    <input id="cc-social-bluesky" [(ngModel)]="socialBlueskyUrlText" placeholder="https://bsky.app/profile/yourhandle">
+                    <app-input inputId="cc-social-bluesky" [(ngModel)]="socialBlueskyUrlText" placeholder="https://bsky.app/profile/yourhandle" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-reddit"><app-brand-icon name="reddit" [size]="12"></app-brand-icon> Reddit</label>
-                    <input id="cc-social-reddit" [(ngModel)]="socialRedditUrlText" placeholder="https://reddit.com/user/yourname">
+                    <app-input inputId="cc-social-reddit" [(ngModel)]="socialRedditUrlText" placeholder="https://reddit.com/user/yourname" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-steam"><app-brand-icon name="steam" [size]="12"></app-brand-icon> Steam</label>
-                    <input id="cc-social-steam" [(ngModel)]="socialSteamUrlText" placeholder="https://store.steampowered.com/app/000000">
+                    <app-input inputId="cc-social-steam" [(ngModel)]="socialSteamUrlText" placeholder="https://store.steampowered.com/app/000000" />
                 </div>
                 <div class="field-group">
                     <label for="cc-social-itch"><app-brand-icon name="itch" [size]="12"></app-brand-icon> itch.io</label>
-                    <input id="cc-social-itch" [(ngModel)]="socialItchUrlText" placeholder="https://yourname.itch.io">
+                    <app-input inputId="cc-social-itch" [(ngModel)]="socialItchUrlText" placeholder="https://yourname.itch.io" />
                 </div>
 
                 <!--No Save of its own: every section of this tab goes to the same endpoint in one
@@ -647,10 +614,8 @@
                                 <app-button variant="paper" size="sm" (clicked)="askUnlinkTelegram.set(false)">{{ t().common.cancel }}</app-button>
                             </div>
                             }
-                            <label class="field-hint">
-                                <input type="checkbox" [checked]="auth.notifyOnEngagement()" (change)="toggleNotifyOnEngagement()" [disabled]="notifyBusy()">
-                                {{ t().settings.integrations.notifyOnEngagement }}
-                            </label>
+                            <app-checkbox [label]="t().settings.integrations.notifyOnEngagement" [value]="auth.notifyOnEngagement()"
+                                          (valueChange)="toggleNotifyOnEngagement()" [disabled]="notifyBusy()" />
                             } @else {
                             <p class="field-hint">{{ t().settings.integrations.notLinked }}</p>
                             <div class="connect-row">
@@ -705,13 +670,13 @@
                                     <p class="field-hint">{{ t().settings.integrations.signatureHint }}</p>
                                     <div class="field-control">
                                         <label [attr.for]="'cc-channel-signature-' + c.id">{{ t().settings.integrations.signatureTextLabel }}</label>
-                                        <input [id]="'cc-channel-signature-' + c.id" [(ngModel)]="sigText" [disabled]="sigBusy()"
-                                               [placeholder]="t().settings.profile.signaturePlaceholder">
+                                        <app-input [inputId]="'cc-channel-signature-' + c.id" [(ngModel)]="sigText" [disabled]="sigBusy()"
+                                                   [placeholder]="t().settings.profile.signaturePlaceholder" />
                                     </div>
                                     <div class="field-control">
                                         <label [attr.for]="'cc-channel-signature-url-' + c.id">{{ t().settings.integrations.signatureUrlLabel }}</label>
-                                        <input [id]="'cc-channel-signature-url-' + c.id" [(ngModel)]="sigUrl" [disabled]="sigBusy()" type="url"
-                                               [placeholder]="t().settings.profile.signatureUrlPlaceholder">
+                                        <app-input [inputId]="'cc-channel-signature-url-' + c.id" [(ngModel)]="sigUrl" [disabled]="sigBusy()" type="url"
+                                                   [placeholder]="t().settings.profile.signatureUrlPlaceholder" />
                                     </div>
                                     <div class="connect-row">
                                         <app-button variant="pine" size="sm" (clicked)="saveChannelSignature(c)" [disabled]="sigBusy()">
@@ -767,8 +732,8 @@
                             <div class="connect-row labelled-connect-row">
                                 <div class="field-control">
                                     <label for="cc-manual-channel">{{ t().settings.integrations.manualLabel }}</label>
-                                    <input id="cc-manual-channel" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
-                                           [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()">
+                                    <app-input inputId="cc-manual-channel" [(ngModel)]="newChannelChatId" [disabled]="channelBusy()"
+                                               [placeholder]="t().settings.integrations.manualPlaceholder" (keyup.enter)="connectChannel()" />
                                 </div>
                                 <app-button variant="pine" size="sm" (clicked)="connectChannel()" [disabled]="channelBusy() || !newChannelChatId.trim()">
                                     {{ t().settings.integrations.connect }}
@@ -809,12 +774,12 @@
                             <div class="connect-row labelled-connect-row">
                                 <div class="field-control">
                                     <label for="cc-bluesky-handle">{{ t().settings.integrations.blueskyHandleLabel }}</label>
-                                    <input id="cc-bluesky-handle" [(ngModel)]="blueskyHandle"
-                                           [placeholder]="t().settings.integrations.blueskyHandle">
+                                    <app-input inputId="cc-bluesky-handle" [(ngModel)]="blueskyHandle"
+                                               [placeholder]="t().settings.integrations.blueskyHandle" />
                                 </div>
                                 <div class="field-control">
                                     <label for="cc-bluesky-app-password">{{ t().settings.integrations.blueskyAppPassword }}</label>
-                                    <input id="cc-bluesky-app-password" type="password" [(ngModel)]="blueskyAppPassword">
+                                    <app-input inputId="cc-bluesky-app-password" type="password" [(ngModel)]="blueskyAppPassword" />
                                 </div>
                                 <app-button variant="pine" size="sm" (clicked)="connectBluesky()"
                                         [disabled]="blueskyBusy() || !blueskyHandle.trim() || !blueskyAppPassword.trim()">
@@ -904,8 +869,8 @@
                             <div class="connect-row labelled-connect-row">
                                 <div class="field-control">
                                     <label for="cc-discord-webhook">{{ t().settings.integrations.discordWebhookLabel }}</label>
-                                    <input id="cc-discord-webhook" type="url" [(ngModel)]="discordWebhookUrl"
-                                           [placeholder]="t().settings.integrations.discordWebhookUrl">
+                                    <app-input inputId="cc-discord-webhook" type="url" [(ngModel)]="discordWebhookUrl"
+                                               [placeholder]="t().settings.integrations.discordWebhookUrl" />
                                 </div>
                                 <app-button variant="pine" size="sm" (clicked)="connectDiscord()"
                                         [disabled]="discordBusy() || !discordWebhookUrl.trim()">

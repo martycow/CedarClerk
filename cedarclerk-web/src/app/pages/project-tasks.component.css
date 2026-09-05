@@ -281,22 +281,6 @@
     color: var(--t2);
 }
 
-.field select,
-.field textarea {
-    width: 100%;
-}
-
-.roadmap-toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--fs-ui);
-    color: var(--t2);
-    cursor: pointer;
-}
-
-.field .roadmap-toggle input { width: auto; }
-
 .link-rows {
     display: flex;
     flex-direction: column;

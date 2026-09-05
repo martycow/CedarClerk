@@ -268,3 +268,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
 - [ADR-263 — Only the active language ships in the initial bundle](adr/ADR-263.md)
+- [ADR-260 — The bench draws the whole form: select, textarea, checkbox, and what a field passes through](adr/ADR-260.md)
