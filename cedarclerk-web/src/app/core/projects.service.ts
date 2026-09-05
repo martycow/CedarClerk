@@ -90,6 +90,10 @@ export interface ProjectSummary {
     lastActivityAt: string;
     /** T-166 — the newest blog, Telegram or network publish of any document here; null = never. */
     lastPublishedAt: string | null;
+    /** T-247 — one of PROJECT_ENGINES, or "" for unset. */
+    engine: string;
+    /** T-247 — PROJECT_PLATFORMS keys in the server's order; [] for none. */
+    targetPlatforms: string[];
 }
 
 export interface ProjectDocument {
@@ -243,8 +247,9 @@ export class ProjectsService {
         return firstValueFrom(this.http.get<ShowcaseStats>(`/api/projects/${id}/showcase/stats`));
     }
 
-    update(id: string, name: string, description: string, coverUrl: string | null) {
-        return firstValueFrom(this.http.put<ProjectSummary>(`/api/projects/${id}`, { name, description, coverUrl }));
+    /** `engine`/`targetPlatforms` left undefined are left alone by the server; "" and [] clear them. */
+    update(id: string, name: string, description: string, coverUrl: string | null, engine?: string, targetPlatforms?: string[]) {
+        return firstValueFrom(this.http.put<ProjectSummary>(`/api/projects/${id}`, { name, description, coverUrl, engine, targetPlatforms }));
     }
 
     setArchived(id: string, archived: boolean) {

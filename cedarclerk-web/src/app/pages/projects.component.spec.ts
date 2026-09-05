@@ -7,18 +7,18 @@ import { en } from '../core/i18n/en';
 const ONE: ProjectSummary = {
     id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
     createdAt: '2026-08-01T09:00:00', archivedAt: null,
-    documentCount: 3, openTaskCount: 8, assetCount: 2481, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, lastActivityAt: '2026-08-19T11:00:00',
+    documentCount: 3, openTaskCount: 8, assetCount: 2481, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, engine: '', targetPlatforms: [], lastActivityAt: '2026-08-19T11:00:00',
 };
 
 const TWO: ProjectSummary = {
     ...ONE, id: 'p2', name: 'Night Lanterns',
-    documentCount: 1, openTaskCount: 2, assetCount: 19, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null,
+    documentCount: 1, openTaskCount: 2, assetCount: 19, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, engine: '', targetPlatforms: [],
 };
 
 // Archived and empty: it is what makes the archived count non-zero without moving any sum.
 const OLD: ProjectSummary = {
     ...ONE, id: 'p3', name: 'Paper Lanterns', archivedAt: '2026-06-01T09:00:00',
-    documentCount: 0, openTaskCount: 0, assetCount: 0, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null,
+    documentCount: 0, openTaskCount: 0, assetCount: 0, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, engine: '', targetPlatforms: [],
 };
 
 class FakeProjects {

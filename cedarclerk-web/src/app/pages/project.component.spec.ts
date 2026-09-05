@@ -14,13 +14,14 @@ const SUMMARY: ProjectSummary = {
     documentCount: 3, openTaskCount: 8, assetCount: 2481, buildCount: 2, latestBuildVersion: '0.3.1',
     lastActivityAt: '2026-08-19T11:00:00',
     lastPublishedAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+    engine: '', targetPlatforms: [],
 };
 
 const OTHER: ProjectSummary = { ...SUMMARY, id: 'p2', name: 'Night Lanterns', assetCount: 0 };
 
 const DETAIL: ProjectDetail = {
     id: 'p1', name: 'Cedar Quest', description: 'A game about a bench.', projectType: 'fullgame',
-    coverUrl: null, teamId: null, createdAt: '2026-08-01T09:00:00', archivedAt: null,
+    coverUrl: null, teamId: null, createdAt: '2026-08-01T09:00:00', archivedAt: null, engine: '', targetPlatforms: [],
     showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, showcaseBlocksJson: '', customDomain: null,
     pressContactEmail: null, pressPrice: null, pressEngine: null, pressGenre: null, pressFactsheetRows: null,
     documents: [
@@ -75,8 +76,8 @@ class FakeProjects {
     }
     async get() { if (!this.detail) throw new Error('nope'); return structuredClone(this.detail); }
     async list() { if (!this.list_) throw new Error('nope'); return structuredClone(this.list_); }
-    async update(id: string, name: string, description: string, coverUrl: string | null) {
-        this.updates.push({ id, name, description, coverUrl });
+    async update(id: string, name: string, description: string, coverUrl: string | null, engine?: string, targetPlatforms?: string[]) {
+        this.updates.push({ id, name, description, coverUrl, engine, targetPlatforms });
         return { ...SUMMARY, id, name, description, coverUrl };
     }
     async setShowcase(_id: string, _enabled: boolean, slug: string | null, _links: string) {
@@ -373,6 +374,48 @@ describe('project hub', () => {
         await fixture.componentInstance['loadStreak']();
         fixture.detectChanges();
         expect(kvValue(t.hub.streakLabel)).toBeNull();
+    });
+
+    // T-247 — the kit's hero tag, drawn only from what is stored (ADR-160 clause 7).
+    it('puts "Unity · Windows, Switch" after the kind once either is set, and nothing when neither is', () => {
+        expect(meta()).not.toContain(expect.stringContaining('·'));
+
+        fixture.componentInstance.project.set({ ...DETAIL, engine: 'unity', targetPlatforms: ['switch', 'windows'] });
+        fixture.detectChanges();
+        expect(meta()[2]).toBe(`${t.engines.unity} · ${t.platforms.windows}, ${t.platforms.switch}`);
+
+        fixture.componentInstance.project.set({ ...DETAIL, engine: '', targetPlatforms: ['web'] });
+        fixture.detectChanges();
+        expect(meta()[2]).toBe(t.platforms.web);
+
+        fixture.componentInstance.project.set({ ...DETAIL, engine: 'godot', targetPlatforms: [] });
+        fixture.detectChanges();
+        expect(meta()[2]).toBe(t.engines.godot);
+    });
+
+    it('offers the engine as a select and the platforms as checkboxes, and sends each only when it moved', async () => {
+        const component = fixture.componentInstance;
+        component.startEdit();
+        fixture.detectChanges();
+        expect(el().querySelectorAll('#edit-engine option').length).toBe(1 + 12);
+        expect(el().querySelectorAll('.platform-grid app-checkbox').length).toBe(10);
+
+        await component.saveEdit();
+        expect(projects.updates.at(-1)).toEqual(expect.objectContaining({ engine: undefined, targetPlatforms: undefined }));
+
+        component.startEdit();
+        component.editEngine.set('unity');
+        component.togglePlatform('switch', true);
+        component.togglePlatform('windows', true);
+        await component.saveEdit();
+        expect(projects.updates.at(-1)).toEqual(expect.objectContaining({ engine: 'unity', targetPlatforms: ['windows', 'switch'] }));
+        expect(component.project()?.engine).toBe('unity');
+        expect(component.summary()?.targetPlatforms).toEqual(['windows', 'switch']);
+
+        component.startEdit();
+        component.togglePlatform('windows', false);
+        await component.saveEdit();
+        expect(projects.updates.at(-1)).toEqual(expect.objectContaining({ engine: undefined, targetPlatforms: ['switch'] }));
     });
 
     // T-353 — the logo comes out of the one asset window now, so the picked asset IS the answer

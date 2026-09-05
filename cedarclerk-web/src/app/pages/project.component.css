@@ -470,7 +470,21 @@ a.jl-title:hover { color: var(--accent); text-decoration: underline; }
 
 .cover-actions { flex-wrap: wrap; }
 
-.team-field { margin-top: var(--space-3); }
+.team-field,
+.engine-field { margin-top: var(--space-3); }
+
+.platform-field {
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-1) var(--space-3);
+}
 
 .danger-row {
     display: flex;

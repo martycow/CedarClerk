@@ -31,6 +31,9 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { LogLevel, LogLineComponent } from '../bench/worktop/log-line.component';
+import { BenchSelectOption, SelectComponent } from '../bench/forms/select.component';
+import { CheckboxComponent } from '../bench/forms/checkbox.component';
+import { PROJECT_ENGINES, PROJECT_PLATFORMS, ProjectPlatform, normalizePlatforms } from '../core/project-engines';
 import { AssetsService, LibraryAsset } from '../core/assets.service';
 import { Team, TeamsService } from '../core/teams.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
@@ -86,7 +89,7 @@ export function journalLink(href: string): { external: true; url: string } | { e
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
         PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent, MediaPickerComponent,
-        LogLineComponent,
+        LogLineComponent, SelectComponent, CheckboxComponent,
     ],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
@@ -141,6 +144,14 @@ export class ProjectComponent {
     // therefore an option in the list rather than an empty select.
     teams = signal<Team[]>([]);
     editTeamId = signal<string>('');
+    // T-247 — the toolchain and the targets, from closed lists the server also holds.
+    editEngine = signal('');
+    editPlatforms = signal<readonly string[]>([]);
+    readonly platforms = PROJECT_PLATFORMS;
+    engineOptions = computed<BenchSelectOption[]>(() => {
+        const t = this.t().projects;
+        return [{ value: '', label: t.edit.engineNone }, ...PROJECT_ENGINES.map(e => ({ value: e, label: t.engines[e] }))];
+    });
     /** T-296/T-297 — the public page's counters; null until they arrive, and on a page with none. */
     showcaseStats = signal<ShowcaseStats | null>(null);
     /** T-166 — the account's publishing streak in ISO weeks (ADR-281); null when unknown or zero. */
@@ -201,8 +212,11 @@ export class ProjectComponent {
         const meta: HeaderMeta[] = [
             { text: p.archivedAt ? t.stateArchived : t.stateActive, tag: true, tone: p.archivedAt ? 'muted' : 'ok' },
             { text: t.projectTypes[p.projectType].name },
-            { text: t.documentCount(p.documents.length) },
         ];
+        // ADR-160 clause 7 — the kit's "Unity 6.1 · Windows / Linux" edge, drawn only from what is stored.
+        const toolchain = this.toolchainLabel(p);
+        if (toolchain) meta.push({ text: toolchain });
+        meta.push({ text: t.documentCount(p.documents.length) });
         const summary = this.summary();
         const at = summary?.lastActivityAt;
         if (at) meta.push({ text: `${t.hub.lastEdit} ${formatInZone(at, 'd MMM')}` });
@@ -214,6 +228,23 @@ export class ProjectComponent {
         }
         return meta;
     });
+
+    /** "Unity · Windows, Switch" — either half alone when only one is set, nothing when neither is. */
+    toolchainLabel(p: Pick<ProjectDetail, 'engine' | 'targetPlatforms'>): string | null {
+        const t = this.t().projects;
+        const engine = PROJECT_ENGINES.find(e => e === p.engine);
+        const platforms = normalizePlatforms(p.targetPlatforms ?? []).map(k => t.platforms[k]);
+        const parts = [engine ? t.engines[engine] : '', platforms.join(', ')].filter(Boolean);
+        return parts.length ? parts.join(' · ') : null;
+    }
+
+    platformOn(key: ProjectPlatform): boolean {
+        return this.editPlatforms().includes(key);
+    }
+
+    togglePlatform(key: ProjectPlatform, on: boolean) {
+        this.editPlatforms.update(list => normalizePlatforms(on ? [...list, key] : list.filter(k => k !== key)));
+    }
 
     constructor() {
         this.route.paramMap.subscribe(params => {
@@ -381,6 +412,8 @@ export class ProjectComponent {
         this.editDescription.set(project.description);
         this.editCoverUrl.set(project.coverUrl);
         this.editTeamId.set(project.teamId ?? '');
+        this.editEngine.set(project.engine ?? '');
+        this.editPlatforms.set(normalizePlatforms(project.targetPlatforms ?? []));
         // Loaded when the dialog opens rather than with the screen: most visits never edit.
         void this.loadTeams();
         this.actionError.set(null);
@@ -411,16 +444,25 @@ export class ProjectComponent {
                 await this.teamsApi.setProjectTeam(project.id, teamId);
                 this.project.set({ ...project, teamId });
             }
-            await this.api.update(project.id, name, this.editDescription().trim(), coverUrl);
+            // Sent only when moved: an older server ignores what it does not know, and an
+            // unchanged field must not turn into a write.
+            const engine = this.editEngine();
+            const targetPlatforms = [...this.editPlatforms()];
+            const engineMoved = engine !== (project.engine ?? '');
+            const platformsMoved = targetPlatforms.join(',') !== normalizePlatforms(project.targetPlatforms ?? []).join(',');
+            await this.api.update(project.id, name, this.editDescription().trim(), coverUrl,
+                engineMoved ? engine : undefined, platformsMoved ? targetPlatforms : undefined);
             this.project.set({
                 ...project,
                 name,
                 description: this.editDescription().trim(),
                 coverUrl,
                 teamId,
+                engine,
+                targetPlatforms,
             });
             this.projects.update(rows => rows.map(row => row.id === project.id
-                ? { ...row, name, description: this.editDescription().trim(), coverUrl }
+                ? { ...row, name, description: this.editDescription().trim(), coverUrl, engine, targetPlatforms }
                 : row));
             this.editing.set(false);
         } catch (e) {

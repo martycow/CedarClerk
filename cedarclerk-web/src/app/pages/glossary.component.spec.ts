@@ -25,7 +25,7 @@ const EN_SPARE = term({ id: 'en3', term: 'Worktop', description: 'The lit top.',
 const PROJECT: ProjectSummary = {
     id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
     createdAt: '2026-08-01T09:00:00', archivedAt: null,
-    documentCount: 0, openTaskCount: 0, assetCount: 0, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, lastActivityAt: '2026-08-19T11:00:00',
+    documentCount: 0, openTaskCount: 0, assetCount: 0, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, engine: '', targetPlatforms: [], lastActivityAt: '2026-08-19T11:00:00',
 };
 
 class FakeGlossary {

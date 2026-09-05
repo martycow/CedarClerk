@@ -311,6 +311,23 @@
         <textarea id="edit-description" class="text-input" rows="3" maxlength="2000"
                   [ngModel]="editDescription()" (ngModelChange)="editDescription.set($event)"></textarea>
 
+        <!--T-247 — the toolchain and where it ships, from the same closed lists the server keeps.
+        The hero draws them as "Unity · Windows, Switch"; the press kit's free-text engine on the
+        showcase screen is a different field for a different page and is not synced.-->
+        <div class="field-group engine-field">
+            <app-select inputId="edit-engine" [label]="t().projects.edit.engineLabel" [options]="engineOptions()"
+                        [value]="editEngine()" (valueChange)="editEngine.set($any($event) ?? '')" [disabled]="busy()" />
+        </div>
+        <fieldset class="field-group platform-field">
+            <legend class="field-label">{{ t().projects.edit.platformsLabel }}</legend>
+            <div class="platform-grid">
+                @for (key of platforms; track key) {
+                    <app-checkbox [inputId]="'edit-platform-' + key" [label]="t().projects.platforms[key]"
+                                  [value]="platformOn(key)" (valueChange)="togglePlatform(key, $event)" [disabled]="busy()" />
+                }
+            </div>
+        </fieldset>
+
         <div class="cover-field">
             <span class="field-label">{{ t().projects.edit.logoLabel }}</span>
             <div class="cover-row">
