@@ -147,6 +147,23 @@ export class ProjectCanvasComponent implements OnDestroy {
 
     readonly corners: readonly string[] = ['nw', 'ne', 'sw', 'se'];
 
+    /** Every key `onStageKey` answers, in the order a reader meets them; the gestures are prose. */
+    surfaceKeys = computed(() => {
+        const c = this.t().projects.canvas;
+        return [
+            { key: 'Tab', does: c.keyTab },
+            { key: c.keyArrowsName, does: c.keyArrows },
+            { key: 'Delete', does: c.keyDelete },
+            { key: 'N', does: c.keyNote },
+            { key: 'Ctrl+A', does: c.selectAll },
+            { key: 'Escape', does: c.keyEscape },
+            { key: '+', does: c.zoomIn },
+            { key: '-', does: c.zoomOut },
+            { key: '0', does: c.zoomReset },
+            { key: '1', does: c.zoomFit },
+        ];
+    });
+
     constructor() {
         this.route.paramMap.subscribe(params => {
             const projectId = params.get('id') ?? '';

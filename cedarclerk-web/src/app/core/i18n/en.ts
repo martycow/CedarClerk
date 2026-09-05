@@ -700,10 +700,18 @@ export const en = {
             // Beyond the frozen list: the surface itself has to be nameable, countable and
             // operable by key, and none of those has a caption anywhere else.
             surface: (board: string) => `${board} — canvas`,
-            surfaceHelp: 'Tab reaches each item. Arrow keys move what is selected, Delete removes it, N adds a note, Escape clears the selection. Hold Space to pan, hold Ctrl and scroll to zoom.',
+            surfaceHelp: 'Hold Space to pan, hold Ctrl and scroll to zoom.',
             zoomLevel: (percent: number) => `${percent}%`,
             selected: (n: number) => `${n} selected`,
             selectAll: 'Select everything',
+            // The key list under the surface: one line per key the handler answers, so a reader
+            // who cannot see the strip's buttons still learns the zoom keys.
+            keyTab: 'Reach the next item',
+            keyArrowsName: 'Arrow keys',
+            keyArrows: 'Move what is selected',
+            keyDelete: 'Remove what is selected',
+            keyNote: 'Add a note',
+            keyEscape: 'Clear the selection',
             lock: 'Lock',
             unlock: 'Unlock',
             locked: 'Locked',

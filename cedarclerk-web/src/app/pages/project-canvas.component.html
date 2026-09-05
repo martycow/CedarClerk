@@ -104,7 +104,15 @@
              (keydown)="onStageKey($event)" (keyup)="onStageKeyUp($event)"
              (dragover)="onDragOver($event)" (drop)="onDrop($event)">
 
-            <p id="canvas-help" class="visually-hidden">{{ t().projects.canvas.surfaceHelp }}</p>
+            <div id="canvas-help" class="visually-hidden">
+                <p>{{ t().projects.canvas.surfaceHelp }}</p>
+                <dl>
+                    @for (row of surfaceKeys(); track row.key) {
+                        <dt>{{ row.key }}</dt>
+                        <dd>{{ row.does }}</dd>
+                    }
+                </dl>
+            </div>
 
             <div #world class="c-world">
                 @for (item of hub.items(); track item.id) {
