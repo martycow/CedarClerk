@@ -72,7 +72,7 @@ public static class GlossaryEndpoints
             Guid draftId, string language, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            if (!Languages.IsContentLanguage(language)) return Results.BadRequest(new { error = $"Unsupported language: {language}" });
+            if (!Languages.IsContentLanguage(language)) return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(language) });
 
             var draft = await db.Drafts.Where(d => d.Id == draftId && d.OwnerId == uid)
                 .Select(d => new { d.PrimaryLanguage, d.CedarJson, d.ProjectId }).FirstOrDefaultAsync();
@@ -197,7 +197,7 @@ public static class GlossaryEndpoints
             ProductAnalytics analytics, CancellationToken ct) =>
         {
             if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
-                return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(req.TargetLanguage) });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var source = await db.GlossaryTerms.FirstOrDefaultAsync(t => t.Id == id && t.OwnerId == uid, ct);
@@ -286,9 +286,9 @@ public static class GlossaryEndpoints
             ProductAnalytics analytics, CancellationToken ct) =>
         {
             if (req.SourceLanguage is null || !Languages.ContentLanguages.Contains(req.SourceLanguage))
-                return Results.BadRequest(new { error = $"Unsupported language: {req.SourceLanguage}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(req.SourceLanguage) });
             if (req.TargetLanguage is null || !Languages.ContentLanguages.Contains(req.TargetLanguage))
-                return Results.BadRequest(new { error = $"Unsupported language: {req.TargetLanguage}" });
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(req.TargetLanguage) });
             if (req.SourceLanguage == req.TargetLanguage)
                 return Results.BadRequest(new { error = ErrorMessages.SameSourceAndTarget });
 
@@ -458,13 +458,13 @@ public static class GlossaryEndpoints
         if (string.IsNullOrWhiteSpace(req.Term))
             return Results.BadRequest(new { error = ErrorMessages.TermRequired });
         if (req.Term.Trim().Length > TermMaxLength)
-            return Results.BadRequest(new { error = $"Term is too long ({TermMaxLength} characters maximum)" });
+            return Results.BadRequest(new { error = ErrorMessages.TermTooLong(TermMaxLength) });
         if (string.IsNullOrWhiteSpace(req.Description))
             return Results.BadRequest(new { error = ErrorMessages.DescriptionRequired });
         if (req.Description.Trim().Length > DescriptionMaxLength)
-            return Results.BadRequest(new { error = $"Description is too long ({DescriptionMaxLength} characters maximum)" });
+            return Results.BadRequest(new { error = ErrorMessages.DescriptionTooLong(DescriptionMaxLength) });
         if (req.Aliases is { Length: > AliasesMaxLength })
-            return Results.BadRequest(new { error = $"Aliases are too long ({AliasesMaxLength} characters maximum)" });
+            return Results.BadRequest(new { error = ErrorMessages.AliasesTooLong(AliasesMaxLength) });
         return null;
     }
 

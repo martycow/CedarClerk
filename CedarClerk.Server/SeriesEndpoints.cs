@@ -36,7 +36,7 @@ public static class SeriesEndpoints
         {
             var name = req.Name.Trim();
             if (name.Length == 0 || name.Length > SeriesNameMaxLength)
-                return Results.Json(new { error = $"Series name must be 1-{SeriesNameMaxLength} characters" }, statusCode: StatusCodes.Status400BadRequest);
+                return Results.Json(new { error = ErrorMessages.SeriesNameLength(SeriesNameMaxLength) }, statusCode: StatusCodes.Status400BadRequest);
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var slug = SlugGenerator.Slugify(name);
@@ -60,7 +60,7 @@ public static class SeriesEndpoints
         {
             var name = req.Name.Trim();
             if (name.Length == 0 || name.Length > SeriesNameMaxLength)
-                return Results.Json(new { error = $"Series name must be 1-{SeriesNameMaxLength} characters" }, statusCode: StatusCodes.Status400BadRequest);
+                return Results.Json(new { error = ErrorMessages.SeriesNameLength(SeriesNameMaxLength) }, statusCode: StatusCodes.Status400BadRequest);
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var series = await db.Series.FirstOrDefaultAsync(s => s.Id == id && s.OwnerId == uid);

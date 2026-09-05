@@ -281,7 +281,7 @@ public static class ProjectEndpoints
 
             var links = (req.Links ?? "").Trim();
             if (links.Length > ShowcaseLinksMaxLength)
-                return Results.BadRequest(new { error = $"Store links are too long ({ShowcaseLinksMaxLength} characters maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.StoreLinksTooLong(ShowcaseLinksMaxLength) });
             project.ShowcaseLinks = links;
 
             // ADR-216 — the gallery is stored the way it will be read: parsing here means a line the
@@ -310,7 +310,7 @@ public static class ProjectEndpoints
                 || PressField(req.PressEngine, PressFieldMaxLength, out var pressEngine)
                 || PressField(req.PressGenre, PressFieldMaxLength, out var pressGenre)
                 || PressField(req.PressFactsheetRows, PressFactsheetMaxLength, out var pressFactsheet))
-                return Results.BadRequest(new { error = $"A press field is too long ({PressFieldMaxLength} characters maximum, {PressFactsheetMaxLength} for factsheet rows)" });
+                return Results.BadRequest(new { error = ErrorMessages.PressFieldTooLong(PressFieldMaxLength, PressFactsheetMaxLength) });
             project.PressContactEmail = pressContact;
             project.PressPrice = pressPrice;
             project.PressEngine = pressEngine;
@@ -376,7 +376,7 @@ public static class ProjectEndpoints
 
             var text = (req.Text ?? "").Trim();
             if (text.Length == 0 || text.Length > ShowcaseLayouts.BodyMaxLength)
-                return Results.BadRequest(new { error = $"Showcase text must be 1–{ShowcaseLayouts.BodyMaxLength} characters" });
+                return Results.BadRequest(new { error = ErrorMessages.ShowcaseTextLength(ShowcaseLayouts.BodyMaxLength) });
 
             var kind = req.Kind switch
             {
@@ -385,7 +385,7 @@ public static class ProjectEndpoints
                 "ideas" => AiEditKind.Ideas,
                 _ => (AiEditKind?)null,
             };
-            if (kind is null) return Results.BadRequest(new { error = $"Unknown Showcase AI kind: {req.Kind}" });
+            if (kind is null) return Results.BadRequest(new { error = ErrorMessages.UnknownShowcaseAiKind(req.Kind) });
 
             var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
             if (!PlanLimitations.HasAiFeatures(tier))

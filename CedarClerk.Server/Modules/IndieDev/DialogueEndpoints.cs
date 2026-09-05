@@ -207,7 +207,7 @@ public static class DialogueEndpoints
             if (script is null) return Results.NotFound();
 
             if (file.Length == 0 || file.Length > XlsxMaxBytes)
-                return Results.BadRequest(new { error = $"File is too large ({XlsxMaxBytes / (1024 * 1024)}MB maximum)" });
+                return Results.BadRequest(new { error = ErrorMessages.FileTooLarge(XlsxMaxBytes / (1024 * 1024)) });
 
             // ClosedXML needs a seekable stream; IFormFile's underlying stream may not be.
             using var uploadCopy = new MemoryStream();
