@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -74,7 +75,13 @@ export class PresetsComponent {
 
     headerMeta = computed<HeaderMeta[]>(() => [{ text: this.t().presets.count(this.presets().length) }]);
 
+    // The New-project dialog opens this page at `?kind=project&new=1`: the shelf it names, with the
+    // form already open, so a missing preset is one click away from being made.
     constructor() {
+        const query = inject(ActivatedRoute, { optional: true })?.snapshot.queryParamMap;
+        const kind = query?.get('kind');
+        if (kind && (PRESET_KINDS as string[]).includes(kind)) this.kind.set(kind as PresetKind);
+        if (query?.get('new')) this.startNew();
         void this.load();
     }
 

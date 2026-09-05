@@ -264,3 +264,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-249 — The editor starts with the document, not its chrome](adr/ADR-249.md)
 - [ADR-250 — Author social links appear at the public blog header](adr/ADR-250.md)
 - [ADR-251 — The initial-bundle ceiling follows the measured bilingual shell](adr/ADR-251.md)
+- [ADR-253 — The New-project dialog is a wizard with a preview, not a list](adr/ADR-253.md)

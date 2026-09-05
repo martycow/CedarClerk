@@ -152,12 +152,13 @@
     display: flex;
     align-items: flex-start;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-1);
     min-width: 0;
 }
 
 .modal-heading {
     white-space: nowrap;
+    font-size: var(--fs-22);
 }
 
 .modal-hint {
@@ -169,53 +170,131 @@
     line-height: 1.45;
 }
 
-.type-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--space-3);
-    margin-bottom: var(--space-5);
+.wizard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    color: var(--text);
 }
 
-.type-row {
+.wizard-bar {
     display: flex;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.preset-search {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+    margin-left: auto;
+}
+
+.wizard-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+}
+
+.choice-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: var(--space-6) var(--space-4);
+    text-align: center;
+    color: var(--t2);
+    font-size: var(--fs-ui);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+}
+
+.choice-note p { margin: 0; }
+
+.choice-note-hint {
+    margin-top: var(--space-1) !important;
+    font-size: var(--fs-caption);
+    color: var(--t3);
+}
+
+/* One card per starting point: the cover leads, as it does on the project card outside. */
+.type-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
     text-align: left;
-    min-height: 112px;
-    padding: var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--sheet);
     color: var(--text);
     cursor: pointer;
     font-family: inherit;
+    transition: border-color var(--motion-fast) var(--ease),
+                box-shadow var(--motion-fast) var(--ease),
+                transform var(--motion-fast) var(--ease);
 }
 
-.type-row:hover {
+.type-card:hover {
     border-color: var(--abord);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
-.type-row.selected {
+.type-card.selected {
     background: var(--asoft);
-    border-color: var(--abord);
-    box-shadow: inset 3px 0 0 var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
 }
 
-.type-row app-icon {
-    color: var(--accent);
-    flex: none;
+.type-cover {
+    position: relative;
+    display: block;
+    aspect-ratio: 2 / 1;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+
+.cover-art {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.type-check {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--text-on-pine);
+    box-shadow: var(--shadow-paper-sm);
 }
 
 .type-text {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: var(--space-1);
     min-width: 0;
+    padding: 0 var(--space-1) var(--space-1);
 }
 
 .type-name {
     font-family: var(--font-display);
-    font-size: var(--fs-16);
+    font-size: var(--fs-18);
     font-weight: 700;
 }
 
@@ -226,9 +305,175 @@
 }
 
 .type-starter {
+    margin-top: var(--space-1);
+    padding: 2px var(--space-2);
     font-size: var(--fs-caption);
-    font-style: italic;
     color: var(--t2);
+    background: var(--alt);
+    border-radius: var(--radius-sm);
+}
+
+/* The right column reads the selection back: what it is, and the document it is born with. */
+.detail {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+}
+
+.detail-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+
+.detail-plate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+.detail-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.detail-name {
+    font-family: var(--font-display);
+    font-size: var(--fs-20);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.detail-blurb {
+    font-size: var(--fs-13);
+    color: var(--t2);
+    line-height: 1.4;
+}
+
+.detail-tag {
+    flex: none;
+    white-space: nowrap;
+}
+
+.detail-about {
+    margin: 0;
+    padding-bottom: var(--space-3);
+    font-size: var(--fs-ui);
+    color: var(--t2);
+    line-height: 1.5;
+    border-bottom: 1px solid var(--border);
+}
+
+.detail-section {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.detail-section-name {
+    font-family: var(--font-display);
+    font-size: var(--fs-16);
+    font-weight: 700;
+}
+
+.detail-section-meta {
+    font-size: var(--fs-caption);
+    color: var(--t3);
+}
+
+.tree {
+    margin: 0;
+    padding: var(--space-3);
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    background: var(--sheet);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-13);
+}
+
+.tree li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.tree app-icon { color: var(--accent); flex: none; }
+
+.tree-root .tree-label { font-weight: 700; }
+
+.tree-doc { padding-left: var(--space-4); }
+
+.tree-heading {
+    position: relative;
+    padding-left: calc(var(--space-4) * 2 + var(--space-2));
+    color: var(--t2);
+}
+
+.tree-heading::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--space-4) + var(--space-2));
+    top: 50%;
+    width: var(--space-3);
+    height: 1px;
+    background: var(--border-strong);
+}
+
+.tree-heading.is-blank .tree-label { font-style: italic; color: var(--t3); }
+
+.tree-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-kind {
+    margin-left: auto;
+    flex: none;
+    font-size: var(--fs-caption);
+    color: var(--t3);
+}
+
+.detail-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-3);
+    font-size: var(--fs-caption);
+    line-height: 1.45;
+    color: var(--t2);
+    background: var(--asoft);
+    border-radius: var(--radius-sm);
+}
+
+.detail-tip app-icon { color: var(--accent); flex: none; margin-top: 1px; }
+
+/* The footer is the modal's own action row: the name on the left, the two buttons on the right. */
+.name-field {
+    flex: 1;
+    min-width: 0;
+    margin-right: var(--space-4);
 }
 
 .field-label {
@@ -241,6 +486,37 @@
     margin-bottom: var(--space-1);
 }
 
+.name-input {
+    position: relative;
+    display: block;
+}
+
+.name-input app-icon {
+    position: absolute;
+    left: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--t3);
+    pointer-events: none;
+}
+
+/* The global field face out-specifies anything scoped here, so the room for the icon is forced. */
 .text-input {
     width: 100%;
+    padding-left: calc(var(--space-3) * 2 + var(--icon-sm)) !important;
+}
+
+/* An empty shelf must not shrink the dialog under the reader's hand. */
+@media (min-width: 901px) {
+    .wizard-body { min-height: 560px; }
+}
+
+@media (max-width: 900px) {
+    .wizard-body { grid-template-columns: minmax(0, 1fr); }
+    .detail { position: static; }
+    .name-field { flex-basis: 100%; margin-right: 0; }
+}
+
+@media (max-width: 640px) {
+    .choice-grid { grid-template-columns: minmax(0, 1fr); }
 }

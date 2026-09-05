@@ -99,53 +99,235 @@
 </div>
 
 @if (creating()) {
-    <app-modal [width]="760" (closed)="creating.set(false)">
+    <app-modal [width]="1080" (closed)="creating.set(false)">
+        <app-icon modal-icon name="tree-evergreen" size="md"></app-icon>
         <span modal-title class="modal-head-row">
             <span class="modal-heading">{{ t().projects.create.title }}</span>
             <span class="modal-hint">{{ t().projects.create.hint }}</span>
         </span>
 
-        <div class="type-list">
-            @for (type of projectTypes; track type) {
-                <button class="type-row" [class.selected]="createPresetId() === null && createType() === type"
-                        (click)="pickType(type)"
-                        [attr.aria-pressed]="createPresetId() === null && createType() === type">
-                    <app-icon [name]="typeIcons[type]" size="md"></app-icon>
-                    <span class="type-text">
-                        <span class="type-name">{{ t().projects.projectTypes[type].name }}</span>
-                        <span class="type-blurb">{{ t().projects.projectTypes[type].blurb }}</span>
-                        <span class="type-starter">{{ t().projects.create.startsWith(t().projects.projectTypes[type].starter) }}</span>
-                    </span>
-                </button>
-            }
-            <!--T-331 — the user's own project presets sit alongside the built-in types, exactly as
-            document presets do in the New-document dialog.-->
-            @for (preset of projectPresets(); track preset.id) {
-                <button class="type-row is-preset" [class.selected]="createPresetId() === preset.id"
-                        (click)="pickPreset(preset)"
-                        [attr.aria-pressed]="createPresetId() === preset.id">
-                    <app-icon name="squares-four" size="md"></app-icon>
-                    <span class="type-text">
-                        <span class="type-name">{{ preset.name }}</span>
-                        <span class="type-blurb">{{ t().presets.kinds.project.name }}</span>
-                        <span class="type-starter">{{ t().projects.create.startsWith(presetStarter(preset)) }}</span>
-                    </span>
-                </button>
-            }
-        </div>
+        <div class="wizard">
+            <div class="wizard-bar">
+                <app-index-tabs [items]="sourceTabs()" [value]="createSource()" [label]="t().projects.create.sourceLabel"
+                                (selected)="pickSource($event)" />
+                <app-input class="preset-search" type="search" [label]="t().projects.create.search"
+                           [ngModel]="presetSearch()" (ngModelChange)="presetSearch.set($event)" />
+                <app-button variant="paper" size="sm" link="/presets" [queryParams]="{ kind: 'project', new: 1 }">
+                    <app-icon name="plus" weight="bold" size="sm" />
+                    {{ t().presets.newPreset }}
+                </app-button>
+            </div>
 
-        <label class="field-label" for="project-name">{{ t().projects.create.nameLabel }}</label>
-        <input id="project-name" class="text-input" type="text" maxlength="80"
-               [ngModel]="createName()" (ngModelChange)="createName.set($event)"
-               [placeholder]="t().projects.create.namePlaceholder" (keydown.enter)="create()">
+            <div class="wizard-body">
+                <div class="choice-grid">
+                    @if (createSource() === 'builtin') {
+                        @for (type of visibleTypes(); track type) {
+                            <button class="type-card" [class.selected]="createPresetId() === null && createType() === type"
+                                    (click)="pickType(type)"
+                                    [attr.aria-pressed]="createPresetId() === null && createType() === type">
+                                <span class="type-cover">
+                                    <ng-container *ngTemplateOutlet="cover; context: { $implicit: type }" />
+                                    @if (createPresetId() === null && createType() === type) {
+                                        <span class="type-check"><app-icon name="check" weight="bold" size="sm" /></span>
+                                    }
+                                </span>
+                                <span class="type-text">
+                                    <span class="type-name">{{ t().projects.projectTypes[type].name }}</span>
+                                    <span class="type-blurb">{{ t().projects.projectTypes[type].blurb }}</span>
+                                    <span class="type-starter">{{ t().projects.create.startsWith(t().projects.projectTypes[type].starter) }}</span>
+                                </span>
+                            </button>
+                        } @empty {
+                            <p class="choice-note">{{ t().projects.create.noMatch }}</p>
+                        }
+                    } @else {
+                        <!--T-331 — the user's own project presets are the second shelf of the same dialog,
+                        exactly as document presets are in the New-document dialog.-->
+                        @for (preset of visiblePresets(); track preset.id) {
+                            <button class="type-card is-preset" [class.selected]="createPresetId() === preset.id"
+                                    (click)="pickPreset(preset)"
+                                    [attr.aria-pressed]="createPresetId() === preset.id">
+                                <span class="type-cover">
+                                    <ng-container *ngTemplateOutlet="cover; context: { $implicit: presetType(preset) }" />
+                                    @if (createPresetId() === preset.id) {
+                                        <span class="type-check"><app-icon name="check" weight="bold" size="sm" /></span>
+                                    }
+                                </span>
+                                <span class="type-text">
+                                    <span class="type-name">{{ preset.name }}</span>
+                                    <span class="type-blurb">{{ presetBlurb(preset) }}</span>
+                                    <span class="type-starter">{{ t().projects.create.startsWith(presetStarter(preset)) }}</span>
+                                </span>
+                            </button>
+                        } @empty {
+                            @if (projectPresets().length === 0) {
+                                <div class="choice-note">
+                                    <p>{{ t().projects.create.noPresets }}</p>
+                                    <p class="choice-note-hint">{{ t().projects.create.noPresetsHint }}</p>
+                                </div>
+                            } @else {
+                                <p class="choice-note">{{ t().projects.create.noMatch }}</p>
+                            }
+                        }
+                    }
+                </div>
+
+                @if (selection(); as sel) {
+                    <aside class="detail">
+                        <div class="detail-head">
+                            <span class="detail-plate"><app-icon [name]="typeIcons[sel.type]" size="lg" /></span>
+                            <span class="detail-title">
+                                <span class="detail-name">{{ sel.name }}</span>
+                                <span class="detail-blurb">{{ sel.blurb }}</span>
+                            </span>
+                            <span class="tag detail-tag">{{ sel.preset ? t().projects.create.presetTag : t().projects.create.builtInTag }}</span>
+                        </div>
+                        @if (sel.about) { <p class="detail-about">{{ sel.about }}</p> }
+
+                        <div class="detail-section">
+                            <span class="detail-section-name">{{ t().projects.create.structure }}</span>
+                            <span class="detail-section-meta">{{ sel.outline.length ? t().projects.create.sectionCount(sel.outline.length) : t().projects.create.blankDocument }}</span>
+                        </div>
+                        <ul class="tree">
+                            <li class="tree-root">
+                                <app-icon name="folder-open" size="sm" />
+                                <span class="tree-label">{{ createName().trim() || t().projects.create.unnamed }}</span>
+                            </li>
+                            <li class="tree-doc">
+                                <app-icon [name]="docIcons[sel.documentType]" size="sm" />
+                                <span class="tree-label">{{ sel.documentTitle }}</span>
+                                <span class="tree-kind">{{ t().projects.docTypes[sel.documentType].name }}</span>
+                            </li>
+                            @for (heading of sel.outline; track $index) {
+                                <li class="tree-heading"><span class="tree-label">{{ heading }}</span></li>
+                            } @empty {
+                                <li class="tree-heading is-blank"><span class="tree-label">{{ t().projects.create.blankDocument }}</span></li>
+                            }
+                        </ul>
+
+                        <p class="detail-tip">
+                            <app-icon name="note" size="sm" />
+                            <span>{{ t().projects.create.tip }}</span>
+                        </p>
+                    </aside>
+                }
+            </div>
+        </div>
 
         @if (createError(); as err) { <p class="load-error">{{ err }}</p> }
 
+        <div modal-actions class="name-field">
+            <label class="field-label" for="project-name">{{ t().projects.create.nameLabel }}</label>
+            <span class="name-input">
+                <app-icon name="folder" size="sm" />
+                <input id="project-name" class="text-input" type="text" maxlength="80"
+                       [ngModel]="createName()" (ngModelChange)="createName.set($event)"
+                       [placeholder]="t().projects.create.namePlaceholder" (keydown.enter)="create()">
+            </span>
+        </div>
         <ng-container modal-actions>
-            <app-button variant="paper" size="sm" (clicked)="creating.set(false)">{{ t().common.cancel }}</app-button>
-            <app-button variant="pine" size="sm" [disabled]="createName().trim().length === 0 || saving()" (clicked)="create()">
+            <app-button variant="paper" (clicked)="creating.set(false)">{{ t().common.cancel }}</app-button>
+            <app-button variant="pine" [disabled]="createName().trim().length === 0 || saving()" (clicked)="create()">
                 {{ t().projects.create.submit }}
             </app-button>
         </ng-container>
     </app-modal>
 }
+
+<!--The four covers are flat scenes painted in the palette, so both themes own them. A preset wears
+the cover of the type it produces.-->
+<ng-template #cover let-type>
+    <svg class="cover-art" viewBox="0 0 320 160" aria-hidden="true" focusable="false">
+        @switch (type) {
+            @case ('blog') {
+                <rect width="320" height="160" fill="var(--alt)" />
+                <ellipse cx="160" cy="150" rx="150" ry="16" fill="var(--border)" />
+                <g transform="rotate(-8 120 80)">
+                    <rect x="70" y="30" width="96" height="112" rx="4" fill="var(--paper-bright)" stroke="var(--border-strong)" />
+                    <text x="86" y="62" style="font-family: var(--font-display); font-size: 30px; font-weight: 700" fill="var(--wood-ink)">T</text>
+                    <rect x="86" y="76" width="64" height="4" rx="2" fill="var(--pine)" />
+                    <rect x="86" y="88" width="56" height="4" rx="2" fill="var(--border-strong)" />
+                    <rect x="86" y="100" width="60" height="4" rx="2" fill="var(--border-strong)" />
+                    <rect x="86" y="112" width="40" height="4" rx="2" fill="var(--border-strong)" />
+                </g>
+                <g transform="rotate(6 200 80)">
+                    <rect x="152" y="24" width="96" height="112" rx="4" fill="var(--paper-bright)" stroke="var(--border-strong)" />
+                    <rect x="166" y="38" width="68" height="40" rx="3" fill="var(--leaf-bg)" />
+                    <circle cx="182" cy="52" r="6" fill="var(--paper-bright)" />
+                    <path d="M170 74 L190 58 L204 68 L218 54 L232 74 Z" fill="var(--leaf-ink)" />
+                    <rect x="166" y="90" width="64" height="4" rx="2" fill="var(--border-strong)" />
+                    <rect x="166" y="102" width="52" height="4" rx="2" fill="var(--border-strong)" />
+                    <rect x="166" y="114" width="60" height="4" rx="2" fill="var(--border-strong)" />
+                </g>
+                <g transform="rotate(38 262 100)">
+                    <rect x="252" y="50" width="14" height="88" rx="2" fill="var(--brass)" />
+                    <path d="M252 138 L259 154 L266 138 Z" fill="var(--wood-ink)" />
+                    <rect x="252" y="50" width="14" height="10" rx="2" fill="var(--resin)" />
+                </g>
+                <path d="M30 40 C40 20 60 20 66 40 C60 42 40 42 30 40 Z" fill="var(--leaf-bg-2)" />
+                <path d="M24 66 C30 46 52 44 60 62 C52 68 32 70 24 66 Z" fill="var(--leaf-ink)" opacity=".7" />
+            }
+            @case ('fullgame') {
+                <rect width="320" height="160" fill="var(--pine-deep)" />
+                <ellipse cx="160" cy="150" rx="170" ry="22" fill="var(--pine)" />
+                <path d="M40 130 L58 96 L76 130 Z" fill="var(--leaf-ink)" />
+                <path d="M46 116 L58 92 L70 116 Z" fill="var(--pine-mark)" />
+                <path d="M244 132 L266 90 L288 132 Z" fill="var(--leaf-ink)" />
+                <path d="M252 116 L266 86 L280 116 Z" fill="var(--pine-mark)" />
+                <rect x="212" y="40" width="72" height="56" rx="4" fill="var(--paper-bright)" stroke="var(--border-strong)" />
+                <path d="M212 76 L236 60 L252 70 L270 52 L284 62 L284 96 L212 96 Z" fill="var(--leaf-bg-2)" />
+                <circle cx="232" cy="52" r="5" fill="var(--brass)" />
+                <path d="M60 36 C60 26 72 22 78 30 C84 22 96 26 96 36 C96 48 78 60 78 60 C78 60 60 48 60 36 Z" fill="var(--danger)" />
+                <rect x="96" y="70" width="128" height="60" rx="26" fill="var(--paper-bright)" stroke="var(--border-strong)" stroke-width="2" />
+                <rect x="112" y="86" width="10" height="28" rx="3" fill="var(--wood-ink)" />
+                <rect x="103" y="95" width="28" height="10" rx="3" fill="var(--wood-ink)" />
+                <circle cx="190" cy="90" r="6" fill="var(--pine)" />
+                <circle cx="206" cy="100" r="6" fill="var(--pine)" />
+                <circle cx="190" cy="110" r="6" fill="var(--pine)" />
+                <circle cx="174" cy="100" r="6" fill="var(--pine)" />
+                <rect x="150" y="96" width="20" height="6" rx="3" fill="var(--border-strong)" />
+            }
+            @case ('product') {
+                <rect width="320" height="160" fill="var(--wood-lo)" />
+                <circle cx="50" cy="30" r="2" fill="var(--paper-bright)" />
+                <circle cx="280" cy="24" r="2" fill="var(--paper-bright)" />
+                <circle cx="230" cy="48" r="1.5" fill="var(--paper-bright)" />
+                <circle cx="90" cy="60" r="1.5" fill="var(--paper-bright)" />
+                <ellipse cx="60" cy="150" rx="90" ry="26" fill="var(--wood)" />
+                <ellipse cx="270" cy="152" rx="100" ry="24" fill="var(--wood)" />
+                <g transform="rotate(-6 96 96)">
+                    <rect x="52" y="60" width="88" height="72" rx="4" fill="var(--paper-bright)" stroke="var(--border-strong)" />
+                    <rect x="64" y="108" width="12" height="16" fill="var(--pine)" />
+                    <rect x="82" y="92" width="12" height="32" fill="var(--pine)" />
+                    <rect x="100" y="100" width="12" height="24" fill="var(--pine-mark)" />
+                    <rect x="118" y="80" width="12" height="44" fill="var(--pine)" />
+                </g>
+                <g transform="rotate(6 236 96)">
+                    <rect x="200" y="56" width="80" height="80" rx="4" fill="var(--paper-bright)" stroke="var(--border-strong)" />
+                    <rect x="212" y="70" width="52" height="4" rx="2" fill="var(--wood-ink)" />
+                    <rect x="212" y="84" width="40" height="4" rx="2" fill="var(--border-strong)" />
+                    <rect x="212" y="96" width="48" height="4" rx="2" fill="var(--border-strong)" />
+                    <rect x="212" y="108" width="36" height="4" rx="2" fill="var(--border-strong)" />
+                </g>
+                <path d="M160 24 C184 44 184 90 176 110 L144 110 C136 90 136 44 160 24 Z" fill="var(--paper-bright)" stroke="var(--border-strong)" />
+                <circle cx="160" cy="62" r="9" fill="var(--pine)" />
+                <path d="M144 96 L128 118 L146 112 Z" fill="var(--danger)" />
+                <path d="M176 96 L192 118 L174 112 Z" fill="var(--danger)" />
+                <path d="M150 112 C154 136 166 136 170 112 Z" fill="var(--brass)" />
+                <path d="M155 116 C158 130 162 130 165 116 Z" fill="var(--resin)" />
+            }
+            @default {
+                <rect width="320" height="160" fill="var(--leaf-bg)" />
+                <ellipse cx="160" cy="146" rx="120" ry="18" fill="var(--leaf-bg-2)" />
+                <path d="M96 70 L160 96 L224 70 L160 46 Z" fill="var(--wood-hi)" />
+                <path d="M96 70 L160 96 L160 150 L96 124 Z" fill="var(--wood)" />
+                <path d="M224 70 L160 96 L160 150 L224 124 Z" fill="var(--wood-lo)" />
+                <path d="M96 70 L70 90 L134 116 L160 96 Z" fill="var(--wood-hi)" opacity=".9" />
+                <path d="M224 70 L250 90 L186 116 L160 96 Z" fill="var(--wood-lo)" opacity=".9" />
+                <path d="M160 96 L160 120" stroke="var(--leaf-ink)" stroke-width="3" stroke-linecap="round" />
+                <path d="M160 108 C150 100 140 100 138 92 C150 88 158 96 160 108 Z" fill="var(--pine-mark)" />
+                <path d="M160 100 C170 90 180 90 184 82 C172 78 162 88 160 100 Z" fill="var(--pine-mark)" />
+            }
+        }
+    </svg>
+</ng-template>

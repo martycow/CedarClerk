@@ -118,14 +118,34 @@ describe('project index', () => {
         expect(el().querySelector('.cards app-empty-state.new-card')?.textContent).toContain(t.startNew);
     });
 
-    it('offers Blog with a post starter and an explicit name hint', () => {
+    it('offers the four types as cards, reads the pick back and asks for the name explicitly', () => {
         fixture.componentInstance.startCreate();
         fixture.detectChanges();
         const types = [...el().querySelectorAll('.type-name')].map(x => x.textContent?.trim());
         expect(types).toEqual(['Empty', 'Blog', 'Game', 'Product']);
-        expect(el().querySelector('.type-row:last-child .type-starter')?.textContent)
+        expect(el().querySelectorAll('.type-card .cover-art').length).toBe(4);
+        expect(el().querySelector('.type-card:last-child .type-starter')?.textContent)
             .toContain(t.create.startsWith(t.projectTypes.product.starter));
+        expect(el().querySelector('.type-card.selected .type-name')?.textContent?.trim()).toBe('Empty');
+        expect(el().querySelector('.detail-name')?.textContent?.trim()).toBe('Empty');
+        expect(el().querySelector('.tree-doc .tree-label')?.textContent?.trim()).toBe(t.projectTypes.empty.starter);
+        expect(el().querySelector('.tree-heading.is-blank')).not.toBeNull();
         expect((el().querySelector('#project-name') as HTMLInputElement).placeholder)
             .toBe('Enter project name here');
+
+        fixture.componentInstance.pickType('fullgame');
+        fixture.detectChanges();
+        expect(el().querySelector('.detail-name')?.textContent?.trim()).toBe('Game');
+        const headings = [...el().querySelectorAll('.tree-heading .tree-label')].map(x => x.textContent?.trim());
+        expect(headings).toEqual(t.create.outline.design);
+    });
+
+    it('keeps the presets on their own shelf and says when there are none', () => {
+        fixture.componentInstance.startCreate();
+        fixture.componentInstance.pickSource('mine');
+        fixture.detectChanges();
+        expect(el().querySelectorAll('.type-card').length).toBe(0);
+        expect(el().querySelector('.choice-note')?.textContent).toContain(t.create.noPresets);
+        expect(el().querySelector('app-button[link="/presets"]')).not.toBeNull();
     });
 });
