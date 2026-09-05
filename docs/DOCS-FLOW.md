@@ -40,6 +40,7 @@ flowchart TB
         DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
         UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
         STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
+        RESEARCH["docs/knowledge_base/RESEARCH-2026-09.md<br/>API research: IndieDB, LinkedIn,<br/>IGDB, Telegram comments, events"]
         BIZ["docs/product/BUSINESS.md<br/>money: gates, metrics, rituals"]
         COMPET["docs/product/COMPETITORS.md<br/>competitor landscape:<br/>per segment, take / refuse"]
         METRICS["docs/product/METRICS.md<br/>event dictionary, metrics derivation §4"]
@@ -115,7 +116,7 @@ flowchart TB
     class OWNER,INPUTP,CODE source
     class BACKLOG,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
-    class PRODUCT,PRD,ARCH,QA,SEC,DESIGN,UIINV,STACK,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
+    class PRODUCT,PRD,ARCH,QA,SEC,DESIGN,UIINV,STACK,RESEARCH,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
     class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT,BPROMPT mod
 ```
 
@@ -175,7 +176,7 @@ The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DEC
 | **`tech/`** | The technical side | ARCHITECTURE, DESKTOP, QA, SECURITY |
 | **`adr/`** | Decision texts, one file per ADR (+ ownership-audit) | 205 ADRs. The index is in the root; its own folder rather than `tech/adr/`, because ADRs can be product decisions (ADR-092, ADR-101) as well as technical ones |
 | **`fleet/`** | Agent orchestration (Cowtext / FleetView) | so far only `docs/fleet/README.md` — agent definitions live in `.claude/agents/` |
-| **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026) |
+| **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026); `docs/knowledge_base/RESEARCH-2026-09.md` (API/terms research behind T-127/169/170/171, each section ending in a verdict) |
 | **`for_user/`** | All instructions, manuals and everything else that matters to the user | integrations-setup (provider runbook) |
 | **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | `incidents.md` — the index of every recorded incident: what broke, where the narrative lives, what guards it now. It is an index into living records rather than a record of a moment, so it is maintained, not frozen |
 | **`misc/`** | Everything else | the folder will appear with the first file that doesn't fit anywhere above |

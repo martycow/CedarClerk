@@ -67,6 +67,7 @@ no deploy path touches it.
 - `docs/product/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing
 - `docs/product/BUSINESS.md` — the money side: what must be true before public registration opens, where the margin leaks, the four metrics worth counting, and the weekly/monthly checks
 - `docs/knowledge_base/STACK.md` — every library, framework and external service, with what each costs and what breaks when it goes down
+- `docs/knowledge_base/RESEARCH-2026-09.md` — API and terms research for the research-only backlog rows (IndieDB/LinkedIn write APIs, IGDB autofill, Telegram first comment, events database); each section ends in a verdict a scoping row can be written from
 - `docs/product/MULTITENANCY.md` — what happens when there are users: where their blogs live, why the tier quotas outrun the disk, what self-hosted would actually require
 - `docs/product/PRD.md` — shipped vs. open requirements, deferred/blocked items
 - `docs/tech/ARCHITECTURE.md` — solution layout, data model, API style, deploy pipeline
