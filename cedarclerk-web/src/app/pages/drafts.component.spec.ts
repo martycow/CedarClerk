@@ -290,4 +290,20 @@ describe('drafts page', () => {
         expect(panel(t.inspector.title)).toBeUndefined();
         expect(panel(t.folders.title)).toBeUndefined();
     });
+
+    it('lays a card out as three rows: state, every language, placement', () => {
+        fixture.componentInstance.drafts.set([draft('poly', {
+            languages: ['en', 'de', 'fr'], staleLanguages: ['de'], tags: 'devlog,art', folderId: 'f1',
+        })]);
+        fixture.componentInstance.view.set('grid');
+        fixture.detectChanges();
+
+        const card = el().querySelector('.draft-card') as HTMLElement;
+        const rows = [...card.querySelectorAll('.card-row')];
+        expect(rows.map(r => r.className)).toEqual(['card-row card-state', 'card-row lang-badges', 'card-row card-place']);
+        expect([...rows[1].querySelectorAll('.draft-lang-badge')].map(b => b.textContent!.trim())).toEqual(['RU', 'EN', 'DE', 'FR']);
+        expect(rows[1].querySelectorAll('.draft-lang-badge.is-stale').length).toBe(1);
+        expect([...rows[2].querySelectorAll('.tag-chip-ro')].map(x => x.textContent!.trim())).toEqual(['#devlog', '#art']);
+        expect(rows[2].querySelector('app-folder-picker')).toBeTruthy();
+    });
 });

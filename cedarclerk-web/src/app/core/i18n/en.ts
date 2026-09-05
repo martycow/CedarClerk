@@ -2170,6 +2170,7 @@ export const en = {
         createdOn: 'Created',
         editedOn: 'Last edited',
         slugPlaceholder: 'post-url',
+        slugLabel: 'Blog address',
         openBlog: 'Open on the blog',
         openTelegram: 'Open in Telegram',
         threadOf: (n: number) => `Thread of ${n} messages`,

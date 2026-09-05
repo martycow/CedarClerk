@@ -179,8 +179,9 @@ never on a component — several of the components below also appear on comforta
                     </div>
                     @if (!phone()) {
                     <div class="lang-badges" role="cell">
-                        <span class="draft-lang-badge">RU</span>
-                        @if (d.languages.includes('en')) { <span class="draft-lang-badge">EN</span> }
+                        @for (code of allLanguages(d); track code) {
+                        <span class="draft-lang-badge" [class.is-stale]="d.staleLanguages.includes(code)">{{ code.toUpperCase() }}</span>
+                        }
                     </div>
                     }
                     @if (!tight()) {
@@ -313,26 +314,41 @@ never on a component — several of the components below also appear on comforta
                         @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
                         {{ d.title || t().drafts.untitled }}
                     </div>
-                    <span class="tag" [class.danger]="status(d).tone === 'danger'" [class.ok]="status(d).tone === 'ok'" [class.muted]="status(d).tone === 'default'">
-                        {{ status(d).label }}
-                    </span>
-                    @if (status(d).detail) { <div class="m status-detail">{{ status(d).detail }}</div> }
-                    @if (d.folderId) {
-                    <div class="folder-cell" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                        <app-folder-picker [folderId]="d.folderId" [compact]="true"
-                                           (picked)="assignFolder(d, $event)"></app-folder-picker>
+                    <!--T-030 (FI1): three rows at most — what state it is in, which languages it
+                    exists in, where it is filed — so a document in six languages does not push
+                    its folder and tags into one wrapped heap.-->
+                    <div class="card-row card-state">
+                        <span class="tag" [class.danger]="status(d).tone === 'danger'" [class.ok]="status(d).tone === 'ok'" [class.muted]="status(d).tone === 'default'">
+                            {{ status(d).label }}
+                        </span>
+                        @if (status(d).detail) { <span class="m status-detail" [title]="status(d).detail">{{ status(d).detail }}</span> }
+                        @if (hasActivity(d)) {
+                        <span class="activity-cell m">
+                            <span class="activity-metric" [title]="t().drafts.activity.views">
+                                <app-icon name="eye" size="xs"></app-icon>{{ d.viewCount }}
+                                @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
+                            </span>
+                            <span class="activity-metric" [title]="t().drafts.activity.reactions">
+                                <app-icon name="heart" size="xs"></app-icon>{{ d.reactionCount }}
+                                @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
+                            </span>
+                        </span>
+                        }
                     </div>
-                    }
-                    @if (hasActivity(d)) {
-                    <div class="activity-cell m">
-                        <span class="activity-metric" [title]="t().drafts.activity.views">
-                            <app-icon name="eye" size="xs"></app-icon>{{ d.viewCount }}
-                            @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
-                        </span>
-                        <span class="activity-metric" [title]="t().drafts.activity.reactions">
-                            <app-icon name="heart" size="xs"></app-icon>{{ d.reactionCount }}
-                            @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
-                        </span>
+                    <div class="card-row lang-badges">
+                        @for (code of allLanguages(d); track code) {
+                        <span class="draft-lang-badge" [class.is-stale]="d.staleLanguages.includes(code)">{{ code.toUpperCase() }}</span>
+                        }
+                    </div>
+                    @if (d.folderId || tagList(d).length) {
+                    <div class="card-row card-place">
+                        @if (d.folderId) {
+                        <div class="folder-cell" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                            <app-folder-picker [folderId]="d.folderId" [compact]="true"
+                                               (picked)="assignFolder(d, $event)"></app-folder-picker>
+                        </div>
+                        }
+                        @for (tag of tagList(d); track tag) { <span class="tag-chip-ro">#{{ tag }}</span> }
                     </div>
                     }
                     <div class="drafts-card-foot">

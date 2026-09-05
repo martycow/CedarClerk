@@ -2084,6 +2084,7 @@ export const ru: Dict = {
         createdOn: 'Создан',
         editedOn: 'Изменён',
         slugPlaceholder: 'adres-posta',
+        slugLabel: 'Адрес в блоге',
         openBlog: 'Открыть в блоге',
         openTelegram: 'Открыть в Telegram',
         threadOf: (n: number) => `Тред из ${n} ${plural(n, 'сообщения', 'сообщений', 'сообщений')}`,

@@ -1,4 +1,5 @@
-<div class="app" data-layout="operational">
+[disabled]="revisionBusy() || selected.isCurrent"
+[title]="t().editor.versions.selectedVersion(selected.createdAt | zonedDate:'d MMM yyyy, HH:mm')" (clicked)="restoreRevision()"><div class="app" data-layout="operational">
 
 
     <!--The publish checklist — a publication runs like a test suite: one row per phase, a thread
@@ -56,9 +57,9 @@
         </p>
         }
 
-        <button modal-actions [class]="run.finished ? 'btn-accent' : 'btn-ghost'" (click)="closePublishRun()">
+        <app-button modal-actions [variant]="run.finished ? 'pine' : 'paper'" (clicked)="closePublishRun()">
             {{ t().common.close }}
-        </button>
+        </app-button>
     </app-modal>
     }
 
@@ -244,8 +245,8 @@
         <app-icon modal-icon name="sparkle" size="sm"></app-icon>
         <span modal-title>{{ aiConfirmTitle() }}</span>
         <p>{{ aiConfirmBody() }}</p>
-        <button modal-actions class="btn-ghost" (click)="cancelAiConfirm()">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmAiEdit()">{{ kind === 'fix-errors' ? 'Fix errors' : 'Run it' }}</button>
+        <app-button modal-actions variant="paper" (clicked)="cancelAiConfirm()">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="confirmAiEdit()">{{ kind === 'fix-errors' ? 'Fix errors' : 'Run it' }}</app-button>
     </app-modal>
     }
 
@@ -294,8 +295,8 @@
             <label><input type="checkbox" [(ngModel)]="dtTime"> {{ t().editor.datetimeFlags.time }}</label>
         </div>
 
-        <button modal-actions class="btn-ghost" (click)="datetimeOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="insertDateTime()" [disabled]="!dtValue">{{ t().editor.groups.insert }}</button>
+        <app-button modal-actions variant="paper" (clicked)="datetimeOpen.set(false)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="insertDateTime()" [disabled]="!dtValue">{{ t().editor.groups.insert }}</app-button>
     </app-modal>
     }
 
@@ -308,8 +309,8 @@
 
         <textarea rows="3" [placeholder]="t().editor.groups.footnotePlaceholder" [(ngModel)]="footnoteText"></textarea>
 
-        <button modal-actions class="btn-ghost" (click)="footnoteOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</button>
+        <app-button modal-actions variant="paper" (clicked)="footnoteOpen.set(false)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="insertFootnote()" [disabled]="!footnoteText.trim()">{{ t().editor.groups.insert }}</app-button>
     </app-modal>
     }
 
@@ -330,8 +331,8 @@
         </div>
         <label class="dialog-check"><input type="checkbox" [(ngModel)]="tableHeaderRow"> {{ t().editor.tableMenu.headerRow }}</label>
 
-        <button modal-actions class="btn-ghost" (click)="tableOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="insertTable()">{{ t().editor.groups.insert }}</button>
+        <app-button modal-actions variant="paper" (clicked)="tableOpen.set(false)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="insertTable()">{{ t().editor.groups.insert }}</app-button>
     </app-modal>
     }
 
@@ -346,9 +347,9 @@
         </label>
         <p class="field-hint-inline">{{ t().editor.formula.hint }}</p>
 
-        <button modal-actions class="btn-ghost" (click)="formulaOpen.set(false)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-ghost" (click)="insertFormula('inline')" [disabled]="!formulaText.trim()">{{ t().editor.formula.inline }}</button>
-        <button modal-actions class="btn-accent" (click)="insertFormula('block')" [disabled]="!formulaText.trim()">{{ t().editor.formula.block }}</button>
+        <app-button modal-actions variant="paper" (clicked)="formulaOpen.set(false)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="paper" (clicked)="insertFormula('inline')" [disabled]="!formulaText.trim()">{{ t().editor.formula.inline }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="insertFormula('block')" [disabled]="!formulaText.trim()">{{ t().editor.formula.block }}</app-button>
     </app-modal>
     }
 
@@ -402,11 +403,11 @@
 
         @if (insertError()) { <p class="channel-error">{{ insertError() }}</p> }
 
-        <button modal-actions class="btn-ghost" (click)="closeInsertModal()">{{ t().common.cancel }}</button>
+        <app-button modal-actions variant="paper" (clicked)="closeInsertModal()">{{ t().common.cancel }}</app-button>
         @if (isActive('link')) {
-        <button modal-actions class="btn-ghost" (click)="removeLink()">{{ t().editor.groups.removeLink }}</button>
+        <app-button modal-actions variant="paper" (clicked)="removeLink()">{{ t().editor.groups.removeLink }}</app-button>
         }
-        <button modal-actions class="btn-accent" (click)="applyInsert()">{{ t().editor.groups.insert }}</button>
+        <app-button modal-actions variant="pine" (clicked)="applyInsert()">{{ t().editor.groups.insert }}</app-button>
     </app-modal>
     }
 
@@ -436,12 +437,12 @@
             <p class="field-hint-inline">{{ t().editor.lang.translateAllCost(translateAllCost()) }}</p>
             @if (translateAllError(); as err) { <p class="error">{{ err }}</p> }
         </div>
-        <button modal-actions class="btn-ghost" [disabled]="translateAllBusy()" (click)="translateAllOpen.set(false)">
+        <app-button modal-actions variant="paper" [disabled]="translateAllBusy()" (clicked)="translateAllOpen.set(false)">
             {{ t().common.cancel }}
-        </button>
-        <button modal-actions class="btn-accent" [disabled]="translateAllBusy() || !translateAllCost()" (click)="runTranslateAll()">
+        </app-button>
+        <app-button modal-actions variant="pine" [disabled]="translateAllBusy() || !translateAllCost()" (clicked)="runTranslateAll()">
             {{ translateAllBusy() ? t().editor.lang.translateAllRunning : t().editor.lang.translateAllStart }}
-        </button>
+        </app-button>
     </app-modal>
     }
 
@@ -451,8 +452,8 @@
         <app-icon modal-icon name="arrow-clockwise" size="sm"></app-icon>
         <span modal-title>{{ t().editor.lang.replaceTitle(lang().toUpperCase()) }}</span>
         <p>{{ t().editor.lang.replaceBody }}</p>
-        <button modal-actions class="btn-ghost" (click)="cancelTranslateConfirm()">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmTranslate()">{{ t().common.save }}</button>
+        <app-button modal-actions variant="paper" (clicked)="cancelTranslateConfirm()">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="confirmTranslate()">{{ t().common.save }}</app-button>
     </app-modal>
     }
 
@@ -734,6 +735,7 @@
                     component, this page's own already-translated wording.-->
                     <app-form-ref
                         [regForm]="regForm()" [presets]="formPresets()" [languages]="formLanguages()"
+                        [fieldLabel]="t().manager.forms.postForm"
                         [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
                         [onLabel]="t().editor.exportModal.formOn" [offLabel]="t().editor.exportModal.formOff"
                         [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
@@ -1378,7 +1380,7 @@
                         <div class="translate-progress">
                             <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
                             <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
-                            <button class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
+                            <app-button variant="paper" (clicked)="cancelAutoTranslate()">{{ t().common.cancel }}</app-button>
                         </div>
                         }
                         @if (autoTranslateError()) { <p class="channel-error">{{ autoTranslateError() }}</p> }
@@ -1788,12 +1790,12 @@
             </div>
             }
         </div>
-        <button modal-actions class="btn-ghost" (click)="revisionsOpen.set(false)">{{ t().editor.versions.close }}</button>
+        <app-button modal-actions variant="paper" (clicked)="revisionsOpen.set(false)">{{ t().editor.versions.close }}</app-button>
         @if (selectedRevision(); as selected) {
-        <button modal-actions class="btn-accent" [disabled]="revisionBusy() || selected.isCurrent"
-                aria-describedby="selected-revision-target" (click)="restoreRevision()">
+        <app-button modal-actions variant="pine" [disabled]="revisionBusy() || selected.isCurrent"
+                [title]="t().editor.versions.selectedVersion(selected.createdAt | zonedDate:'d MMM yyyy, HH:mm')" (clicked)="restoreRevision()">
             {{ t().editor.versions.restore }}
-        </button>
+        </app-button>
         }
     </app-modal>
     }
@@ -1815,8 +1817,8 @@
         <!--The safe action carries the accent, not the destructive one: this dialog exists because
         a save was about to delete a document, and the button the eye lands on should be the one
         that brings the text back. "Save anyway" stays available, just not emphasised.-->
-        <button modal-actions class="btn-ghost" (click)="confirmRefusedSave()">{{ t().editor.saveGuard.saveAnyway }}</button>
-        <button modal-actions class="btn-accent" (click)="reloadStoredVersion()">{{ t().editor.saveGuard.reload }}</button>
+        <app-button modal-actions variant="paper" (clicked)="confirmRefusedSave()">{{ t().editor.saveGuard.saveAnyway }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="reloadStoredVersion()">{{ t().editor.saveGuard.reload }}</app-button>
     </app-modal>
     }
 
@@ -1854,8 +1856,8 @@
             </div>
             }
         </div>
-        <button modal-actions class="btn-ghost" (click)="updateConfirm.set(null)">{{ t().editor.versions.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="publishAllConfirmed()">{{ t().editor.versions.confirm }}</button>
+        <app-button modal-actions variant="paper" (clicked)="updateConfirm.set(null)">{{ t().editor.versions.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="publishAllConfirmed()">{{ t().editor.versions.confirm }}</app-button>
     </app-modal>
     }
 
@@ -1901,12 +1903,12 @@
             [initialTerm]="draft.term" [initialLanguage]="draft.language">
         </app-glossary-term-form>
         @if (termError()) { <p class="channel-error">{{ termError() }}</p> }
-        <button modal-actions class="btn-ghost" (click)="termDraft.set(null)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="saveTerm(termForm.value())"
+        <app-button modal-actions variant="paper" (clicked)="termDraft.set(null)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="saveTerm(termForm.value())"
                 [disabled]="termBusy() || !termForm.canSave()">
             @if (termBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().common.save }}
-        </button>
+        </app-button>
     </app-modal>
     }
 
@@ -1918,7 +1920,7 @@
             <div class="upload-bar"><div class="upload-fill" [style.width.%]="autoTranslateProgress()"></div></div>
             <p class="translate-status">{{ translateStatusMessage() }} — {{ autoTranslateProgress() }}% · {{ autoTranslateElapsed() }}s</p>
         </div>
-        <button modal-actions class="btn-ghost" (click)="cancelAutoTranslate()">{{ t().common.cancel }}</button>
+        <app-button modal-actions variant="paper" (clicked)="cancelAutoTranslate()">{{ t().common.cancel }}</app-button>
     </app-modal>
     }
 
@@ -1930,7 +1932,7 @@
             <div class="upload-bar"><div class="upload-fill" [style.width.%]="aiEditProgress()"></div></div>
             <p class="translate-status">{{ t().editor.ai.working }} — {{ aiEditProgress() }}% · {{ aiEditElapsed() }}s</p>
         </div>
-        <button modal-actions class="btn-ghost" (click)="cancelAiEdit()">{{ t().common.cancel }}</button>
+        <app-button modal-actions variant="paper" (clicked)="cancelAiEdit()">{{ t().common.cancel }}</app-button>
     </app-modal>
     }
 </div>

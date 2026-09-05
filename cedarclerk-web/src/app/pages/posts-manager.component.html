@@ -294,14 +294,14 @@ so it stays addressable by the name the smoke suite binds.-->
                 <details class="detail-group" [open]="isOpen('basics')" (toggle)="rememberOpen('basics', $event)">
                     <summary>{{ t().manager.groups.basics }}</summary>
                 <div class="detail-field">
-                    <label>{{ t().manager.title }}</label>
-                    <input class="chat-input" [(ngModel)]="editTitle">
+                    <label for="post-title">{{ t().manager.title }}</label>
+                    <input id="post-title" class="chat-input" [(ngModel)]="editTitle">
                 </div>
                 <!--Idea #4: the name in the drafts list and the headline a reader sees are
                 two different things. Empty keeps them the same.-->
                 <div class="detail-field">
-                    <label>{{ t().manager.articleTitle }}</label>
-                    <input class="chat-input" [(ngModel)]="editArticleTitle"
+                    <label for="post-article-title">{{ t().manager.articleTitle }}</label>
+                    <input id="post-article-title" class="chat-input" [(ngModel)]="editArticleTitle"
                            [placeholder]="editTitle || t().manager.articleTitlePlaceholder" maxlength="200">
                     <p class="field-hint-inline">{{ t().manager.articleTitleHint }}</p>
                 </div>
@@ -311,10 +311,10 @@ so it stays addressable by the name the smoke suite binds.-->
                     <label>{{ t().manager.tags }} <span class="field-hint-inline">{{ t().manager.tagsHint }}</span></label>
                     <app-tag-picker [tags]="editTags()" (tagsChange)="editTags.set($event)"></app-tag-picker>
                 </div>
-                <button class="btn-accent" (click)="saveMeta()" [disabled]="busy()">
+                <app-button variant="pine" (clicked)="saveMeta()" [disabled]="busy()">
                     @if (renaming()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                     {{ t().common.save }}
-                </button>
+                </app-button>
 
                 </details>
 
@@ -352,18 +352,18 @@ so it stays addressable by the name the smoke suite binds.-->
                 }
 
                 <div class="detail-actions">
-                    <button class="btn-ghost" (click)="togglePrivate()" [disabled]="busy()">
+                    <app-button variant="paper" (clicked)="togglePrivate()" [disabled]="busy()">
                         <app-icon name="lock" size="sm"></app-icon>
                         {{ d.isPrivate ? t().manager.makePublic : t().manager.makePrivate }}
-                    </button>
-                    <button class="btn-ghost" (click)="toggleArchive()" [disabled]="busy()">
+                    </app-button>
+                    <app-button variant="paper" (clicked)="toggleArchive()" [disabled]="busy()">
                         @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> {{ t().manager.unarchive }} }
                         @else { <app-icon name="archive" size="sm"></app-icon> {{ t().manager.archive }} }
-                    </button>
-                    <button class="btn-ghost danger" (click)="deleteConfirmId.set(d.id)" [disabled]="busy()">
+                    </app-button>
+                    <app-button variant="danger" (clicked)="deleteConfirmId.set(d.id)" [disabled]="busy()">
                         <app-icon name="trash" size="sm"></app-icon>
                         {{ t().common.delete }}
-                    </button>
+                    </app-button>
                 </div>
 
                 </details>
@@ -380,19 +380,20 @@ so it stays addressable by the name the smoke suite binds.-->
                     <!--FI3.4: the URL outlives the draft, so it's worth being able to choose.
                     Slugified server-side, so a hand-typed value can't be unroutable.-->
                     <div class="action-row">
-                        <input class="chat-input" [(ngModel)]="editSlug" [placeholder]="t().manager.slugPlaceholder">
-                        <button class="btn-ghost" (click)="saveSlug(d)" [disabled]="busy() || !editSlug.trim()">
+                        <input class="chat-input" [(ngModel)]="editSlug" [placeholder]="t().manager.slugPlaceholder"
+                               [attr.aria-label]="t().manager.slugLabel">
+                        <app-button variant="paper" (clicked)="saveSlug(d)" [disabled]="busy() || !editSlug.trim()">
                             {{ t().common.save }}
-                        </button>
+                        </app-button>
                     </div>
                     }
                     <!--FI2.1: unpublishing is managing an already-published post, which the
                     Export window explicitly stops doing (FI2.6) — it belongs here.-->
                     @if (d.isBlogPublished) {
-                    <button class="btn-ghost danger" (click)="unpublish(d)" [disabled]="busy()">
+                    <app-button class="unpublish" variant="danger" (clicked)="unpublish(d)" [disabled]="busy()">
                         @if (unpublishing()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                         {{ t().manager.unpublish }}
-                    </button>
+                    </app-button>
                     } @else if (d.blogSlug) {
                     <p class="field-hint-inline">{{ t().manager.unpublishedNote }} {{ t().manager.republishHint }}</p>
                     }
@@ -410,9 +411,9 @@ so it stays addressable by the name the smoke suite binds.-->
                     <summary>{{ t().manager.scheduled }}</summary>
                 <div class="detail-field">
                     @if (sentScheduleCount(d.id); as sentCount) {
-                    <button class="btn-ghost mini" (click)="showSentSchedules.set(!showSentSchedules())">
+                    <app-button variant="paper" size="sm" (clicked)="showSentSchedules.set(!showSentSchedules())">
                         {{ showSentSchedules() ? t().manager.hideSent : t().manager.showSent(sentCount) }}
-                    </button>
+                    </app-button>
                     }
                     @for (p of scheduled; track p.id) {
                     <div class="scheduled-item">
@@ -512,6 +513,7 @@ so it stays addressable by the name the smoke suite binds.-->
                     } @else {
                     <app-form-ref
                         [regForm]="regForm()" [presets]="presets()" [languages]="postFormLanguages()"
+                        [fieldLabel]="t().manager.forms.postForm"
                         [primaryLanguage]="primaryLanguage" [busy]="regBusy()"
                         [onLabel]="t().manager.forms.formOn" [offLabel]="t().manager.forms.formOff"
                         [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
@@ -958,7 +960,7 @@ so it stays addressable by the name the smoke suite binds.-->
                                     </button>
                                 </div>
                                 }
-                                <button class="btn-ghost option-add" (click)="addOption(q.id)">+ {{ t().manager.forms.addOption }}</button>
+                                <app-button variant="paper" size="sm" class="option-add" (clicked)="addOption(q.id)">+ {{ t().manager.forms.addOption }}</app-button>
                             </div>
                             }
                             @if (q.type === 'consent') {
@@ -986,18 +988,18 @@ so it stays addressable by the name the smoke suite binds.-->
                     </app-empty-state>
                     }
                     @if (form.questions.length) {
-                    <button class="btn-ghost" (click)="addQuestion()">+ {{ t().manager.forms.addQuestion }}</button>
+                    <app-button variant="paper" (clicked)="addQuestion()">+ {{ t().manager.forms.addQuestion }}</app-button>
                     }
                 </div>
 
                     <div class="detail-actions">
-                        <button class="btn-ghost danger" (click)="deletePresetId.set(selectedPresetId())">{{ t().manager.forms.deletePreset }}</button>
+                        <app-button variant="danger" (clicked)="deletePresetId.set(selectedPresetId())">{{ t().manager.forms.deletePreset }}</app-button>
                     </div>
 
                     <div class="form-save-row">
-                        <button class="btn-accent" (click)="savePreset()" [disabled]="presetState() === 'saving' || presetState() === 'saved'">
+                        <app-button variant="pine" (clicked)="savePreset()" [disabled]="presetState() === 'saving' || presetState() === 'saved'">
                             {{ t().common.save }}
-                        </button>
+                        </app-button>
                         <span class="form-save-state" [class.dirty]="presetState() === 'dirty'" [class.error]="presetState() === 'error'">
                             @switch (presetState()) {
                                 @case ('saved') { {{ t().manager.forms.saved }} }
@@ -1029,8 +1031,8 @@ so it stays addressable by the name the smoke suite binds.-->
         <app-icon modal-icon name="trash" size="sm"></app-icon>
         <span modal-title>{{ t().manager.deletePostTitle }}</span>
         <p>{{ t().drafts.deleteDraftBody }}</p>
-        <button modal-actions class="btn-ghost" (click)="deleteConfirmId.set(null)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmDelete()">{{ t().common.delete }}</button>
+        <app-button modal-actions variant="paper" (clicked)="deleteConfirmId.set(null)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="confirmDelete()">{{ t().common.delete }}</app-button>
     </app-modal>
     }
 
@@ -1054,8 +1056,8 @@ so it stays addressable by the name the smoke suite binds.-->
             <p class="hint">{{ t().manager.forms.noAnswers }}</p>
             }
         </div>
-        <button modal-actions class="btn-ghost" (click)="deleteRegistrationTarget.set(r)">{{ t().common.delete }}</button>
-        <button modal-actions class="btn-ghost" (click)="selectedRegistration.set(null)">{{ t().common.close }}</button>
+        <app-button modal-actions variant="paper" (clicked)="deleteRegistrationTarget.set(r)">{{ t().common.delete }}</app-button>
+        <app-button modal-actions variant="paper" (clicked)="selectedRegistration.set(null)">{{ t().common.close }}</app-button>
     </app-modal>
     }
 
@@ -1066,11 +1068,11 @@ so it stays addressable by the name the smoke suite binds.-->
         <app-icon modal-icon name="trash" size="sm"></app-icon>
         <span modal-title>{{ t().manager.forms.deleteSubmission }}</span>
         <p>{{ t().manager.forms.deleteSubmissionBody(target.name || target.nickname || target.email || t().manager.forms.anonymous) }}</p>
-        <button modal-actions class="btn-ghost" (click)="deleteRegistrationTarget.set(null)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmDeleteRegistration()" [disabled]="registrationDeleting()">
+        <app-button modal-actions variant="paper" (clicked)="deleteRegistrationTarget.set(null)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="confirmDeleteRegistration()" [disabled]="registrationDeleting()">
             @if (registrationDeleting()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
             {{ t().common.delete }}
-        </button>
+        </app-button>
     </app-modal>
     }
 
@@ -1081,8 +1083,8 @@ so it stays addressable by the name the smoke suite binds.-->
         <app-icon modal-icon name="trash" size="sm"></app-icon>
         <span modal-title>{{ t().manager.forms.deletePreset }}</span>
         <p>{{ t().manager.forms.deletePresetBody }}</p>
-        <button modal-actions class="btn-ghost" (click)="deletePresetId.set(null)">{{ t().common.cancel }}</button>
-        <button modal-actions class="btn-accent" (click)="confirmDeletePreset()">{{ t().common.delete }}</button>
+        <app-button modal-actions variant="paper" (clicked)="deletePresetId.set(null)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="pine" (clicked)="confirmDeletePreset()">{{ t().common.delete }}</app-button>
     </app-modal>
     }
 </div>

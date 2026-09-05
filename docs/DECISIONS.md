@@ -273,3 +273,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-286 — One skeleton, held for 300 ms, marking the region busy](adr/ADR-286.md)
 - [ADR-287 — View transitions: the router cross-fades except around the editor, the blog carries a cover into the post](adr/ADR-287.md)
 - [ADR-283 — Document tree drag&drop: a flat drop list, depth from sideways travel](adr/ADR-283.md)
+- [ADR-285 — A dialog leaves through Escape, the ✕ or an action; the scrim is not a button](adr/ADR-285.md)

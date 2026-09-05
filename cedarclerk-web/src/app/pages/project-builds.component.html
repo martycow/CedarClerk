@@ -160,17 +160,17 @@
 
         <div modal-actions class="modal-foot-row">
             @if (editing(); as b) {
-                <button class="btn-ghost danger" (click)="remove(b)" [disabled]="busy()">
+                <app-button variant="danger" (clicked)="remove(b)" [disabled]="busy()">
                     {{ t().projects.builds.deleteBuild }}
-                </button>
+                </app-button>
             }
             <span class="spacer"></span>
-            <button class="btn-ghost" (click)="creating.set(false); editing.set(null)">
+            <app-button variant="paper" (clicked)="creating.set(false); editing.set(null)">
                 {{ t().projects.planner.cancel }}
-            </button>
-            <button class="btn-accent" (click)="save()" [disabled]="busy()">
+            </app-button>
+            <app-button variant="pine" (clicked)="save()" [disabled]="busy()">
                 {{ editing() ? t().projects.planner.save : t().projects.builds.create }}
-            </button>
+            </app-button>
         </div>
     </app-modal>
 }

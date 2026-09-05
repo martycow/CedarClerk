@@ -237,6 +237,7 @@
 
 .lang-badges {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
 }
 
@@ -349,6 +350,20 @@
     opacity: .6;
     pointer-events: none;
 }
+
+/* The card's three rows (T-030): state, languages, placement. Each wraps on its own, so many
+   languages lengthen the second row and never the first or the third. */
+.card-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    align-self: stretch;
+    gap: var(--space-1) var(--space-2);
+    min-width: 0;
+}
+
+.card-state .status-detail { flex: 1 1 0; }
+.card-state .activity-cell { flex: none; }
 
 .drafts-card-foot {
     display: flex;

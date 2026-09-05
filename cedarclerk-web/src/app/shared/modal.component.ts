@@ -5,10 +5,10 @@ import { OverlayCoordinatorService, OverlayLayerLease, ShellOverlay } from '../c
 
 let nextModalId = 0;
 
-// Reusable centered modal shell — extracted from the hand-rolled .modal-overlay/.modal-card
-// pattern that was duplicated between the AI-edit confirm dialog and the re-translate confirm
-// dialog in editor.component.html. Closes on Escape and on backdrop click; content is split into
-// three projected slots (icon, title, actions) plus a default slot for the body.
+// Reusable centered modal shell. Every dialog dims the page and closes only through Escape, the
+// ✕ or one of its own actions — a click on the scrim does nothing (ADR-285), so a stray press
+// outside the card cannot take a half-filled form away. Content is split into three projected
+// slots (icon, title, actions) plus a default slot for the body.
 @Component({
     selector: 'app-modal',
     imports: [IconComponent],
