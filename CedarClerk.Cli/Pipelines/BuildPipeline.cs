@@ -37,6 +37,11 @@ public sealed class BuildPipeline
     public const string StageElectron = "Electron";
     public const string StageInstaller = "Installer";
 
+    // The one production Angular build. `cedar test` runs the same invocation as its build phase, so
+    // what the test run proves is what the deploy ships, not a second command that could drift.
+    public static (string Exe, string Args, string Cwd) AngularBuild(CliConfig config) =>
+        (Shell.Npm(), "run build", config.WebDir);
+
     public static IEnumerable<(string Name, string Detail)> Plan(BuildOptions options)
     {
         if (!options.DesktopOnly)
@@ -57,7 +62,8 @@ public sealed class BuildPipeline
         {
             await board.StepAsync(StageAngular, async step =>
             {
-                await LocalRun.RunOrStopAsync(_runner, step, Shell.Npm(), "run build", _config.WebDir,
+                var (exe, args, cwd) = AngularBuild(_config);
+                await LocalRun.RunOrStopAsync(_runner, step, exe, args, cwd,
                     "The Angular build failed", null, ct);
                 step.Done("dist/cedarclerk-web/browser");
             });

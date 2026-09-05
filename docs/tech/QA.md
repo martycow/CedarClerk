@@ -19,7 +19,7 @@ works.
 
 ## What a machine already answers
 
-`cedar test` runs **five phases by default and six with `--smoke`**, each with its own verdict:
+`cedar test` runs **six phases by default and seven with `--smoke`**, each with its own verdict:
 
 | Phase | What it proves |
 |---|---|
@@ -28,6 +28,7 @@ works.
 | Icon inventory | `icon-usage.generated.ts` matches the call sites in `src/app` |
 | Contrast contract | Every token pair clears its ratio in both themes |
 | Density contract | No control drops below its touch/size floor |
+| Production build (`ng build`) | The front end compiles for release and stays under its bundle ceiling — the same command the deploy runs (ADR-265) |
 | Smoke (Playwright, isolated database) — **`--smoke` only** | The critical paths end to end against a scratch `CEDAR_DATA_DIR` |
 
 `TestPipeline.Phases()` appends the smoke phase only under `options.Smoke`, so a bare `cedar test`
@@ -39,12 +40,9 @@ Three drift guards inside the backend phase fail the build rather than waiting t
 or `sec-*` settings section absent from `docs/design/UI-INVENTORY.md`), `DocsFlowGraphTests` (a doc
 absent from `docs/DOCS-FLOW.md`, or a mapped path that no longer exists).
 
-**`ng build` is not a phase at all.** All five default phases read source; none produces a production
-bundle, and `--smoke` builds one only as a side effect of serving the app. A build-only regression — a
-budget breach, a template error the dev build tolerates, a chunk that fails to lazy-load — is invisible
-to the project's own runner until `cedar deploy` hits it. Whether that becomes a sixth phase or a
-stated decision that the production build belongs to deploy alone is `T-362`; until it is settled, run
-`ng build` by hand before a deploy that touches the front end.
+The build phase names no tests, so the grid draws nothing for it and its row reads "no results
+parsed" — the verdict is its exit code, as for every phase. `--smoke` does not replace it: the smoke
+harness starts the Angular dev server, which tolerates exactly what the production compiler rejects.
 
 What none of it answers: how anything looks, whether a real provider accepts our payload, whether a
 flow makes sense to a person, and anything that needs a second machine, a phone, or real money.

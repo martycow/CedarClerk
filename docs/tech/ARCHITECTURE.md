@@ -178,7 +178,7 @@ C# in `CedarClerk.Cli/Pipelines/`, and `Scripts/deploy.ps1`, `build.ps1`, `test.
 - `Pipelines/GitGuard.cs` — branch, clean tree, version tag, and the `LIVE`/`LIVE-PREV` tags (ADR-118 d12)
 - `Pipelines/BuildPipeline.cs` — Angular, the portable server publish that ships, the self-contained
   desktop server, Electron, the installer
-- `Pipelines/TestPipeline.cs` — backend, frontend units, the contrast contract, the density contract, and `e2e.ps1` for smoke
+- `Pipelines/TestPipeline.cs` — backend, frontend units, the icon inventory, the contrast contract, the density contract, the production `ng build` (ADR-265), and `e2e.ps1` for smoke
 - `Pipelines/DeployPipeline.cs` — the pipeline below, **master only, clean tree only** (T-138)
 - `Pipelines/StageBoard.cs` — the live screen all three run behind: the plan drawn up front, timings,
   and a running step's own detail (upload bar, braille throughput chart)
@@ -239,6 +239,6 @@ The reason it exists is the asset index (ADR-107) — only a process on the deve
 - **See the whole thing as it will ship: `cedar run`** (ADR-121) — builds front and back, serves the real `publish/` artifact on `localhost:8080` against the dev database with the bot forced off, opens the browser; `--no-build` reuses the last publish
 - Server alone: `dotnet run --project CedarClerk.Server` (port 8080, bot disabled without a token — see `.claude/rules/telegram-bot.md`)
 - Frontend alone: `ng serve` in `cedarclerk-web/` (proxies `/api` → `http://localhost:8080` via `proxy.conf.json`)
-- Tests: `cedar test` (backend + frontend + contrast + density; `--smoke` adds Playwright) — ~930 xUnit cases across `CedarClerk.Tests` and `CedarClerk.Cli.Tests`; plain `dotnet test` from repo root also works
+- Tests: `cedar test` (backend + frontend + icons + contrast + density + production `ng build`; `--smoke` adds Playwright) — ~930 xUnit cases across `CedarClerk.Tests` and `CedarClerk.Cli.Tests`; plain `dotnet test` from repo root also works
 - Frontend tests alone: `npm run test` in `cedarclerk-web/` (Vitest-backed via `@angular/build:unit-test`, not Karma)
 - EF migrations: `dotnet ef migrations add <Name> --project CedarClerk.Server`

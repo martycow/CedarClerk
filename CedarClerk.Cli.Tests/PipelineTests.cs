@@ -335,7 +335,8 @@ public class PipelineTests
             new[]
             {
                 TestPipeline.PhaseBackend, TestPipeline.PhaseFrontend,
-                TestPipeline.PhaseIcons, TestPipeline.PhaseContrast, TestPipeline.PhaseDensity
+                TestPipeline.PhaseIcons, TestPipeline.PhaseContrast, TestPipeline.PhaseDensity,
+                TestPipeline.PhaseBuild
             },
             TestPipeline.Phases(new TestOptions()));
 
@@ -345,9 +346,40 @@ public class PipelineTests
             new[]
             {
                 TestPipeline.PhaseFrontend, TestPipeline.PhaseIcons,
-                TestPipeline.PhaseContrast, TestPipeline.PhaseDensity, TestPipeline.PhaseSmoke
+                TestPipeline.PhaseContrast, TestPipeline.PhaseDensity, TestPipeline.PhaseBuild,
+                TestPipeline.PhaseSmoke
             },
             TestPipeline.Phases(new TestOptions(Smoke: true, Frontend: true)));
+    }
+
+    [Fact]
+    public void The_production_build_is_a_phase_that_runs_after_every_source_check_and_before_the_browser()
+    {
+        // A build-only regression - a budget breach, a template the dev compiler tolerates - used to
+        // be invisible to the runner until `cedar deploy` hit it (T-362). It is one phase in the
+        // frontend half, never under --backend, and it runs once whether or not --smoke follows: the
+        // smoke suite compiles a dev build through `ng serve`, which is not the same build.
+        var full = TestPipeline.Phases(new TestOptions()).ToList();
+        Assert.Equal(TestPipeline.PhaseBuild, full.Last());
+        Assert.True(full.IndexOf(TestPipeline.PhaseBuild) > full.IndexOf(TestPipeline.PhaseDensity));
+
+        var smoke = TestPipeline.Phases(new TestOptions(Smoke: true)).ToList();
+        Assert.Equal(1, smoke.Count(p => p == TestPipeline.PhaseBuild));
+        Assert.True(smoke.IndexOf(TestPipeline.PhaseBuild) < smoke.IndexOf(TestPipeline.PhaseSmoke));
+
+        Assert.DoesNotContain(TestPipeline.PhaseBuild, TestPipeline.Phases(new TestOptions(Backend: true)));
+    }
+
+    [Fact]
+    public async Task The_build_phase_runs_the_very_command_the_deploy_builds_with()
+    {
+        var runner = new FakeCommandRunner();
+        var config = Config();
+
+        await new TestPipeline(runner, config).RunAsync(new TestOptions(Frontend: true), _ => { }, CancellationToken.None);
+
+        var (exe, args, _) = BuildPipeline.AngularBuild(config);
+        Assert.Contains($"{exe} {args}", runner.LocalCalls);
     }
 
     [Fact]
