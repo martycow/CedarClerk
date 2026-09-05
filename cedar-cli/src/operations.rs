@@ -171,12 +171,13 @@ pub fn execute(r: &Runner, p: &Program, request: &Request) -> Result<()> {
         }
         Request::Backup => {
             let d = p.deploy.as_ref().context("No remote configured")?;
-            let dir = deploy::quote(&format!("{}/data/backups", d.remote_root));
+            let dir = deploy::quote(&deploy::backups_dir(d));
             let result = deploy::remote(
                 r,
                 p,
                 &format!(
-                    "set -e\ntest -d {dir}\nfind {dir} -maxdepth 1 -name 'cedar-*.db.gz' -type f -printf '%T+ %s %f\\n' | sort -r | head -14\ncrontab -l | grep 'backup' || true"
+                    "set -e\ntest -d {dir}\nfind {dir} -maxdepth 1 -name {glob} -type f -printf '%T+ %s %f\\n' | sort -r | head -14\ncrontab -l | grep 'backup' || true",
+                    glob = deploy::quote(deploy::BACKUP_GLOB)
                 ),
             )?;
             if !r.dry_run {
