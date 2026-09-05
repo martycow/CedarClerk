@@ -19,21 +19,24 @@ works.
 
 ## What a machine already answers
 
-`cedar test` runs **six phases by default and seven with `--smoke`**, each with its own verdict:
+`cedar test` runs the `test` action of `cedar.json` — **seven steps by default, eight with
+`--smoke`** — and every step gets its own verdict; the action is `continueOnError`, so a red step
+never hides the ones after it:
 
-| Phase | What it proves |
+| Step | What it proves |
 |---|---|
+| Rust console tests (`Scripts/rust-cli.ps1 test`) | The console itself: profile validation, planning, dry-run, the deploy scripts |
 | Backend (`dotnet test`) | Endpoints, renderers, guards, and the drift guards below |
 | Frontend units (vitest) | Component and service logic in isolation |
 | Icon inventory | `icon-usage.generated.ts` matches the call sites in `src/app` |
 | Contrast contract | Every token pair clears its ratio in both themes |
 | Density contract | No control drops below its touch/size floor |
-| Frontend build (`ng build`) | The front end compiles for production and stays under its bundle ceiling — the same command the deploy runs (ADR-265) |
+| Angular production build (`npm run build`) | The front end compiles for production and stays under its bundle ceiling — the same step the `build` action starts with, so what the test run proves is what the deploy ships (ADR-265; `config.rs` asserts it is the last step, so it cannot silently drop) |
 | Smoke (Playwright, isolated database) — **`--smoke` only** | The critical paths end to end against a scratch `CEDAR_DATA_DIR` |
 
-`TestPipeline.Phases()` appends the smoke phase only under `options.Smoke`, so a bare `cedar test`
-never runs it. Anyone who has only ever typed the bare command has a whole suite they have never
-triggered — run `cedar test --smoke` before a deploy that touches a critical path.
+`--smoke` appends the profile's `smoke` action after `test`, so a bare `cedar test` never runs it.
+Anyone who has only ever typed the bare command has a whole suite they have never triggered — run
+`cedar test --smoke` before a deploy that touches a critical path.
 
 The smoke suite has two environment variables, both exported by `Scripts/e2e.ps1` from its
 `-WebPort` / `-ApiPort` parameters: `E2E_BASE_URL` (the Angular dev server; `playwright.config.ts`
@@ -47,9 +50,9 @@ Three drift guards inside the backend phase fail the build rather than waiting t
 or `sec-*` settings section absent from `docs/design/UI-INVENTORY.md`), `DocsFlowGraphTests` (a doc
 absent from `docs/DOCS-FLOW.md`, or a mapped path that no longer exists).
 
-The build phase names no tests, so the grid draws nothing for it and its row reads "no results
-parsed" — the verdict is its exit code, as for every phase. `--smoke` does not replace it: the smoke
-harness starts the Angular dev server, which tolerates exactly what the production compiler rejects.
+The build step names no tests — its verdict is its exit code, as for every step. `--smoke` does not
+replace it: the smoke harness starts the Angular dev server, which tolerates exactly what the
+production compiler rejects.
 
 On a machine with the .NET SDK but without the ASP.NET Core 8 shared runtime — a fresh install that
 only ever pulled a newer SDK — `dotnet test` and `dotnet ef` refuse to start the .NET 8 test host and
@@ -304,10 +307,12 @@ The full risk list is `docs/tech/DESKTOP.md` §Risks. The checks that need a rea
 - **The deployed build is actually the new one.** A version-string match proves nothing when two builds
   carry the same number: check a behaviour only the new build has, and bump `Consts.CurrentVersion`
   before deploying so the cheap check works next time.
-- **`cedar status` and `cedar backup verify` agree with the server.** The nightly copy's destination and
-  the path the tool reads are one fact in two places; they have disagreed for a day before. Copies are
+- **`cedar backup verify` and the deploy preflight agree with the server.** The nightly copy's
+  destination and the path the tool reads (`deploy.rs`: `backups_dir` and `BACKUP_GLOB`, one spelling
+  for both readers) are one fact in two places; they have disagreed for a day before. Copies are
   counted by `cedar-*.db.gz`, never by a bare glob — `backup.log` shares the directory and is written
-  after the copy.
+  after the copy. The preflight reads the newest copy's age off the droplet's own clock and prints a
+  WARNING past 36 h or with no copy at all; it never stops the deploy (ADR-265).
 - **A restore, monthly.** Download a dated copy, gunzip it over a scratch `cedar.db`, and open the app
   against it. Restore the media half from R2 the same way. A backup nobody has restored is a hope with
   a cron entry. Cadence: `docs/product/BUSINESS.md` §5.
