@@ -5,6 +5,7 @@ import {
     AdminLanding, AdminPost, AdminSummary, AdminUsage, AdminUser, AdminWaitlistEntry, LandingTextPair,
 } from '../core/admin.service';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
+import { SkeletonComponent, heldLoading } from '../shared/skeleton.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { ModalComponent } from '../shared/modal.component';
 import { IconComponent } from '../shared/icon.component';
@@ -55,7 +56,7 @@ function sortRows<T>(rows: readonly T[], direction: SortDirection,
 @Component({
     selector: 'app-admin',
     imports: [
-        ZonedDatePipe, FormsModule, IndexTabsComponent, SpecRowComponent, LogLineComponent, ButtonComponent,
+        ZonedDatePipe, FormsModule, IndexTabsComponent, SpecRowComponent, LogLineComponent, ButtonComponent, SkeletonComponent,
         ModalComponent, IconComponent, PageHeaderComponent, EmptyStateComponent, SortHeaderComponent,
     ],
     templateUrl: 'admin.component.html',
@@ -73,6 +74,8 @@ export class AdminComponent implements OnInit, OnDestroy {
     audit = signal<AdminAuditEntry[]>([]);
     auditHasMore = signal(false);
     auditLoadingMore = signal(false);
+    showSkeleton = heldLoading(this.loading);
+    showAuditSkeleton = heldLoading(this.auditLoadingMore);
     invites = signal<AdminInviteCode[]>([]);
     posts = signal<AdminPost[]>([]);
     postTotal = signal(0);
@@ -183,6 +186,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     // listing, and four of the five admin tabs never look at it.
     landing = signal<AdminLanding | null>(null);
     landingBusy = signal(false);
+    showLandingSkeleton = heldLoading(computed(() => this.landingBusy() && !this.landing()));
     landingSaved = signal(false);
     readonly marks = ['done', 'doing', 'next'];
     lf = {
@@ -201,6 +205,7 @@ export class AdminComponent implements OnInit, OnDestroy {
 
     discovery = signal<AdminDiscovery | null>(null);
     discoveryBusy = signal(false);
+    showDiscoverySkeleton = heldLoading(computed(() => this.discoveryBusy() && !this.discovery()));
     discoverySaved = signal(false);
     df = {
         enabled: true,
