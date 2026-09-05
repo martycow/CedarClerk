@@ -184,7 +184,7 @@ cedar open desktop             launch what's already built (or the installed cop
 
 `BuildPipeline` synchronizes the version in `package.json` with `Consts.CurrentVersion`. `CedarClerk.Desktop/server/` is the build output (~70 MB self-contained runtime), not tracked by git.
 
-**`Scripts/build.ps1` no longer exists** (nor do `deploy.ps1`/`test.ps1`) — since 12.08.2026 all of that lives in `CedarClerk.Cli/Pipelines/` (ADR-119). On a fresh clone, run `.\Scripts\install-cli.ps1` first, then everything through `cedar`.
+Build/test/deploy operations live in the Rust `cedar-cli` and JSON program profiles (ADR-252). On a fresh clone, run `.\Scripts\install-cli.ps1` first, then use `cedar`. See [operations-console.md](../for_user/operations-console.md) for prerequisites and configuration.
 
 ## How an update arrives (ADR-116)
 

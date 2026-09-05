@@ -13,6 +13,7 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [x] Replace the operations console with Rust/Ratatui — animated dashboard, JSON program profiles, streamed actions, deploy/resume/rollback, local tests and bot-disabled local serving; installed as native `cedar.exe`. ADR-252 #cli #operations P1
 - [x] Screenshot-derived UI coherence pass — one persisted sidebar model, task-specific page measures, fluid panes, one scroll owner per axis, shared row and selection anatomy, mutually exclusive overlays, actionable empty states, and an editorial Discovery zero state across the full 18-screen evidence set. ADR-246 #design #ux #a11y P0
 - [x] `T-357` Advanced Showcase editor — an ordered safe-block model, block list + live result + per-block inspector, reviewed AI prose suggestions, and canonical `/showcase/{slug}` routes for Projects of any kind. ADR-245 #showcase #editor P3
 - [x] `T-323` Account display timezone — IANA timezone in the profile, one formatter across the app/calendar/blog, with UTC on the wire unchanged. ADR-244 #ui #decision P2
@@ -96,5 +97,5 @@ see them.
   only. **Committed to master as `3b93004`, not deployed.**
   `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
   from the one on the droplet — which the previous pair of deploys could not do.
-- Active branch: `claude/backlog-sweep` (above). `codex/ui-feedback-pass` holds the UI feedback pass, committed locally and not deployed. `showcase_menu_and_layout` and the `UI_V2` port remain merged into `master`.
+- Active branch: `master` — merged 05.09.2026: the backlog sweep (`claude/backlog-sweep`, version 0.22.0), the New-project wizard (ADR-253) and the Rust operations console (`codex/rust-operations-console`, ADR-252). Nothing deployed. `showcase_menu_and_layout` and the `UI_V2` port remain merged into `master`.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.

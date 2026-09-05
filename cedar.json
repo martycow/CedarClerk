@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "defaultProgram": "cedarclerk",
+  "appearance": { "animation": true, "fps": 24 },
+  "programs": [
+    {
+      "id": "cedarclerk",
+      "name": "Cedar Clerk",
+      "description": "One document. Every destination.",
+      "root": ".",
+      "cedarClerk": true,
+      "version": { "file": "CedarClerk.Core/Consts.cs", "marker": "CurrentVersion" },
+      "links": {
+        "browser": "https://cedarclerk.app",
+        "blog": "https://blog.mooexe.dev",
+        "local": "http://localhost:8080",
+        "downloads": "https://cedarclerk.app/downloads"
+      },
+      "deploy": {
+        "host": "martycow@periwinkle.mooexe.dev",
+        "identityFile": "",
+        "remoteRoot": "/home/martycow/cedarclerk",
+        "service": "cedarclerk",
+        "healthUrl": "https://cedarclerk.app/api/health",
+        "artifactDir": "publish",
+        "requiredFiles": ["CedarClerk.Server.dll", "wwwroot/index.html"],
+        "branch": "master",
+        "buildAction": "build",
+        "healthAttempts": 40,
+        "healthDelaySeconds": 3
+      },
+      "serve": {
+        "command": "dotnet",
+        "args": ["CedarClerk.Server.dll"],
+        "cwd": "publish",
+        "env": {
+          "CEDAR_DATA_DIR": "{root}/CedarClerk.Server/data",
+          "Cedar__Telegram__BotToken": " ",
+          "Cedar__Urls": "http://127.0.0.1:8080",
+          "ASPNETCORE_URLS": "http://127.0.0.1:8080",
+          "ASPNETCORE_ENVIRONMENT": "LocalNoBot"
+        },
+        "port": 8080,
+        "url": "http://localhost:8080",
+        "healthUrl": "http://localhost:8080/api/health",
+        "buildAction": "build"
+      },
+      "actions": {
+        "build": {
+          "label": "Build web + server",
+          "description": "Build the exact artifact that deploy ships.",
+          "steps": [
+            { "type": "exec", "name": "Angular production build", "command": "npm", "args": ["run", "build"], "cwd": "cedarclerk-web" },
+            { "type": "clear", "name": "Prepare publish directory", "path": "publish" },
+            { "type": "exec", "name": "Publish portable .NET server", "command": "dotnet", "args": ["publish", "CedarClerk.Server", "-c", "Release", "-o", "publish"] },
+            { "type": "copy", "name": "Bundle browser application", "from": "cedarclerk-web/dist/cedarclerk-web/browser", "to": "publish/wwwroot" }
+          ]
+        },
+        "test": {
+          "label": "Run all local tests",
+          "description": "Rust, backend, frontend and design contracts.",
+          "continueOnError": true,
+          "steps": [
+            { "type": "exec", "name": "Rust console tests", "command": "pwsh", "args": ["-NoProfile", "-File", "Scripts/rust-cli.ps1", "test", "--locked"] },
+            { "type": "exec", "name": "Backend tests", "command": "dotnet", "args": ["test", "CedarClerk.sln", "--nologo", "--logger", "console;verbosity=normal"] },
+            { "type": "exec", "name": "Frontend tests", "command": "npm", "args": ["run", "test"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Icon inventory", "command": "npm", "args": ["run", "check:icons"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Contrast contract", "command": "npm", "args": ["run", "check:contrast"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Density contract", "command": "npm", "args": ["run", "check:density"], "cwd": "cedarclerk-web" }
+          ]
+        },
+        "test-backend": {
+          "label": "Backend tests",
+          "steps": [{ "type": "exec", "name": "Backend tests", "command": "dotnet", "args": ["test", "CedarClerk.sln", "--nologo"] }]
+        },
+        "test-frontend": {
+          "label": "Frontend + design contracts",
+          "continueOnError": true,
+          "steps": [
+            { "type": "exec", "name": "Frontend tests", "command": "npm", "args": ["run", "test"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Icon inventory", "command": "npm", "args": ["run", "check:icons"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Contrast", "command": "npm", "args": ["run", "check:contrast"], "cwd": "cedarclerk-web" },
+            { "type": "exec", "name": "Density", "command": "npm", "args": ["run", "check:density"], "cwd": "cedarclerk-web" }
+          ]
+        },
+        "test-cli": {
+          "label": "Rust console tests",
+          "steps": [{ "type": "exec", "name": "Rust tests", "command": "pwsh", "args": ["-NoProfile", "-File", "Scripts/rust-cli.ps1", "test", "--locked"] }]
+        },
+        "smoke": {
+          "label": "Browser smoke suite",
+          "description": "Playwright with an isolated database and no bot token.",
+          "steps": [{ "type": "exec", "name": "Playwright smoke", "command": "pwsh", "args": ["-NoProfile", "-File", "Scripts/e2e.ps1"], "env": { "Cedar__Telegram__BotToken": " " } }]
+        },
+        "build-desktop": {
+          "label": "Build desktop shell",
+          "steps": [
+            { "type": "clear", "name": "Prepare desktop server", "path": "CedarClerk.Desktop/server" },
+            { "type": "exec", "name": "Publish desktop server", "command": "dotnet", "args": ["publish", "CedarClerk.Server", "-c", "Release", "-r", "win-x64", "--self-contained", "true", "-p:PublishSingleFile=false", "-o", "CedarClerk.Desktop/server"] },
+            { "type": "copy", "name": "Bundle desktop frontend", "from": "cedarclerk-web/dist/cedarclerk-web/browser", "to": "CedarClerk.Desktop/server/wwwroot" },
+            { "type": "exec", "name": "Install desktop dependencies", "command": "npm", "args": ["ci"], "cwd": "CedarClerk.Desktop" }
+          ]
+        },
+        "build-installer": {
+          "label": "Package desktop installer",
+          "steps": [{ "type": "exec", "name": "Electron installer", "command": "npm", "args": ["run", "dist"], "cwd": "CedarClerk.Desktop" }]
+        },
+        "desktop": {
+          "label": "Open desktop app",
+          "steps": [{ "type": "exec", "name": "Desktop app", "command": "npm", "args": ["start"], "cwd": "CedarClerk.Desktop" }]
+        },
+        "claude": {
+          "label": "Claude remote control",
+          "interactive": true,
+          "steps": [{ "type": "exec", "name": "Claude remote control", "command": "claude", "args": ["remote-control"] }]
+        }
+      }
+    }
+  ]
+}
