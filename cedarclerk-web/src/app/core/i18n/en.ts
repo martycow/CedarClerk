@@ -958,6 +958,7 @@ export const en = {
             nothingToLink: 'Every document in this project is already linked.',
             indexedLabel: 'Indexed',
             missingHint: 'The path is recorded, the file is not there right now. It may be on a drive that is unplugged.',
+            loadingMore: 'Loading more…',
         },
         edit: {
             title: 'Project settings',

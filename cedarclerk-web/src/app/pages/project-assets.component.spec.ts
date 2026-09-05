@@ -57,6 +57,20 @@ class FakeIndex {
     thumbnailUrl(_projectId: string, assetId: string) { return `/thumb/${assetId}`; }
 }
 
+// The virtual viewport renders its window a microtask after the data arrives, so a view switch
+// needs a settle before the rows exist.
+async function settle(fixture: ComponentFixture<unknown>) {
+    for (let tick = 0; tick < 3; tick++) await fixture.whenStable();
+    fixture.detectChanges();
+}
+
+function assetPage(from: number, count: number, total: number): AssetPage {
+    const items = Array.from({ length: Math.max(0, Math.min(count, total - from)) }, (_, i) => ({
+        ...ASSET, id: `a${from + i}`, fileName: `file-${from + i}.png`, relativePath: `Art/file-${from + i}.png`,
+    }));
+    return { ...PAGE, total, totalIndexed: total, byKind: { image: total }, items };
+}
+
 describe('project assets', () => {
     let fixture: ComponentFixture<ProjectAssetsComponent>;
     let api: FakeIndex;
@@ -115,13 +129,15 @@ describe('project assets', () => {
         expect(tile.getAttribute('aria-pressed')).toBe('true');
 
         fixture.componentInstance.setView('list');
-        fixture.detectChanges();
+        await settle(fixture);
         const table = root().querySelector<HTMLElement>('.asset-table')!;
         const row = table.querySelector<HTMLElement>('.asset-row:not(.head-row)')!;
         const openButton = row.querySelector<HTMLButtonElement>('button.asset-open')!;
         expect(table.getAttribute('role')).toBe('table');
+        expect(table.getAttribute('aria-rowcount')).toBe('2');
         expect(root().querySelector('[role="grid"]')).toBeNull();
         expect(row.getAttribute('role')).toBe('row');
+        expect(row.getAttribute('aria-rowindex')).toBe('2');
         expect(row.querySelectorAll('[role="cell"]').length).toBe(5);
         expect(openButton.tagName).toBe('BUTTON');
         expect(openButton.getAttribute('role')).toBeNull();
@@ -149,6 +165,58 @@ describe('project assets', () => {
 
         expect(api.queries.at(-1)).toMatchObject({ sort: 'modified', direction: 'desc', skip: 0 });
         expect(modifiedHeader.getAttribute('aria-sort')).toBe('descending');
+    });
+
+    // T-142 — no pager: the list keeps the server's page size and appends the next page behind the
+    // scroll, so the row count a reader hears is the index's, not the page's.
+    it('appends the next server page behind the scroll instead of paging', async () => {
+        api.listHandler = async (_projectId, query) => assetPage(query.skip ?? 0, 60, 130);
+        await fixture.componentInstance.load();
+        await settle(fixture);
+
+        expect(fixture.componentInstance.items().length).toBe(60);
+        expect(root().querySelector('.pager')).toBeNull();
+        expect(root().querySelector('.asset-grid')?.getAttribute('role')).toBe('list');
+        expect(root().querySelector('[role="listitem"]')?.getAttribute('aria-setsize')).toBe('130');
+        expect(fixture.componentInstance.rangeLabel()).toBe('60 / 130');
+
+        await fixture.componentInstance.loadMore();
+        expect(api.queries.at(-1)).toMatchObject({ skip: 60, take: 60 });
+        expect(fixture.componentInstance.items().map(a => a.id).slice(58, 62)).toEqual(['a58', 'a59', 'a60', 'a61']);
+
+        // A short page is the end even though the count promised more.
+        api.listHandler = async (_projectId, query) => assetPage(query.skip ?? 0, 5, 130);
+        await fixture.componentInstance.loadMore();
+        expect(fixture.componentInstance.items().length).toBe(125);
+        expect(fixture.componentInstance.hasMore()).toBe(false);
+        await fixture.componentInstance.loadMore();
+        expect(fixture.componentInstance.items().length).toBe(125);
+
+        // A new filter starts over from the first page.
+        api.listHandler = async (_projectId, query) => assetPage(query.skip ?? 0, 60, 90);
+        const before = api.queries.length;
+        fixture.componentInstance.setKind('image');
+        await settle(fixture);
+        expect(api.queries[before]).toMatchObject({ kind: 'image', skip: 0 });
+        expect(fixture.componentInstance.items()[0].id).toBe('a0');
+        // The test window has no height, so the fill check keeps asking until the count is met.
+        await vi.waitFor(() => expect(fixture.componentInstance.items().length).toBe(90));
+    });
+
+    it('draws the list through a fixed-height virtual viewport that counts every row', async () => {
+        api.listHandler = async (_projectId, query) => assetPage(query.skip ?? 0, 60, 130);
+        await fixture.componentInstance.load();
+        fixture.componentInstance.setView('list');
+        await settle(fixture);
+
+        const viewport = root().querySelector<HTMLElement>('cdk-virtual-scroll-viewport.asset-rows')!;
+        expect(viewport).not.toBeNull();
+        expect(viewport.getAttribute('role')).toBe('rowgroup');
+        expect(root().querySelector('.asset-table')?.getAttribute('aria-rowcount')).toBe('131');
+        const rendered = [...viewport.querySelectorAll<HTMLElement>('.asset-row')];
+        expect(rendered.length).toBeGreaterThan(0);
+        expect(rendered.length).toBeLessThan(60);
+        expect(rendered[0].getAttribute('aria-rowindex')).toBe('2');
     });
 
     it('does not promise localized alphabet order for the canonical type sort', () => {
