@@ -1,0 +1,409 @@
+/* ---------- Toolbar: the tool strip, its menus, and the insert dialogs that hang off it ---------- */
+/* One tool strip, chrome, whose rows and captions are decided by measurement (ADR-150). The
+   attribute is what puts the 30px touch floor and the 11-13px type under everything in here — and
+   what lets tools/check-density.mjs score them. */
+.strip[data-surface="chrome"] {
+    --icon-xs: var(--icon-sm);
+    flex: none;
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 0 var(--space-2);
+    border-bottom: 1px solid var(--paper-edge);
+    background: var(--surface);
+    color: var(--t2);
+    font-size: var(--text-chrome-sm);
+}
+
+.strip .tb-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    /* The fit aims for no overflow at all; this is what the strip does on the width where even
+       two rows do not hold, which is the behaviour it had before the fit existed. */
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.strip .tb-line-2 {
+    margin-top: var(--space-1);
+    border-top: 1px solid var(--paper-edge);
+    padding-top: var(--space-1);
+}
+
+.strip .tb-lead,
+.strip .tb-trail {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+}
+
+.strip .tb-history {
+    display: inline-flex;
+    gap: 0;
+    flex: none;
+}
+
+/* Pushed to the far end without a spacer element: a spacer would be one more flex item and one
+   more gap than measureToolbar() counts, and the count is what decides the row. */
+.strip .tb-trail { margin-left: auto; }
+
+.strip .tb-group {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    flex: none;
+    border-left: 1px solid color-mix(in srgb, var(--t2) 20%, transparent);
+    padding-left: var(--space-2);
+}
+
+/* The rule is withheld at the head of a row, never the box: a group has to measure the same width
+   wherever the fit puts it, or the measurement and the arrangement chase each other. */
+.strip .tb-group:first-child { border-left-color: transparent; }
+
+.strip .tb-row {
+    display: inline-flex;
+    gap: 1px;
+}
+
+/* The caption names its group; it must never be what decides the group's width (T-051 — a long
+   word here widened the group and pushed the next one off the row). */
+/* Cream at full strength: a group caption is a word, and the soft cream is 3.35:1 composited
+   over the rail — the glyph floor, not a label's. The same call the styleguide's state line
+   makes. */
+.strip .tb-caption {
+    font-size: var(--text-chrome-sm);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    font-weight: 700;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.strip .tb-caption.accent {
+    color: var(--accent);
+}
+
+.strip.no-captions .tb-caption { display: none; }
+
+.strip-error {
+    margin: var(--space-1) var(--space-3);
+}
+
+.block-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+}
+
+/* The same panel hangs off both surfaces — the strip's wood and the inspector's paper — so the
+   base rule is the one that carries the ink and the box, and the strip only tightens it. */
+.block-menu button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.block-menu button:hover:not(:disabled) { background: var(--hover); }
+
+.block-menu button.on {
+    color: var(--accent);
+    font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.block-menu button:disabled { opacity: .6; cursor: default; }
+
+/* The panel is paper hanging off wood, so it keeps paper's ink. Without these three the entries
+   were painted the strip's soft cream on a cream sheet — `.strip button` and `.block-menu button`
+   are the same specificity, and the strip's block comes second. */
+.strip .block-menu button {
+    min-height: var(--hit-chrome);
+    padding: 0 var(--space-3);
+    font-size: var(--text-chrome);
+    color: var(--text);
+}
+
+.strip .block-menu button:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+
+.strip .block-menu button.on {
+    color: var(--accent);
+    font-weight: 700;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Same defect, same reason: the footnote panel's own Insert button is a class the strip's element
+   rule out-specifies, so it too came out cream on cream. */
+
+.strip button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* --hit-surface carries the touch floor and is declared only under @media (pointer: coarse),
+       so the resting box names the chrome token the strip's own surface resolves to. */
+    min-height: var(--hit-chrome);
+    min-width: var(--hit-chrome);
+    padding: 0 var(--space-1);
+    border: none;
+    border-radius: var(--radius-stamp);
+    background: none;
+    /* T-340 — was --rail-ink-soft, which is the crumb separator's cream: forty tools drawn in it
+       read as part of the wood. The resting tool takes the full rail ink now; soft stays for
+       captions, where fading is the point. */
+    color: var(--t2);
+    font-family: var(--font-sans);
+    font-size: var(--text-chrome);
+    cursor: pointer;
+}
+
+/* T-340 — one weight step for every glyph on the strip without a second icon sweep: Phosphor
+   draws fills, so a hairline stroke of the fill's own colour thickens the shape (8/256 ≈ .5px
+   at the drawn size). */
+.strip app-icon svg { stroke: currentColor; stroke-width: 8px; }
+
+.strip button:hover:not(:disabled) {
+    background: var(--hover-strong);
+    color: var(--text);
+}
+
+.strip button.on {
+    background: var(--asoft);
+    color: var(--accent);
+}
+
+/* Written :not(:focus-visible) so the ring cannot out-specify the global focus halo (ADR-140). */
+.strip button.on:not(:focus-visible) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.strip button:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
+.strip button.block-dropdown {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--hit-chrome);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-stamp);
+    background: var(--sheet);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: var(--text-chrome-sm);
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.strip button.block-dropdown:hover {
+    filter: brightness(1.08);
+}
+
+/* Severity on chrome is a stamp, never a tinted glyph: the rust ink is derived against paper
+   and measures 1.13:1 laid straight on the rail, while the wash it belongs on is opaque and
+   carries it anywhere. Same face as app-stamp-badge's rust tone. */
+.strip button.tb-retry {
+    padding: 0 var(--space-2);
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+/* The face is the word, so it takes a label's ink rather than the glyph cream the other
+   buttons rest on. */
+.strip button.gif-btn {
+    color: var(--text);
+    font-size: var(--text-chrome-sm);
+    font-weight: 700;
+    letter-spacing: .06em;
+}
+
+.strip button.tb-retry:hover:not(:disabled) {
+    background: var(--danger-soft);
+    color: var(--danger);
+    filter: brightness(1.05);
+}
+
+/* Only ever drawn inside a group on the strip, so it is milled into the wood rather than ruled
+   in the page's own border ink. */
+.sep {
+    width: 1px;
+    height: 18px;
+    align-self: center;
+    background: color-mix(in srgb, var(--t2) 20%, transparent);
+    margin: var(--space-1) 0;
+}
+
+.strip.hidden-for-focus {
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    border-width: 0;
+    opacity: 0;
+    transition: height .15s ease, opacity .1s ease;
+}
+
+.emoji-search {
+    width: 100%;
+    margin-bottom: var(--space-2);
+}
+
+/* A column of captioned grids, scrolling down and only down. As one 10-column grid the captions
+   were cells in it and the panel ran sideways. */
+.emoji-popover {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    max-height: 340px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+}
+
+.emoji-grid-wide {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.emoji-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    border: none;
+    background: none;
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    cursor: pointer;
+    font-size: var(--fs-16);
+    width: auto;
+    height: auto;
+}
+
+.emoji-btn:hover {
+    background: var(--hover-strong);
+}
+
+/* The country code under a flag: on Windows the glyph itself draws as nothing, so this is the
+   only thing on the button that can be read. */
+.emoji-label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-10);
+    line-height: 1;
+    color: var(--t2);
+}
+
+.dt-flags {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: var(--fs-meta);
+    color: var(--text);
+}
+
+.dt-flags label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* The table and formula dialogs (ADR-none — a straight replacement of window.prompt and of an
+   insert that read its size from a preference nobody remembered setting). */
+.dialog-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.dialog-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.dialog-field textarea {
+    font-family: var(--font-mono);
+    resize: vertical;
+}
+
+.dialog-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    font-size: var(--fs-meta);
+    color: var(--text);
+}
+
+/* B9 - the emoji popover scrolls instead of growing, and each group is captioned. */
+.emoji-popover {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+/* Its own name rather than the strip's: the picker groups emoji, the strip groups tools, and one
+   of the two is hidden by a fit the other knows nothing about. */
+.emoji-caption {
+    font-size: var(--fs-caption);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    font-weight: 600;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 2px;
+    margin-bottom: 6px;
+}
+
+/* Multi-emoji sequences (the flags Unicode never got — ⚪️🔴⚪️ and friends) are three glyphs
+   wide; a 10-column cell would clip them, so their group flows as pills instead. */
+.emoji-grid-wide {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.emoji-grid-wide .emoji-btn {
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+}
+
+/* B13 - reveal where a block actually ends. Rendered as ::after decoration so the document stays
+   exactly as written; a real pilcrow character would end up in the exported text. Spaces and tabs
+   are deliberately NOT marked for the same reason: in a contenteditable there is no way to draw
+   them without either inserting characters or fighting the browser's own whitespace handling.
+   DB2: the actual rule moved to styles.scss (global) — this component's emulated encapsulation
+   meant it never matched ProseMirror's runtime-rendered paragraphs, so the button did nothing. */

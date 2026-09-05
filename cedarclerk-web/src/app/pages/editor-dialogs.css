@@ -1,0 +1,295 @@
+/* ---------- Dialogs: AI confirm and toast, uploads, version history, the update diff, the term menu ---------- */
+/* .modal-overlay/.modal-card/etc moved to shared/modal.component.css (ModalComponent) */
+
+.ai-toast {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--sheet);
+    border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--border));
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 11px 15px;
+    color: var(--text);
+    font-size: var(--fs-ui);
+    font-weight: 500;
+}
+
+.ai-toast .icon-xs {
+    color: var(--ok);
+}
+
+.ai-toast.error {
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+.ai-toast.error .icon-xs {
+    color: var(--danger);
+}
+
+/* ---------- Uploads ---------- */
+.uploads {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.upload-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-meta);
+    color: var(--t2);
+}
+
+.upload-name {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upload-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--alt);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.upload-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.15s ease;
+}
+
+.upload-pct {
+    width: 36px;
+    text-align: right;
+    color: var(--t2);
+}
+
+.upload-item.error {
+    color: var(--danger);
+}
+
+.upload-error {
+    flex: 1;
+}
+
+/* ADR-065 — version history rows and the publish-confirmation diff. */
+/* A row is a button now (T-016): it opens the version rather than just describing it. */
+.revision-row {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    width: 100%;
+    padding: 6px 4px;
+    border: none;
+    border-left: 3px solid transparent;
+    border-bottom: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    background: none;
+    font: inherit;
+    font-size: var(--fs-13);
+    text-align: left;
+    cursor: pointer;
+}
+
+.revision-row:hover { background: var(--alt); }
+
+.revision-row.selected {
+    background: var(--asoft);
+    border-left-color: var(--accent);
+    border-bottom-color: var(--abord);
+    font-weight: 600;
+}
+
+.revision-when { color: var(--text); }
+
+.revision-kind {
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.revision-kind.publish { color: var(--accent); }
+
+.revision-lines {
+    margin-left: auto;
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+/* T-014 — one row per target language in the batch-translate dialog. */
+.translate-all-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 0;
+    font-size: var(--fs-13);
+    cursor: pointer;
+}
+
+.translate-all-state {
+    margin-left: auto;
+    font-size: var(--fs-12);
+    color: var(--t2);
+}
+
+.translate-all-state.done { color: var(--ok); }
+.translate-all-state.warn { color: var(--danger); }
+
+/* T-016/T-017 — the opened version: what it changes, and what it actually says. */
+.revision-detail {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.revision-detail-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: var(--fs-13);
+    color: var(--t2);
+}
+
+.revision-detail-head select {
+    font: inherit;
+    padding: 4px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.revision-preview-title {
+    margin-top: 12px;
+    font-size: var(--fs-12);
+    color: var(--t2);
+}
+
+.revision-preview {
+    margin: 4px 0 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--alt);
+    font-family: inherit;
+    font-size: var(--fs-13);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.revision-unified {
+    margin-top: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+    font-family: var(--font-mono);
+    font-size: var(--fs-12);
+}
+
+.revision-unified.compact { max-height: 180px; overflow: auto; }
+
+.revision-diff-row {
+    display: grid;
+    grid-template-columns: 3ch 3ch 2ch minmax(0, 1fr);
+    min-height: 24px;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+}
+
+.revision-diff-row:last-child { border-bottom: 0; }
+.revision-diff-row.added { background: color-mix(in srgb, var(--ok) 11%, var(--sheet)); }
+.revision-diff-row.removed { background: color-mix(in srgb, var(--danger) 10%, var(--sheet)); }
+.revision-line-no { padding: 3px var(--space-1); text-align: right; color: var(--t3); user-select: none; }
+.revision-sign { padding: 3px var(--space-1); text-align: center; font-weight: 700; }
+.revision-diff-row.added .revision-sign { color: var(--ok); }
+.revision-diff-row.removed .revision-sign { color: var(--danger); }
+.revision-line-text { padding: 3px var(--space-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.publish-diff {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--alt);
+}
+
+.publish-diff-head {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-size: var(--fs-13);
+}
+
+.publish-diff-head .muted { color: var(--t2); }
+
+.publish-diff-line {
+    margin-top: 4px;
+    color: var(--t2);
+    font-size: var(--fs-12);
+}
+
+.publish-diff-line.added { color: var(--ok); }
+.publish-diff-line.removed { color: var(--danger); }
+
+/* Right-click menu over a selection (create a glossary term). Positioned at the pointer, with a
+   full-screen invisible button behind it so a click anywhere — or Escape via the button's own
+   focus handling — dismisses it. */
+.term-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    border: none;
+    background: none;
+    cursor: default;
+}
+
+.term-menu {
+    position: fixed;
+    z-index: 61;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--dens-radius);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-1);
+    min-width: 220px;
+}
+
+.term-menu-sep {
+    height: 1px;
+    background: var(--border);
+    margin: var(--space-1) 0;
+}
+
+.term-menu button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    border: none;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--fs-ui);
+    text-align: left;
+    padding: var(--dens-control-y) var(--dens-control-x);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.term-menu button:hover {
+    background: var(--hover);
+}
