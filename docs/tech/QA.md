@@ -51,6 +51,13 @@ The build phase names no tests, so the grid draws nothing for it and its row rea
 parsed" — the verdict is its exit code, as for every phase. `--smoke` does not replace it: the smoke
 harness starts the Angular dev server, which tolerates exactly what the production compiler rejects.
 
+On a machine with the .NET SDK but without the ASP.NET Core 8 shared runtime — a fresh install that
+only ever pulled a newer SDK — `dotnet test` and `dotnet ef` refuse to start the .NET 8 test host and
+the design-time tooling with a "framework not found" error. Set `DOTNET_ROLL_FORWARD=Major` in the
+shell (or `$env:DOTNET_ROLL_FORWARD='Major'` in PowerShell) and both roll onto the runtime that is
+installed; nothing in the repo pins it, because the droplet runs the exact 8.0 runtime and must not
+roll anywhere.
+
 What none of it answers: how anything looks, whether a real provider accepts our payload, whether a
 flow makes sense to a person, and anything that needs a second machine, a phone, or real money.
 Those are the checks below.

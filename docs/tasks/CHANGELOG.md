@@ -1,5 +1,95 @@
 # Changelog
 
+## 2026-09-05 — Backlog sweep (ADR-260…288)
+
+One session, many lanes, fifty-five board rows closed. Everything below is on `claude/backlog-sweep`,
+verified by unit and end-to-end tests only — nobody has opened a screen — and not merged or deployed.
+`Consts.CurrentVersion` is 0.22.0. Four migrations ride along, every one an added column or table:
+`AddPublishJobSilentPin`, `AddPublishTargetStatSnapshot`, `AddProjectEngineAndPlatforms`,
+`AddDraftLastTelegramSentAt`.
+
+**The bench draws the whole form (ADR-260).** `app-select`, `app-textarea` and `app-checkbox` join
+`app-input` in `bench/forms/`, `app-input` passes `maxlength` through and takes an accessible name
+without a visible label, and `app-task-tag` preserves the query it sits beside — T-251, T-252, T-254.
+With the controls in place the modal footers followed: the editor, Posts Manager, project builds and
+the project hub now footer in `app-button` (T-263), and the four picker dialogs T-262 named turned out
+to use it already. Seventy-three orphan dictionary keys are gone from both languages, ten kept as
+computed lookups (T-264); the comments' thumbs-down is an icon and the admin star no longer exists
+(T-269); the peer face reads `--avatar-size` instead of three literals (T-312); presence colours are
+six on both sides of the hub (T-311). Drafts' card rows are laid out by kind (T-030), and the Posts
+Manager, form picker, glossary and Settings fields that had only a placeholder for a name have one
+(T-103, the editor's dialogs remain). Skeletons are one `app-skeleton` held for 300 ms with
+`aria-busy` on the region, used in admin (ADR-286, T-184 keeps the Posts Manager and editor). A dialog
+leaves through Escape, the ✕ or an action, and the scrim is not a button (ADR-285, T-043). The
+router cross-fades except around the editor, and the blog carries a post's cover into its hero; both
+stop under reduced motion (ADR-287, T-185). A custom accent is admitted at 3:1 on the paper and
+`--accent-ink` is set for it; the four area presets — Telegram, iPhone, iPad, blog — are a macro over
+the sheet controls (ADR-288, T-047).
+
+**Build, test and the deploy gate.** `editor.component.css` is four files split by meaning and the
+initial bundle ships only the active language, the Russian dictionary lazily (ADR-263, T-102,
+T-363). `cedar test` runs `ng build` as its sixth phase, and the deploy preflight warns when the
+newest `cedar-*.db.gz` is stale (ADR-265, T-362, T-195). The hanging-link test asserts the cap was
+applied instead of measuring wall-clock, so it no longer races the suite (the flaky T-364).
+`e2e/helpers.ts` derives the blog and landing origins from `E2E_BASE_URL` and `E2E_API_PORT` (T-266);
+both canvas screens have page-level specs (T-308); the `SaveAsync` concurrency branch and
+`CanvasHub.Leave` have tests through a fixture that can arrange the race (T-307). The smoke suite's
+cold run on this branch passed — 60 passed, 18 audit-only skips — and the login spec repeated ten
+times went 40/40, which closes T-317 and T-173.
+
+**Publishing and Telegram.** `disable_notification` and pin-after-send travel through the queue into
+`PublishJob`, so an immediate send honours the toggles the scheduled path already did (T-325). A
+publish revision records the source document rather than the wire copy with Telegram's media paths,
+so the next diff shows only what the author changed (ADR-269, T-104). `POST /api/posts/{id}/telegram-sync`
+edits the one message the last send left and answers with Telegram's own verdict; `Draft.LastTelegramSentAt`
+is what "edited since" is measured against, and a thread answers 409 (ADR-275/278 — the server half
+of T-180; the editor button and the live check remain on the row). The link probe checks every
+redirect hop against the private ranges and dials only the address it resolved (ADR-268, T-324).
+`article:modified_time` is clamped like the JSON-LD date (T-319); `GET …/preview-link` reads an
+existing token back so the editor can show it in a later session (T-320); a post older than the
+nightly snapshots says so once, on the chart (T-105).
+
+**Stats.** X and Bluesky get `PublishTargetStatSnapshot` and `SnapshotPublishTargetStatsJob` at
+04:10 UTC, and the Stats tab grows a leaf per target as soon as a row exists (ADR-273, T-241).
+`GET /api/stats/series` answers every selected source over one aligned window with `available[]`
+beside it, the window delta replaces Δ7d, and `series.csv` is the same query as a file (ADR-279
+supersedes ADR-161 rule 5; T-242, T-243). The invite shelf draws the per-day join/leave bars from
+the series it already had (ADR-271, T-327).
+
+**Project hub, tree and forms.** `Project` carries an engine and target platforms as closed-vocabulary
+keys, comma-joined in the column and refused by the API when unknown, and the hero tag fills in
+(ADR-274/276, T-247). The hub's journal is a union of timestamps the module already writes, and the
+publishing nudge is one date on that list plus a sentence and a number the hub names as the
+account's (ADR-277/281, T-249, T-166). `ProjectSummary` carries the build count and latest version
+(T-246); admin audit rows have a severity derived from the action (T-258). A tree node moves by its
+grip on one flat drop list, depth read off sideways travel (ADR-283, T-201); the asset list view is
+virtualised, the grid appends on scroll by decision (T-142). A registration can be revoked and
+restored from the Forms tab (T-108).
+
+**Canvas.** The board list asks `/access` instead of an owner-only endpoint (T-303); the batch cap has
+its own sentence in `ErrorMessages` (T-306); the People panel is `shared/project-members-panel`
+(T-309); `saving` counts writes in flight (T-310); the empty state and the rail no longer both offer
+"New board" (T-313); the key list names every key the handler implements (T-314); the resend endpoint
+is an addendum to ADR-217 (T-316).
+
+**Errors in every UI language (ADR-284, T-194).** Fifty-eight interpolated server strings across
+fourteen files moved into `ErrorMessages`, and the table now speaks all nine UI languages —
+en/ru/de/fr/es/ja/uk/be/ka — from one partial file per language keyed by member name. The seven new
+translations are first passes, not native-reviewed.
+
+**Docs and research.** `docs/tech/SECURITY.md` is the threat model — assets, trust boundaries, a
+STRIDE table with each mitigation cited, and sixteen gaps G1–G16 as candidate rows (T-190; the
+triage is T-376). The four research rows went into `docs/knowledge_base/RESEARCH-2026-09.md`, each
+section ending in a verdict: IndieDB has no write API and is a copy target; LinkedIn is a post-now-only
+connector or a copy target; IGDB autofill is small but waits on one email to IGDB; the Telegram
+first comment is one to two sessions; no upstream events feed exists, so a curated seed (T-127,
+T-169, T-170, T-171 → T-380…T-384). T-275 was deleted from the board — it had been marked done in
+its own text.
+
+**Board bookkeeping.** New rows T-370…T-384 (the `npm audit` row was re-numbered from a duplicate
+T-364), T-180/T-184/T-103 narrowed to what is left. A machine without the ASP.NET Core 8 shared
+runtime needs `DOTNET_ROLL_FORWARD=Major` for `dotnet test` and `dotnet ef` — in `docs/tech/QA.md`.
+
 ## 2026-09-02 — Queryable collections and document-first editing (ADR-247…251)
 
 The app now owns one headless collection contract instead of adopting a themed data grid: visible
