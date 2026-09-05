@@ -247,7 +247,7 @@
         <ng-container modal-actions>
             <span class="modal-note">{{ t().projects.newDoc.note }}</span>
             <span class="spacer"></span>
-            <button class="btn-ghost" (click)="addingDocument.set(false)">{{ t().common.cancel }}</button>
+            <app-button variant="paper" size="sm" (clicked)="addingDocument.set(false)">{{ t().common.cancel }}</app-button>
         </ng-container>
     </app-modal>
 }
@@ -307,23 +307,23 @@
         </div>
 
         <div class="danger-row">
-            <button class="btn-ghost" [disabled]="busy()" (click)="toggleArchived()">
+            <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="toggleArchived()">
                 {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}
-            </button>
-            <button class="btn-ghost danger" [disabled]="busy()"
-                    (click)="confirmDelete ? deleteProject() : (confirmDelete = true)">
+            </app-button>
+            <app-button variant="danger" size="sm" [disabled]="busy()"
+                        (clicked)="confirmDelete ? deleteProject() : (confirmDelete = true)">
                 {{ confirmDelete ? t().common.delete : t().projects.edit.remove }}
-            </button>
+            </app-button>
         </div>
         @if (confirmDelete) { <p class="hint danger-hint">{{ t().projects.edit.removeConfirm }}</p> }
 
         @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
 
         <ng-container modal-actions>
-            <button class="btn-ghost" (click)="editing.set(false)">{{ t().common.cancel }}</button>
-            <button class="btn-accent" [disabled]="editName().trim().length === 0 || busy()" (click)="saveEdit()">
+            <app-button variant="paper" size="sm" (clicked)="editing.set(false)">{{ t().common.cancel }}</app-button>
+            <app-button variant="pine" size="sm" [disabled]="editName().trim().length === 0 || busy()" (clicked)="saveEdit()">
                 {{ t().common.save }}
-            </button>
+            </app-button>
         </ng-container>
     </app-modal>
 }

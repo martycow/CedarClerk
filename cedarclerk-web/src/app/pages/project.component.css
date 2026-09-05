@@ -283,57 +283,6 @@
 }
 
 /* ---------- Dialogs ---------- */
-.btn-accent {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-accent:hover:not(:disabled) {
-    filter: brightness(1.08);
-}
-
-.btn-accent:disabled,
-.btn-ghost:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
-.btn-ghost {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-ghost:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--border-strong);
-}
-
-.btn-ghost.danger:hover:not(:disabled) {
-    color: var(--danger);
-    border-color: var(--danger);
-}
-
 /* The shared modal head is a flex row and lets its title shrink, which wrapped "New project" onto
    two lines. Projected content keeps this component's style scope, so the heading is fixed here
    rather than by changing the shell for every modal in the app. */
