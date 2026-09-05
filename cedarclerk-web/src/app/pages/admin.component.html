@@ -6,8 +6,14 @@ the Posts Manager and inherit its density through the cascade.-->
 
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
-    @if (loading()) {
-    <p class="hint">{{ t().common.loading }}</p>
+    @if (showSkeleton()) {
+    <div class="admin-grid">
+        <section class="card section">
+            <div class="card-body">
+                <app-skeleton variant="card" [count]="6" />
+            </div>
+        </section>
+    </div>
     } @else {
 
     <app-index-tabs [items]="sectionTabs()" [value]="tab()" [label]="t().admin.tabStrip"
@@ -232,8 +238,8 @@ the Posts Manager and inherit its density through the cascade.-->
             feature list are absent on purpose — they are read out of the code that enforces them,
             and a field for one here would be a second place for a number to be wrong in.-->
             @if (tab() === 'landing') {
-            @if (landingBusy() && !landing()) {
-            <p class="hint in-card">{{ t().common.loading }}</p>
+            @if (showLandingSkeleton()) {
+            <app-skeleton [count]="4" />
             } @else if (landing(); as L) {
             <div class="landing-bar">
                 <!--A real link to the real page, in a new tab: a preview drawn inside the panel
@@ -482,8 +488,8 @@ the Posts Manager and inherit its density through the cascade.-->
             }
 
             @if (tab() === 'discovery') {
-            @if (discoveryBusy() && !discovery()) {
-            <p class="hint in-card">{{ t().common.loading }}</p>
+            @if (showDiscoverySkeleton()) {
+            <app-skeleton [count]="4" />
             } @else if (discovery(); as D) {
             <div class="landing-bar">
                 <a class="landing-preview" href="/discovery" target="_blank" rel="noopener">
@@ -707,6 +713,9 @@ the Posts Manager and inherit its density through the cascade.-->
                 }
                 <!--The log is append-only and never trimmed, so a fixed cap would hide history rather
                 than bound it. One page at a time instead.-->
+                @if (showAuditSkeleton()) {
+                <app-skeleton variant="table-row" [count]="3" />
+                }
                 @if (auditHasMore()) {
                 <app-button variant="paper" size="sm" [disabled]="auditLoadingMore()" (clicked)="loadMoreAudit()">
                     {{ t().admin.loadMoreAudit }}

@@ -2177,6 +2177,7 @@ public static partial class BlogEndpoints
             <div class="post-reader">
             {postSheet}
             </div>
+            {HeroTransitionScript}
             {copyGuard}
             {articleBlock}
             <div class="post-discovery">
@@ -2280,6 +2281,14 @@ public static partial class BlogEndpoints
 
     // Plain (non-interpolated) raw string — title/body are substituted via Replace so the
     // CSS's braces don't need interpolation-escaping.
+    // ADR-287 — the post's first own picture answers to the same `view-transition-name` the index
+    // gives the clicked card's cover, so the two are one element to the browser. Placed right after
+    // the article rather than in the footer: the name has to be on the element by the time the new
+    // document first renders, and the footer script is parsed later than the picture.
+    private const string HeroTransitionScript =
+        "<script>(function(){var h=document.querySelector('.post-sheet img[src*=\"/media/\"]');"
+        + "if(h)h.style.viewTransitionName='post-cover';})();</script>";
+
     private const string ShellTemplate = """
         <!doctype html>
         <html lang="{{LANG}}">
@@ -3089,9 +3098,19 @@ public static partial class BlogEndpoints
             .related-grid { grid-template-columns: 1fr; }
         }
 
+        /* ADR-287 — same-origin navigations cross-fade, and `post-cover` (the clicked card's cover on
+           the index, the post's first own picture) travels between the two pages. Firefox has no
+           cross-document transitions and simply navigates; the motion values are the blog's own,
+           since the token contract carries no motion. */
+        @view-transition { navigation: auto; }
+        ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 180ms; }
+        ::view-transition-group(post-cover) { animation-duration: 280ms; animation-timing-function: cubic-bezier(.2, .6, .3, 1); }
+
         /* The design system's motion is a settle, and the OS setting turns it off entirely. */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+            @view-transition { navigation: none; }
+            ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
         }
         </style>
         {{MATH_ASSETS}}
@@ -3139,6 +3158,20 @@ public static partial class BlogEndpoints
                     topics.open = false;
                     topics.querySelector('summary').focus();
                 }
+            });
+        })();
+        /* ADR-287 - only the card being opened names its cover, so the post's hero has exactly one
+           counterpart; pageshow clears it again, because a bfcache return would otherwise leave two
+           covers with one name and the browser would skip the transition entirely. */
+        (function () {
+            document.addEventListener('click', function (e) {
+                if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                var card = e.target && e.target.closest && e.target.closest('a.index-card.has-cover');
+                var cover = card && card.querySelector('.post-card-cover');
+                if (cover) cover.style.viewTransitionName = 'post-cover';
+            });
+            window.addEventListener('pageshow', function () {
+                document.querySelectorAll('.post-card-cover').forEach(function (img) { img.style.viewTransitionName = ''; });
             });
         })();
         /* T-360 - the report link carries the page it was pressed on. */
