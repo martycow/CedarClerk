@@ -1,0 +1,92 @@
+<aside class="card side" [attr.aria-label]="t().projects.canvas.people">
+    <div class="side-head">
+        <span class="label">{{ t().projects.canvas.people }}</span>
+        @if (people().length) { <span class="side-count">{{ people().length }}</span> }
+    </div>
+    <p class="hint">{{ t().projects.canvas.peopleHint }}</p>
+
+    @if (peopleError(); as e) { <p class="error-line">{{ e }}</p> }
+
+    <ul class="people">
+        @for (member of people(); track member.email) {
+            <li class="person">
+                <span class="face" [style.background]="fill(member.email)">{{ initial(member.email) }}</span>
+                <span class="person-text">
+                    <span class="person-name">
+                        {{ member.email }}
+                        @if (member.isYou) { <span class="you">· {{ t().projects.canvas.you }}</span> }
+                    </span>
+                    <span class="person-meta">
+                        {{ roleWord(member.role) }}
+                        @if (member.pending) { · {{ t().projects.canvas.invitePending }} }
+                    </span>
+                </span>
+                @if (isOwner() && member.id) {
+                    <span class="person-actions">
+                        @if (member.pending) {
+                            <app-button variant="paper" size="sm" [disabled]="busy()"
+                                        [title]="t().projects.canvas.inviteResend"
+                                        (clicked)="resend(member)">
+                                <app-icon name="paper-plane-tilt" size="xs" [label]="t().projects.canvas.inviteResend" />
+                            </app-button>
+                        }
+                        <select class="role-pick" [attr.aria-label]="t().projects.canvas.inviteRole"
+                                [ngModel]="member.role" (ngModelChange)="setRole(member, $event)">
+                            @for (role of roles; track role) {
+                                <option [value]="role">{{ roleWord(role) }}</option>
+                            }
+                        </select>
+                        <app-button variant="paper" size="sm" [title]="t().projects.canvas.removeMember"
+                                    (clicked)="openRemove(member)">
+                            <app-icon name="x" size="xs" [label]="t().projects.canvas.removeMember" />
+                        </app-button>
+                    </span>
+                }
+            </li>
+        }
+    </ul>
+
+    @if (isOwner()) {
+        <div class="invite">
+            <app-input type="email" [label]="t().projects.canvas.inviteEmail"
+                       inputId="canvas-invite-email"
+                       [value]="inviteEmail()" (valueChange)="inviteEmail.set($any($event) ?? '')" />
+            <label class="field">
+                <span class="field-label">{{ t().projects.canvas.inviteRole }}</span>
+                <select [ngModel]="inviteRole()" (ngModelChange)="inviteRole.set($event)">
+                    @for (role of roles; track role) {
+                        <option [value]="role">{{ roleWord(role) }}</option>
+                    }
+                </select>
+            </label>
+            <app-button variant="pine" size="sm" [disabled]="busy() || !inviteEmail().trim()"
+                        (clicked)="invite()">
+                <app-icon name="paper-plane-tilt" size="xs" />
+                {{ t().projects.canvas.invite }}
+            </app-button>
+
+            @if (inviteLink(); as link) {
+                <p class="invite-link">{{ link }}</p>
+                <app-button variant="paper" size="sm" (clicked)="copyInvite()">
+                    <app-icon name="link" size="xs" />
+                    {{ inviteCopied() ? t().projects.canvas.inviteCopied : t().projects.canvas.inviteCopy }}
+                </app-button>
+            }
+        </div>
+    }
+</aside>
+
+@if (confirmRemove(); as member) {
+    <app-modal [width]="400" (closed)="confirmRemove.set(null)">
+        <app-icon modal-icon name="warning" size="sm" />
+        <span modal-title>{{ member.email }}</span>
+        <p class="hint">{{ t().projects.canvas.removeConfirm }}</p>
+        @if (peopleError(); as e) { <p class="error-line">{{ e }}</p> }
+        <ng-container modal-actions>
+            <app-button variant="paper" size="sm" (clicked)="confirmRemove.set(null)">{{ t().common.cancel }}</app-button>
+            <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="removeMember()">
+                {{ t().projects.canvas.removeMember }}
+            </app-button>
+        </ng-container>
+    </app-modal>
+}

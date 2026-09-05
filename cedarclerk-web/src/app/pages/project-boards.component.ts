@@ -3,13 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
-import { avatarFill, avatarInitial } from '../core/avatar-color.util';
 import { BoardsService, CANVAS_BACKGROUNDS, CanvasBackground, CanvasBoardSummary } from '../core/boards.service';
-import { INVITABLE_ROLES, InvitableRole, MembersService, ProjectMember } from '../core/members.service';
+import { MembersService, ProjectMember } from '../core/members.service';
 import { ProjectAccess, ProjectAccessService } from '../core/project-access.service';
 import { ProjectsService } from '../core/projects.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
+import { ProjectMembersPanelComponent } from '../shared/project-members-panel.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -22,8 +22,8 @@ import { InputComponent } from '../bench/forms/input.component';
 @Component({
     selector: 'app-project-boards',
     imports: [
-        FormsModule, RouterLink, IconComponent, ModalComponent, PageHeaderComponent, EmptyStateComponent,
-        ButtonComponent, InputComponent,
+        FormsModule, RouterLink, IconComponent, ModalComponent, ProjectMembersPanelComponent,
+        PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent,
     ],
     templateUrl: 'project-boards.component.html',
     styleUrls: ['project-boards.component.css'],
@@ -37,20 +37,17 @@ export class ProjectBoardsComponent {
     t = inject(LocaleService).t;
 
     readonly backgrounds = CANVAS_BACKGROUNDS;
-    readonly roles = INVITABLE_ROLES;
-    readonly fill = avatarFill;
-    readonly initial = avatarInitial;
 
     projectId = signal('');
     projectName = signal('');
     /** What this account is to the project, asked before any owner-only route is tried. */
     access = signal<ProjectAccess | null>(null);
     boards = signal<readonly CanvasBoardSummary[]>([]);
+    /** The People panel's list, as it publishes it. */
     people = signal<readonly ProjectMember[]>([]);
     loading = signal(true);
     loadError = signal<string | null>(null);
     actionError = signal<string | null>(null);
-    peopleError = signal<string | null>(null);
     busy = signal(false);
 
     editing = signal<CanvasBoardSummary | null>(null);
@@ -59,14 +56,7 @@ export class ProjectBoardsComponent {
     formBackground = signal<CanvasBackground>('grid');
     confirmDelete = signal<CanvasBoardSummary | null>(null);
 
-    inviteEmail = signal('');
-    inviteRole = signal<InvitableRole>('editor');
-    inviteLink = signal('');
-    inviteCopied = signal(false);
-    confirmRemove = signal<ProjectMember | null>(null);
-
     me = computed(() => this.people().find(m => m.isYou) ?? null);
-    isOwner = computed(() => (this.access()?.role ?? this.me()?.role) === 'owner');
 
     /**
      * Who may write. The access answer is the authority; the members list stands in for it, and a
@@ -95,7 +85,6 @@ export class ProjectBoardsComponent {
             if (!id) return;
             this.projectId.set(id);
             void this.load();
-            void this.loadPeople();
         });
     }
 
@@ -122,17 +111,6 @@ export class ProjectBoardsComponent {
                 : (await this.members.shared()).find(p => p.id === id)?.name ?? '');
         } catch {
             this.projectName.set('');
-        }
-    }
-
-    async loadPeople() {
-        const id = this.projectId();
-        if (!id) return;
-        this.peopleError.set(null);
-        try {
-            this.people.set(await this.members.list(id));
-        } catch (e) {
-            this.peopleError.set(httpErrorMessage(e, this.t().projects.canvas.peopleFailed));
         }
     }
 
@@ -183,16 +161,11 @@ export class ProjectBoardsComponent {
         }
     }
 
-    // Both confirms clear the error they will render: the last failure of some other action, shown
-    // inside a dialog asking about this one, reads as a refusal of the button not yet pressed.
+    // Clears the error it will render: the last failure of some other action, shown inside a
+    // dialog asking about this one, reads as a refusal of the button not yet pressed.
     openDelete(board: CanvasBoardSummary) {
         this.actionError.set(null);
         this.confirmDelete.set(board);
-    }
-
-    openRemove(member: ProjectMember) {
-        this.peopleError.set(null);
-        this.confirmRemove.set(member);
     }
 
     async removeBoard() {
@@ -208,85 +181,6 @@ export class ProjectBoardsComponent {
         } finally {
             this.busy.set(false);
         }
-    }
-
-    async invite() {
-        const email = this.inviteEmail().trim().toLowerCase();
-        if (!email || this.busy()) return;
-        this.busy.set(true);
-        this.peopleError.set(null);
-        this.inviteCopied.set(false);
-        try {
-            const answer = await this.members.invite(this.projectId(), email, this.inviteRole());
-            this.people.set([...this.people(), answer.member]);
-            this.inviteLink.set(answer.inviteUrl);
-            this.inviteEmail.set('');
-        } catch (e) {
-            this.peopleError.set(httpErrorMessage(e, this.t().projects.canvas.inviteFailed));
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    async resend(member: ProjectMember) {
-        if (!member.id || this.busy()) return;
-        this.busy.set(true);
-        this.peopleError.set(null);
-        this.inviteCopied.set(false);
-        try {
-            const answer = await this.members.resend(this.projectId(), member.id);
-            this.people.set(this.people().map(m => (m.id === answer.member.id ? answer.member : m)));
-            this.inviteLink.set(answer.inviteUrl);
-        } catch (e) {
-            this.peopleError.set(httpErrorMessage(e, this.t().projects.canvas.inviteFailed));
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    async setRole(member: ProjectMember, role: string) {
-        if (!member.id || this.busy() || (role !== 'editor' && role !== 'viewer')) return;
-        this.busy.set(true);
-        try {
-            const next = await this.members.setRole(this.projectId(), member.id, role);
-            this.people.set(this.people().map(m => (m.id === next.id ? next : m)));
-        } catch (e) {
-            this.peopleError.set(httpErrorMessage(e, this.t().projects.actionFailed));
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    async removeMember() {
-        const member = this.confirmRemove();
-        if (!member?.id || this.busy()) return;
-        this.busy.set(true);
-        try {
-            await this.members.remove(this.projectId(), member.id);
-            this.people.set(this.people().filter(m => m.id !== member.id));
-            this.confirmRemove.set(null);
-        } catch (e) {
-            this.peopleError.set(httpErrorMessage(e, this.t().projects.actionFailed));
-        } finally {
-            this.busy.set(false);
-        }
-    }
-
-    async copyInvite() {
-        const link = this.inviteLink();
-        if (!link) return;
-        try {
-            await navigator.clipboard.writeText(link);
-            this.inviteCopied.set(true);
-        } catch {
-            // No clipboard permission — the address is on screen and selectable, which is the
-            // fallback the copy button was a shortcut for.
-        }
-    }
-
-    roleWord(role: string): string {
-        const t = this.t().projects.canvas;
-        return role === 'owner' ? t.roleOwner : role === 'viewer' ? t.roleViewer : t.roleEditor;
     }
 
     backgroundWord(value: CanvasBackground): string {
