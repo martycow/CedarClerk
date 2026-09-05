@@ -270,3 +270,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
 - [ADR-271 — The invite shelf draws the day series it already has](adr/ADR-271.md)
+- [ADR-277 — The project journal is a union of timestamps the module already writes, and the nudge is one date on the list](adr/ADR-277.md)
