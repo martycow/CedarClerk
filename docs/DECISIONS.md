@@ -278,3 +278,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-284 — Server errors speak every UI language, from one table per language keyed by member name](adr/ADR-284.md)
 - [ADR-288 — A custom accent is gated at 3:1 on the paper; an area preset is a macro over the sheet controls](adr/ADR-288.md)
 - [ADR-279 — The Stats tab asks the server for one aligned window; selection reaches it, and the window delta replaces Δ7d](adr/ADR-279.md)
+- [ADR-281 — The hub nudges with a sentence, and prints one account number it names as the account's](adr/ADR-281.md)

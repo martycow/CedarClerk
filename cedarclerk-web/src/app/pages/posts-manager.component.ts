@@ -140,6 +140,10 @@ export class PostsManagerComponent implements OnInit {
     // while the confirm modal is up, same shape as deleteConfirmId/deletePresetId.
     deleteRegistrationTarget = signal<PostRegistration | null>(null);
     registrationDeleting = signal(false);
+    // T-108 — revoking throws a live reader out, so it confirms like delete; restoring lets one
+    // back in and does not.
+    revokeRegistrationTarget = signal<PostRegistration | null>(null);
+    registrationRevoking = signal(false);
 
     // The form attached to the currently selected post. Shown on the POSTS tab (a post is where a
     // form is used), never edited there directly — you pick a preset, and the preset is copied.
@@ -972,6 +976,38 @@ export class PostsManagerComponent implements OnInit {
             this.error.set(httpErrorMessage(e, this.t().manager.errors.loadForm));
         } finally {
             this.registrationDeleting.set(false);
+        }
+    }
+
+    async confirmRevokeRegistration() {
+        const target = this.revokeRegistrationTarget();
+        if (!target) return;
+        const done = await this.setRegistrationRevoked(target, true);
+        if (done) this.revokeRegistrationTarget.set(null);
+    }
+
+    restoreRegistration(r: PostRegistration) {
+        return this.setRegistrationRevoked(r, false);
+    }
+
+    private async setRegistrationRevoked(target: PostRegistration, revoked: boolean): Promise<boolean> {
+        const d = this.selected();
+        if (!d || this.registrationRevoking()) return false;
+        this.registrationRevoking.set(true);
+        try {
+            const res = revoked
+                ? await this.draftsApi.revokeRegistration(d.id, target.id)
+                : await this.draftsApi.restoreRegistration(d.id, target.id);
+            const patch = (r: PostRegistration) => r.id === target.id ? { ...r, isRevoked: res.isRevoked } : r;
+            this.registrations.update(list => list.map(patch));
+            const open = this.selectedRegistration();
+            if (open?.id === target.id) this.selectedRegistration.set(patch(open));
+            return true;
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().manager.forms.revokeFailed));
+            return false;
+        } finally {
+            this.registrationRevoking.set(false);
         }
     }
 
