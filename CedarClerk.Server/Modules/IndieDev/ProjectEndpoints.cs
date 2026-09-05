@@ -39,6 +39,166 @@ public static class ProjectEndpoints
             g.Count(),
             g.Where(b => b.ReleasedAt != null).OrderByDescending(b => b.ReleasedAt).Select(b => b.Version).FirstOrDefault()));
     }
+
+    /// <summary>
+    /// T-166 — the newest publish of any kind across each project's documents: blog, Telegram
+    /// (ChannelPost) or a succeeded queue job. Absent from the result means never published.
+    /// </summary>
+    public static async Task<Dictionary<Guid, DateTime>> LastPublishedAsync(CedarDbContext db, string ownerId)
+    {
+        var filed = db.Drafts.Where(d => d.OwnerId == ownerId && d.ProjectId != null);
+
+        var blog = await filed.Where(d => d.BlogPublishedAt != null)
+            .GroupBy(d => d.ProjectId)
+            .Select(g => new { ProjectId = g.Key!.Value, At = g.Max(d => d.BlogPublishedAt!.Value) })
+            .ToListAsync();
+
+        var telegram = await db.ChannelPosts.Where(p => p.OwnerId == ownerId)
+            .Join(filed, p => p.DraftId, d => d.Id, (p, d) => new { d.ProjectId, p.PublishedAt })
+            .GroupBy(x => x.ProjectId)
+            .Select(g => new { ProjectId = g.Key!.Value, At = g.Max(x => x.PublishedAt) })
+            .ToListAsync();
+
+        var jobs = await db.PublishJobs
+            .Where(j => j.OwnerId == ownerId && j.Status == PublishJobStatus.Succeeded && j.FinishedAt != null)
+            .Join(filed, j => j.DraftId, d => d.Id, (j, d) => new { d.ProjectId, At = j.FinishedAt!.Value })
+            .GroupBy(x => x.ProjectId)
+            .Select(g => new { ProjectId = g.Key!.Value, At = g.Max(x => x.At) })
+            .ToListAsync();
+
+        return blog.Concat(telegram).Concat(jobs)
+            .GroupBy(x => x.ProjectId)
+            .ToDictionary(g => g.Key, g => g.Max(x => x.At));
+    }
+
+    /// <summary>T-249 — the ten things a project journal can say. Strings on the wire, never an enum ordinal.</summary>
+    public static class ActivityKinds
+    {
+        public const string DocumentCreated = "document-created";
+        public const string DocumentUpdated = "document-updated";
+        public const string TaskCreated = "task-created";
+        public const string TaskCompleted = "task-completed";
+        public const string BuildCreated = "build-created";
+        public const string BuildReleased = "build-released";
+        public const string BlogPublished = "blog-published";
+        public const string TelegramPublished = "telegram-published";
+        public const string Published = "published";
+        public const string PublishFailed = "publish-failed";
+
+        public static readonly IReadOnlyList<string> All =
+        [
+            DocumentCreated, DocumentUpdated, TaskCreated, TaskCompleted, BuildCreated, BuildReleased,
+            BlogPublished, TelegramPublished, Published, PublishFailed,
+        ];
+    }
+
+    public sealed record ActivityItem(DateTime At, string Kind, string Title, string? Subtitle, string? Href, string? Actor);
+
+    public const int ActivityDefaultTake = 20;
+    public const int ActivityMaxTake = 100;
+
+    // An edit within a minute of creation is the starter template being saved, not a second event.
+    private static readonly TimeSpan ActivityEditGap = TimeSpan.FromMinutes(1);
+    // Parts of one Telegram thread land seconds apart; the journal names the send, not each part.
+    private static readonly TimeSpan ActivityThreadWindow = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// T-249 — newest first, at most <paramref name="take"/> items, read under the project owner's
+    /// id. Every source is capped at <paramref name="take"/> before the union, so a project with a
+    /// thousand tasks costs the same as one with ten.
+    /// </summary>
+    public static async Task<List<ActivityItem>> ActivityAsync(
+        CedarDbContext db, IConfiguration cfg, string ownerId, Guid projectId, int take, CancellationToken ct = default)
+    {
+        take = Math.Clamp(take, 1, ActivityMaxTake);
+        var items = new List<ActivityItem>();
+        var drafts = db.Drafts.Where(d => d.ProjectId == projectId && d.OwnerId == ownerId);
+
+        var created = await drafts.OrderByDescending(d => d.CreatedAt).Take(take)
+            .Select(d => new { d.Id, d.Title, d.DocumentType, d.CreatedAt }).ToListAsync(ct);
+        items.AddRange(created.Select(d => new ActivityItem(
+            d.CreatedAt, ActivityKinds.DocumentCreated, d.Title, d.DocumentType, $"/editor?draft={d.Id}", null)));
+
+        var updated = await drafts.OrderByDescending(d => d.UpdatedAt).Take(take)
+            .Select(d => new { d.Id, d.Title, d.DocumentType, d.CreatedAt, d.UpdatedAt }).ToListAsync(ct);
+        items.AddRange(updated.Where(d => d.UpdatedAt > d.CreatedAt + ActivityEditGap).Select(d => new ActivityItem(
+            d.UpdatedAt, ActivityKinds.DocumentUpdated, d.Title, d.DocumentType, $"/editor?draft={d.Id}", null)));
+
+        var blogHost = await BlogTenant.HostForOwnerAsync(db, cfg, ownerId, ct);
+        var blog = await drafts.Where(d => d.BlogPublishedAt != null).OrderByDescending(d => d.BlogPublishedAt).Take(take)
+            .Select(d => new { d.Title, d.BlogSlug, At = d.BlogPublishedAt!.Value }).ToListAsync(ct);
+        items.AddRange(blog.Select(d => new ActivityItem(
+            d.At, ActivityKinds.BlogPublished, d.Title, "blog",
+            blogHost is null || d.BlogSlug is null ? null : new BlogSite(ownerId, blogHost).PostUrl(d.BlogSlug), null)));
+
+        var tasks = db.GameTasks.Where(t => t.ProjectId == projectId && t.OwnerId == ownerId);
+        var tasksHref = $"/projects/{projectId}/tasks";
+        var tasksCreated = await tasks.OrderByDescending(t => t.CreatedAt).Take(take)
+            .Select(t => new { t.Title, t.Status, t.Assignee, t.CreatedAt }).ToListAsync(ct);
+        items.AddRange(tasksCreated.Select(t => new ActivityItem(
+            t.CreatedAt, ActivityKinds.TaskCreated, t.Title, t.Status, tasksHref, NullIfBlank(t.Assignee))));
+
+        var tasksCompleted = await tasks.Where(t => t.CompletedAt != null).OrderByDescending(t => t.CompletedAt).Take(take)
+            .Select(t => new { t.Title, t.Status, t.Assignee, At = t.CompletedAt!.Value }).ToListAsync(ct);
+        items.AddRange(tasksCompleted.Select(t => new ActivityItem(
+            t.At, ActivityKinds.TaskCompleted, t.Title, t.Status, tasksHref, NullIfBlank(t.Assignee))));
+
+        var builds = db.Builds.Where(b => b.ProjectId == projectId && b.OwnerId == ownerId);
+        var buildsHref = $"/projects/{projectId}/builds";
+        var buildsCreated = await builds.OrderByDescending(b => b.CreatedAt).Take(take)
+            .Select(b => new { b.Version, b.CreatedAt }).ToListAsync(ct);
+        items.AddRange(buildsCreated.Select(b => new ActivityItem(
+            b.CreatedAt, ActivityKinds.BuildCreated, b.Version, null, buildsHref, null)));
+
+        var buildsReleased = await builds.Where(b => b.ReleasedAt != null).OrderByDescending(b => b.ReleasedAt).Take(take)
+            .Select(b => new { b.Version, At = b.ReleasedAt!.Value }).ToListAsync(ct);
+        items.AddRange(buildsReleased.Select(b => new ActivityItem(
+            b.At, ActivityKinds.BuildReleased, b.Version, null, buildsHref, null)));
+
+        // Over-fetched so a long thread collapsing into one item cannot starve this source.
+        var posts = await db.ChannelPosts.Where(p => p.OwnerId == ownerId)
+            .Join(drafts, p => p.DraftId, d => d.Id, (p, d) => new { p, d.Title })
+            .Join(db.Channels, x => x.p.ChannelId, c => c.Id, (x, c) => new
+            {
+                x.p.DraftId, x.p.ChannelId, x.p.PublishedAt, x.p.TelegramMessageId, x.Title, Channel = c.Title, c.Username,
+            })
+            .OrderByDescending(x => x.PublishedAt).Take(take * 4)
+            .ToListAsync(ct);
+        foreach (var group in posts.GroupBy(x => (x.DraftId, x.ChannelId)))
+        {
+            DateTime? sendStart = null;
+            foreach (var part in group.OrderBy(x => x.PublishedAt).ThenBy(x => x.TelegramMessageId))
+            {
+                if (sendStart is { } start && part.PublishedAt - start < ActivityThreadWindow) continue;
+                sendStart = part.PublishedAt;
+                items.Add(new ActivityItem(
+                    part.PublishedAt, ActivityKinds.TelegramPublished, part.Title, part.Channel,
+                    part.Username is null ? null : $"https://t.me/{part.Username}/{part.TelegramMessageId}", null));
+            }
+        }
+
+        var jobs = db.PublishJobs.Where(j => j.OwnerId == ownerId && j.PartIndex == 0)
+            .Join(drafts, j => j.DraftId, d => d.Id, (j, d) => new { j, d.Title });
+        var succeeded = await jobs
+            .Where(x => x.j.Status == PublishJobStatus.Succeeded && x.j.Network != PublishNetworks.Telegram)
+            .OrderByDescending(x => x.j.FinishedAt).Take(take)
+            .Select(x => new { x.Title, x.j.Network, x.j.PublicUrl, At = x.j.FinishedAt ?? x.j.CreatedAt }).ToListAsync(ct);
+        items.AddRange(succeeded.Select(x => new ActivityItem(
+            x.At, ActivityKinds.Published, x.Title, x.Network, x.PublicUrl, null)));
+
+        var failed = await jobs
+            .Where(x => x.j.Status == PublishJobStatus.Failed || x.j.Status == PublishJobStatus.Unknown)
+            .OrderByDescending(x => x.j.FinishedAt ?? x.j.StartedAt ?? x.j.CreatedAt).Take(take)
+            .Select(x => new { x.Title, x.j.Network, x.j.Error, At = x.j.FinishedAt ?? x.j.StartedAt ?? x.j.CreatedAt }).ToListAsync(ct);
+        items.AddRange(failed.Select(x => new ActivityItem(
+            x.At, ActivityKinds.PublishFailed, x.Title,
+            string.IsNullOrWhiteSpace(x.Error) ? x.Network : $"{x.Network}: {x.Error}", null, null)));
+
+        return items.OrderByDescending(i => i.At).ThenBy(i => i.Kind).Take(take).ToList();
+    }
+
+    private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
     public record ShowcaseRequest(bool Enabled, string? Slug, string? Links, string? Gallery,
         string? TrailerUrl, string? CustomDomain,
         string? PressContactEmail = null, string? PressPrice = null, string? PressEngine = null,
@@ -111,6 +271,7 @@ public static class ProjectEndpoints
                 .ToDictionaryAsync(g => g.ProjectId, g => g.Count);
 
             var builds = await BuildSummariesAsync(db, uid);
+            var lastPublished = await LastPublishedAsync(db, uid);
 
             return Results.Ok(projects.Select(p => new
             {
@@ -127,6 +288,7 @@ public static class ProjectEndpoints
                 assetCount = assetCounts.GetValueOrDefault(p.Id),
                 buildCount = builds.GetValueOrDefault(p.Id)?.Count ?? 0,
                 latestBuildVersion = builds.GetValueOrDefault(p.Id)?.LatestVersion,
+                lastPublishedAt = lastPublished.TryGetValue(p.Id, out var publishedAt) ? publishedAt : (DateTime?)null,
                 // Falls back to the project's own creation for the moment between the two writes
                 // of a create — there is no state in which a project has no documents (ADR-103),
                 // but a null here would still render as an empty cell rather than a date.
@@ -193,6 +355,22 @@ public static class ProjectEndpoints
                 taskCounts,
                 openTaskCount = taskCounts.Where(c => TaskStatuses.IsOpen(c.Key)).Sum(c => c.Value),
             });
+        });
+
+        // T-249 — readable by anyone the project resolves for, the way the canvas is: a member on
+        // the hub sees the same journal as the owner, read under the owner's tenant.
+        group.MapGet("/{id:guid}/activity", async (
+            Guid id, ClaimsPrincipal user, IServiceScopeFactory scopes, IConfiguration cfg, CancellationToken ct,
+            int take = ActivityDefaultTake) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var access = await ProjectAccessResolver.ResolveAsync(scopes, id, uid, ct);
+            if (access is null) return Results.NotFound();
+
+            using var scope = ProjectAccessResolver.OpenOwnerScope(scopes, access);
+            var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+            var items = await ActivityAsync(db, cfg, access.OwnerId, id, take, ct);
+            return Results.Ok(new { items });
         });
 
         // ADR-103 — creating a project creates its first document in the same transaction. There is

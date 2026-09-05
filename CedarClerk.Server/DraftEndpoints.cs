@@ -883,10 +883,22 @@ public static class DraftEndpoints
 
             var rows = await db.PostRegistrations.Where(r => r.DraftId == id)
                 .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new { r.Id, r.Name, r.Nickname, r.Email, r.SocialLink, r.AnswersJson, r.CreatedAt })
+                .Select(r => new { r.Id, r.Name, r.Nickname, r.Email, r.SocialLink, r.AnswersJson, r.CreatedAt, r.IsRevoked })
                 .ToListAsync();
             return Results.Ok(rows);
         });
+
+        // T-108 (ADR-084) — the row stays, the door it opened closes; restore reopens it. Two verbs
+        // rather than a flag in a body so each is idempotent and reads as the action it is.
+        groupBuilder.MapPost("/{id:guid}/registrations/{regId:guid}/revoke", async (Guid id, Guid regId, ClaimsPrincipal user, CedarDbContext db) =>
+            await SetRegistrationRevokedAsync(db, user.FindFirstValue(ClaimTypes.NameIdentifier)!, id, regId, true) is { } state
+                ? Results.Ok(state)
+                : Results.NotFound());
+
+        groupBuilder.MapPost("/{id:guid}/registrations/{regId:guid}/restore", async (Guid id, Guid regId, ClaimsPrincipal user, CedarDbContext db) =>
+            await SetRegistrationRevokedAsync(db, user.FindFirstValue(ClaimTypes.NameIdentifier)!, id, regId, false) is { } state
+                ? Results.Ok(state)
+                : Results.NotFound());
 
         // The owner's own test submissions would otherwise sit in the distribution charts forever.
         // A hard delete, and deliberately so: the row IS that reader's grant (ADR-084's AccessToken
@@ -1965,6 +1977,25 @@ public static class DraftEndpoints
     /// <summary>Null when the draft has no slug yet, or its owner no host to serve one on.</summary>
     public static string? BuildInviteUrl(BlogSite? site, Draft draft, string token) =>
         site is { } blog && draft.BlogSlug is { } slug ? blog.InviteUrl(slug, token) : null;
+
+    public sealed record RegistrationState(Guid Id, bool IsRevoked);
+
+    /// <summary>Null when the draft is not the owner's or the row is not that draft's — one 404 for both.</summary>
+    public static async Task<RegistrationState?> SetRegistrationRevokedAsync(
+        CedarDbContext db, string ownerId, Guid draftId, Guid regId, bool revoked)
+    {
+        if (!await db.Drafts.AnyAsync(d => d.Id == draftId && d.OwnerId == ownerId)) return null;
+
+        var row = await db.PostRegistrations.FirstOrDefaultAsync(r => r.Id == regId && r.DraftId == draftId);
+        if (row is null) return null;
+
+        if (row.IsRevoked != revoked)
+        {
+            row.IsRevoked = revoked;
+            await db.SaveChangesAsync();
+        }
+        return new RegistrationState(row.Id, row.IsRevoked);
+    }
 
     private static string SanitizeFileName(string title)
     {
