@@ -260,5 +260,10 @@ public static partial class ErrorMessages
         [nameof(ShowcaseTextLength)] = "Текст витрины — от 1 до {0} символов",
         [nameof(UnknownShowcaseAiKind)] = "Неизвестный тип ИИ-запроса витрины: {0}",
         [nameof(CouldNotReachService)] = "Не удалось связаться с {0}: {1}",
+        [nameof(TelegramNotSentYet)] = "Этот пост ещё не отправлялся в Telegram — синхронизировать нечего.",
+        [nameof(TelegramThreadNotSyncable)] = "Последняя отправка была тредом — синхронизация тредов пока не поддерживается. Опубликуйте заново.",
+        [nameof(TelegramPostGone)] = "Пост в Telegram больше нельзя отредактировать: {0}",
+        [nameof(UnknownProjectEngine)] = "Неизвестный движок «{0}».",
+        [nameof(UnknownProjectPlatform)] = "Неизвестная платформа «{0}».",
     };
 }

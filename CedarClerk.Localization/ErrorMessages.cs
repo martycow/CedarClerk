@@ -141,6 +141,9 @@ public static partial class ErrorMessages
     public static string ThreadPartGone => T("The document changed while the thread was being published — this part no longer exists. Publish again.");
 
     public static string BotNotRunning => T("Telegram bot is not running.");
+    public static string TelegramNotSentYet => T("This post has not been sent to Telegram yet — there is nothing to sync.");
+    public static string TelegramThreadNotSyncable => T("The last send was a thread — syncing threads is not supported yet. Publish again.");
+    public static string TelegramPostGone(string reason) => T("The Telegram post can no longer be edited: {0}", [reason]);
     /// <summary>ADR-189 — the bounds come from the caller: they are CreditPacks' to state, and
     /// this project does not reference Core.</summary>
     public static string CreditAmountOutOfRange(int min, int max) => T("Name a pack, or a number of credits between {0} and {1}.", [min, max]);
@@ -243,6 +246,8 @@ public static partial class ErrorMessages
     public static string AssetThumbBudgetExhausted(long budget) => T("The preview allowance is used up — the limit is {0} MB. The index still works; new previews are not being stored.", [budget / (1024 * 1024)]);
 
     public static string UnknownProjectType(string type) => T("Unknown project type '{0}'.", [type]);
+    public static string UnknownProjectEngine(string engine) => T("Unknown engine '{0}'.", [engine]);
+    public static string UnknownProjectPlatform(string platform) => T("Unknown platform '{0}'.", [platform]);
 
     public static string UnknownDiscoveryCategory(string category) => T("Unknown Discovery category '{0}'.", [category]);
 

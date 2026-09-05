@@ -260,5 +260,10 @@ public static partial class ErrorMessages
         [nameof(ShowcaseTextLength)] = "Showcase-ის ტექსტი 1-დან {0} სიმბოლომდე უნდა იყოს",
         [nameof(UnknownShowcaseAiKind)] = "Showcase-ის AI-ს უცნობი ტიპი: {0}",
         [nameof(CouldNotReachService)] = "{0}-თან დაკავშირება ვერ მოხერხდა: {1}",
+        [nameof(TelegramNotSentYet)] = "ეს პოსტი ჯერ არ გაგზავნილა Telegram-ში — სინქრონიზაციისთვის არაფერია.",
+        [nameof(TelegramThreadNotSyncable)] = "ბოლო გაგზავნა თრედი იყო — თრედების სინქრონიზაცია ჯერ არ არის მხარდაჭერილი. გამოაქვეყნეთ ხელახლა.",
+        [nameof(TelegramPostGone)] = "Telegram-ის პოსტის რედაქტირება აღარ არის შესაძლებელი: {0}",
+        [nameof(UnknownProjectEngine)] = "უცნობი ძრავი „{0}“.",
+        [nameof(UnknownProjectPlatform)] = "უცნობი პლატფორმა „{0}“.",
     };
 }

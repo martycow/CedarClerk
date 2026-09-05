@@ -260,5 +260,10 @@ public static partial class ErrorMessages
         [nameof(ShowcaseTextLength)] = "Der Showcase-Text muss 1–{0} Zeichen lang sein",
         [nameof(UnknownShowcaseAiKind)] = "Unbekannte Showcase-KI-Art: {0}",
         [nameof(CouldNotReachService)] = "{0} konnte nicht erreicht werden: {1}",
+        [nameof(TelegramNotSentYet)] = "Dieser Beitrag wurde noch nicht an Telegram gesendet — es gibt nichts zu synchronisieren.",
+        [nameof(TelegramThreadNotSyncable)] = "Der letzte Versand war ein Thread — das Synchronisieren von Threads wird noch nicht unterstützt. Veröffentlichen Sie erneut.",
+        [nameof(TelegramPostGone)] = "Der Telegram-Beitrag kann nicht mehr bearbeitet werden: {0}",
+        [nameof(UnknownProjectEngine)] = "Unbekannte Engine „{0}“.",
+        [nameof(UnknownProjectPlatform)] = "Unbekannte Plattform „{0}“.",
     };
 }

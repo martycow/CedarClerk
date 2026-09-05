@@ -260,5 +260,10 @@ public static partial class ErrorMessages
         [nameof(ShowcaseTextLength)] = "Showcaseのテキストは1〜{0}文字にしてください",
         [nameof(UnknownShowcaseAiKind)] = "不明なShowcase AIの種類です：{0}",
         [nameof(CouldNotReachService)] = "{0}に接続できませんでした：{1}",
+        [nameof(TelegramNotSentYet)] = "この投稿はまだ Telegram に送信されていません — 同期するものがありません。",
+        [nameof(TelegramThreadNotSyncable)] = "最後の送信はスレッドでした — スレッドの同期はまだ対応していません。再度公開してください。",
+        [nameof(TelegramPostGone)] = "Telegram の投稿はもう編集できません: {0}",
+        [nameof(UnknownProjectEngine)] = "不明なエンジン「{0}」。",
+        [nameof(UnknownProjectPlatform)] = "不明なプラットフォーム「{0}」。",
     };
 }

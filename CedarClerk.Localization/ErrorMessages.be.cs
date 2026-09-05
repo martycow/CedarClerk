@@ -260,5 +260,10 @@ public static partial class ErrorMessages
         [nameof(ShowcaseTextLength)] = "Тэкст Showcase — ад 1 да {0} сімвалаў",
         [nameof(UnknownShowcaseAiKind)] = "Невядомы тып ШІ-запыту Showcase: {0}",
         [nameof(CouldNotReachService)] = "Не ўдалося звязацца з {0}: {1}",
+        [nameof(TelegramNotSentYet)] = "Гэты пост яшчэ не адпраўляўся ў Telegram — сінхранізаваць няма чаго.",
+        [nameof(TelegramThreadNotSyncable)] = "Апошняя адпраўка была трэдам — сінхранізацыя трэдаў пакуль не падтрымліваецца. Апублікуйце зноў.",
+        [nameof(TelegramPostGone)] = "Пост у Telegram больш нельга адрэдагаваць: {0}",
+        [nameof(UnknownProjectEngine)] = "Невядомы рухавік «{0}».",
+        [nameof(UnknownProjectPlatform)] = "Невядомая платформа «{0}».",
     };
 }
