@@ -4,6 +4,8 @@ using CedarClerk.Server.Modules.IndieDev;
 using CedarClerk.Server.Tenancy;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CedarClerk.Tests;
 
@@ -28,8 +30,42 @@ internal sealed class CanvasFixture : IDisposable
 
     public CedarDbContext As(string ownerId) => Open(TenantProvider.For(ownerId));
 
+    /// <summary>
+    /// The owner's scope with a second writer racing its first save: <paramref name="race"/> runs
+    /// once, after the rows were read and before the UPDATE goes out. That is the window
+    /// <c>CanvasWrites.SaveAsync</c> exists for, and one context alone cannot open it.
+    /// </summary>
+    public CedarDbContext As(string ownerId, Func<Task> race) =>
+        new(new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection)
+            .AddInterceptors(new RaceBeforeSave(race)).Options, TenantProvider.For(ownerId));
+
+    private sealed class RaceBeforeSave(Func<Task> race) : SaveChangesInterceptor
+    {
+        private Func<Task>? pending = race;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken ct = default)
+        {
+            if (Interlocked.Exchange(ref pending, null) is { } once) await once();
+            return result;
+        }
+    }
+
     private CedarDbContext Open(TenantProvider tenant) =>
         new(new DbContextOptionsBuilder<CedarDbContext>().UseSqlite(connection).Options, tenant);
+
+    /// <summary>
+    /// What the hub is given in production: a scope factory whose scopes hand out a
+    /// <see cref="TenantProvider"/> and a context on it, so <c>CreatePlatformScope</c> and
+    /// <c>CreateTenantScope</c> behave exactly as they do behind Kestrel.
+    /// </summary>
+    public IServiceScopeFactory Scopes()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<TenantProvider>();
+        services.AddDbContext<CedarDbContext>(options => options.UseSqlite(connection));
+        return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+    }
 
     public void Dispose() => connection.Dispose();
 

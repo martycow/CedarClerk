@@ -166,6 +166,39 @@
     gap: var(--space-2);
 }
 
+/* The journal is a fixed-height stack like the document card: the page keeps its height and
+   the lines scroll under the pinned head. */
+.journal {
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    max-height: 360px;
+    min-height: 120px;
+}
+
+.journal-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.jl-title {
+    color: var(--text);
+    text-decoration: none;
+}
+
+a.jl-title:hover { color: var(--accent); text-decoration: underline; }
+
+.jl-sub { color: var(--t2); }
+
+.journal-foot {
+    display: flex;
+    justify-content: center;
+    padding-top: var(--space-2);
+}
+
 /* ---------- The right column ---------- */
 .side-card {
     display: flex;
@@ -283,57 +316,6 @@
 }
 
 /* ---------- Dialogs ---------- */
-.btn-accent {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: none;
-    background: var(--accent);
-    color: var(--sheet);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-accent:hover:not(:disabled) {
-    filter: brightness(1.08);
-}
-
-.btn-accent:disabled,
-.btn-ghost:disabled {
-    opacity: .5;
-    cursor: default;
-}
-
-.btn-ghost {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: var(--dens-radius);
-    padding: var(--dens-control-y) var(--dens-control-x);
-    font-size: var(--dens-fs);
-    cursor: pointer;
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.btn-ghost:hover:not(:disabled) {
-    color: var(--text);
-    border-color: var(--border-strong);
-}
-
-.btn-ghost.danger:hover:not(:disabled) {
-    color: var(--danger);
-    border-color: var(--danger);
-}
-
 /* The shared modal head is a flex row and lets its title shrink, which wrapped "New project" onto
    two lines. Projected content keeps this component's style scope, so the heading is fixed here
    rather than by changing the shell for every modal in the app. */
@@ -488,7 +470,21 @@
 
 .cover-actions { flex-wrap: wrap; }
 
-.team-field { margin-top: var(--space-3); }
+.team-field,
+.engine-field { margin-top: var(--space-3); }
+
+.platform-field {
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-1) var(--space-3);
+}
 
 .danger-row {
     display: flex;

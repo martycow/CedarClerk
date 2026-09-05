@@ -249,7 +249,7 @@ public static class PostEndpoints
             if (draft is null) return Results.NotFound(new { error = ErrorMessages.DraftNotFound });
 
             var target = targets.FirstOrDefault(t => t.Network == req.Network);
-            if (target is null) return Results.BadRequest(new { error = $"Unknown network: {req.Network}" });
+            if (target is null) return Results.BadRequest(new { error = ErrorMessages.UnknownNetwork(req.Network) });
 
             var language = req.Language ?? draft.PrimaryLanguage;
             var document = await DraftRevisionService.ResolveAsync(db, draft, language);

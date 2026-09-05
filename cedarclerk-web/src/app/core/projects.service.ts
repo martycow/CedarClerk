@@ -88,6 +88,12 @@ export interface ProjectSummary {
     latestBuildVersion: string | null;
     /** Newest edit to any of the project's documents — the project row itself never moves. */
     lastActivityAt: string;
+    /** T-166 — the newest blog, Telegram or network publish of any document here; null = never. */
+    lastPublishedAt: string | null;
+    /** T-247 — one of PROJECT_ENGINES, or "" for unset. */
+    engine: string;
+    /** T-247 — PROJECT_PLATFORMS keys in the server's order; [] for none. */
+    targetPlatforms: string[];
 }
 
 export interface ProjectDocument {
@@ -99,7 +105,7 @@ export interface ProjectDocument {
     isBlogPublished: boolean;
 }
 
-export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'buildCount' | 'latestBuildVersion' | 'lastActivityAt'> {
+export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'buildCount' | 'latestBuildVersion' | 'lastActivityAt' | 'lastPublishedAt'> {
     /** T-358 — the team whose people reach this project, or null for the owner's alone. */
     teamId: string | null;
     /** T-159 (ADR-134) — null means no public page. */
@@ -157,6 +163,28 @@ export interface ShowcaseStats {
     pendingFollowerCount: number;
 }
 
+/** Mirrors ProjectEndpoints.ActivityKinds — the journal's closed vocabulary of things that happened. */
+export type ActivityKind =
+    | 'document-created' | 'document-updated'
+    | 'task-created' | 'task-completed'
+    | 'build-created' | 'build-released'
+    | 'blog-published' | 'telegram-published' | 'published' | 'publish-failed';
+
+export const ACTIVITY_KINDS: ActivityKind[] = [
+    'document-created', 'document-updated', 'task-created', 'task-completed', 'build-created', 'build-released',
+    'blog-published', 'telegram-published', 'published', 'publish-failed',
+];
+
+/** One journal line: an in-app path or an absolute URL in `href`, or nothing to open at all. */
+export interface ActivityItem {
+    at: string;
+    kind: ActivityKind;
+    title: string;
+    subtitle: string | null;
+    href: string | null;
+    actor: string | null;
+}
+
 export interface CreateProjectInput {
     name: string;
     description?: string;
@@ -209,13 +237,19 @@ export class ProjectsService {
         }>(`/api/ai-jobs/${jobId}`));
     }
 
+    /** T-249 — the project's journal, newest first; `take` is 1…100 and the server clamps it. */
+    activity(id: string, take: number) {
+        return firstValueFrom(this.http.get<{ items: ActivityItem[] }>(`/api/projects/${id}/activity?take=${take}`));
+    }
+
     /** T-296/T-297 — the public page's own counters, for the owner. */
     showcaseStats(id: string) {
         return firstValueFrom(this.http.get<ShowcaseStats>(`/api/projects/${id}/showcase/stats`));
     }
 
-    update(id: string, name: string, description: string, coverUrl: string | null) {
-        return firstValueFrom(this.http.put<ProjectSummary>(`/api/projects/${id}`, { name, description, coverUrl }));
+    /** `engine`/`targetPlatforms` left undefined are left alone by the server; "" and [] clear them. */
+    update(id: string, name: string, description: string, coverUrl: string | null, engine?: string, targetPlatforms?: string[]) {
+        return firstValueFrom(this.http.put<ProjectSummary>(`/api/projects/${id}`, { name, description, coverUrl, engine, targetPlatforms }));
     }
 
     setArchived(id: string, archived: boolean) {

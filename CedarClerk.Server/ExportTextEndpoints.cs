@@ -24,7 +24,7 @@ public static class ExportTextEndpoints
             ClaimsPrincipal user, CedarDbContext db, IConfiguration cfg) =>
         {
             if (target is not (TargetSteam or TargetItch))
-                return Results.BadRequest(new { error = $"Unknown target — use '{TargetSteam}' or '{TargetItch}'." });
+                return Results.BadRequest(new { error = ErrorMessages.UnknownExportTarget(TargetSteam, TargetItch) });
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid);

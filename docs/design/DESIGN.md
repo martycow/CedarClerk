@@ -56,6 +56,8 @@ into `--surface`, the deepest paper, so the wash is one flat colour wherever it 
 
 `--surface` is the deepest of the three papers, so it is the surface every dark-on-light ratio is measured against — not `--sheet`.
 
+`--accent` is the one contract token a user rewrites: `appearance.service.ts` injects a preset's vetted tone, or the author's own hex once it clears 3:1 against `--surface` in that theme (ADR-288). Beside it the same rule sets `--accent-ink` — `var(--sheet)` by default, `var(--text)` for a custom accent bright enough that paper ink would fail — and `styles.scss` declares `--accent-ink: var(--sheet)` so the name resolves when nothing is injected. It is app-only, outside the contract list.
+
 The same block carries what the list above does not name: `--shadow-lg` (the modal shadow), `--hover`/`--hover-strong`/`--hover-danger` (hover tints mixed from `--text`, so they follow the theme), `--scrim` (modal backdrop), the `-soft` washes and `--shadow-md` above, the Cedar Aero glass set (`--blur`, `--glass`, `--glass-strong`, `--glass-border`, `--gloss-top`, `--glow-accent`), and the **bench material names** — `--wood-*`, `--wall-*`, `--rail-*`, `--paper-*`, `--pine-*`, `--brass-*`, `--leaf-*`, the textures, the gradients and the `--bench-*` dimensions. A material name answers "what is this made of", a contract name "what is this for"; where both name one swatch the material aliases onto the contract, never the reverse, and a component reaching for a role uses the contract name (ADR-137).
 
 ### Color — dark (`:root[data-theme="dark"]`)

@@ -21,6 +21,7 @@ const DETAIL: ProjectDetail = {
     createdAt: '2026-08-01T09:00:00', archivedAt: null, showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, showcaseBlocksJson: '', customDomain: null,
     pressContactEmail: null, pressPrice: null, pressEngine: null, pressGenre: null, pressFactsheetRows: null,
     documents: [], upNext: [], taskCounts: {}, currentSprint: SPRINT, openTaskCount: 2,
+    engine: '', targetPlatforms: [],
 };
 
 const task = (over: Partial<GameTask>): GameTask => ({

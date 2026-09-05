@@ -2,10 +2,18 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AuthService } from './auth.service';
 import {
+    ACCENT_MIN_CONTRAST,
+    ACCENT_PRESETS,
     AppearanceService,
     DEFAULT_APPEARANCE,
+    PAPER_SURFACE,
     SHEET_WIDTH_PX,
     SIDEBAR_MODE_STORAGE_KEY,
+    accentContrast,
+    accentInk,
+    contrastRatio,
+    resolveAccent,
+    storedAccent,
 } from './appearance.service';
 import { Theme, ThemeService, THEME_STORAGE_KEY } from './theme.service';
 
@@ -154,6 +162,50 @@ describe('AppearanceService', () => {
         finishSecond();
         await second;
         expect(service.dirty()).toBe(false);
+    });
+
+    it('scores a colour against the paper and picks the ink from its luminance', () => {
+        expect(contrastRatio('#000000', '#FFFFFF')).toBeCloseTo(21, 5);
+        expect(contrastRatio('#FFFFFF', '#000000')).toBeCloseTo(21, 5);
+        expect(accentContrast('#F1EADA', 'light')).toBeCloseTo(1, 5);
+        expect(accentContrast('not a colour', 'light')).toBe(0);
+        for (const preset of ACCENT_PRESETS) {
+            expect(accentContrast(preset.hex, 'light')).toBeGreaterThanOrEqual(4.5);
+            expect(accentContrast(preset.night, 'dark')).toBeGreaterThanOrEqual(4.5);
+            expect(accentInk(preset.hex)).toBe('light');
+        }
+        expect(accentInk(PAPER_SURFACE.light)).toBe('dark');
+        expect(accentInk('#7E7E7E')).toBe('dark');
+        expect(accentContrast('#7E7E7E', 'light')).toBeGreaterThanOrEqual(ACCENT_MIN_CONTRAST);
+    });
+
+    it('keeps a custom accent that clears the floor and drops one that does not', () => {
+        expect(storedAccent('#204060', 'light')).toBe('#204060');
+        expect(storedAccent('#204060', 'light')).toBe(resolveAccent('#204060', 'light'));
+        expect(storedAccent('#e0c060', 'light')).toBe(ACCENT_PRESETS[0].hex);
+        expect(storedAccent('teal', 'dark')).toBe(ACCENT_PRESETS[0].hex);
+        expect(storedAccent(ACCENT_PRESETS[2].hex.toLowerCase(), 'dark')).toBe(ACCENT_PRESETS[2].hex);
+        expect(resolveAccent(ACCENT_PRESETS[2].hex, 'dark')).toBe(ACCENT_PRESETS[2].night);
+        // Night paper is deeper than day paper, so the same colour can pass one and fail the other.
+        expect(accentContrast('#7E7E7E', 'dark')).toBeLessThan(ACCENT_MIN_CONTRAST);
+        expect(storedAccent('#7E7E7E', 'dark')).toBe(ACCENT_PRESETS[0].hex);
+    });
+
+    it('paints a custom accent on :root with the ink its luminance calls for', () => {
+        storedJson.set(JSON.stringify({ theme: 'light', accentLight: '#204060', accentDark: '#e0c060' }));
+        const service = TestBed.inject(AppearanceService);
+        service.loadFromAuth();
+
+        expect(service.prefs()).toMatchObject({ accentLight: '#204060', accentDark: ACCENT_PRESETS[0].hex });
+        const injected = () => document.getElementById('__appearance-accent')?.textContent ?? '';
+        expect(injected()).toContain(':root{--accent:#204060;--accent-ink:var(--sheet)}');
+        expect(injected()).toContain(`:root[data-theme="dark"]{--accent:${ACCENT_PRESETS[0].night};--accent-ink:var(--sheet)}`);
+
+        service.preview({ accentLight: '#7E7E7E' });
+        expect(injected()).toContain(':root{--accent:#7E7E7E;--accent-ink:var(--text)}');
+
+        service.preview({ accentLight: ACCENT_PRESETS[0].hex });
+        expect(injected()).toBe('');
     });
 
     it('maps the four sheet measures to 640, 760, 960 and fluid', () => {

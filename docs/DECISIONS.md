@@ -1,4 +1,4 @@
----
+﻿---
 owner: marty
 last_verified: 2026-09-05
 source_of_truth_for: ADR index — which decisions exist and where their texts live
@@ -270,8 +270,15 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-268 — The link probe checks every hop and dials only the address it checked](adr/ADR-268.md)
 - [ADR-269 — A publish revision holds the source document, not the wire copy](adr/ADR-269.md)
 - [ADR-271 — The invite shelf draws the day series it already has](adr/ADR-271.md)
+- [ADR-273 — X and Bluesky get their own snapshot table and their own nightly job](adr/ADR-273.md)
+- [ADR-274 — Engine and target platforms are closed-vocabulary keys, stored comma-joined](adr/ADR-274.md)
+- [ADR-275 — `Draft.LastTelegramSentAt` is the one timestamp "edited since" is measured against](adr/ADR-275.md)
+- [ADR-277 — The project journal is a union of timestamps the module already writes, and the nudge is one date on the list](adr/ADR-277.md)
+- [ADR-279 — The Stats tab asks the server for one aligned window; selection reaches it, and the window delta replaces Δ7d](adr/ADR-279.md)
+- [ADR-281 — The hub nudges with a sentence, and prints one account number it names as the account's](adr/ADR-281.md)
+- [ADR-283 — Document tree drag&drop: a flat drop list, depth from sideways travel](adr/ADR-283.md)
+- [ADR-284 — Server errors speak every UI language, from one table per language keyed by member name](adr/ADR-284.md)
+- [ADR-285 — A dialog leaves through Escape, the ✕ or an action; the scrim is not a button](adr/ADR-285.md)
 - [ADR-286 — One skeleton, held for 300 ms, marking the region busy](adr/ADR-286.md)
 - [ADR-287 — View transitions: the router cross-fades except around the editor, the blog carries a cover into the post](adr/ADR-287.md)
-- [ADR-283 — Document tree drag&drop: a flat drop list, depth from sideways travel](adr/ADR-283.md)
-- [ADR-285 — A dialog leaves through Escape, the ✕ or an action; the scrim is not a button](adr/ADR-285.md)
-- [ADR-277 — The project journal is a union of timestamps the module already writes, and the nudge is one date on the list](adr/ADR-277.md)
+- [ADR-288 — A custom accent is gated at 3:1 on the paper; an area preset is a macro over the sheet controls](adr/ADR-288.md)

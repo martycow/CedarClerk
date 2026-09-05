@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
@@ -34,7 +35,7 @@ public static class FolderEndpoints
         {
             var name = req.Name.Trim();
             if (name.Length == 0 || name.Length > FolderNameMaxLength)
-                return Results.Json(new { error = $"Folder name must be 1-{FolderNameMaxLength} characters" }, statusCode: StatusCodes.Status400BadRequest);
+                return Results.Json(new { error = ErrorMessages.FolderNameLength(FolderNameMaxLength) }, statusCode: StatusCodes.Status400BadRequest);
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var folder = new Folder { OwnerId = uid, Name = name };
@@ -47,7 +48,7 @@ public static class FolderEndpoints
         {
             var name = req.Name.Trim();
             if (name.Length == 0 || name.Length > FolderNameMaxLength)
-                return Results.Json(new { error = $"Folder name must be 1-{FolderNameMaxLength} characters" }, statusCode: StatusCodes.Status400BadRequest);
+                return Results.Json(new { error = ErrorMessages.FolderNameLength(FolderNameMaxLength) }, statusCode: StatusCodes.Status400BadRequest);
 
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var folder = await db.Folders.FirstOrDefaultAsync(f => f.Id == id && f.OwnerId == uid);

@@ -95,6 +95,46 @@
                         }
                     </div>
                 </div>
+
+                <!--T-249 — what happened in the project, newest first. Each line is a stamp, a
+                word and one sentence; the address a line carries goes on the title, never into
+                the sentence (log-line's own rule).-->
+                <div class="card journal">
+                    <div class="docs-head">
+                        <h2 class="docs-title">{{ t().projects.hub.journal }}</h2>
+                    </div>
+                    <div class="journal-list">
+                        @for (item of journal(); track item.at + item.kind + item.title) {
+                            <app-log-line [level]="journalLevel(item.kind)" [word]="t().projects.hub.journalKinds[item.kind]"
+                                          [time]="journalTime(item)" [at]="journalDay(item)">
+                                @if (item.href; as href) {
+                                    @if (journalLink(href); as link) {
+                                        @if (link.external) {
+                                            <a class="jl-title" [href]="link.url" target="_blank" rel="noopener">{{ item.title }}</a>
+                                        } @else {
+                                            <a class="jl-title" [routerLink]="link.path" [queryParams]="link.query">{{ item.title }}</a>
+                                        }
+                                    }
+                                } @else {
+                                    <span class="jl-title">{{ item.title }}</span>
+                                }
+                                @if (item.subtitle) { <span class="jl-sub"><span class="sep">·</span>{{ item.subtitle }}</span> }
+                                @if (item.actor) { <span class="jl-sub"><span class="sep">·</span>{{ item.actor }}</span> }
+                            </app-log-line>
+                        } @empty {
+                            @if (!journalLoading()) {
+                                <app-empty-state [icon]="null" [text]="t().projects.hub.journalEmpty" />
+                            }
+                        }
+                    </div>
+                    @if (journalHasMore()) {
+                        <div class="journal-foot">
+                            <app-button variant="paper" size="sm" [disabled]="journalLoading()" (clicked)="showMoreJournal()">
+                                {{ t().projects.hub.journalMore }}
+                            </app-button>
+                        </div>
+                    }
+                </div>
             </section>
 
             <aside class="hub-side">
@@ -200,6 +240,13 @@
                         } @else {
                             <span class="kv-none">—</span>
                         }
+
+                        <!--T-166 / ADR-281 — the account's streak, said to be the account's, and
+                        only while there is one: a zero would be a reproach dressed as a number.-->
+                        @if (streakWeeks(); as weeks) {
+                            <b>{{ t().projects.hub.streakLabel }}</b>
+                            <span class="kv-streak">{{ t().projects.hub.streak(weeks) }}</span>
+                        }
                     </div>
                 </div>
             </aside>
@@ -247,7 +294,7 @@
         <ng-container modal-actions>
             <span class="modal-note">{{ t().projects.newDoc.note }}</span>
             <span class="spacer"></span>
-            <button class="btn-ghost" (click)="addingDocument.set(false)">{{ t().common.cancel }}</button>
+            <app-button variant="paper" size="sm" (clicked)="addingDocument.set(false)">{{ t().common.cancel }}</app-button>
         </ng-container>
     </app-modal>
 }
@@ -263,6 +310,23 @@
         <label class="field-label spaced" for="edit-description">{{ t().projects.edit.descriptionLabel }}</label>
         <textarea id="edit-description" class="text-input" rows="3" maxlength="2000"
                   [ngModel]="editDescription()" (ngModelChange)="editDescription.set($event)"></textarea>
+
+        <!--T-247 — the toolchain and where it ships, from the same closed lists the server keeps.
+        The hero draws them as "Unity · Windows, Switch"; the press kit's free-text engine on the
+        showcase screen is a different field for a different page and is not synced.-->
+        <div class="field-group engine-field">
+            <app-select inputId="edit-engine" [label]="t().projects.edit.engineLabel" [options]="engineOptions()"
+                        [value]="editEngine()" (valueChange)="editEngine.set($any($event) ?? '')" [disabled]="busy()" />
+        </div>
+        <fieldset class="field-group platform-field">
+            <legend class="field-label">{{ t().projects.edit.platformsLabel }}</legend>
+            <div class="platform-grid">
+                @for (key of platforms; track key) {
+                    <app-checkbox [inputId]="'edit-platform-' + key" [label]="t().projects.platforms[key]"
+                                  [value]="platformOn(key)" (valueChange)="togglePlatform(key, $event)" [disabled]="busy()" />
+                }
+            </div>
+        </fieldset>
 
         <div class="cover-field">
             <span class="field-label">{{ t().projects.edit.logoLabel }}</span>
@@ -307,23 +371,23 @@
         </div>
 
         <div class="danger-row">
-            <button class="btn-ghost" [disabled]="busy()" (click)="toggleArchived()">
+            <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="toggleArchived()">
                 {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}
-            </button>
-            <button class="btn-ghost danger" [disabled]="busy()"
-                    (click)="confirmDelete ? deleteProject() : (confirmDelete = true)">
+            </app-button>
+            <app-button variant="danger" size="sm" [disabled]="busy()"
+                        (clicked)="confirmDelete ? deleteProject() : (confirmDelete = true)">
                 {{ confirmDelete ? t().common.delete : t().projects.edit.remove }}
-            </button>
+            </app-button>
         </div>
         @if (confirmDelete) { <p class="hint danger-hint">{{ t().projects.edit.removeConfirm }}</p> }
 
         @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
 
         <ng-container modal-actions>
-            <button class="btn-ghost" (click)="editing.set(false)">{{ t().common.cancel }}</button>
-            <button class="btn-accent" [disabled]="editName().trim().length === 0 || busy()" (click)="saveEdit()">
+            <app-button variant="paper" size="sm" (clicked)="editing.set(false)">{{ t().common.cancel }}</app-button>
+            <app-button variant="pine" size="sm" [disabled]="editName().trim().length === 0 || busy()" (clicked)="saveEdit()">
                 {{ t().common.save }}
-            </button>
+            </app-button>
         </ng-container>
     </app-modal>
 }

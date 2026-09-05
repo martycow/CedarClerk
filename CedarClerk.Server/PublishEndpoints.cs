@@ -88,7 +88,7 @@ public static class PublishEndpoints
             }
             catch (HttpRequestException ex)
             {
-                return Results.Json(new { error = $"Could not reach {service}: {ex.Message}" }, statusCode: StatusCodes.Status502BadGateway);
+                return Results.Json(new { error = ErrorMessages.CouldNotReachService(service, ex.Message) }, statusCode: StatusCodes.Status502BadGateway);
             }
 
             if (session is null)
@@ -153,7 +153,7 @@ public static class PublishEndpoints
             }
             catch (HttpRequestException ex)
             {
-                return Results.Json(new { error = $"Could not reach Discord: {ex.Message}" },
+                return Results.Json(new { error = ErrorMessages.CouldNotReachService("Discord", ex.Message) },
                     statusCode: StatusCodes.Status502BadGateway);
             }
 
@@ -560,8 +560,8 @@ public static class PublishEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (!await db.Drafts.AnyAsync(d => d.Id == draftId && d.OwnerId == uid)) return Results.NotFound();
-            if (!PublishNetworks.IsKnown(req.Network)) return Results.BadRequest(new { error = $"Unknown network: {req.Network}" });
-            if (!Languages.IsContentLanguage(req.Language)) return Results.BadRequest(new { error = $"Unknown language: {req.Language}" });
+            if (!PublishNetworks.IsKnown(req.Network)) return Results.BadRequest(new { error = ErrorMessages.UnknownNetwork(req.Network) });
+            if (!Languages.IsContentLanguage(req.Language)) return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(req.Language) });
 
             var row = await db.DraftTargetTexts.FirstOrDefaultAsync(
                 t => t.DraftId == draftId && t.Network == req.Network && t.Language == req.Language);

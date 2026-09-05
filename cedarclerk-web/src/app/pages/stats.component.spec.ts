@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { StatsComponent } from './stats.component';
-import { ChannelsService } from '../core/channels.service';
+import { ChannelsService, StatSourceInfo, StatSourceSeries, StatsSeries } from '../core/channels.service';
 import { GrowthChartComponent } from '../bench/worktop/growth-chart.component';
 import { en } from '../core/i18n/en';
 
@@ -21,63 +21,100 @@ function sheetFor(marker: string): string {
 
 const day = (d: string) => `2026-08-${d}T12:00:00Z`;
 
+const BLOG_ID = 'blog';
+const DEVLOG_ID = 'channel:c1';
+const QUIET_ID = 'channel:c2';
+const BSKY_ID = 'target:t1';
+
 // ADR-205 — the varying number sits on likeCount, which is the one metric both a blog and a
 // channel track: views are the blog's alone, since Telegram reports none to a bot.
-const blogSnapshot = (d: string, n: number) =>
-    ({ takenAt: day(d), viewCount: n, likeCount: n, commentCount: 1 });
+const AVAILABLE: StatSourceInfo[] = [
+    { id: BLOG_ID, kind: 'blog', network: 'blog', name: 'Blog', tracked: ['viewCount', 'likeCount', 'commentCount'], firstDay: '2026-08-08' },
+    { id: DEVLOG_ID, kind: 'channel', network: 'telegram', name: 'Devlog', tracked: ['memberCount', 'likeCount', 'commentCount'], firstDay: '2026-08-09' },
+    // Connected, never snapshotted — the honest case for the kit's `dried` leaf.
+    { id: QUIET_ID, kind: 'channel', network: 'telegram', name: 'Quiet', tracked: ['memberCount', 'likeCount', 'commentCount'], firstDay: null },
+];
 
-const channelSnapshot = (d: string, n: number) =>
-    ({ takenAt: day(d), memberCount: 400 + n, viewCount: 0, likeCount: n, commentCount: 0 });
+const BSKY: StatSourceInfo = { id: BSKY_ID, kind: 'target', network: 'bluesky', name: 'studio.bsky.social', tracked: ['memberCount', 'likeCount', 'commentCount'], firstDay: '2026-08-10' };
 
-// The blog has read since the 8th; the channel only since the 9th, and it missed the 10th. Both
-// facts are load-bearing: the first is what the window's start rule exists for, the second what
-// carry-forward answers.
-const BLOG = {
-    currentViews: 130, deltaWeekViews: 30,
-    currentLikes: 130, deltaWeekLikes: 30,
-    currentComments: 1, deltaWeekComments: 0,
-    snapshots: [blogSnapshot('08', 100), blogSnapshot('09', 110), blogSnapshot('10', 120), blogSnapshot('11', 130)],
-    countries: [], languages: [],
+// The server's aligned answer for blog + Devlog: the window starts at the channel's first day.
+const ALIGNED_DAYS = ['2026-08-09', '2026-08-10', '2026-08-11'];
+const BLOG_SERIES: StatSourceSeries = {
+    id: BLOG_ID,
+    values: { memberCount: null, viewCount: [110, 120, 130], likeCount: [110, 120, 130], commentCount: [1, 1, 1] },
+    current: { viewCount: 130, likeCount: 130, commentCount: 1 },
+    delta: { viewCount: 20, likeCount: 20, commentCount: 0 },
+    publishDays: ['2026-08-10'],
+};
+const DEVLOG_SERIES: StatSourceSeries = {
+    id: DEVLOG_ID,
+    values: { memberCount: [410, 410, 440], viewCount: null, likeCount: [10, 10, 40], commentCount: [0, 0, 0] },
+    current: { memberCount: 440, likeCount: 40, commentCount: 0 },
+    delta: { memberCount: 30, likeCount: 30, commentCount: 0 },
+    publishDays: ['2026-08-11'],
 };
 
-const DEVLOG = {
-    current: 440, deltaWeek: 30,
-    currentViews: 0, deltaWeekViews: 0,
-    currentLikes: 40, deltaWeekLikes: 30,
-    currentComments: 0, deltaWeekComments: 0,
-    snapshots: [channelSnapshot('09', 10), channelSnapshot('11', 40)],
+// With the channel off the server widens the window back to the blog's own first day — a
+// different `days` and a different first point, so the tests can tell a redraw from a re-read.
+const BLOG_ALONE_DAYS = ['2026-08-08', '2026-08-09', '2026-08-10', '2026-08-11'];
+const BLOG_ALONE_SERIES: StatSourceSeries = {
+    ...BLOG_SERIES,
+    values: { memberCount: null, viewCount: [100, 110, 120, 130], likeCount: [100, 110, 120, 130], commentCount: [1, 1, 1, 1] },
+    delta: { viewCount: 30, likeCount: 30, commentCount: 0 },
 };
 
-// Connected, never snapshotted — the honest case for the kit's `dried` leaf.
-const QUIET = {
-    current: null, deltaWeek: null,
-    currentViews: null, deltaWeekViews: null,
-    currentLikes: null, deltaWeekLikes: null,
-    currentComments: null, deltaWeekComments: null,
-    snapshots: [],
+const BSKY_SERIES: StatSourceSeries = {
+    id: BSKY_ID,
+    values: { memberCount: [12, 15], viewCount: null, likeCount: [3, 5], commentCount: [0, 1] },
+    current: { memberCount: 15, likeCount: 5, commentCount: 1 },
+    delta: { memberCount: 3, likeCount: 2, commentCount: 1 },
+    publishDays: [],
 };
+
+const AUDIENCE = { countries: [{ code: 'US', views: 40 }], languages: [{ code: 'en', views: 38 }] };
 
 class ApiStub {
     channels = [
         { id: 'c1', title: 'Devlog', telegramChatId: 1, username: null },
         { id: 'c2', title: 'Quiet', telegramChatId: 2, username: null },
     ];
-    blogCalls: number[] = [];
-    channelCalls: string[] = [];
+    available = AVAILABLE;
+    calls: { days: number; sources: string[] }[] = [];
+    fail = false;
 
     list() { return Promise.resolve(this.channels as never); }
 
-    getBlogStats(days: number) {
-        this.blogCalls.push(days!);
-        return Promise.resolve(BLOG as never);
+    /** Answers the way the server does: only selected sources with readings get a series, over
+     *  the window their first days allow. */
+    series(days: number, sources: readonly string[]): Promise<StatsSeries> {
+        this.calls.push({ days, sources: [...sources] });
+        if (this.fail) return Promise.reject(new Error('down'));
+        const wantsDevlog = sources.includes(DEVLOG_ID);
+        const wantsBsky = sources.includes(BSKY_ID) && this.available.includes(BSKY);
+        const series: StatSourceSeries[] = [];
+        let window = wantsDevlog ? ALIGNED_DAYS : BLOG_ALONE_DAYS;
+        if (wantsBsky) window = window.slice(-2);
+        if (sources.includes(BLOG_ID)) {
+            const blog = wantsDevlog ? BLOG_SERIES : BLOG_ALONE_SERIES;
+            series.push(wantsBsky ? { ...blog, values: { ...blog.values, viewCount: [120, 130], likeCount: [120, 130], commentCount: [1, 1] } } : blog);
+        }
+        if (wantsDevlog) series.push(wantsBsky ? { ...DEVLOG_SERIES, values: { ...DEVLOG_SERIES.values, memberCount: [410, 440], likeCount: [10, 40], commentCount: [0, 0] } } : DEVLOG_SERIES);
+        if (wantsBsky) series.push(BSKY_SERIES);
+        return Promise.resolve({
+            zone: 'America/Los_Angeles',
+            requestedDays: days,
+            days: series.length ? window : [],
+            available: this.available,
+            series,
+            audience: AUDIENCE,
+        });
     }
 
-    getStats(id: string, days: number) {
-        this.channelCalls.push(`${id}:${days}`);
-        return Promise.resolve((id === 'c1' ? DEVLOG : QUIET) as never);
+    seriesCsvUrl(days: number, sources: readonly string[]) {
+        return `/api/stats/series.csv?days=${days}&sources=${sources.join(',')}`;
     }
 
-    // Wave 2 — the streak card and the invite-links shelf ask these on init, best-effort.
+    // The streak card and the invite-links shelf ask these on init, best-effort.
     publishingStats() {
         return Promise.resolve({ currentStreakWeeks: 2, longestStreakWeeks: 5, weeks: [] } as never);
     }
@@ -102,7 +139,7 @@ describe('stats screen (Posts Manager tab)', () => {
     const page = () => fixture.componentInstance;
     const el = () => fixture.nativeElement as HTMLElement;
 
-    // The screen's state lands through an awaited fan-out, so a render pass has to come after the
+    // The screen's state lands through awaited requests, so a render pass has to come after the
     // microtask queue drains — not merely after the fixture calls itself stable.
     async function settle(target: ComponentFixture<StatsComponent> = fixture) {
         target.detectChanges();
@@ -130,7 +167,7 @@ describe('stats screen (Posts Manager tab)', () => {
         const before = page().readouts().map(r => `${r.name}:${r.color}`);
         expect(before).toEqual(['Blog:var(--series-2)', 'Devlog:var(--series-1)']);
 
-        page().toggle('blog');
+        page().toggle(BLOG_ID);
         await settle();
 
         expect(page().readouts().map(r => `${r.name}:${r.color}`)).toEqual(['Devlog:var(--series-1)']);
@@ -172,23 +209,37 @@ describe('stats screen (Posts Manager tab)', () => {
         expect(page().leaves().find(l => l.name === 'Devlog')!.swatch).toBe('var(--series-1)');
     });
 
-    it('starts the axis where every drawn line has a reading, and draws nothing before it', () => {
-        expect(page().axis().days).toEqual(['2026-08-09', '2026-08-10', '2026-08-11']);
+    // ADR-279 — the window, the carry-forward and the delta are the server's; the screen draws
+    // exactly the days and points the response carries and computes none of them.
+    it('draws the aligned window the response carries, point for point', () => {
+        expect(page().days()).toEqual(ALIGNED_DAYS);
         expect(page().series().find(s => s.name === 'Blog')!.points).toEqual([110, 120, 130]);
-    });
-
-    it('carries the last reading through a day with no snapshot rather than dropping to zero', () => {
         expect(page().series().find(s => s.name === 'Devlog')!.points).toEqual([10, 10, 40]);
     });
 
-    it('states the window rather than leaving it to the axis, because it moves with the selection', async () => {
+    it('redraws from the new answer when the selection changes the window', async () => {
         expect(page().windowLabel()).toBe('3 points · 08/09 — 08/11');
 
-        page().toggle('c1');
+        page().toggle(DEVLOG_ID);
         await settle();
 
-        expect(page().axis().days.length).toBe(4);
+        expect(page().days()).toEqual(BLOG_ALONE_DAYS);
+        expect(page().series().find(s => s.name === 'Blog')!.points).toEqual([100, 110, 120, 130]);
         expect(page().windowLabel()).toBe('4 points · 08/08 — 08/11');
+    });
+
+    it('shows the response\'s own current and delta on the tile, so a card and the chart agree', async () => {
+        expect(page().readouts().map(r => [r.value, r.delta])).toEqual([[130, 20], [40, 30]]);
+        expect(el().querySelector('.ro-delta')!.textContent).toContain(`+20 ${en.stats.readouts.deltaWindow}`);
+
+        page().toggle(DEVLOG_ID);
+        await settle();
+
+        expect(page().readouts().map(r => [r.value, r.delta])).toEqual([[130, 30]]);
+    });
+
+    it('marks the chart with the publish days the response carries', () => {
+        expect(page().publishMarkers()).toEqual([1, 2]);
     });
 
     it('tells the chart the tail is closed: a running total is complete the moment it is read', () => {
@@ -200,7 +251,7 @@ describe('stats screen (Posts Manager tab)', () => {
     it('washes the blog and only the blog, however many lines are drawn', async () => {
         expect(page().series().map(s => [s.name, s.wash])).toEqual([['Blog', true], ['Devlog', false]]);
 
-        page().toggle('blog');
+        page().toggle(BLOG_ID);
         await settle();
 
         expect(page().series().map(s => s.wash)).toEqual([false]);
@@ -225,8 +276,8 @@ describe('stats screen (Posts Manager tab)', () => {
 
     it('sorts the complete series table and exposes aria-sort on its active header', async () => {
         page().setView('table');
-        page().sortTable('c1');
-        page().sortTable('c1');
+        page().sortTable(DEVLOG_ID);
+        page().sortTable(DEVLOG_ID);
         await settle();
 
         expect(page().tableRows().map(row => row.day))
@@ -237,8 +288,8 @@ describe('stats screen (Posts Manager tab)', () => {
 
     it('returns table sorting to the day column when its source leaves the visible series', async () => {
         page().setView('table');
-        page().sortTable('c1');
-        page().toggle('c1');
+        page().sortTable(DEVLOG_ID);
+        page().toggle(DEVLOG_ID);
         await settle();
 
         expect(page().tableSortKey()).toBe('period');
@@ -309,12 +360,12 @@ describe('stats screen (Posts Manager tab)', () => {
         const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
         page().setView('table');
-        page().sortTable('c1');
+        page().sortTable(DEVLOG_ID);
         page().setInviteQuery('launch');
         page().setInviteState('revoked');
         page().sortInviteLinks('net');
-        page().toggle('blog');
-        page().toggle('c2');
+        page().toggle(BLOG_ID);
+        page().toggle(QUIET_ID);
         await settle();
 
         expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({
@@ -323,8 +374,8 @@ describe('stats screen (Posts Manager tab)', () => {
             queryParams: expect.objectContaining({
                 statsMetric: 'likeCount',
                 statsView: 'table',
-                statsSources: 'c1',
-                statsSort: 'c1',
+                statsSources: DEVLOG_ID,
+                statsSort: DEVLOG_ID,
                 inviteQ: 'launch',
                 inviteState: 'revoked',
                 inviteSort: 'net',
@@ -335,14 +386,13 @@ describe('stats screen (Posts Manager tab)', () => {
 
     it('never offers a readout that is a sum of sources', () => {
         expect(page().readouts().map(r => r.value)).toEqual([130, 40]);
-        expect(page().readouts().map(r => r.delta)).toEqual([30, 30]);
         expect(el().querySelectorAll('.ro-value').length).toBe(2);
     });
 
     it('says the sources are off rather than drawing an empty chart', async () => {
-        page().toggle('blog');
-        page().toggle('c1');
-        page().toggle('c2');
+        page().toggle(BLOG_ID);
+        page().toggle(DEVLOG_ID);
+        page().toggle(QUIET_ID);
         await settle();
 
         expect(page().anySelected()).toBe(false);
@@ -355,12 +405,13 @@ describe('stats screen (Posts Manager tab)', () => {
         await settle();
 
         expect(page().anySelected()).toBe(true);
-        expect(page().selected()).toEqual(new Set(['blog', 'c1', 'c2']));
+        expect(page().selected()).toEqual(new Set([BLOG_ID, DEVLOG_ID, QUIET_ID]));
+        expect(api.calls.at(-1)!.sources).toEqual([BLOG_ID, DEVLOG_ID, QUIET_ID]);
     });
 
     it('distinguishes "all off" from filters that hide drawable sources', async () => {
-        page().toggle('blog');
-        page().toggle('c1');
+        page().toggle(BLOG_ID);
+        page().toggle(DEVLOG_ID);
         await settle();
 
         expect(page().anySelected()).toBe(true);
@@ -368,9 +419,11 @@ describe('stats screen (Posts Manager tab)', () => {
         expect(el().querySelector('.stats-empty')!.textContent).toContain(en.stats.sources.showAll);
     });
 
-    it('keeps zero-snapshot sources selected and offers the documents route', async () => {
-        api.getBlogStats = vi.fn().mockResolvedValue({ ...BLOG, snapshots: [] } as never);
-        api.getStats = vi.fn().mockResolvedValue(QUIET as never);
+    it('keeps zero-reading sources selected and offers the documents route', async () => {
+        api.available = AVAILABLE.map(a => ({ ...a, firstDay: null }));
+        api.series = vi.fn().mockImplementation((days: number) => Promise.resolve({
+            zone: 'UTC', requestedDays: days, days: [], available: api.available, series: [], audience: AUDIENCE,
+        }));
         const empty = TestBed.createComponent(StatsComponent);
         await settle(empty);
 
@@ -383,7 +436,7 @@ describe('stats screen (Posts Manager tab)', () => {
     });
 
     it('offers to restore a hidden source that can draw the current metric', async () => {
-        page().toggle('c1');
+        page().toggle(DEVLOG_ID);
         page().setMetric('memberCount');
         await settle();
 
@@ -396,7 +449,7 @@ describe('stats screen (Posts Manager tab)', () => {
         showAll.click();
         await settle();
 
-        expect(page().drawable().map(source => source.id)).toContain('c1');
+        expect(page().drawable().map(source => source.id)).toContain(DEVLOG_ID);
     });
 
     it('offers Subscribers only when a source can answer it', async () => {
@@ -404,6 +457,7 @@ describe('stats screen (Posts Manager tab)', () => {
             .toEqual(['memberCount', 'viewCount', 'likeCount', 'commentCount']);
 
         api.channels = [];
+        api.available = [AVAILABLE[0]];
         const blogOnly = TestBed.createComponent(StatsComponent);
         await settle(blogOnly);
 
@@ -411,33 +465,100 @@ describe('stats screen (Posts Manager tab)', () => {
             .toEqual(['viewCount', 'likeCount', 'commentCount']);
     });
 
-    it('fans out once per source per range, and a filter costs no request at all', async () => {
-        expect(api.blogCalls).toEqual([90]);
-        expect(api.channelCalls).toEqual(['c1:90', 'c2:90']);
+    // ADR-279 — one request per selection, the selected ids on it; the metric and the view are the
+    // client's own and cost nothing.
+    it('asks once for every selected source, and refetches only when the selection or range moves', async () => {
+        expect(api.calls).toEqual([{ days: 90, sources: [BLOG_ID, DEVLOG_ID, QUIET_ID] }]);
 
-        page().toggle('c1');
         page().setMetric('likeCount');
         page().setView('table');
         await settle();
+        expect(api.calls.length).toBe(1);
 
-        expect(api.blogCalls).toEqual([90]);
-        expect(api.channelCalls).toEqual(['c1:90', 'c2:90']);
+        page().toggle(DEVLOG_ID);
+        await settle();
+        expect(api.calls.at(-1)).toEqual({ days: 90, sources: [BLOG_ID, QUIET_ID] });
+
+        await page().onRangeCommit(30);
+        expect(api.calls.at(-1)).toEqual({ days: 30, sources: [BLOG_ID, QUIET_ID] });
     });
 
-    it('fetches the blog even when its line is off — the audience shelf is blog data', async () => {
-        page().toggle('blog');
-        await page().onRangeCommit(30);
+    it('keeps the previous answer on the board when a refetch fails', async () => {
+        const before = page().series().map(s => s.points);
+        api.fail = true;
+
+        page().toggle(DEVLOG_ID);
         await settle();
 
-        expect(api.blogCalls).toEqual([90, 30]);
+        expect(page().pending()).toBe(false);
+        expect(page().days()).toEqual(ALIGNED_DAYS);
+        expect(page().series().map(s => s.points)).toEqual([before[0]]);
+    });
+
+    it('keeps the audience shelf when the blog line is off — it rides every response', async () => {
+        page().toggle(BLOG_ID);
+        await settle();
+
         expect(page().series().some(s => s.name === 'Blog')).toBe(false);
+        expect(page().hasAudience()).toBe(true);
+    });
+
+    it('remembers a switched-off source\'s number on its leaf', async () => {
+        page().toggle(DEVLOG_ID);
+        await settle();
+
+        const devlog = page().leaves().find(l => l.name === 'Devlog')!;
+        expect(devlog.state).toBe('idle');
+        expect(devlog.note).toBe('40');
+    });
+
+    // T-241 — a target is a leaf the moment the server lists it, and a line once it has a reading.
+    it('offers an X or Bluesky account as a leaf only once available[] lists it', async () => {
+        expect(page().leaves().some(l => l.id === BSKY_ID)).toBe(false);
+        expect(el().querySelector('.filter-strip app-brand-icon')).not.toBeNull();
+
+        api.available = [...AVAILABLE, BSKY];
+        const withTarget = TestBed.createComponent(StatsComponent);
+        await settle(withTarget);
+        withTarget.componentInstance.setMetric('likeCount');
+        await settle(withTarget);
+
+        const leaf = withTarget.componentInstance.leaves().find(l => l.id === BSKY_ID)!;
+        expect(leaf).toMatchObject({ name: 'studio.bsky.social', brand: 'bluesky', network: en.stats.sources.network.bluesky, state: 'active', swatch: 'var(--series-4)' });
+        expect(withTarget.componentInstance.series().map(s => s.name)).toEqual(['Blog', 'Devlog', 'studio.bsky.social']);
+        expect(withTarget.componentInstance.series().at(-1)!.points).toEqual([3, 5]);
+        const strip = withTarget.nativeElement.querySelector('.filter-strip') as HTMLElement;
+        expect(strip.textContent).toContain(en.stats.sources.network.bluesky);
+        // Two requests on a fresh open: the client could not name the target before the server did.
+        expect(api.calls.map(c => c.sources)).toEqual([
+            [BLOG_ID, DEVLOG_ID, QUIET_ID], [BLOG_ID, DEVLOG_ID, QUIET_ID], [BLOG_ID, DEVLOG_ID, QUIET_ID, BSKY_ID],
+        ]);
+    });
+
+    // T-243 — the same matrix as a file, from the chart card's own header.
+    it('links the CSV export to the drawn selection and drops the address when nothing is drawn', async () => {
+        const link = () => el().querySelector('.chart-panel .card-head a.export-csv') as HTMLAnchorElement;
+        expect(link().getAttribute('href')).toBe(`/api/stats/series.csv?days=90&sources=${BLOG_ID},${DEVLOG_ID},${QUIET_ID}`);
+        expect(link().hasAttribute('download')).toBe(true);
+        expect(link().getAttribute('aria-disabled')).toBeNull();
+        expect(link().textContent).toContain(en.stats.exportCsv);
+        expect(link().querySelector('app-icon')).not.toBeNull();
+
+        page().toggle(BLOG_ID);
+        page().toggle(DEVLOG_ID);
+        page().toggle(QUIET_ID);
+        await settle();
+
+        expect(page().canExport()).toBe(false);
+        expect(link().getAttribute('href')).toBeNull();
+        expect(link().getAttribute('aria-disabled')).toBe('true');
     });
 
     it('uses a discrete period picker and names the display timezone', () => {
         const options = [...el().querySelectorAll('.range-picker option')] as HTMLOptionElement[];
         expect(options.map(option => Number(option.value))).toEqual([7, 14, 30, 60, 90, 180]);
         expect(el().querySelector('input[type="range"]')).toBeNull();
-        expect(page().updatedAt()).toMatch(/^\d{2}:\d{2} \S+$/);
+        expect(page().updatedAt()).toMatch(/^08\/11 \S+$/);
     });
 
     it('names the source the audience card is answering about', () => {
@@ -476,8 +597,8 @@ describe('stats manager route restoration', () => {
                                 statsMetric: 'likeCount',
                                 statsView: 'table',
                                 statsDays: '30',
-                                statsSources: 'c1',
-                                statsSort: 'c1',
+                                statsSources: DEVLOG_ID,
+                                statsSort: DEVLOG_ID,
                                 statsDir: 'desc',
                                 inviteChannel: 'c2',
                                 inviteQ: 'launch',
@@ -501,8 +622,10 @@ describe('stats manager route restoration', () => {
         expect(page.metric()).toBe('likeCount');
         expect(page.view()).toBe('table');
         expect(page.rangeDays()).toBe(30);
-        expect(page.selected()).toEqual(new Set(['c1']));
-        expect(page.tableSortKey()).toBe('c1');
+        expect(page.selected()).toEqual(new Set([DEVLOG_ID]));
+        // A saved selection is sent as it is — one request, no guess.
+        expect(api.calls).toEqual([{ days: 30, sources: [DEVLOG_ID] }]);
+        expect(page.tableSortKey()).toBe(DEVLOG_ID);
         expect(page.tableSortDirection()).toBe('desc');
         expect(page.inviteChannelId()).toBe('c2');
         expect(page.inviteQuery()).toBe('launch');

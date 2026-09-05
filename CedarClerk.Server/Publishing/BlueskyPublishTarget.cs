@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -236,7 +236,7 @@ public class BlueskyPublishTarget(
     }
 
     /// <summary>The two halves of a stored "uri|cid" RemoteId; null when the cid half is missing.</summary>
-    private static (string Uri, string Cid)? ParseRef(string remoteId)
+    public static (string Uri, string Cid)? ParseRef(string remoteId)
     {
         var split = remoteId.IndexOf('|');
         return split > 0 && split < remoteId.Length - 1

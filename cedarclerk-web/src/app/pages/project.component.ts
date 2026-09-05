@@ -6,6 +6,8 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { formatInZone } from '../core/display-time';
 import {
+    ActivityItem,
+    ActivityKind,
     DOCUMENT_TYPES,
     DOCUMENT_TYPE_ICONS,
     DocumentType,
@@ -28,6 +30,10 @@ import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component'
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
+import { LogLevel, LogLineComponent } from '../bench/worktop/log-line.component';
+import { BenchSelectOption, SelectComponent } from '../bench/forms/select.component';
+import { CheckboxComponent } from '../bench/forms/checkbox.component';
+import { PROJECT_ENGINES, PROJECT_PLATFORMS, ProjectPlatform, normalizePlatforms } from '../core/project-engines';
 import { AssetsService, LibraryAsset } from '../core/assets.service';
 import { Team, TeamsService } from '../core/teams.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
@@ -35,6 +41,43 @@ import { MediaPickerComponent } from '../shared/media-picker.component';
 type DocFilter = 'all' | 'live' | 'drafts' | 'archived';
 
 const MS_PER_DAY = 86_400_000;
+
+// T-166 — the hub's two nudges. Seven days is where a quiet week becomes a sentence in the
+// header, fourteen where the sentence turns warn; there is no score and nothing to lose.
+const NUDGE_TAG_DAYS = 7;
+const NUDGE_WARN_DAYS = 14;
+
+export function daysSince(at: string, now = Date.now()): number {
+    return Math.max(0, Math.floor((now - new Date(at).getTime()) / MS_PER_DAY));
+}
+
+const JOURNAL_PAGE = 12;
+const JOURNAL_MAX = 100;
+
+// The stamp is the severity the kind carries, so a reader scanning the column sees finished things
+// in pine and the one failure in rust without reading a word (log-line's own rule).
+const JOURNAL_LEVELS: Partial<Record<ActivityKind, LogLevel>> = {
+    'blog-published': 'ok',
+    'telegram-published': 'ok',
+    'published': 'ok',
+    'build-released': 'ok',
+    'task-completed': 'ok',
+    'build-created': 'build',
+    'publish-failed': 'warn',
+};
+
+export function journalLevel(kind: ActivityKind): LogLevel {
+    return JOURNAL_LEVELS[kind] ?? 'info';
+}
+
+/** An absolute URL opens outside the app; anything else is a route with its query split off. */
+export function journalLink(href: string): { external: true; url: string } | { external: false; path: string; query: Record<string, string> } {
+    if (/^https?:\/\//i.test(href)) return { external: true, url: href };
+    const [path, search = ''] = href.split('?', 2);
+    const query: Record<string, string> = {};
+    for (const [k, v] of new URLSearchParams(search)) query[k] = v;
+    return { external: false, path, query };
+}
 
 // T-223 (ADR-160) — the hub: one project's dashboard. Main.png (ADR-239): a header with the
 // state, kind, count and last edit; the most recent document as a "continue writing" card over a
@@ -46,6 +89,7 @@ const MS_PER_DAY = 86_400_000;
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
         PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent, MediaPickerComponent,
+        LogLineComponent, SelectComponent, CheckboxComponent,
     ],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
@@ -76,6 +120,14 @@ export class ProjectComponent {
     loading = signal(true);
     loadError = signal<string | null>(null);
 
+    // T-249 — the journal is its own request beside the detail: a feed is not part of the page
+    // that loaded, and a failed one prints its empty sentence rather than breaking the hub.
+    journal = signal<ActivityItem[]>([]);
+    journalTake = signal(JOURNAL_PAGE);
+    journalLoading = signal(false);
+    readonly journalLevel = journalLevel;
+    readonly journalLink = journalLink;
+
     docFilter = signal<DocFilter>('all');
     docSearch = signal('');
 
@@ -92,8 +144,18 @@ export class ProjectComponent {
     // therefore an option in the list rather than an empty select.
     teams = signal<Team[]>([]);
     editTeamId = signal<string>('');
+    // T-247 — the toolchain and the targets, from closed lists the server also holds.
+    editEngine = signal('');
+    editPlatforms = signal<readonly string[]>([]);
+    readonly platforms = PROJECT_PLATFORMS;
+    engineOptions = computed<BenchSelectOption[]>(() => {
+        const t = this.t().projects;
+        return [{ value: '', label: t.edit.engineNone }, ...PROJECT_ENGINES.map(e => ({ value: e, label: t.engines[e] }))];
+    });
     /** T-296/T-297 — the public page's counters; null until they arrive, and on a page with none. */
     showcaseStats = signal<ShowcaseStats | null>(null);
+    /** T-166 — the account's publishing streak in ISO weeks (ADR-281); null when unknown or zero. */
+    streakWeeks = signal<number | null>(null);
     actionError = signal<string | null>(null);
     busy = signal(false);
     // Deleting a project is two clicks on the same button rather than a second modal on top of the
@@ -137,6 +199,12 @@ export class ProjectComponent {
         return Math.max(0, Math.round((endDay - today) / MS_PER_DAY));
     });
 
+    /** Whole days since the last publish of anything in this project; null while the list has not answered or nothing was ever published. */
+    daysSinceLastPublish = computed(() => {
+        const at = this.summary()?.lastPublishedAt;
+        return at ? daysSince(at) : null;
+    });
+
     headerMeta = computed<HeaderMeta[]>(() => {
         const p = this.project();
         if (!p) return [];
@@ -144,12 +212,39 @@ export class ProjectComponent {
         const meta: HeaderMeta[] = [
             { text: p.archivedAt ? t.stateArchived : t.stateActive, tag: true, tone: p.archivedAt ? 'muted' : 'ok' },
             { text: t.projectTypes[p.projectType].name },
-            { text: t.documentCount(p.documents.length) },
         ];
-        const at = this.summary()?.lastActivityAt;
+        // ADR-160 clause 7 — the kit's "Unity 6.1 · Windows / Linux" edge, drawn only from what is stored.
+        const toolchain = this.toolchainLabel(p);
+        if (toolchain) meta.push({ text: toolchain });
+        meta.push({ text: t.documentCount(p.documents.length) });
+        const summary = this.summary();
+        const at = summary?.lastActivityAt;
         if (at) meta.push({ text: `${t.hub.lastEdit} ${formatInZone(at, 'd MMM')}` });
+        if (summary) {
+            const days = this.daysSinceLastPublish();
+            if (days === null) meta.push({ text: t.hub.neverPublished, tag: true, tone: 'muted' });
+            else if (days >= NUDGE_TAG_DAYS) meta.push({ text: t.hub.sinceLastPublish(days), tag: true, tone: days >= NUDGE_WARN_DAYS ? 'warn' : 'muted' });
+            else meta.push({ text: t.hub.sinceLastPublish(days) });
+        }
         return meta;
     });
+
+    /** "Unity · Windows, Switch" — either half alone when only one is set, nothing when neither is. */
+    toolchainLabel(p: Pick<ProjectDetail, 'engine' | 'targetPlatforms'>): string | null {
+        const t = this.t().projects;
+        const engine = PROJECT_ENGINES.find(e => e === p.engine);
+        const platforms = normalizePlatforms(p.targetPlatforms ?? []).map(k => t.platforms[k]);
+        const parts = [engine ? t.engines[engine] : '', platforms.join(', ')].filter(Boolean);
+        return parts.length ? parts.join(' · ') : null;
+    }
+
+    platformOn(key: ProjectPlatform): boolean {
+        return this.editPlatforms().includes(key);
+    }
+
+    togglePlatform(key: ProjectPlatform, on: boolean) {
+        this.editPlatforms.update(list => normalizePlatforms(on ? [...list, key] : list.filter(k => k !== key)));
+    }
 
     constructor() {
         this.route.paramMap.subscribe(params => {
@@ -159,6 +254,17 @@ export class ProjectComponent {
 
         void this.loadProjects();
         void this.loadChannels();
+        void this.loadStreak();
+    }
+
+    /** The one account figure the hub prints (ADR-281): a zero and a failed call read the same — no row. */
+    private async loadStreak() {
+        try {
+            const stats = await this.channelsApi.publishingStats();
+            this.streakWeeks.set(stats.currentStreakWeeks > 0 ? stats.currentStreakWeeks : null);
+        } catch {
+            this.streakWeeks.set(null);
+        }
     }
 
     async load(id: string) {
@@ -174,8 +280,35 @@ export class ProjectComponent {
         }
 
         this.showcaseStats.set(null);
+        this.journal.set([]);
+        this.journalTake.set(JOURNAL_PAGE);
+        if (this.project()) void this.loadJournal(id);
         if (this.project()?.showcaseSlug) await this.loadShowcaseStats(id);
     }
+
+    private async loadJournal(id: string) {
+        this.journalLoading.set(true);
+        try {
+            this.journal.set((await this.api.activity(id, this.journalTake())).items);
+        } catch {
+            this.journal.set([]);
+        } finally {
+            this.journalLoading.set(false);
+        }
+    }
+
+    /** A full page means there may be more; a short one is the whole story, and 100 is the server's ceiling. */
+    journalHasMore = computed(() => this.journal().length >= this.journalTake() && this.journalTake() < JOURNAL_MAX);
+
+    showMoreJournal() {
+        const id = this.project()?.id;
+        if (!id || this.journalLoading()) return;
+        this.journalTake.set(Math.min(JOURNAL_MAX, this.journalTake() * 2));
+        void this.loadJournal(id);
+    }
+
+    journalTime(item: ActivityItem): string { return formatInZone(item.at, 'HH:mm'); }
+    journalDay(item: ActivityItem): string { return formatInZone(item.at, 'd MMM'); }
 
     /** Beside the detail rather than before it: counters are one group of rows, not the page (ADR-160 rule 4). */
     private async loadShowcaseStats(id: string) {
@@ -279,6 +412,8 @@ export class ProjectComponent {
         this.editDescription.set(project.description);
         this.editCoverUrl.set(project.coverUrl);
         this.editTeamId.set(project.teamId ?? '');
+        this.editEngine.set(project.engine ?? '');
+        this.editPlatforms.set(normalizePlatforms(project.targetPlatforms ?? []));
         // Loaded when the dialog opens rather than with the screen: most visits never edit.
         void this.loadTeams();
         this.actionError.set(null);
@@ -309,16 +444,25 @@ export class ProjectComponent {
                 await this.teamsApi.setProjectTeam(project.id, teamId);
                 this.project.set({ ...project, teamId });
             }
-            await this.api.update(project.id, name, this.editDescription().trim(), coverUrl);
+            // Sent only when moved: an older server ignores what it does not know, and an
+            // unchanged field must not turn into a write.
+            const engine = this.editEngine();
+            const targetPlatforms = [...this.editPlatforms()];
+            const engineMoved = engine !== (project.engine ?? '');
+            const platformsMoved = targetPlatforms.join(',') !== normalizePlatforms(project.targetPlatforms ?? []).join(',');
+            await this.api.update(project.id, name, this.editDescription().trim(), coverUrl,
+                engineMoved ? engine : undefined, platformsMoved ? targetPlatforms : undefined);
             this.project.set({
                 ...project,
                 name,
                 description: this.editDescription().trim(),
                 coverUrl,
                 teamId,
+                engine,
+                targetPlatforms,
             });
             this.projects.update(rows => rows.map(row => row.id === project.id
-                ? { ...row, name, description: this.editDescription().trim(), coverUrl }
+                ? { ...row, name, description: this.editDescription().trim(), coverUrl, engine, targetPlatforms }
                 : row));
             this.editing.set(false);
         } catch (e) {

@@ -87,6 +87,19 @@
     opacity: .8;
 }
 
+/* The brand mark sits in the leaf's own ink, before the name; the network word after it is the
+   mark's reading for anyone the mark says nothing to. */
+:host([data-surface="paper"]) .leaf-brand {
+    display: inline-flex;
+    align-items: center;
+}
+
+:host([data-surface="paper"]) .leaf-network {
+    font-size: var(--fs-ui);
+    font-weight: 400;
+    opacity: .8;
+}
+
 /* ---------- Period picker ---------- */
 :host([data-surface="paper"]) .range-picker {
     display: flex;
@@ -178,6 +191,14 @@
     row-gap: var(--space-1);
     padding-top: var(--space-1);
     padding-bottom: var(--space-1);
+}
+
+/* The global .btn.sm face on an anchor (ADR-196 sizes it); only the dead-link state is this
+   sheet's, and it reads and behaves the way app-button's does. */
+:host([data-surface="paper"]) .export-csv[aria-disabled="true"] {
+    opacity: .6;
+    cursor: default;
+    pointer-events: none;
 }
 
 :host([data-surface="paper"]) .chart-body {
