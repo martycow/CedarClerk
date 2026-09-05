@@ -326,6 +326,7 @@ app.MapQueueSlotEndpoints();
 app.MapTrackedLinkEndpoints();
 app.MapPreflightEndpoints();
 app.MapStatsInsightsEndpoints();
+app.MapStatSeriesEndpoints();
 app.MapBillingEndpoints();
 app.MapAdminEndpoints();
 app.MapAiJobEndpoints();

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace CedarClerk.Localization;
 
@@ -42,6 +42,7 @@ public static class ErrorMessages
     public static string UnknownAssetKindFilter => Ru("Неизвестный фильтр типа ассета.", "Unknown asset kind filter.");
     public static string UnknownAssetSortKey => Ru("Неизвестный критерий сортировки ассетов.", "Unknown asset sort key.");
     public static string UnknownAssetSortDirection => Ru("Неизвестное направление сортировки ассетов.", "Unknown asset sort direction.");
+    public static string UnknownStatSource => Ru("Неизвестный источник статистики.", "Unknown stats source.");
     public static string UnknownAdminPostStateFilter => Ru("Неизвестный фильтр состояния постов.", "Unknown admin post state filter.");
     public static string UnknownAdminPostSortKey => Ru("Неизвестный критерий сортировки постов.", "Unknown admin post sort key.");
     public static string UnknownAdminPaymentStatusFilter => Ru("Неизвестный фильтр состояния платежей.", "Unknown admin payment status filter.");
