@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-05 — Tablet project layouts (ADR-290)
+
+The Project hub, Showcase builder and task board respond to their available width beside the sidebar.
+The hub stacks before document titles and controls become cramped. Filters wrap, journal rows adapt,
+and long destination addresses stay inside their cards. Showcase uses three, two or one column,
+with reachable block controls and publishing settings. Landscape task boards show all four statuses;
+empty columns have compact drop areas, and portrait keeps a horizontal board scroller.
+
+The tablet browser suite covers 1024x768, 1180x820 and 1366x1024 landscape, plus 820x1180 portrait,
+in English and Russian with touch enabled. See the [audit report](../design/UI-AUDIT-2026-09-05.md).
+Verification: 30 Rust, 1952 backend, 766 frontend and 71 browser tests passed,
+along with icon, contrast, density and production build checks.
+
 ## 2026-09-05 — Release 0.22.1
 
 Merge the interface layout and confirmation audit into `master` (ADR-289).

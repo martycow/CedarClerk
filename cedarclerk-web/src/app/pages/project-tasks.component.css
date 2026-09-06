@@ -1,11 +1,10 @@
-/* Board.png (ADR-239): four full-height columns in the shell body's flex column. What is left in
-   this file is arrangement — the strips, the columns, the table's grid, the modal's field grid. */
 :host {
     display: flex;
     flex: 1;
     flex-direction: column;
     min-height: 0;
     min-width: 0;
+    container: project-tasks / inline-size;
 }
 
 .hint {
@@ -52,6 +51,7 @@
     min-height: 0;
     overflow-x: auto;
     scroll-snap-type: x proximity;
+    align-items: start;
 }
 
 .column {
@@ -60,6 +60,7 @@
     flex-direction: column;
     min-height: 0;
     min-width: 0;
+    max-height: 100%;
 }
 
 .column-head {
@@ -70,7 +71,7 @@
     padding: var(--space-2) var(--space-2) var(--space-2) 14px;
 }
 
-.column-name { font-weight: 700; }
+.column-name { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
 
 .column-count {
     font-size: var(--fs-12);
@@ -83,9 +84,17 @@
     flex: 1;
     flex-direction: column;
     gap: var(--space-2);
-    min-height: 0;
+    min-height: 160px;
     padding: 0 10px 10px;
     overflow: auto;
+}
+
+.column-cards ::ng-deep .empty-state { min-height: 160px; padding: var(--space-3); gap: var(--space-2); }
+.column-head app-button { flex: none; }
+
+@container project-tasks (min-width: 680px) {
+    .board { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+    .column-head { gap: var(--space-1); padding-inline: var(--space-2); }
 }
 
 /* T-354 — the drag feedback. The card lifts with a shadow; the column it can drop into shows a

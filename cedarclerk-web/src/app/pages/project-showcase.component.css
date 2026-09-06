@@ -3,6 +3,8 @@
     flex: 1;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    container: project-showcase / inline-size;
 }
 
 .showcase-page { min-height: 0; }
@@ -218,17 +220,27 @@
 .error-line { margin: 0; color: var(--danger); font-size: var(--fs-ui); }
 .action-error { margin-top: var(--space-3); }
 
-@media (max-width: 1200px) {
-    .builder { grid-template-columns: minmax(13rem, .65fr) minmax(24rem, 1.35fr); }
-    .inspector { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+@container project-showcase (max-width: 1080px) {
+    .builder { grid-template-columns: 224px minmax(0, 1fr); grid-template-rows: minmax(340px, 52vh) auto; align-content: start; overflow: auto; }
+    .inspector { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; overflow: visible; }
     .inspector-card { grid-row: span 3; }
 }
 
-@media (max-width: 760px) {
-    .builder { display: flex; flex-direction: column; overflow: visible; }
-    .block-list { max-height: 18rem; }
-    .live-result { min-height: 32rem; }
+@container project-showcase (max-width: 680px) {
+    .builder { display: flex; flex-direction: column; overflow: auto; }
+    .block-rail { flex: none; }
+    .block-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); flex: none; max-height: 240px; }
+    .live-result { flex: none; height: 420px; }
     .inspector { display: flex; }
     .preview-block:has(.preview-cover) { grid-template-columns: 1fr; }
     .preview-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.block-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-2); }
+.block-row > app-icon:first-child { margin-right: var(--space-1); }
+.preview-bar { flex-wrap: wrap; padding-block: var(--space-2); }
+.preview-bar > span, .preview-block { min-width: 0; overflow-wrap: anywhere; }
+.settings-body, .field { min-width: 0; }
+.settings-body input:not([type="checkbox"]), .settings-body select { width: 100%; min-width: 0; }
+.field-label { overflow-wrap: anywhere; }
+.preview-follow { grid-template-columns: minmax(0, 1fr) auto; }

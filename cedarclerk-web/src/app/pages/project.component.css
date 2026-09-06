@@ -1,9 +1,10 @@
-/* Main.png (ADR-239): the shell owns the viewport; the document card scrolls, the page does not. */
 :host {
     display: flex;
     flex: 1;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    container: project-hub / inline-size;
 }
 
 .spacer { flex: 1; }
@@ -38,7 +39,7 @@
 .hub-grid {
     display: grid;
     flex: 1;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 280px;
     gap: var(--space-5);
     align-items: stretch;
     min-height: 0;
@@ -64,6 +65,7 @@
 /* ---------- Continue writing ---------- */
 .resume {
     display: flex;
+    flex-wrap: wrap;
     flex: none;
     align-items: center;
     gap: 18px;
@@ -85,7 +87,7 @@
 
 .resume-text {
     display: flex;
-    flex: 1;
+    flex: 1 1 180px;
     flex-direction: column;
     gap: var(--space-1);
     min-width: 0;
@@ -121,6 +123,7 @@
 
 .docs-head {
     display: flex;
+    flex-wrap: wrap;
     flex: none;
     align-items: center;
     gap: var(--space-3);
@@ -128,7 +131,8 @@
 }
 
 .docs-title {
-    flex: 1;
+    flex: none;
+    white-space: nowrap;
     margin: 0;
     font-family: var(--font-display);
     font-size: var(--fs-18);
@@ -142,7 +146,7 @@
     color: var(--t3);
 }
 
-.docs-search { width: 220px; }
+.docs-search { width: 220px; flex: 1 1 180px; min-width: 0; max-width: 100%; }
 
 .doc-row {
     grid-template-columns: auto minmax(0, 1fr) 140px 200px;
@@ -161,6 +165,7 @@
 
 .doc-end {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
@@ -301,6 +306,7 @@ a.jl-title:hover { color: var(--accent); text-decoration: underline; }
     align-items: center;
     gap: 6px;
     min-width: 0;
+    overflow-wrap: anywhere;
     color: var(--text);
     text-decoration: none;
 }
@@ -497,12 +503,33 @@ a.jl-title:hover { color: var(--accent); text-decoration: underline; }
     margin-top: var(--space-2);
 }
 
-/* A narrow hub keeps the title: the search wraps under the tabs and the type column goes, the
-   date and the state staying at the row's end. Last in the file so it wins over .doc-row above. */
-@media (max-width: 1180px) {
-    .docs-head { flex-wrap: wrap; }
-    .docs-head .docs-search { flex: 1 1 160px; min-width: 0; }
+@container project-hub (max-width: 1200px) {
     .doc-row { grid-template-columns: auto minmax(0, 1fr) auto; }
     .doc-row > .m { display: none; }
     .doc-end { justify-content: flex-end; }
+}
+
+.hub-side .kv { grid-template-columns: 80px minmax(0, 1fr); }
+.hub-side .kv > * { min-width: 0; overflow-wrap: anywhere; }
+.kv-link app-icon { flex: none; }
+.resume > app-button { margin-left: auto; }
+.docs-head .seg { flex-wrap: wrap; max-width: 100%; }
+
+@container project-hub (max-width: 900px) {
+    .hub-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; align-content: start; overflow: auto; }
+    .hub-main { min-height: auto; }
+    .docs { flex: none; min-height: 220px; max-height: 420px; }
+    .hub-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+    .hub-side > :last-child { grid-column: 1 / -1; }
+}
+
+@container project-hub (max-width: 560px) {
+    .hub-side { grid-template-columns: minmax(0, 1fr); }
+    .resume-thumb { width: 48px; height: 48px; }
+    .resume { gap: var(--space-3); }
+    .doc-row { grid-template-columns: auto minmax(0, 1fr); padding-block: var(--space-2); }
+    .doc-end { grid-column: 2; justify-content: flex-start; }
+    .journal app-log-line { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+    .journal ::ng-deep .ll-msg { grid-column: 1 / -1; grid-row: 2; white-space: normal; overflow-wrap: anywhere; }
+    .journal ::ng-deep .ll-at { grid-column: 3; grid-row: 1; }
 }

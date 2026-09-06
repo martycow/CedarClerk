@@ -351,3 +351,20 @@ The confirmation unit suite covers navigation cancellation, concurrent requests 
 Register a fresh scratch account, complete its profile and open the initial editor document.
 Type a paragraph, wait for Synced, then reload. The paragraph must remain without a save-conflict dialog.
 `e2e/18-interface-safety.spec.ts` exercises this path against the server.
+
+### Tablet project layouts
+
+Use 1024x768, 1180x820 and 1366x1024 landscape viewports, then 820x1180 portrait.
+Check both interface languages with touch input enabled.
+
+1. Open a Project with a long document title. Check Continue writing, document filters,
+   journal entries and a long blog address inside their cards.
+2. Open Showcase. Select a block, expand publishing and press settings, and scroll to
+   every field. The page must fit its work area beside the sidebar.
+3. Open an empty task board. Landscape shows all four statuses with compact columns.
+   Portrait keeps horizontal scrolling inside the board.
+4. Create a task with a long title, open it, and check the editing dialog bounds.
+
+`e2e/19-ipad-layout.spec.ts` covers this matrix and saves local screenshots under
+`.e2e-audit/ipad-layout/`. Each case uses its own scratch account and sets the profile language.
+Chromium touch emulation does not replace physical iPad Safari verification.
