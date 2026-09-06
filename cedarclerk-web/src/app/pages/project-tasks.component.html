@@ -69,9 +69,6 @@
             </app-empty-state>
         </div>
     } @else if (view() === 'board') {
-        <!--Four full-height columns (ADR-239 clause 7). T-354 — one cdkDropListGroup so a card
-        drags between them; a drop into a different column is a status change, which reloads the
-        board like every other one.-->
         <div class="board" cdkDropListGroup>
             @for (status of statuses; track status) {
                 <section class="card is-tinted column" [attr.aria-label]="t().projects.tasks.status[status]">

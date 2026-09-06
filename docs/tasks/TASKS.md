@@ -97,5 +97,5 @@ see them.
   only. **Committed to master as `3b93004`, not deployed.**
   `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
   from the one on the droplet — which the previous pair of deploys could not do.
-- Active branch: `master` — release `0.22.1`, including the interface audit (ADR-289), the backlog sweep, the New-project wizard and the Rust operations console. `cedar status` reports the current production version; local `LIVE` identifies its verified commit.
+- Active branch: `master` — release `0.22.2`, including tablet Project layouts (ADR-290), the interface audit (ADR-289), the backlog sweep, the New-project wizard and the Rust operations console. `cedar status` reports the current production version; local `LIVE` identifies its verified commit.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.

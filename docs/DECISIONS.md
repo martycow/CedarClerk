@@ -287,3 +287,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-287 — View transitions: the router cross-fades except around the editor, the blog carries a cover into the post](adr/ADR-287.md)
 - [ADR-288 — A custom accent is gated at 3:1 on the paper; an area preset is a macro over the sheet controls](adr/ADR-288.md)
 - [ADR-289 — Destructive actions use the shared modal before changing data](adr/ADR-289.md)
+- [ADR-290 — Project layouts respond to their available width](adr/ADR-290.md)
