@@ -17,7 +17,6 @@ export interface AppearancePrefs {
     showParagraphNumbers: boolean;
     showLineRules: boolean;
     showInvisibles: boolean;
-    // Default size for Insert → Table (I5). Bounded by MAX_TABLE_SIZE — "within reason", as asked.
     tableRows: number;
     tableCols: number;
     showWordCount: boolean;
@@ -25,10 +24,7 @@ export interface AppearancePrefs {
     sheetFlush: boolean; // no paper card — sheet merges with the canvas
 }
 
-// Two tones per preset, because night is derived downward against cream paper rather than mixed
-// towards white (ADR-141): no single value clears 4.5:1 on both #F1EADA and #D9CEAE, and the
-// night sheet has to stay readable as a label on the same colour used as a button fill.
-// tools/check-contrast.mjs reads this list and scores every entry in both roles and both themes.
+// check-contrast.mjs verifies each tone as text and button fill against its theme's paper (ADR-141).
 export const ACCENT_PRESETS: { name: string; hex: string; night: string }[] = [
     { name: 'Cedar', hex: '#39543C', night: '#39543C' },
     { name: 'Bark', hex: '#755934', night: '#624B2C' },
@@ -41,9 +37,7 @@ const BENCH_ACCENT = ACCENT_PRESETS[0];
 
 export const HEX_COLOUR = /^#[0-9a-fA-F]{6}$/;
 
-// The deepest paper of each theme, the surface every dark-on-light ratio is bound to (ADR-141).
-// Mirrors --surface in styles.scss: the gate below runs for a theme that is not the one painted,
-// so it cannot read the live token.
+// Mirror --surface: validation also runs for the inactive theme, whose live token is unavailable.
 export const PAPER_SURFACE: Record<Theme, string> = { light: '#F1EADA', dark: '#D9CEAE' };
 
 // WCAG 2.2 SC 1.4.11 — the floor for a control boundary or a graphical object. The shipped
@@ -67,8 +61,7 @@ export function accentContrast(hex: string, theme: Theme): number {
     return HEX_COLOUR.test(hex) ? contrastRatio(hex, PAPER_SURFACE[theme]) : 0;
 }
 
-// The ink painted over an accent fill: light paper ink until the accent is bright enough that
-// dark text wins (the 0.179 luminance crossover is where white and black tie at 4.5:1).
+// At luminance 0.179, black and white have equal contrast.
 export function accentInk(hex: string): 'light' | 'dark' {
     return relativeLuminance(hex) > 0.179 ? 'dark' : 'light';
 }
@@ -77,16 +70,13 @@ const presetFor = (hex: string) => ACCENT_PRESETS.find(p => p.hex.toUpperCase() 
 
 export const isAccentPreset = (hex: string) => !!presetFor(hex);
 
-// The stored key: a preset keeps its day hex, which names both tones; a custom colour is itself,
-// but only if it clears the floor on that theme's paper. Anything else — a foreign palette, a
-// colour that fails — falls back to the bench accent rather than painting an unmeasured one.
+// A preset's day hex identifies both tones; custom colors must pass the theme's contrast floor.
 export function storedAccent(hex: string, theme: Theme): string {
     const preset = presetFor(hex);
     if (preset) return preset.hex;
     return accentContrast(hex, theme) >= ACCENT_MIN_CONTRAST ? hex.toUpperCase() : BENCH_ACCENT.hex;
 }
 
-// The tone actually painted: a preset's vetted day or night value, or the custom hex.
 export function resolveAccent(hex: string, theme: Theme): string {
     const key = storedAccent(hex, theme);
     const preset = presetFor(key);

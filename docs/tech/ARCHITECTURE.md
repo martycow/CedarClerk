@@ -46,16 +46,15 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 
 ## Solution layout
 
-6 projects, all `net8.0`:
+Four .NET projects target `net8.0`. The operations console is an external Rust project:
 
 | Project | Purpose |
 |---|---|
 | `CedarClerk.Server` | ASP.NET Core 8: minimal-API REST endpoints, static host for the Angular SPA, Telegram bot host, Quartz.NET scheduled jobs, EF Core/SQLite data layer |
 | `CedarClerk.Core` | Document format + renderers. Zero external dependencies — pure C#, fully unit-tested |
 | `CedarClerk.Localization` | `ErrorMessages.cs` (shared error strings) and `Languages.cs` (the content/UI language lists — nine content languages: ru/en/de/fr/es/ja/uk/be/ka) |
-| `cedar-cli` | Native Rust/Ratatui `cedar`; JSON profiles, command runner, deploy and terminal dashboard (ADR-252) |
+| MooTool (external) | Native Rust/Ratatui `cedar`; JSON profiles, command runner, deploy and terminal dashboard (ADR-291) |
 | `CedarClerk.Tests` | xUnit, references `Core` and `Server` |
-| `cedar-cli/tests` | Rust integration tests for deployment scripts; module tests cover configuration, execution and terminal rendering |
 
 `CedarClerk.Server` subfolders (the list of *conventions*, not a census — the census is `ls`):
 - `Ai/` — `IAiEditProvider` + Anthropic/OpenAI implementations; `AiJobService` runs long AI calls as background jobs polled by the client (202 + jobId — a Cloudflare-timeout lesson)
@@ -171,8 +170,8 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 
 See `.claude/rules/production-environment.md` for the droplet/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
-`cedar-cli` is the Rust operations console (ADR-252). It replaces the .NET CLI while preserving
-`cedar` as the build, test and deploy entry point. `cedar.json` contains versioned program profiles,
+MooTool owns the Rust operations console in its `modules/cedar` crate (ADR-291).
+`cedar` is the build, test and deploy entry point. `cedar.json` contains versioned program profiles,
 explicit command/argument arrays, local serve settings and optional SSH/systemd deployment settings.
 
 - `src/config.rs` validates profiles and resolves paths. Legacy per-user JSON loads in memory without overwriting it.
@@ -180,7 +179,7 @@ explicit command/argument arrays, local serve settings and optional SSH/systemd 
 - `src/operations.rs` runs build/test actions, serves loopback with the Cedar Clerk bot disabled, and exposes read-only diagnostics.
 - `src/deploy.rs` checks source state and artifact provenance, packs and resumes a checksummed archive, stages required files, confirms the production swap, verifies public health/version and updates local LIVE tags.
 - `src/ui.rs` renders the Ratatui dashboard, animated cedar/aurora title, program selection, action filter, output and confirmations.
-- `Scripts/install-cli.ps1` tests and builds the Rust executable before replacing the installed .NET tool. `Scripts/rust-cli.ps1` loads the Windows C++ toolchain for source builds.
+- MooTool owns source installation, the Windows C++ toolchain helper and Rust verification. The module builds from its bundled starter profile; the target repository owns the active `cedar.json`.
 - `Scripts/e2e.ps1` owns the isolated smoke environment and remains an action in the JSON profile.
 
 Everything slow precedes downtime. A remote lock serializes the directory switch; a recovery trap

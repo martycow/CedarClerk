@@ -8,13 +8,7 @@ using CedarClerk.Localization;
 
 namespace CedarClerk.Server;
 
-// Admin panel (IF2) — see ADR-122 in docs/DECISIONS.md for the scoping decisions this follows.
-//
-// Every other endpoint file in this app filters by OwnerId (61 such queries at the time of
-// writing). The deliberate choice here is NOT to thread an "admin bypasses the filter" flag
-// through those: one missed call site would be a cross-tenant leak. Instead every cross-owner
-// read lives here, behind one gate, so the security property is a single sentence — everything
-// under /api/admin is admin-only, everything else stays owner-scoped.
+// Keep cross-owner reads behind the admin gate; normal endpoints must remain owner-scoped (ADR-122).
 public static partial class AdminEndpoints
 {
     public record SetPlanRequest(string Tier, DateTime? ExpiresAt);
@@ -148,21 +142,10 @@ public static partial class AdminEndpoints
         return ordered.ThenBy(p => p.Id);
     }
 
-    // Every mutation goes through here. Takes the actor and target so the row reads correctly
-    // later without joining to anything that might have changed since.
-    /// <summary>
-    /// A signed movement, so one control both tops up and takes back. Note is the admin's own words
-    /// about why, and it goes into the audit log rather than into the ledger — the ledger records
-    /// what moved, the audit records who decided and why.
-    /// </summary>
+    // Note belongs to the audit log; the credit ledger records only the movement.
     public record AdjustCreditsRequest(int Amount, string? Note);
 
-    /// <summary>
-    /// How loudly the audit log draws an action: "warn" for what takes something away from an
-    /// account or the platform, "ok" for what gives it back or opens a door, "info" for the rest.
-    /// Computed, not stored — the row records what happened, and a later change of opinion about
-    /// how grave an action is must not rewrite history.
-    /// </summary>
+    // Compute severity so presentation changes do not rewrite audit history.
     public static string SeverityOf(string action) => action switch
     {
         "lock" or "delete-account" or "purge-orphans" or "grant-admin" or "revoke-admin" => AuditSeverity.Warn,

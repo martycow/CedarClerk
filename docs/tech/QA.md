@@ -25,7 +25,7 @@ never hides the ones after it:
 
 | Step | What it proves |
 |---|---|
-| Rust console tests (`Scripts/rust-cli.ps1 test`) | The console itself: profile validation, planning, dry-run, the deploy scripts |
+| External operations module (MooTool) | Run its Rust tests and Clippy when changing the console. `cedar test --cli` validates the installed repository profile. |
 | Backend (`dotnet test`) | Endpoints, renderers, guards, and the drift guards below |
 | Frontend units (vitest) | Component and service logic in isolation |
 | Icon inventory | `icon-usage.generated.ts` matches the call sites in `src/app` |

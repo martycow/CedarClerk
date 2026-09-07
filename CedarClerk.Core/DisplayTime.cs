@@ -1,18 +1,14 @@
 namespace CedarClerk.Core;
 
-// The single place a stored UTC instant becomes the time printed on a page (ADR-115). SQLite has
-// nowhere to keep the kind, so values read back arrive Unspecified and are treated as UTC — which is
-// what they always are here (DateTime.UtcNow everywhere, file times as LastWriteTimeUtc).
+// SQLite loses DateTime.Kind, so stored Unspecified values must be interpreted as UTC.
 public static class DisplayTime
 {
-    /// <summary>The UTC instant as wall-clock time in the display zone.</summary>
     public static DateTime ToZone(DateTime utc, string? timeZoneId = null) =>
         TimeZoneInfo.ConvertTimeFromUtc(AsUtc(utc), TimeZones.ResolveOrDefault(timeZoneId));
 
     public static DateTime? ToZone(DateTime? utc, string? timeZoneId = null) =>
         utc is { } value ? ToZone(value, timeZoneId) : null;
 
-    /// <summary>A compact, unambiguous label for the configured zone at this instant.</summary>
     public static string Abbreviation(DateTime utc, string? timeZoneId = null)
     {
         var zoneId = TimeZones.NormalizeOrDefault(timeZoneId);

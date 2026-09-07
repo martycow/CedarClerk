@@ -157,8 +157,8 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 
 | Term | Russian | Meaning | Source |
 |---|---|---|---|
-| cedar CLI | операционная консоль | Native Rust/Ratatui operations console; the build/test/deploy entry point, installed by `Scripts/install-cli.ps1`, with named JSON program profiles | AGENTS.md, ADR-252 |
-| pipeline | пайплайн | Ordered build/test/deploy operations in `cedar-cli/src/operations.rs`, `deploy.rs` and the selected `cedar.json` profile | ADR-252 |
+| cedar CLI | операционная консоль | Native Rust/Ratatui operations console; the build/test/deploy entry point, installed from MooTool’s `modules/cedar` crate, with named JSON program profiles | AGENTS.md, ADR-252 |
+| pipeline | пайплайн | Ordered build/test/deploy operations in MooTool’s `modules/cedar/src/operations.rs`, `deploy.rs` and the selected `cedar.json` profile | ADR-252 |
 | preflight | префлайт | `cedar deploy --preflight`: runs every check (branch, tag, LIVE agreeing with the version, a remote probe) — and stops, touching nothing | CLAUDE.md |
 | GitGuard | — | The pre-deploy checks: master only, not detached, a clean tree, a tag matching CurrentVersion; `test`/`build` deliberately do not apply them | `Pipelines/GitGuard.cs` |
 | LIVE / LIVE-PREV | теги LIVE | Local-only tags (never pushed): LIVE = the commit in production, moved after a health check; the one it displaces stays as LIVE-PREV; `--rollback` moves it back | CLAUDE.md, ADR-118 |

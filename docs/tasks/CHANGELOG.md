@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-09-07 — Project cleanup and external operations (ADR-291)
+
+Move the Rust operations source, tests, starter profile and source installer into MooTool's
+`modules/cedar` crate. Preserve MooTool's existing implementation and uncommitted work.
+The module builds independently of the Cedar Clerk checkout. The installed `cedar` command
+matches its release executable; the previous executable remains available for recovery.
+
+Cedar Clerk retains `cedar.json`. Its application test action no longer builds the external Rust
+project; `cedar test --cli` validates the active profile. Update the architecture, operations manual,
+terminology and UI inventory to match this ownership boundary.
+
+Remove the unused root package lock and source installer scripts. Archive the root design QA report
+without changing its content. Move 20 local scratch entries (about 38 MiB) out of the checkout,
+including old logs, runtime installers, scratch scripts and empty directories. Move the Rust build
+cache into MooTool. Preserve application data, keys, source design references and current audit evidence.
+Shorten comments in five application files; a comparison confirms that all non-comment lines remain unchanged.
+Simplify one nested Rust condition to satisfy Clippy. Preserve CLI help through explicit command attributes.
+
+Verification: 30 Rust tests, Clippy, formatting, 1952 backend tests, 766 frontend tests, icon,
+contrast and density checks, and the web/server production build passed. The terminal dashboard
+opened and exited normally. Profile validation, executable hashes and deployment dry-run plans passed.
+The full browser run passed 70 scenarios and failed the Cyrillic Ctrl+B scenario; 18 audit scenarios
+were skipped by the suite configuration. Both Cyrillic and Latin shortcut scenarios passed on an
+isolated rerun without code changes. This records an intermittent smoke failure, not a fully green full run.
+Frontend dependencies were restored from the existing lock before verification.
+No application release, master merge or production deployment accompanies this cleanup.
+
 ## 2026-09-05 — Release 0.22.2
 
 Merge the tablet Project layout correction into `master` (ADR-290).

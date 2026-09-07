@@ -1,20 +1,30 @@
 # Cedar operations console
 
-`cedar` is a native Rust executable with a Ratatui dashboard. It manages named programs through JSON. Cedar Clerk is the bundled profile.
+`cedar` is MooTool's native Rust operations executable with a Ratatui dashboard (ADR-291).
+Its source, installer and Rust tests live in MooTool's `modules/cedar` crate.
+Cedar Clerk owns the active `cedar.json` profile.
 
 ## Install and start
 
-Use PowerShell 7, Rust stable, Visual Studio C++ Build Tools with the Windows SDK x64 component, and Git for Windows. The SDK must include `kernel32.lib`, UCRT libraries and headers. The installer verifies the Rust tests and release executable before removing the previous .NET global tool. Cedar Clerk actions also need Node/npm, a .NET SDK and the .NET 8 + ASP.NET Core 8 runtimes. The console executable itself needs no .NET runtime.
+Source installation requires PowerShell 7, Rust stable, Visual Studio C++ Build Tools, the Windows SDK x64 component, and Git for Windows.
+The SDK must include `kernel32.lib`, UCRT libraries and headers.
+From the MooTool root, run `./modules/cedar/Scripts/install-cli.ps1 -Repo <CedarClerk-checkout>`.
+The installer runs Rust tests and builds the release executable before installation.
+It reuses the existing `cedar.exe` directory, or selects `%LOCALAPPDATA%/MooTool/bin` for a fresh installation.
+It preserves configuration and keeps the previous executable as `cedar.previous.<id>.exe`.
+The installation directory comes first in the user PATH. Open a new terminal after installation.
+
+Cedar Clerk actions require Node/npm, a .NET SDK and the .NET 8 + ASP.NET Core 8 runtimes.
+The console executable itself needs no .NET runtime or source checkout.
 
 | Command | Purpose |
 |---|---|
-| `./Scripts/install-cli.ps1` | Build, test and install the native `cedar.exe` into the existing per-user command directory |
 | `cedar` | Open the animated dashboard |
 | `cedar --no-animation` | Open a still dashboard; `A` also toggles animation |
-| `cedar test` | Run Rust, backend, frontend, icon, contrast and density tests, then the Angular production build |
+| `cedar test` | Run backend, frontend, icon, contrast and density tests, then the Angular production build |
 | `cedar test --backend` | Run backend tests |
 | `cedar test --frontend` | Run frontend tests, design contracts and the Angular production build |
-| `cedar test --cli` | Run Rust console tests |
+| `cedar test --cli` | Validate the active profile with the installed executable |
 | `cedar test --smoke` | Add the isolated Playwright suite |
 | `cedar build --no-desktop` | Build the web and server deployment artifact |
 | `cedar build --installer` | Also build the desktop shell and installer |
@@ -29,9 +39,6 @@ Use PowerShell 7, Rust stable, Visual Studio C++ Build Tools with the Windows SD
 | `cedar status` / `cedar logs --errors` | Inspect production health or bounded service errors |
 | `cedar db` / `cedar backup verify` | Read SQLite health or local backup inventory |
 | `cedar config validate` / `cedar config path` | Validate or locate the active JSON |
-| `./Scripts/rust-cli.ps1 test --locked` | Run Rust tests from source with the Windows build environment |
-| `./Scripts/rust-cli.ps1 clippy --locked --all-targets` | Check Rust code with warnings treated as errors |
-| `./Scripts/install-cli.ps1 -Uninstall` | Remove the executable and retain configuration |
 
 The dashboard uses arrows or J/K to select, Enter to execute, Tab or Left/Right to switch programs, `/` to filter actions, `R` to reload JSON, and Q to exit. During a job, PageUp/PageDown scroll output and C requests cancellation. Enter returns after completion. Production confirmations default to Cancel; Y confirms.
 
@@ -95,7 +102,7 @@ The deployment account needs OpenSSH, `tar`, `sha256sum`, `flock`, common POSIX 
 
 ## Verify a change
 
-1. Run Rust tests and Clippy. Deployment integration tests execute shell scripts only in disposable local directories with mocked service control.
+1. For console changes, run `./modules/cedar/Scripts/rust-cli.ps1 test --locked` and `./modules/cedar/Scripts/rust-cli.ps1 clippy --locked --all-targets` from MooTool. Deployment tests use disposable local directories with mocked service control.
 2. Run `cedar test` and `cedar build --no-desktop` against the working branch.
 3. Open the dashboard, select/filter actions, run a harmless action and return. Cancel a long local command and verify its owned child exits.
 4. Use `cedar run --no-open`, verify local health and the disabled bot, then stop it.

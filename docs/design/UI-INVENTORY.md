@@ -973,11 +973,11 @@ Cross-referenced with `TASKS.md`. Note that smoke coverage is a different claim 
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| Animated cedar title | `cedar-cli/src/ui.rs`, `scene` | terminal art | Cedar, aurora, forest layers and shimmer identify the console | No loading dependency | Reduced motion and compact layouts |
-| Program selector | `cedar-cli/src/ui.rs`, dashboard | keyboard selector | Choose a JSON program profile and show the deployment target | Local configuration | Tab/Left/Right; no automatic remote request |
-| Action list and filter | `cedar-cli/src/ui.rs`, dashboard | list | Prioritize deploy, tests, local run and build; expose configured actions | Starts a job with visible state | Arrows/J/K, Enter and slash search |
-| Job output | `cedar-cli/src/ui.rs`, job view | log and progress | Show stage, elapsed time, process output, upload progress and final status | Running stage and byte counts | Bounded history; scrolling and cancellation |
-| Production confirmation | `cedar-cli/src/ui.rs`, overlay | dialog | Identify the target and confirm a deploy, rollback or restart | Waits for operator input | Enter/Escape cancels; Y confirms |
+| Animated cedar title | MooTool: `modules/cedar/src/ui.rs`, `scene` | terminal art | Cedar, aurora, forest layers and shimmer identify the console | No loading dependency | Reduced motion and compact layouts |
+| Program selector | MooTool: `modules/cedar/src/ui.rs`, dashboard | keyboard selector | Choose a JSON program profile and show the deployment target | Local configuration | Tab/Left/Right; no automatic remote request |
+| Action list and filter | MooTool: `modules/cedar/src/ui.rs`, dashboard | list | Prioritize deploy, tests, local run and build; expose configured actions | Starts a job with visible state | Arrows/J/K, Enter and slash search |
+| Job output | MooTool: `modules/cedar/src/ui.rs`, job view | log and progress | Show stage, elapsed time, process output, upload progress and final status | Running stage and byte counts | Bounded history; scrolling and cancellation |
+| Production confirmation | MooTool: `modules/cedar/src/ui.rs`, overlay | dialog | Identify the target and confirm a deploy, rollback or restart | Waits for operator input | Enter/Escape cancels; Y confirms |
 
 ## Destructive actions and layout audit (ADR-289)
 

@@ -3,23 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
-/// <summary>
-/// Removing an account and everything it owns.
-///
-/// Runs on a platform context, which is what makes it dangerous and what makes it possible: with
-/// the tenant filters off, a delete written against the wrong column takes somebody else's work
-/// with it. Every statement here names OwnerId explicitly for that reason.
-///
-/// <see cref="AdminAuditEntry"/> is deliberately left behind. It stores the actor's and target's
-/// email as text precisely so it still reads once the rows it points at are gone, and an audit log
-/// that loses the record of a deletion is not an audit log.
-/// </summary>
+// Platform contexts bypass tenant filters: every delete must scope its owner explicitly.
+// Retain AdminAuditEntry so account deletion cannot erase its audit record.
 public static class AccountDeletion
 {
-    /// <summary>
-    /// Deletes the account, its rows and its media files. Returns false when there is no such
-    /// account, which is not an error — the caller asked for a state that already holds.
-    /// </summary>
     public static async Task<bool> DeleteAsync(CedarDbContext db, string ownerId, string? mediaDir,
         TenantOwnerCache.ForHosts hosts)
     {
@@ -29,9 +16,7 @@ public static class AccountDeletion
         var files = await db.Assets.Where(a => a.OwnerId == ownerId)
             .Select(a => a.LocalPath).ToListAsync();
 
-        // Rows first. If file removal fails halfway the account is still gone, and what is left is
-        // unreferenced bytes on disk — recoverable. The reverse order could leave a live account
-        // whose pictures have vanished.
+        // Delete rows before files so a partial failure cannot remove a live account's media.
         await db.ChannelPosts.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.ChannelStatSnapshots.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.PublishTargetStatSnapshots.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
@@ -69,8 +54,7 @@ public static class AccountDeletion
         await db.CanvasItems.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.CanvasBoards.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.ProjectMembers.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
-        // The other direction, and the one that is easy to miss: this account's memberships of other
-        // people's projects. Left behind, they grant access to a user id nothing answers for.
+        // Memberships in other owners' projects must also lose access.
         await db.ProjectMembers.Where(x => x.MemberUserId == ownerId).ExecuteDeleteAsync();
         await db.Assets.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Folders.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
@@ -84,8 +68,7 @@ public static class AccountDeletion
         db.Users.Remove(user);
         await db.SaveChangesAsync();
 
-        // Before the files, and after the rows: the subdomain must stop answering as soon as the
-        // account behind it is gone, rather than serving an empty blog until the entry expires.
+        // Invalidate the subdomain before file cleanup, which can fail independently.
         if (user.TenantUsername is { } name) hosts.Forget(name);
 
         if (mediaDir is not null) DeleteFiles(mediaDir, files);
@@ -107,8 +90,7 @@ public static class AccountDeletion
             }
             catch (ArgumentException) { continue; }
 
-            // A stored path is data, and data is not trusted to stay inside the directory it is
-            // supposed to describe.
+            // Stored paths are untrusted and must remain inside the media directory.
             if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal)) continue;
 
             try

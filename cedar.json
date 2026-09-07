@@ -58,10 +58,9 @@
         },
         "test": {
           "label": "Run all local tests",
-          "description": "Rust, backend, frontend and design contracts, then the production build the deploy ships.",
+          "description": "Backend, frontend and design contracts, then the production build the deploy ships.",
           "continueOnError": true,
           "steps": [
-            { "type": "exec", "name": "Rust console tests", "command": "pwsh", "args": ["-NoProfile", "-File", "Scripts/rust-cli.ps1", "test", "--locked"] },
             { "type": "exec", "name": "Backend tests", "command": "dotnet", "args": ["test", "CedarClerk.sln", "--nologo", "--logger", "console;verbosity=normal"] },
             { "type": "exec", "name": "Frontend tests", "command": "npm", "args": ["run", "test"], "cwd": "cedarclerk-web" },
             { "type": "exec", "name": "Icon inventory", "command": "npm", "args": ["run", "check:icons"], "cwd": "cedarclerk-web" },
@@ -86,8 +85,8 @@
           ]
         },
         "test-cli": {
-          "label": "Rust console tests",
-          "steps": [{ "type": "exec", "name": "Rust tests", "command": "pwsh", "args": ["-NoProfile", "-File", "Scripts/rust-cli.ps1", "test", "--locked"] }]
+          "label": "Installed operations profile",
+          "steps": [{ "type": "exec", "name": "Validate operations profile", "command": "cedar", "args": ["config", "validate"] }]
         },
         "smoke": {
           "label": "Browser smoke suite",

@@ -188,7 +188,7 @@ A new doc must get a node in the diagram above **in the same commit** — STACK/
 
 ## Operations console
 
-`docs/for_user/operations-console.md` documents installation, JSON program profiles, commands and verification of the Rust console (ADR-252).
+`docs/for_user/operations-console.md` documents installation, JSON program profiles, commands and use of MooTool’s external Rust console (ADR-291).
 
 ## Known weak spots
 

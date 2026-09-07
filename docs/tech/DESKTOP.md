@@ -184,7 +184,7 @@ cedar open desktop             launch what's already built (or the installed cop
 
 `BuildPipeline` synchronizes the version in `package.json` with `Consts.CurrentVersion`. `CedarClerk.Desktop/server/` is the build output (~70 MB self-contained runtime), not tracked by git.
 
-Build/test/deploy operations live in the Rust `cedar-cli` and JSON program profiles (ADR-252). On a fresh clone, run `.\Scripts\install-cli.ps1` first, then use `cedar`. See [operations-console.md](../for_user/operations-console.md) for prerequisites and configuration.
+Build/test/deploy operations use MooTool’s `cedar` command and the repository’s `cedar.json` profile (ADR-291). Install the command from MooTool before building a fresh clone. See [operations-console.md](../for_user/operations-console.md).
 
 ## How an update arrives (ADR-116)
 

@@ -22,9 +22,7 @@ appsettings.Development.json
 appsettings.*.local.json
 *.env
 .env*
-test.ps1
-# ...but the repo's own runner is tracked — the rule above is for a scratch file at the root.
-!Scripts/test.ps1
+/test.ps1
 
 # Local SQLite (path is case-sensitive on purpose — CedarClerk.Server/Data/ holds source files)
 CedarClerk.Server/Data/media/
@@ -53,24 +51,14 @@ cedarclerk-web/.playwright/
 .e2e-server.log.err
 .e2e-audit/
 
-# A local `dotnet run` with no CEDAR_DATA_DIR set puts its data dir inside the project — the SQLite
-# file, uploaded media, and the DataProtection key ring that signs cookies and encrypts publish
-# credentials. None of it belongs in the repo; production's lives on the Pi under CEDAR_DATA_DIR.
+# Local uploads and DataProtection keys must remain private.
 CedarClerk.Server/Data/dataprotection-keys/
-CedarClerk.Server/Data/cedar.db
-CedarClerk.Server/Data/cedar.db-shm
-CedarClerk.Server/Data/cedar.db-wal
-CedarClerk.Server/Data/media/
 CedarClerk.Server/Data/import-tmp/
 
-# === Desktop shell (T-121) ===
-# The published server copied in beside the Electron shell by Scripts/build.ps1 — a build output,
-# ~70MB of self-contained runtime, regenerated on every build.
+# Published desktop server
 CedarClerk.Desktop/server/
 
-# === Marty's dynamic prompt inbox (18.08.2026) ===
-# The only inbox (18.08.2026). Rewritten by Marty at will; deliberately untracked - rewrites
-# are tracked by mtime against the last "Input sweep" entry in docs/tasks/ROADMAP.md.
+# Dynamic prompt inbox; rewrites are tracked by mtime against CHANGELOG.
 docs/INPUT_PROMPT.md
 
 # Mirror of the Claude Design system — re-fetchable from the project id in config.json
@@ -82,6 +70,5 @@ docs/INPUT_PROMPT.md
 # docs/adr/ and CHANGELOG.md. Same reasoning as the prompt inbox above.
 CedarClerk_BAD/
 
-# Rust operations console
-cedar-cli/target/
+# Local operations profile
 cedar.local.json
