@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-07 — Release 0.22.3
+
+Merge project cleanup and external operations ownership into local `master` (ADR-291).
+The version tag is `0.22.3`. Production remains on the existing `LIVE` tag; this merge does not deploy.
+The cleanup verification record below retains the intermittent Cyrillic shortcut smoke failure and its successful isolated rerun.
+
 ## 2026-09-07 — Project cleanup and external operations (ADR-291)
 
 Move the Rust operations source, tests, starter profile and source installer into MooTool's
