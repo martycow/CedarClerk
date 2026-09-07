@@ -5,7 +5,7 @@ import { ProjectBuildsComponent } from './project-builds.component';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { Build, BuildsService } from '../core/builds.service';
 import { GameTask, TasksService } from '../core/tasks.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 const PROJECT = { id: 'p1', name: 'Cedar Quest' } as ProjectDetail;
 

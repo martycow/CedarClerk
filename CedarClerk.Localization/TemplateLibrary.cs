@@ -1,6 +1,4 @@
-using CedarClerk.Localization;
-
-namespace CedarClerk.Server;
+namespace CedarClerk.Localization;
 
 /// <summary>
 /// Wave 2 item 18 — the built-in devlog starter templates. A static library, deliberately NOT rows

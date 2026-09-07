@@ -24,22 +24,4 @@ public static class LanguagePreference
         return Languages.IsUiLanguage(stored ?? "") ? stored : null;
     }
 
-    /// <summary>
-    /// First acceptable tag we recognise, in the order the browser listed them. Deliberately not a
-    /// full RFC 4647 q-value sort: the header's own order is already preference order in every
-    /// browser that ships, and a wrong pick here costs a message in the wrong language, not a bug.
-    /// </summary>
-    public static string? FromAcceptLanguage(string? header)
-    {
-        if (string.IsNullOrWhiteSpace(header)) return null;
-
-        foreach (var part in header.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var tag = part.Split(';')[0].Trim();
-            // "ru-RU" and "ru" both mean Russian here — the app has no regional variants.
-            var primary = tag.Split('-')[0].ToLowerInvariant();
-            if (Languages.IsUiLanguage(primary)) return primary;
-        }
-        return null;
-    }
 }

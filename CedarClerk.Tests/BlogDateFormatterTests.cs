@@ -1,3 +1,4 @@
+using CedarClerk.Localization;
 using CedarClerk.Core;
 
 namespace CedarClerk.Tests;

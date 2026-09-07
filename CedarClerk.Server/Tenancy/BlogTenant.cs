@@ -1,3 +1,4 @@
+using CedarClerk.Localization;
 using CedarClerk.Core;
 using Microsoft.EntityFrameworkCore;
 

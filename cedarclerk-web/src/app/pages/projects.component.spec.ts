@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ProjectsComponent } from './projects.component';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 const ONE: ProjectSummary = {
     id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,

@@ -154,13 +154,13 @@ public static class SprintEndpoints
 
         if (done.Count > 0)
         {
-            content.Add(DocJson.Heading(ru ? "Что сделано" : "What got done"));
+            content.Add(DocJson.Heading(DocumentTexts.SprintCompleted(ru)));
             content.Add(DocJson.BulletList(done));
         }
 
         if (builds.Count > 0)
         {
-            content.Add(DocJson.Heading(ru ? "Релизы" : "Released"));
+            content.Add(DocJson.Heading(DocumentTexts.SprintReleased(ru)));
             foreach (var build in builds)
             {
                 content.Add(DocJson.Paragraph(string.IsNullOrWhiteSpace(build.Notes)
@@ -171,7 +171,7 @@ public static class SprintEndpoints
 
         if (open.Count > 0)
         {
-            content.Add(DocJson.Heading(ru ? "Что дальше" : "What's next"));
+            content.Add(DocJson.Heading(DocumentTexts.SprintNext(ru)));
             content.Add(DocJson.BulletList(open));
         }
 

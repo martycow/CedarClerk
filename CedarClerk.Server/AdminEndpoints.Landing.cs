@@ -68,9 +68,9 @@ public static partial class AdminEndpoints
                 // show them as placeholders rather than making the admin guess what "empty" means.
                 Defaults = new
                 {
-                    Kicker = LandingContent.Defaults.Kicker,
-                    HeroTitle = LandingContent.Defaults.HeroTitle,
-                    HeroSub = LandingContent.Defaults.HeroSub,
+                    Kicker = LandingTexts.Kicker,
+                    HeroTitle = LandingTexts.HeroTitle,
+                    HeroSub = LandingTexts.HeroSub,
                 },
                 // The configured fallback, shown when the override is blank — otherwise an empty
                 // field reads as "no showcase blog" while the footer still carries a link.

@@ -1,3 +1,4 @@
+using CedarClerk.Localization;
 namespace CedarClerk.Core;
 
 public sealed record HeaderSlotContext(

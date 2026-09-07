@@ -289,3 +289,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-289 — Destructive actions use the shared modal before changing data](adr/ADR-289.md)
 - [ADR-290 — Project layouts respond to their available width](adr/ADR-290.md)
 - [ADR-291 — Project cleanup and external operations ownership](adr/ADR-291.md)
+- [ADR-292 — Localization owns language resources and presentation rules](adr/ADR-292.md)

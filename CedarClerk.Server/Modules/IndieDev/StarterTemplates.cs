@@ -14,20 +14,12 @@ public static class StarterTemplates
         var ru = language == Languages.Russian;
         return (documentType, projectType) switch
         {
-            (DocumentTypes.Design, ProjectTypes.Jam) => Sections(ru
-                ? ["Идея", "Скоуп: что выйдет", "Расписание", "Чеклист сдачи"]
-                : ["The idea", "Scope: what ships", "Schedule", "Submission checklist"]),
-            (DocumentTypes.Design, _) => Sections(ru
-                ? ["Концепт", "Core loop", "Системы", "Контент", "Открытые вопросы"]
-                : ["Concept", "Core loop", "Systems", "Content", "Open questions"]),
+            (DocumentTypes.Design, ProjectTypes.Jam) => Sections(DocumentTexts.JamSections(ru)),
+            (DocumentTypes.Design, _) => Sections(DocumentTexts.DesignSections(ru)),
             // An Empty project promises nothing, so its first note carries no skeleton either.
             (DocumentTypes.Note, ProjectTypes.Empty) => DocJson.Doc([DocJson.Paragraph("")]),
-            (DocumentTypes.Note, _) => Sections(ru
-                ? ["Вопрос, на который отвечает прототип", "Как поймём, что ответ «да»"]
-                : ["The question this prototype answers", "How we'll know the answer is yes"]),
-            (DocumentTypes.Changelog, _) => Sections(ru
-                ? ["Не выпущено", "Известные проблемы"]
-                : ["Unreleased", "Known issues"]),
+            (DocumentTypes.Note, _) => Sections(DocumentTexts.PrototypeSections(ru)),
+            (DocumentTypes.Changelog, _) => Sections(DocumentTexts.ChangelogSections(ru)),
             _ => DocJson.Doc([DocJson.Paragraph("")]),
         };
     }

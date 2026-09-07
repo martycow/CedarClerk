@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TeamsComponent } from './teams.component';
 import { JoinedTeam, Team, TeamMember, TeamsService } from '../core/teams.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 const TEAM: Team = {
     id: 'team-1', name: 'Signal Pine', createdAt: '2026-09-01T00:00:00Z',

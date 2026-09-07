@@ -49,7 +49,7 @@ public static partial class BlogEndpoints
         sb.Append("<div class=\"press-bar\"><span class=\"press-bar-name\">").Append(Html(project.Name))
           .Append("</span><span class=\"press-bar-label\">press kit</span><span class=\"spacer\"></span>");
         sb.Append("<a class=\"press-pack-chip\" href=\"").Append(packUrl).Append("\">")
-          .Append(en ? "Download press pack (.zip)" : "Скачать пресс-пак (.zip)").Append("</a>");
+          .Append(BlogTexts.DownloadPressPackZip(en)).Append("</a>");
         sb.Append("</div>");
 
         sb.Append("<h1 class=\"press-h1\">").Append(Html(project.Name)).Append("</h1>");
@@ -67,7 +67,7 @@ public static partial class BlogEndpoints
 
         // ── Left: the factsheet card ─────────────────────────────────────────────────────────────
         sb.Append("<div class=\"press-card\">");
-        sb.Append("<div class=\"press-card-title\">").Append(en ? "Factsheet" : "Факты").Append("</div>");
+        sb.Append("<div class=\"press-card-title\">").Append(BlogTexts.Factsheet(en)).Append("</div>");
 
         void Row(string label, string valueHtml)
         {
@@ -80,10 +80,10 @@ public static partial class BlogEndpoints
                 Row(label, Html(value));
         }
 
-        TextRow(en ? "Developer" : "Разработчик", developer);
-        TextRow(en ? "Price" : "Цена", project.PressPrice);
-        TextRow(en ? "Engine" : "Движок", project.PressEngine);
-        TextRow(en ? "Genre" : "Жанр", project.PressGenre);
+        TextRow(BlogTexts.Developer(en), developer);
+        TextRow(BlogTexts.Price(en), project.PressPrice);
+        TextRow(BlogTexts.Engine(en), project.PressEngine);
+        TextRow(BlogTexts.Genre(en), project.PressGenre);
         if (links.Count > 0)
         {
             var linkHtml = new StringBuilder();
@@ -93,10 +93,10 @@ public static partial class BlogEndpoints
                 linkHtml.Append("<a href=\"").Append(Html(url)).Append("\" rel=\"noopener\" target=\"_blank\">")
                         .Append(Html(label)).Append("</a>");
             }
-            Row(en ? "Links" : "Ссылки", linkHtml.ToString());
+            Row(BlogTexts.Links(en), linkHtml.ToString());
         }
         if (project.PressContactEmail is { Length: > 0 } contact)
-            Row(en ? "Press contact" : "Контакт для прессы",
+            Row(BlogTexts.PressContact(en),
                 $"<a href=\"mailto:{Html(contact)}\">{Html(contact)}</a>");
 
         // Free rows: "Label: value" per line; a line without a colon is skipped, not rendered.
@@ -117,9 +117,9 @@ public static partial class BlogEndpoints
         {
             sb.Append("<div class=\"press-card-divider\"></div>");
             sb.Append("<div class=\"press-row\"><div class=\"press-row-label\">")
-              .Append(en ? "Logo & key art" : "Лого и арты").Append("</div><div class=\"press-row-value\">")
+              .Append(BlogTexts.LogoKeyArt(en)).Append("</div><div class=\"press-row-value\">")
               .Append("<a href=\"").Append(MediaSrc(coverPath, mainBase)).Append("\" target=\"_blank\" rel=\"noopener\">")
-              .Append(en ? "Cover image" : "Обложка").Append("</a></div></div>");
+              .Append(BlogTexts.CoverImage(en)).Append("</a></div></div>");
         }
         sb.Append("</div>");
 
@@ -128,7 +128,7 @@ public static partial class BlogEndpoints
 
         if (project.Description is { Length: > 0 } about)
         {
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "About the project" : "О проекте").Append("</h2>");
+            sb.Append("<h2 class=\"showcase-section\">").Append(BlogTexts.AboutTheProject(en)).Append("</h2>");
             sb.Append("<div class=\"press-about\">");
             foreach (var paragraph in about.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 sb.Append("<p>").Append(Html(paragraph)).Append("</p>");
@@ -137,9 +137,9 @@ public static partial class BlogEndpoints
 
         if (gallery.Count > 0)
         {
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Screenshots" : "Скриншоты")
+            sb.Append("<h2 class=\"showcase-section\">").Append(BlogTexts.Screenshots(en))
               .Append(" <a class=\"press-download-all\" href=\"").Append(packUrl).Append("\">")
-              .Append(en ? "download all" : "скачать все").Append("</a></h2>");
+              .Append(BlogTexts.DownloadAll(en)).Append("</a></h2>");
             sb.Append("<div class=\"showcase-gallery press-shots\">");
             foreach (var image in gallery)
             {
@@ -153,7 +153,7 @@ public static partial class BlogEndpoints
 
         if (YouTubeLink.EmbedUrl(project.ShowcaseTrailerUrl) is { } embed)
         {
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Trailer" : "Трейлер").Append("</h2>");
+            sb.Append("<h2 class=\"showcase-section\">").Append(BlogTexts.Trailer(en)).Append("</h2>");
             sb.Append("<div class=\"showcase-trailer\"><iframe src=\"").Append(Html(embed))
               .Append("\" loading=\"lazy\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div>");
         }
@@ -161,14 +161,12 @@ public static partial class BlogEndpoints
         if (publicPosts.Count > 0)
         {
             var latest = publicPosts[0];
-            var countLine = en
-                ? $"{publicPosts.Count} devlog {(publicPosts.Count == 1 ? "post" : "posts")}"
-                : $"Постов в девлоге: {publicPosts.Count}";
-            sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Devlog" : "Девлог").Append("</h2>");
+            var countLine = BlogTexts.DevlogPostCount(en, publicPosts.Count);
+            sb.Append("<h2 class=\"showcase-section\">").Append(BlogTexts.Devlog(en)).Append("</h2>");
             sb.Append("<p class=\"press-devlog-line\">").Append(countLine).Append(" — <a href=\"")
               .Append(ShowcasePath(ctx, project, "")).Append("\">")
-              .Append(en ? "read the feed" : "читать ленту").Append("</a>. ")
-              .Append(en ? "Latest: " : "Последний: ").Append("<a href=\"/").Append(latest.BlogSlug).Append("\">")
+              .Append(BlogTexts.ReadTheFeed(en)).Append("</a>. ")
+              .Append(BlogTexts.Latest(en)).Append("<a href=\"/").Append(latest.BlogSlug).Append("\">")
               .Append(Html(latest.ArticleTitle ?? latest.Title)).Append("</a></p>");
         }
 

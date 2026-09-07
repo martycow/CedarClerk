@@ -35,6 +35,7 @@ flowchart TB
         PRODUCT["docs/product/PRODUCT.md<br/>product, target audience, pricing"]
         PRD["docs/product/PRD.md<br/>requirements"]
         ARCH["docs/tech/ARCHITECTURE.md<br/>system design"]
+        LOCALIZATION["docs/tech/LOCALIZATION.md<br/>language resources and ownership"]
         QA["docs/tech/QA.md<br/>permanent verification checklist<br/>by surface, re-checked on change"]
         SEC["docs/tech/SECURITY.md<br/>threat model: assets, boundaries,<br/>STRIDE table, gaps"]
         DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
@@ -85,6 +86,7 @@ flowchart TB
     CODE -.->|"check"| BACKLOG
 
     ARCH -.->|"read BEFORE<br/>any implementation"| DECISIONS
+    ARCH --> LOCALIZATION
     PRD -.->|"same"| DECISIONS
     PRODUCT -->|"who for and why"| BACKLOG
     COMPET -->|"what to take / refuse →<br/>board rows, anti-features"| BACKLOG

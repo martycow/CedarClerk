@@ -52,7 +52,7 @@ Four .NET projects target `net8.0`. The operations console is an external Rust p
 |---|---|
 | `CedarClerk.Server` | ASP.NET Core 8: minimal-API REST endpoints, static host for the Angular SPA, Telegram bot host, Quartz.NET scheduled jobs, EF Core/SQLite data layer |
 | `CedarClerk.Core` | Document format + renderers. Zero external dependencies — pure C#, fully unit-tested |
-| `CedarClerk.Localization` | `ErrorMessages.cs` (shared error strings) and `Languages.cs` (the content/UI language lists — nine content languages: ru/en/de/fr/es/ja/uk/be/ka) |
+| `CedarClerk.Localization` | Language catalogs, errors, email/public-page text, date/time formatting, language rules and TypeScript interface dictionaries. See [Localization](LOCALIZATION.md) (ADR-292). |
 | MooTool (external) | Native Rust/Ratatui `cedar`; JSON profiles, command runner, deploy and terminal dashboard (ADR-291) |
 | `CedarClerk.Tests` | xUnit, references `Core` and `Server` |
 
@@ -68,7 +68,7 @@ Four .NET projects target `net8.0`. The operations console is an external Rust p
 - Top-level: one `XxxEndpoints.cs` static class per feature area — auth, drafts, blog, posts/publish, assets, channels, scheduling, billing, folders, form presets, glossary, admin, AI jobs, downloads, the landing — plus `SubscriptionPlan.cs` and `Program.cs`. The wiring list in `Program.cs` is the authoritative census.
 
 `cedarclerk-web/src/app/`:
-- `core/` — one Angular service per feature area (thin RxJS→Promise), the i18n dictionaries (`i18n/en.ts`/`ru.ts`), and the guards (`auth`, `guest`, `admin`, `indiedev`)
+- `core/` — one Angular service per feature area (thin RxJS→Promise), the `i18n/locale.service.ts` adapter, and the guards (`auth`, `guest`, `admin`, `indiedev`). Dictionaries and localization utilities live in `CedarClerk.Localization/Web`, imported through `@localization/*`.
 - `pages/` — route components; `editor` is the largest surface by far. `comments` and `stats` exist as components but their routes redirect into the Posts Manager (`/posts`) where they are tabs. The IndieDev screens (`projects`, `project`, `project-tasks/planner/assets/builds`, `project-canvas`/`canvas-board`) also live here behind `indieDevGuard` — the `modules/<name>/` folder convention from ADR-101 was **not** adopted on the frontend
 - `shared/` — ~15 genuinely reusable components now, including a real `app-modal`, `app-icon` (Phosphor, generated), `page-header`, `account-menu`, pickers and the appearance panel — `docs/design/UI-INVENTORY.md` §Shared lists them
 - `tiptap-extensions/` — custom TipTap nodes/marks whose HTML output is the shared contract with the backend renderers (e.g. `spoiler-mark.ts` ↔ `<tg-spoiler>` in the Telegram renderers)
@@ -88,7 +88,7 @@ A module **adds**; it never replaces an existing screen. That is what makes it r
 ## API style
 
 Minimal APIs only, no MVC controllers. Each feature area is `public static class XxxEndpoints` with a single `MapXxxEndpoints(this WebApplication app)` extension method, wired flatly in `Program.cs` — fourteen `MapXxx` calls for the core areas plus the module calls behind their flag; that block in `Program.cs` is the authoritative list (an enumeration copied here went stale once already).
-Blog requests are routed separately, by hostname, before the rest: `app.MapWhen(ctx => ctx.Request.Host.Host == blogHost, ...)`. All API routes live under `/api/...`. Errors are either ad-hoc `Results.Json(new { error = "..." }, statusCode: ...)` at the call site, or a small per-endpoint result record (e.g. `PostEndpoints.PublishResult`) for logic factored out of the lambda. See `CedarClerk.Localization.ErrorMessages` for the handful of error strings reused across call sites — most errors are one-off inline literals by convention.
+Blog requests are routed separately, by hostname, before the rest: `app.MapWhen(ctx => ctx.Request.Host.Host == blogHost, ...)`. All API routes live under `/api/...`. Errors use `ErrorMessages` through `Results.Json(new { error = ErrorMessages.X }, statusCode: ...)` or a per-endpoint result record. User-facing error literals are prohibited by `ErrorMessageLocalizationTests`.
 
 ## Realtime: one hub, one group per board (ADR-218)
 
@@ -152,15 +152,13 @@ a trailing `Z`. That converter is not cosmetic: SQLite cannot store `DateTimeKin
 an offset-less timestamp as **local time** — the app was showing times seven hours out everywhere the
 one hand-rolled `utcDate()` helper had not been applied.
 
-Everything a human reads is rendered in one display zone, named once per side:
-`Consts.General.DisplayTimeZone` (backend, used through `CedarClerk.Core.DisplayTime` and the
-`…Local` wrappers on `BlogDateFormatter`) and `DISPLAY_TIME_ZONE` in `core/display-time.ts` (frontend,
-used through the `zonedDate` pipe, which replaced every `| date:`). It is `America/Los_Angeles` rather
-than a fixed −8 because Los Angeles is on PDT for most of the year, and the blog labels the zone
-(`PDT`/`PST`) while the app does not — readers are worldwide, the operator is not. Machine-facing
-timestamps stay UTC: RSS `pubDate`, `<time datetime="…Z">`, and every API field.
+Account display timezones are IANA identifiers. `CedarClerk.Localization.TimeZones` validates them;
+`DisplayTime` converts UTC values and `BlogDateFormatter` formats reader dates. The default is
+`America/Los_Angeles`, preserving accounts that have no timezone preference.
 
-When timezones become per-user, those two constants are the place that changes.
+The browser uses `CedarClerk.Localization/Web/display-time.ts`; the account profile supplies the
+active timezone before authenticated screens render. Machine-facing timestamps remain UTC:
+RSS `pubDate`, `<time datetime="…Z">` and every API field. See [Localization](LOCALIZATION.md).
 
 ## `.cedar` file format
 

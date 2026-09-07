@@ -5,9 +5,9 @@ import { of } from 'rxjs';
 import { AssetDetail, AssetEntry, AssetIndexService, AssetPage, AssetQuery, LinkedDocument } from '../core/asset-index.service';
 import { AssetSyncService } from '../core/asset-sync.service';
 import { AuthService } from '../core/auth.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 import { LocaleService } from '../core/i18n/locale.service';
-import { ru } from '../core/i18n/ru';
+import { ru } from '@localization/ru';
 import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { ProjectAssetsComponent } from './project-assets.component';
 

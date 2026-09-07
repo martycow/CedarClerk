@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace CedarClerk.Core;
@@ -12,9 +12,7 @@ namespace CedarClerk.Core;
 // than taking a published post down.
 public static class RegistrationFormSet
 {
-    // Core stays free of a project reference to CedarClerk.Localization (same rule as
-    // CedarToBlogHtmlRenderer.Render), so the primary language code is spelled out here.
-    private const string PrimaryLanguage = "ru";
+    private const string PrimaryLanguage = CedarClerk.Localization.Languages.Russian;
 
     /// <summary>
     /// The form to show a reader who asked for <paramref name="lang"/>, falling back to the

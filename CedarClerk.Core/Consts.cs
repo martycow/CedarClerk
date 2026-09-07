@@ -77,10 +77,10 @@ public static class Consts
         // Not a secret — just enough to avoid storing raw visitor IPs directly.
         public const string VisitorHashSalt = "cedar-clerk-visitor-v1";
         
-        public const string DisplayTimeZone = "America/Los_Angeles";
-        public const string DisplayTimeZoneWindows = "Pacific Standard Time";
-        public const string DisplayTimeZoneStandard = "PST";
-        public const string DisplayTimeZoneDaylight = "PDT";
+        public const string DisplayTimeZone = CedarClerk.Localization.TimeZones.DefaultId;
+        public const string DisplayTimeZoneWindows = CedarClerk.Localization.TimeZones.WindowsDefaultId;
+        public const string DisplayTimeZoneStandard = CedarClerk.Localization.TimeZones.StandardAbbreviation;
+        public const string DisplayTimeZoneDaylight = CedarClerk.Localization.TimeZones.DaylightAbbreviation;
 
         public const string MainHostCfg = "Cedar:MainHost";
         public const string TenantHostCfg = "Cedar:TenantHost";
@@ -320,9 +320,9 @@ public static class Consts
     // blog one is language-dependent because the blog page is.
     public static class CrossLinks
     {
-        public const string DefaultBlogLinkText = "Read on the blog →";
-        public const string DefaultTelegramLinkTextEn = "View in Telegram &#8594;";
-        public const string DefaultTelegramLinkTextRu = "Смотреть в Telegram &#8594;";
+        public const string DefaultBlogLinkText = CedarClerk.Localization.CrossLinkTexts.Blog;
+        public const string DefaultTelegramLinkTextEn = CedarClerk.Localization.CrossLinkTexts.TelegramEnglish;
+        public const string DefaultTelegramLinkTextRu = CedarClerk.Localization.CrossLinkTexts.TelegramRussian;
     }
 
     public static class Admin

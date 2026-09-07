@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+using CedarClerk.Localization;
+using System.Globalization;
 using CedarClerk.Core;
 using CedarClerk.Server;
 using CedarClerk.Server.Analytics;
@@ -292,7 +293,7 @@ app.Use(async (ctx, next) =>
     var lang = ctx.User.Identity?.IsAuthenticated == true
         ? await LanguagePreference.OfUserAsync(ctx)
         : null;
-    lang ??= LanguagePreference.FromAcceptLanguage(ctx.Request.Headers.AcceptLanguage.ToString());
+    lang ??= LanguageNegotiation.FromAcceptLanguage(ctx.Request.Headers.AcceptLanguage.ToString());
     if (lang is not null)
         CultureInfo.CurrentUICulture = new CultureInfo(lang);
     await next();

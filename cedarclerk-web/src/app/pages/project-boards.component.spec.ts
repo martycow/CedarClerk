@@ -6,7 +6,7 @@ import { BoardsService, CanvasBoardSummary } from '../core/boards.service';
 import { MembersService, ProjectMember } from '../core/members.service';
 import { ProjectAccess, ProjectAccessService } from '../core/project-access.service';
 import { ProjectsService } from '../core/projects.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 const BOARD: CanvasBoardSummary = {
     id: 'b1', projectId: 'p1', name: 'References', background: 'grid', itemCount: 3,

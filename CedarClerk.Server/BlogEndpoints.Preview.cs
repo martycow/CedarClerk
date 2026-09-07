@@ -63,9 +63,7 @@ public static partial class BlogEndpoints
             : $"<h1>{System.Net.WebUtility.HtmlEncode(title)}</h1>";
 
         var banner = $"""
-            <div class="preview-banner">{(en
-                ? "Draft preview — this is a working copy, shared by its author. It may change or disappear."
-                : "Предпросмотр черновика — это рабочая копия, которой поделился автор. Она может измениться или исчезнуть.")}</div>
+            <div class="preview-banner">{(BlogTexts.DraftPreviewThisIsWorkingCopyShared(en))}</div>
             """;
 
         var html = $"""

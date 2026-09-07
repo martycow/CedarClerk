@@ -3,7 +3,7 @@ import { GlossaryComponent } from './glossary.component';
 import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 const term = (over: Partial<GlossaryTerm>): GlossaryTerm => ({
     id: 'x', term: 'TipTap', description: 'The editor engine.', aliases: '',

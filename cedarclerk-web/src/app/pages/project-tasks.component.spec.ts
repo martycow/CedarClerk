@@ -6,7 +6,7 @@ import { ProjectDetail, ProjectsService } from '../core/projects.service';
 import { GameTask, TasksService } from '../core/tasks.service';
 import { Sprint, SprintsService } from '../core/sprints.service';
 import { BuildsService } from '../core/builds.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 import { AssetsService } from '../core/assets.service';
 import { setDisplayTimeZone } from '../core/display-time';
 

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -1033,25 +1033,6 @@ public static partial class BlogEndpoints
     internal static List<string> SplitTags(string tags) =>
         tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-    // The index's own chrome, in the language the reader picked (ADR-202). Only the languages this
-    // table names can be offered as an index language — an English "Newest first" over a Russian
-    // list is the mixed page the site-wide toggle was removed for.
-    private sealed record IndexChrome(
-        string Order, string SortNew, string SortOld, string SortPopular, string SortUnpopular,
-        string LanguageGroup, string AllLanguages, string Available,
-        string ShowMore, string NothingYet, string NoMatch, string ReadIn);
-
-    private static readonly IReadOnlyDictionary<string, IndexChrome> IndexLabels =
-        new Dictionary<string, IndexChrome>
-        {
-            ["en"] = new("Order", "Newest first", "Oldest first", "Most popular", "Least popular",
-                "Language", "All languages", "available",
-                "Show {0} more of {1}", "Nothing published yet.", "No posts match.", "Read in"),
-            ["ru"] = new("Порядок", "Сначала новые", "Сначала старые", "Самые читаемые", "Наименее читаемые",
-                "Язык", "Все языки", "есть перевод",
-                "Показать ещё {0} из {1}", "Пока ничего не опубликовано.", "Ничего не найдено.", "Читать на"),
-        };
-
     // ADR-192/193 — the index toolbar (sort dropdown, language filter, tag chips, "show more") all
     // link back into the same parameters, so any one of them can change without the others resetting.
     // Changing a filter drops `shown` on purpose — a narrower list should start from its own top.
@@ -1162,35 +1143,6 @@ public static partial class BlogEndpoints
         links.Add(new BlogAuthorLink(label, uri.AbsoluteUri));
     }
 
-    private sealed record ReadingChrome(
-        string Menu, string Theme, string Day, string Night, string System, string Size, string Face);
-
-    // ADR-181 — the reading menu's four labels. English is the fallback for any code not listed,
-    // the same rule the registration gate follows (ADR-050): an untranslated menu in English beats
-    // one in a language the reader definitely did not ask for. Day/Night rather than Light/Dark in
-    // every language on purpose — the product's own word for its two looks is the lamp, not the
-    // luminance, and a reader who sees "Ночь" here reads the same word the app uses.
-    //
-    // T-013's caveat holds for uk/be/ka exactly as it does on the gate: no native speaker has read
-    // them, and they are here because an English menu on a Ukrainian post is the worse default.
-    //
-    // ADR-192 adds Face — the group label above the serif/sans row. The two buttons underneath it
-    // are not translated: they read "Literata" and "Source Sans 3", the faces' own names, the same
-    // choice the app's own typeface picker makes.
-    private static readonly IReadOnlyDictionary<string, ReadingChrome> ReadingLabels =
-        new Dictionary<string, ReadingChrome>
-        {
-            ["ru"] = new("Чтение", "Тема", "День", "Ночь", "Система", "Размер текста", "Гарнитура"),
-            ["en"] = new("Reading", "Theme", "Day", "Night", "System", "Text size", "Face"),
-            ["de"] = new("Lesen", "Design", "Tag", "Nacht", "System", "Textgröße", "Schriftart"),
-            ["fr"] = new("Lecture", "Thème", "Jour", "Nuit", "Système", "Taille du texte", "Police"),
-            ["es"] = new("Lectura", "Tema", "Día", "Noche", "Sistema", "Tamaño del texto", "Tipografía"),
-            ["ja"] = new("表示", "テーマ", "昼", "夜", "システム", "文字サイズ", "書体"),
-            ["uk"] = new("Читання", "Тема", "День", "Ніч", "Системна", "Розмір тексту", "Гарнітура"),
-            ["be"] = new("Чытанне", "Тэма", "Дзень", "Ноч", "Сістэмная", "Памер тэксту", "Гарнітура"),
-            ["ka"] = new("კითხვა", "თემა", "დღე", "ღამე", "სისტემური", "ტექსტის ზომა", "შრიფტი"),
-        };
-
     private static string RenderHeader(BlogHeaderInfo header, string lang)
     {
         var channel = header.Channel;
@@ -1231,7 +1183,7 @@ public static partial class BlogEndpoints
             if (channel.Username is not null)
             {
                 openInTelegram = $"""
-                    <a class="tg-open-btn" href="https://t.me/{System.Net.WebUtility.HtmlEncode(channel.Username)}" target="_blank" rel="noopener" aria-label="{(lang == Languages.Russian ? "Открыть в Telegram" : "Open in Telegram")}">
+                    <a class="tg-open-btn" href="https://t.me/{System.Net.WebUtility.HtmlEncode(channel.Username)}" target="_blank" rel="noopener" aria-label="{(BlogTexts.OpenInTelegram(lang != Languages.Russian))}">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
                     <span class="tg-open-label">Telegram</span>
                     </a>
@@ -1269,8 +1221,8 @@ public static partial class BlogEndpoints
         if (links.Count == 0)
             return "";
 
-        var title = lang == Languages.Russian ? "Ссылки автора" : "Author links";
-        var shortLabel = lang == Languages.Russian ? "Автор" : "Author";
+        var title = BlogTexts.AuthorLinks(lang != Languages.Russian);
+        var shortLabel = BlogTexts.Author(lang != Languages.Russian);
         var items = new StringBuilder();
         foreach (var link in links)
         {
@@ -1302,7 +1254,7 @@ public static partial class BlogEndpoints
     // localStorage; the head script applies both before the first paint, so neither flashes.
     private static string ReadingMenuHtml(string lang)
     {
-        var t = ReadingLabels.TryGetValue(lang, out var found) ? found : ReadingLabels["en"];
+        var t = BlogTexts.ReadingLabels.TryGetValue(lang, out var found) ? found : BlogTexts.ReadingLabels["en"];
         string Esc(string v) => System.Net.WebUtility.HtmlEncode(v);
 
         return $"""
@@ -1368,9 +1320,9 @@ public static partial class BlogEndpoints
         // index chrome has words for: offering a language the toolbar cannot speak would produce
         // exactly the half-translated page ADR-193 removed.
         var offeredLangs = posts.Select(p => p.PrimaryLanguage).Concat(posts.SelectMany(p => p.TranslationLanguages))
-            .Where(IndexLabels.ContainsKey).Distinct().OrderBy(l => l == Languages.English ? 0 : 1).ThenBy(l => l).ToList();
+            .Where(BlogTexts.IndexLabels.ContainsKey).Distinct().OrderBy(l => l == Languages.English ? 0 : 1).ThenBy(l => l).ToList();
         var indexLang = pickedLang is not null && offeredLangs.Contains(pickedLang) ? pickedLang : Languages.English;
-        var chrome = IndexLabels[IndexLabels.ContainsKey(indexLang) ? indexLang : Languages.English];
+        var chrome = BlogTexts.IndexLabels[BlogTexts.IndexLabels.ContainsKey(indexLang) ? indexLang : Languages.English];
 
         var postIds = posts.Select(p => p.Id).ToList();
         // One batched lookup for every post's translation into the index language, not N+1 — the
@@ -1440,10 +1392,10 @@ public static partial class BlogEndpoints
         var sb = new StringBuilder();
         var isEnglish = indexLang != Languages.Russian;
         sb.Append("<div class=\"index-heading\"><div><h1>")
-          .Append(isEnglish ? "All posts" : "Все записи").Append("</h1><p>")
-          .Append(isEnglish ? "Browse the archive or find something to read." : "Листайте архив или найдите интересную тему.")
+          .Append(BlogTexts.AllPosts(isEnglish)).Append("</h1><p>")
+          .Append(BlogTexts.ArchiveDescription(isEnglish))
           .Append("</p></div><a class=\"subscribe-link\" href=\"#subscribe\">")
-          .Append(isEnglish ? "Follow by email" : "Подписаться на почту").Append("</a></div>");
+          .Append(BlogTexts.FollowByEmail(isEnglish)).Append("</a></div>");
 
         var currentSortLabel = sortOptions.First(o => o.Key == sort).Label;
         sb.Append("<div class=\"index-bar\">");
@@ -1493,10 +1445,9 @@ public static partial class BlogEndpoints
         if (allTags.Count > 0)
         {
             sb.Append("<details class=\"topic-filter\"><summary>")
-              .Append(isEnglish ? "Topics" : "Темы").Append(" <span class=\"num\">")
+              .Append(BlogTexts.Topics(isEnglish)).Append(" <span class=\"num\">")
               .Append(allTags.Count).Append("</span></summary><div class=\"topic-panel\"><p>")
-              .Append(isEnglish ? "Choose topics to narrow the list. Posts must match every selected topic."
-                  : "Выберите темы. В списке останутся записи со всеми выбранными тегами.")
+              .Append(BlogTexts.TopicsHint(isEnglish))
               .Append("</p><div class=\"tag-bar\">");
             foreach (var tag in allTags)
             {
@@ -1511,7 +1462,7 @@ public static partial class BlogEndpoints
         }
         sb.Append("</div>");
         sb.Append("<div class=\"index-results\"><span>")
-          .Append(isEnglish ? "Posts: " : "Записей: ").Append("<strong class=\"num\">")
+          .Append(BlogTexts.Posts(isEnglish)).Append("<strong class=\"num\">")
           .Append(filtered.Count).Append("</strong></span>");
         foreach (var tag in selectedTags)
             sb.Append("<a class=\"tag-chip selected\" href=\"")
@@ -1524,7 +1475,7 @@ public static partial class BlogEndpoints
         if (selectedTags.Count > 0 || avail is not null || sort != "new")
             sb.Append("<a class=\"filter-reset\" href=\"")
               .Append(IndexFilterUrl([], "new", null, null, indexLang)).Append("\">")
-              .Append(isEnglish ? "Reset filters" : "Сбросить фильтры").Append("</a>");
+              .Append(BlogTexts.ResetFilters(isEnglish)).Append("</a>");
         sb.Append("</div>");
 
         // T-294 — the games this blog is about, above the posts that are about them. Without it the
@@ -1670,12 +1621,11 @@ public static partial class BlogEndpoints
         sb.Append("<div class=\"series-head\"><h1>").Append(System.Net.WebUtility.HtmlEncode(series.Name)).Append("</h1>");
         if (series.Description is { Length: > 0 } desc)
             sb.Append("<p class=\"series-desc\">").Append(System.Net.WebUtility.HtmlEncode(desc)).Append("</p>");
-        sb.Append("<span class=\"series-count\">").Append(posts.Count).Append(en ? " parts" : " частей").Append("</span></div>");
+        sb.Append("<span class=\"series-count\">").Append(posts.Count).Append(BlogTexts.Parts(en)).Append("</span></div>");
 
         if (posts.Count == 0)
         {
-            sb.Append(en ? "<p class=\"empty\">Nothing published in this series yet.</p>"
-                         : "<p class=\"empty\">В этой серии пока ничего не опубликовано.</p>");
+            sb.Append(BlogTexts.EmptySeriesHtml(en));
         }
         else
         {
@@ -1688,7 +1638,7 @@ public static partial class BlogEndpoints
                 sb.Append("<div class=\"timeline-item\"><span class=\"timeline-dot\"></span>");
                 sb.Append("<a class=\"post-card\" href=\"/").Append(p.BlogSlug).Append("\">");
                 sb.Append("<div class=\"post-card-meta\">");
-                sb.Append("<span class=\"series-part-no\">").Append(en ? "Part " : "Часть ").Append(part).Append("</span>");
+                sb.Append("<span class=\"series-part-no\">").Append(BlogTexts.Part(en)).Append(part).Append("</span>");
                 sb.Append("<span class=\"post-card-date\">")
                   .Append(p.BlogPublishedAt is { } cardDate ? BlogDateFormatter.DateLocal(cardDate, pageLang, site.TimeZoneId) : "")
                   .Append("</span>");
@@ -1703,7 +1653,7 @@ public static partial class BlogEndpoints
             sb.Append("</div>");
         }
 
-        var backLinkLabel = en ? "All posts" : "Все посты";
+        var backLinkLabel = BlogTexts.BackToPosts(en);
         var body = $"<a class=\"back-link\" href=\"/\">&larr; {backLinkLabel}</a>{sb}";
 
         var blogBase = site.BaseUrl;
@@ -1988,8 +1938,8 @@ public static partial class BlogEndpoints
 
         // ADR-192/193 — a plain client-side copy, at the top of the post rather than the bottom
         // (feedback: a reader who wants the link rarely wants to scroll for it first).
-        var copyLinkLabel = lang == Languages.English ? "Copy link" : "Скопировать ссылку";
-        var copiedLabel = lang == Languages.English ? "Copied!" : "Скопировано!";
+        var copyLinkLabel = BlogTexts.CopyLink(lang == Languages.English);
+        var copiedLabel = BlogTexts.Copied(lang == Languages.English);
         var copyLinkBtn = $"""
             <button type="button" class="copy-link-btn" data-copied-label="{System.Net.WebUtility.HtmlEncode(copiedLabel)}">
             {BlogIcons.Link}<span>{System.Net.WebUtility.HtmlEncode(copyLinkLabel)}</span>
@@ -2033,10 +1983,10 @@ public static partial class BlogEndpoints
                 if (prev is not null || next is not null)
                 {
                     var prevHtml = prev is null ? "<span></span>"
-                        : $"<a href=\"/{prev.BlogSlug}?lang={lang}\"><span class=\"nav-label\">&larr; {(isEn ? "Previous" : "Предыдущая")}</span>"
+                        : $"<a href=\"/{prev.BlogSlug}?lang={lang}\"><span class=\"nav-label\">&larr; {(BlogTexts.Previous(isEn))}</span>"
                           + System.Net.WebUtility.HtmlEncode(prev.ArticleTitle ?? prev.Title) + "</a>";
                     var nextHtml = next is null ? ""
-                        : $"<a class=\"nav-next\" href=\"/{next.BlogSlug}?lang={lang}\"><span class=\"nav-label\">{(isEn ? "Next" : "Следующая")} &rarr;</span>"
+                        : $"<a class=\"nav-next\" href=\"/{next.BlogSlug}?lang={lang}\"><span class=\"nav-label\">{(BlogTexts.Next(isEn))} &rarr;</span>"
                           + System.Net.WebUtility.HtmlEncode(next.ArticleTitle ?? next.Title) + "</a>";
                     seriesNav = $"<div class=\"series-nav\">{prevHtml}{nextHtml}</div>";
                 }
@@ -2068,9 +2018,9 @@ public static partial class BlogEndpoints
                     </a>
                     """;
                 var newerCard = newer is null ? "<span></span>"
-                    : Card(newer.BlogSlug!, newer.ArticleTitle ?? newer.Title, newer.BlogPublishedAt!.Value, isEn ? "Newer post" : "Следующая запись");
+                    : Card(newer.BlogSlug!, newer.ArticleTitle ?? newer.Title, newer.BlogPublishedAt!.Value, BlogTexts.NewerPost(isEn));
                 var olderCard = older is null ? ""
-                    : Card(older.BlogSlug!, older.ArticleTitle ?? older.Title, older.BlogPublishedAt!.Value, isEn ? "Older post" : "Предыдущая запись");
+                    : Card(older.BlogSlug!, older.ArticleTitle ?? older.Title, older.BlogPublishedAt!.Value, BlogTexts.OlderPost(isEn));
                 neighboursHtml = $"<div class=\"post-neighbours\">{newerCard}{olderCard}</div>";
             }
         }
@@ -2097,7 +2047,7 @@ public static partial class BlogEndpoints
             {
                 var relatedSb = new StringBuilder();
                 relatedSb.Append("<div class=\"related-posts\"><div class=\"related-title\">")
-                  .Append(lang == Languages.English ? "Read next" : "Читать дальше")
+                  .Append(BlogTexts.ReadNext(lang == Languages.English))
                   .Append("</div><div class=\"related-grid\">");
                 foreach (var r in related)
                 {
@@ -2166,8 +2116,8 @@ public static partial class BlogEndpoints
               + (draft.DisableComments ? " data-no-comments=\"1\"" : "") + ">"
               + CedarToBlogHtmlRenderer.AnnotationControlsHtml(lang, owner.AuthorDisplayName, draft.BlogPublishedAt, site.TimeZoneId) + "</div>";
 
-        var backLinkLabel = lang == Languages.English ? "All posts" : "Все посты";
-        var backToTopLabel = lang == Languages.English ? "Back to top" : "Наверх";
+        var backLinkLabel = BlogTexts.BackToPosts(lang == Languages.English);
+        var backToTopLabel = BlogTexts.BackToTop(lang == Languages.English);
         var floatingNav = $"""
             <div class="floating-nav">
             <a class="floating-nav-btn" href="/?lang={lang}" title="{backLinkLabel}" aria-label="{backLinkLabel}">{BlogIcons.List}</a>
@@ -3639,7 +3589,7 @@ public static partial class BlogEndpoints
 
             var PAGE_SIZE = 20;
             var AVATAR_COLORS = ['#7A5A3A', '#375D74', '#3E7A4E', '#8A4A6B', '#5B6E46'];
-            var REPLY_LABEL = document.documentElement.lang === 'en' ? 'Reply' : 'Ответить';
+            var REPLY_LABEL = document.documentElement.lang === 'en' ? {{REPLY_EN}} : {{REPLY_RU}};
             function avatarColor(name) {
                 var hash = 0;
                 for (var i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
@@ -3887,6 +3837,8 @@ public static partial class BlogEndpoints
     {
         var mathAssets = bodyHtml.Contains("math-tex") ? MathAssets : "";
         return ShellTemplate
+            .Replace("{{REPLY_EN}}", System.Text.Json.JsonSerializer.Serialize(BlogTexts.Reply(true)))
+            .Replace("{{REPLY_RU}}", System.Text.Json.JsonSerializer.Serialize(BlogTexts.Reply(false)))
             // T-101 — the palette comes from the app's stylesheet through the generated
             // DesignTokens, so a colour changed there reaches the blog without anyone copying it.
             .Replace("{{LIGHT_TOKENS}}", DesignTokens.Declarations(DesignTokens.Light, DesignTokens.MaterialsLight))

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProjectMembersPanelComponent } from './project-members-panel.component';
 import { MembersService, ProjectMember } from '../core/members.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 function person(over: Partial<ProjectMember>): ProjectMember {
     return {

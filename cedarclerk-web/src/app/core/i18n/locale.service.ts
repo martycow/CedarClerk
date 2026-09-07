@@ -1,8 +1,9 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { Dict, en } from './en';
-import { pseudoDict } from './pseudo';
+import { Dict, en } from '@localization/en';
+import { pseudoDict } from '@localization/pseudo';
+import { DICTIONARY_LOADERS, initialInterfaceLanguage, isInterfaceLanguage, type UiLang } from '@localization/dictionaries';
 
-export type UiLang = 'en' | 'ru';
+export type { UiLang } from '@localization/dictionaries';
 
 // Cache only — the profile (ApplicationUser.UiLanguage) is the source of truth. Without it every
 // load would paint English until /api/auth/me resolves. See ADR-044.
@@ -11,9 +12,7 @@ const STORAGE_KEY = 'cedar-ui-lang';
 // English ships in the initial bundle: it defines Dict's shape and stands in while another
 // dictionary is still on its way. Every other language is its own lazy chunk (ADR-263), and the
 // app initializer holds the first paint until the active one has arrived.
-const LOADERS: Record<Exclude<UiLang, 'en'>, () => Promise<Dict>> = {
-    ru: () => import('./ru').then(m => m.ru),
-};
+const LOADERS = DICTIONARY_LOADERS;
 
 // T-051 — the pseudo-locale switch. A development flag, not a language: it never appears in the
 // picker and never reaches the profile, so an account cannot end up stuck in it. `?pseudo=1` in
@@ -59,7 +58,7 @@ export class LocaleService {
     // Called with the value from the profile once /api/auth/me has resolved. Null means the user
     // never picked one, so whatever the browser suggested stays.
     adoptProfileLanguage(uiLanguage: string | null) {
-        if (uiLanguage === 'en' || uiLanguage === 'ru') this.set(uiLanguage);
+        if (isInterfaceLanguage(uiLanguage)) this.set(uiLanguage);
     }
 
     set(lang: UiLang) {
@@ -110,13 +109,8 @@ export class LocaleService {
     }
 
     private loadInitial(): UiLang {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored === 'en' || stored === 'ru') return stored;
-        return navigator.language?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+        return initialInterfaceLanguage(localStorage.getItem(STORAGE_KEY), navigator.language ?? '');
     }
 }
 
-// Interpolation for the handful of strings that need it: fmt(t().drafts.count, { n: 3 }).
-export function fmt(template: string, params: Record<string, string | number>): string {
-    return template.replace(/\{(\w+)\}/g, (whole, key) => String(params[key] ?? whole));
-}
+export { fmt } from '@localization/format';

@@ -21,7 +21,7 @@ import { TagPickerComponent } from '../shared/tag-picker.component';
 import { SeriesPickerComponent } from '../shared/series-picker.component';
 import { CONTENT_LANGUAGES, DEFAULT_PRIMARY_LANGUAGE } from '../core/languages';
 import { LocaleService } from '../core/i18n/locale.service';
-import { Dict } from '../core/i18n/en';
+import { Dict } from '@localization/en';
 import { ModalComponent } from '../shared/modal.component';
 import { PopoverComponent } from '../shared/popover.component';
 import { httpErrorMessage } from '../core/http-error.util';

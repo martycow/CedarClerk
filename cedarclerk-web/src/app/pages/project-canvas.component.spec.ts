@@ -10,7 +10,7 @@ import {
     CanvasSnapshot, NewCanvasItem,
 } from '../core/boards.service';
 import { CanvasHubService, HubStatus } from '../core/canvas-hub.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 const BOARD: CanvasBoardSummary = {
     id: 'b1', projectId: 'p1', name: 'References', background: 'dots', itemCount: 0,

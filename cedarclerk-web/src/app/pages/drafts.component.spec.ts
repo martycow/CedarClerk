@@ -4,7 +4,7 @@ import { DraftsPageComponent, TreeRow, treeDropTarget } from './drafts.component
 import { DraftMeta, DraftsService, FolderMeta, SeriesMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
 import { SeriesService } from '../core/series.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 async function settle(fixture: ComponentFixture<unknown>) {
     for (let link = 0; link < 5; link++) await fixture.whenStable();

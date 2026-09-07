@@ -1,20 +1,24 @@
 using System.Collections.Concurrent;
 
-namespace CedarClerk.Core;
+namespace CedarClerk.Localization;
 
 /// <summary>Validation and lookup for account-owned IANA timezones (ADR-244).</summary>
 public static class TimeZones
 {
+    public const string DefaultId = "America/Los_Angeles";
+    public const string WindowsDefaultId = "Pacific Standard Time";
+    public const string StandardAbbreviation = "PST";
+    public const string DaylightAbbreviation = "PDT";
     private static readonly ConcurrentDictionary<string, TimeZoneInfo?> Cache =
         new(StringComparer.Ordinal);
 
     public static bool IsValid(string? id) => Resolve(id) is not null;
 
     public static string NormalizeOrDefault(string? id) =>
-        Resolve(id) is not null ? id!.Trim() : Consts.General.DisplayTimeZone;
+        Resolve(id) is not null ? id!.Trim() : TimeZones.DefaultId;
 
     public static TimeZoneInfo ResolveOrDefault(string? id) =>
-        Resolve(id) ?? Resolve(Consts.General.DisplayTimeZone)
+        Resolve(id) ?? Resolve(TimeZones.DefaultId)
         ?? TimeZoneInfo.CreateCustomTimeZone("PST", TimeSpan.FromHours(-8), "PST", "PST");
 
     private static TimeZoneInfo? Resolve(string? raw)

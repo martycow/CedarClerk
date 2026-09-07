@@ -1,4 +1,4 @@
-namespace CedarClerk.Core;
+namespace CedarClerk.Localization;
 
 // Suggests Russian forms of a glossary term into the alias field, where the author deletes what is
 // wrong (T-040). Declension has more exceptions than rules, and a silently generated form would mark

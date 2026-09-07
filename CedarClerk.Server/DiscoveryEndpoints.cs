@@ -1,3 +1,4 @@
+using CedarClerk.Localization;
 using System.Net;
 using CedarClerk.Core;
 using CedarClerk.Server.Modules.IndieDev;
@@ -56,11 +57,11 @@ public static class DiscoveryEndpoints
         row?.ShowProjects ?? true,
         row?.ShowBlogs ?? true,
         new LandingText(
-            Blank(row?.TitleEn) ?? "Made independently. Shared openly.",
-            Blank(row?.TitleRu) ?? "Сделано независимо. Показано открыто."),
+            Blank(row?.TitleEn) ?? DiscoveryTexts.TitleEn,
+            Blank(row?.TitleRu) ?? DiscoveryTexts.TitleRu),
         new LandingText(
-            Blank(row?.IntroEn) ?? "Projects, devlogs and personal blogs from people building things on their own terms.",
-            Blank(row?.IntroRu) ?? "Проекты, девлоги и личные блоги людей, которые делают вещи на своих условиях."));
+            Blank(row?.IntroEn) ?? DiscoveryTexts.IntroEn,
+            Blank(row?.IntroRu) ?? DiscoveryTexts.IntroRu));
 
     public static async Task<Snapshot> LoadAsync(CedarDbContext db, IConfiguration cfg,
         CancellationToken ct = default)
@@ -147,7 +148,6 @@ public static class DiscoveryEndpoints
     internal static string RenderLandingPreview(bool ru, Snapshot snapshot)
     {
         if (!snapshot.Settings.Enabled) return "";
-        string T(string russian, string english) => ru ? russian : english;
 
         var projects = snapshot.Projects.Take(2).ToList();
         var blogs = snapshot.Blogs.Where(b => b.Kind == "blog").Take(2).ToList();
@@ -157,7 +157,7 @@ public static class DiscoveryEndpoints
                 <section id="discover" class="discover-preview discover-empty">
                     <div><span class="stamp">Discovery</span><h2>{E(snapshot.Settings.Title.Pick(ru))}</h2>
                     <p>{E(snapshot.Settings.Intro.Pick(ru))}</p></div>
-                    <a class="btn btn-pine" href="/discovery">{T("Открыть Discovery", "Open Discovery")}</a>
+                    <a class="btn btn-pine" href="/discovery">{DiscoveryTexts.OpenDiscovery(!ru)}</a>
                 </section>
                 """;
         }
@@ -173,7 +173,7 @@ public static class DiscoveryEndpoints
                 <div class="discover-copy"><span class="stamp">Discovery</span>
                     <h2>{E(snapshot.Settings.Title.Pick(ru))}</h2>
                     <p>{E(snapshot.Settings.Intro.Pick(ru))}</p>
-                    <a class="btn btn-pine" href="/discovery">{T("Перемешать и смотреть", "Shuffle and explore")}</a>
+                    <a class="btn btn-pine" href="/discovery">{DiscoveryTexts.ShuffleAndExplore(!ru)}</a>
                 </div>
                 <div class="discover-minis">{string.Join("", cards)}</div>
             </section>
@@ -182,7 +182,6 @@ public static class DiscoveryEndpoints
 
     public static string Render(bool ru, Snapshot snapshot, string type, string? category, string query)
     {
-        string T(string russian, string english) => ru ? russian : english;
         var settings = snapshot.Settings;
         var projectPool = snapshot.Projects.Where(i => Matches(i, query)).ToList();
         var projects = projectPool.Where(i => category is null || i.Category == category).ToList();
@@ -224,8 +223,8 @@ public static class DiscoveryEndpoints
         {
             feedColumns.Add($"""
                 <div class="feed-col">
-                    <p class="column-note">{T("Каждая работа здесь опубликована самим автором.", "Every item here was shared publicly by its author.")}</p>
-                    <header class="section-head"><div><span>{NextSection()}</span><h2>{T("Из независимых блогов", "From independent blogs")}</h2></div><a href="/discovery?type=blogs{langSuffix}">{T("Все блоги", "All blogs")}</a></header>
+                    <p class="column-note">{DiscoveryTexts.EveryItemHereWasSharedPubliclyBy(!ru)}</p>
+                    <header class="section-head"><div><span>{NextSection()}</span><h2>{DiscoveryTexts.FromIndependentBlogs(!ru)}</h2></div><a href="/discovery?type=blogs{langSuffix}">{DiscoveryTexts.AllBlogs(!ru)}</a></header>
                     <div class="blog-list">{blogCards}</div>
                 </div>
                 """);
@@ -234,8 +233,8 @@ public static class DiscoveryEndpoints
         {
             feedColumns.Add($"""
                 <div class="feed-col">
-                    <p class="column-note">{T("Свежие проекты независимых авторов во всех форматах.", "Fresh projects from independent makers across every medium.")}</p>
-                    <header class="section-head"><div><span>{NextSection()}</span><h2>Project Showcase</h2></div><a href="/discovery?type=projects{langSuffix}">{T("Все проекты", "All projects")}</a></header>
+                    <p class="column-note">{DiscoveryTexts.FreshProjectsFromIndependentMakersAcrossEvery(!ru)}</p>
+                    <header class="section-head"><div><span>{NextSection()}</span><h2>Project Showcase</h2></div><a href="/discovery?type=projects{langSuffix}">{DiscoveryTexts.AllProjects(!ru)}</a></header>
                     <div class="project-list">{projectCards}</div>
                 </div>
                 """);
@@ -248,12 +247,12 @@ public static class DiscoveryEndpoints
             """;
         var devlogSection = settings.ShowBlogs && type != "projects" && devlogs.Length > 0
             ? $"""
-                <section class="devlogs wrap"><header class="section-head"><div><span>{NextSection()}</span><h2>{T("Девлоги из проектов", "Project devlogs")}</h2></div></header><div class="devlog-grid">{devlogs}</div></section>
+                <section class="devlogs wrap"><header class="section-head"><div><span>{NextSection()}</span><h2>{DiscoveryTexts.ProjectDevlogs(!ru)}</h2></div></header><div class="devlog-grid">{devlogs}</div></section>
                 """
             : "";
         var categorySection = settings.ShowProjects && type != "blogs" && type != "devlogs" && categoryCards.Length > 0
             ? $"""
-                <section id="categories" class="categories wrap"><header class="section-head"><div><span>{NextSection()}</span><h2>{T("Категории проектов", "Project categories")}</h2></div></header><div class="category-grid">{categoryCards}</div></section>
+                <section id="categories" class="categories wrap"><header class="section-head"><div><span>{NextSection()}</span><h2>{DiscoveryTexts.ProjectCategories(!ru)}</h2></div></header><div class="category-grid">{categoryCards}</div></section>
                 """
             : "";
         var hasResults = stage is not null || feedColumns.Count > 0 || devlogs.Length > 0 || categorySection.Length > 0;
@@ -267,20 +266,19 @@ public static class DiscoveryEndpoints
         var searchQuery = string.IsNullOrWhiteSpace(query) ? "" : $"&q={Uri.EscapeDataString(query)}";
         var currentStateQuery = typeQuery + categoryQuery + searchQuery;
         var shuffle = hasResults && projects.Count + blogs.Count > 1
-            ? $"""<a class="shuffle" href="/discovery?shuffle={Guid.NewGuid():N}&lang={(ru ? "ru" : "en")}{currentStateQuery}">{Icons.Svg("arrows-clockwise", 16)} {T("Перемешать находки", "Shuffle discoveries")}</a>"""
+            ? $"""<a class="shuffle" href="/discovery?shuffle={Guid.NewGuid():N}&lang={(ru ? "ru" : "en")}{currentStateQuery}">{Icons.Svg("arrows-clockwise", 16)} {DiscoveryTexts.ShuffleDiscoveries(!ru)}</a>"""
             : "";
         var categoriesNav = settings.ShowProjects && type != "blogs" && type != "devlogs" && categoryCards.Length > 0
-            ? $"""<a href="#categories">{T("Категории", "Categories")}</a>"""
+            ? $"""<a href="#categories">{DiscoveryTexts.Categories(!ru)}</a>"""
             : "";
         var searchType = type == "all" ? "" : $"""<input type="hidden" name="type" value="{E(type)}">""";
         var searchCategory = category is null ? "" : $"""<input type="hidden" name="category" value="{E(category)}">""";
         var startPublishing = settings.Enabled && globalEmpty
             ? ""
-            : $"""<a class="start" href="/welcome#waitlist">{T("Начать публиковать", "Start publishing")}</a>""";
+            : $"""<a class="start" href="/welcome#waitlist">{DiscoveryTexts.StartPublishing(!ru)}</a>""";
 
         var light = DesignTokens.Declarations(DesignTokens.Light, DesignTokens.MaterialsLight);
-        var title = T("Discovery — проекты и блоги независимых авторов · Cedar Clerk",
-            "Discovery — independent projects and blogs · Cedar Clerk");
+        var title = DiscoveryTexts.DiscoveryIndependentProjectsAndBlogsCedarClerk(!ru);
         var description = settings.Intro.Pick(ru);
 
         return $"""
@@ -299,12 +297,12 @@ public static class DiscoveryEndpoints
             <body>
                 <header class="topbar">
                     <a class="brand" href="/welcome"><img src="/favicon.png" alt=""><span>Cedar Clerk</span></a>
-                    <nav class="main-nav" aria-label="{T("Главная навигация", "Primary navigation")}">
+                    <nav class="main-nav" aria-label="{DiscoveryTexts.PrimaryNavigation(!ru)}">
                         <a class="active" href="/discovery?lang={(ru ? "ru" : "en")}" aria-current="page">Discovery</a>
                         {categoriesNav}
                     </nav>
                     <div class="lang"><a href="/discovery?lang=ru{currentStateQuery}"{(ru ? " aria-current=\"page\"" : "")}>RU</a><a href="/discovery?lang=en{currentStateQuery}"{(!ru ? " aria-current=\"page\"" : "")}>EN</a></div>
-                    <a class="sign" href="/login">{T("Войти", "Sign in")}</a>
+                    <a class="sign" href="/login">{DiscoveryTexts.SignIn(!ru)}</a>
                     {startPublishing}
                 </header>
 
@@ -314,17 +312,17 @@ public static class DiscoveryEndpoints
                         {stageContent}
                         <div class="stage-controls">
                             <form class="search" method="get" action="/discovery">
-                                <label for="discovery-search">{T("Поиск в Discovery", "Search Discovery")}</label>
-                                <input id="discovery-search" type="search" name="q" value="{E(query)}" placeholder="{T("Проект, блог или автор", "Project, blog or author")}">
+                                <label for="discovery-search">{DiscoveryTexts.SearchDiscovery(!ru)}</label>
+                                <input id="discovery-search" type="search" name="q" value="{E(query)}" placeholder="{DiscoveryTexts.ProjectBlogOrAuthor(!ru)}">
                                 <input type="hidden" name="lang" value="{(ru ? "ru" : "en")}">
                                 {searchType}
                                 {searchCategory}
                             </form>
-                            <nav class="segments" aria-label="{T("Тип материалов", "Content type")}">
-                                {Segment("all", type, T("Всё", "All"), ru, query)}
-                                {Segment("projects", type, T("Проекты", "Projects"), ru, query)}
-                                {Segment("devlogs", type, T("Девлоги", "Devlogs"), ru, query)}
-                                {Segment("blogs", type, T("Блоги", "Blogs"), ru, query)}
+                            <nav class="segments" aria-label="{DiscoveryTexts.ContentType(!ru)}">
+                                {Segment("all", type, DiscoveryTexts.All(!ru), ru, query)}
+                                {Segment("projects", type, DiscoveryTexts.ProjectsHeading(!ru), ru, query)}
+                                {Segment("devlogs", type, DiscoveryTexts.Devlogs(!ru), ru, query)}
+                                {Segment("blogs", type, DiscoveryTexts.Blogs(!ru), ru, query)}
                             </nav>
                             {shuffle}
                         </div>
@@ -337,27 +335,26 @@ public static class DiscoveryEndpoints
                 </main>
                 """ : Disabled(ru))}
 
-                <footer><div class="wrap footer-inner"><a class="brand" href="/welcome"><img src="/favicon.png" alt=""><span>Cedar Clerk</span></a><span>{T("Публикация для независимых авторов", "Publishing for independent makers")}</span><span class="grow"></span><a href="/terms">{T("Условия", "Terms")}</a><a href="/privacy">{T("Приватность", "Privacy")}</a></div></footer>
+                <footer><div class="wrap footer-inner"><a class="brand" href="/welcome"><img src="/favicon.png" alt=""><span>Cedar Clerk</span></a><span>{DiscoveryTexts.PublishingForIndependentMakers(!ru)}</span><span class="grow"></span><a href="/terms">{DiscoveryTexts.Terms(!ru)}</a><a href="/privacy">{DiscoveryTexts.Privacy(!ru)}</a></div></footer>
             </body></html>
             """;
     }
 
     private static string Stage(Item? stage, IReadOnlyList<Item> projects, bool ru, bool isSaturday)
     {
-        string T(string russian, string english) => ru ? russian : english;
-        var eyebrow = isSaturday ? $"{Icons.Svg("tree-evergreen", 14)} SATURDAY STAGE" : T("В ЦЕНТРЕ ВНИМАНИЯ", "FEATURED");
-        var heading = isSaturday ? "#ScreenshotSaturday" : T("Независимая работа недели", "Independent work of the week");
+        var eyebrow = isSaturday ? $"{Icons.Svg("tree-evergreen", 14)} SATURDAY STAGE" : DiscoveryTexts.FEATURED(!ru);
+        var heading = isSaturday ? "#ScreenshotSaturday" : DiscoveryTexts.IndependentWorkOfTheWeek(!ru);
         if (stage is null)
         {
             return $"""
                 <div class="stage-empty"><span class="eyebrow">{eyebrow}</span><h2>{heading}</h2>
-                <p>{T("Здесь появятся новые скриншоты и проекты авторов, которые включили Discovery.", "New screenshots and projects from authors who enable Discovery will appear here.")}</p></div>
+                <p>{DiscoveryTexts.FeedDescription(!ru)}</p></div>
                 """;
         }
 
         var rail = projects.Where(p => p.Url != stage.Url).Take(4).ToList();
         var stageText = isSaturday
-            ? T("Субботний ритуал: покажите скриншот и вдохновите других.", "Saturday's ritual. Share a screenshot. Inspire the weekend.")
+            ? DiscoveryTexts.SaturdayDescription(!ru)
             : stage.Summary;
         var avatar = stage.AvatarUrl is null ? "" : $"<img class=\"stage-avatar\" src=\"{E(stage.AvatarUrl)}\" alt=\"\">";
         return $"""
@@ -367,10 +364,10 @@ public static class DiscoveryEndpoints
                     <span class="eyebrow">{eyebrow}</span><h2>{heading}</h2>
                     <p>{E(stageText)}</p>
                     <div class="stage-by">{avatar}<span>{E(stage.Author)} <i>·</i> {E(KindLabel(stage, ru))}</span></div>
-                    <a href="{E(stage.Url)}">{T("Открыть эту работу", "See this stage")} {Icons.Svg("arrow-right", 16)}</a>
+                    <a href="{E(stage.Url)}">{DiscoveryTexts.SeeThisStage(!ru)} {Icons.Svg("arrow-right", 16)}</a>
                 </div>
             </article>
-            <aside class="stage-rail" aria-label="{T("Другие категории", "More categories")}">
+            <aside class="stage-rail" aria-label="{DiscoveryTexts.MoreCategories(!ru)}">
                 {string.Join("", rail.Select(p => $"""<a href="{E(p.Url)}"><img src="{E(p.ImageUrl)}" alt=""><span><small>{E(CategoryLabel(p.Category, ru))}</small><b>{E(p.Title)}</b></span></a>"""))}
             </aside>
             """;
@@ -378,13 +375,12 @@ public static class DiscoveryEndpoints
 
     private static string ProjectCard(Item item, bool ru, bool featured)
     {
-        string T(string russian, string english) => ru ? russian : english;
         return $"""
             <article class="project-card{(featured ? " featured" : "")}">
                 <a class="project-image" href="{E(item.Url)}"><img src="{E(item.ImageUrl)}" alt="" loading="lazy"><span>{E(CategoryLabel(item.Category, ru))}</span></a>
                 <div class="project-body"><div class="project-meta">{E(item.Author)} · {item.PublishedAt:MMM yyyy}</div>
                     <h3><a href="{E(item.Url)}">{E(item.Title)}</a></h3><p>{E(item.Summary)}</p>
-                    {(item.ProjectUrl is null ? "" : $"""<a class="linked" href="{E(item.ProjectUrl)}">{T("Последний девлог", "Latest devlog")}: {E(item.ProjectName ?? "")}</a>""")}
+                    {(item.ProjectUrl is null ? "" : $"""<a class="linked" href="{E(item.ProjectUrl)}">{DiscoveryTexts.LatestDevlog(!ru)}: {E(item.ProjectName ?? "")}</a>""")}
                 </div>
             </article>
             """;
@@ -419,16 +415,14 @@ public static class DiscoveryEndpoints
     private static string EmptyStage(bool ru, bool filtered)
     {
         var heading = filtered
-            ? (ru ? "Ничего не совпало" : "Nothing matches this view")
-            : (ru ? "Эта поляна пока свободна" : "This clearing is waiting for its first story");
+            ? (DiscoveryTexts.NothingMatchesThisView(!ru))
+            : (DiscoveryTexts.EmptyDescription(!ru));
         var copy = filtered
-            ? (ru ? "Сбросьте поиск и фильтры — возможно, нужная работа уже рядом."
-                : "Clear the search and filters — the work you want may already be here.")
-            : (ru ? "Здесь появятся только публично опубликованные работы авторов, которые сами включили показ в Discovery."
-                : "Only publicly published work from authors who explicitly opt in to Discovery will appear here.");
+            ? (DiscoveryTexts.ClearTheSearchAndFiltersTheWork(!ru))
+            : (DiscoveryTexts.PrivacyDescription(!ru));
         var href = filtered ? $"/discovery?lang={(ru ? "ru" : "en")}" : "/welcome#waitlist";
-        var action = filtered ? (ru ? "Сбросить фильтры" : "Clear filters")
-            : (ru ? "Опубликовать первую работу" : "Publish the first project");
+        var action = filtered ? (DiscoveryTexts.ClearFilters(!ru))
+            : (DiscoveryTexts.PublishTheFirstProject(!ru));
         return $"""
             <div class="stage-empty discovery-empty"><span class="eyebrow">DISCOVERY</span><h2>{heading}</h2>
             <p>{copy}</p><a class="stage-empty-action" href="{href}">{action} {Icons.Svg("arrow-right", 16)}</a></div>
@@ -437,9 +431,9 @@ public static class DiscoveryEndpoints
 
     private static string Disabled(bool ru) => $"""
         <main class="disabled wrap" data-layout="editorial"><img src="/og-default.png" alt=""><span class="eyebrow">DISCOVERY</span>
-        <h1>{(ru ? "Discovery сейчас на паузе" : "Discovery is taking a short pause")}</h1>
-        <p>{(ru ? "Блоги и Showcase по-прежнему доступны по адресам их авторов." : "Blogs and Showcases remain available at their authors' own addresses.")}</p>
-        <a class="start" href="/welcome">{(ru ? "На главную" : "Back to Cedar Clerk")}</a></main>
+        <h1>{(DiscoveryTexts.DiscoveryIsTakingShortPause(!ru))}</h1>
+        <p>{(DiscoveryTexts.BlogsAndShowcasesRemainAvailableAtTheir(!ru))}</p>
+        <a class="start" href="/welcome">{(DiscoveryTexts.BackToCedarClerk(!ru))}</a></main>
         """;
 
     private static bool Matches(Item item, string query) => string.IsNullOrWhiteSpace(query)
@@ -448,20 +442,20 @@ public static class DiscoveryEndpoints
 
     private static string CategoryLabel(string value, bool ru) => value switch
     {
-        DiscoveryCategories.Games => ru ? "Игры" : "Games",
-        DiscoveryCategories.AppsTools => ru ? "Приложения и инструменты" : "Apps & Tools",
-        DiscoveryCategories.ComicsArt => ru ? "Комиксы и арт" : "Comics & Art",
-        DiscoveryCategories.FilmAnimation => ru ? "Кино и анимация" : "Film & Animation",
-        DiscoveryCategories.MusicAudio => ru ? "Музыка и звук" : "Music & Audio",
-        DiscoveryCategories.Hardware => ru ? "Железо" : "Hardware",
-        _ => ru ? "Другое" : "Other",
+        DiscoveryCategories.Games => DiscoveryTexts.Games(!ru),
+        DiscoveryCategories.AppsTools => DiscoveryTexts.AppsTools(!ru),
+        DiscoveryCategories.ComicsArt => DiscoveryTexts.ComicsArt(!ru),
+        DiscoveryCategories.FilmAnimation => DiscoveryTexts.FilmAnimation(!ru),
+        DiscoveryCategories.MusicAudio => DiscoveryTexts.MusicAudio(!ru),
+        DiscoveryCategories.Hardware => DiscoveryTexts.Hardware(!ru),
+        _ => DiscoveryTexts.Other(!ru),
     };
 
     private static string KindLabel(Item item, bool ru) => item.Kind switch
     {
         "project" => CategoryLabel(item.Category, ru),
-        "devlog" => ru ? "Девлог" : "Devlog",
-        _ => ru ? "Независимый блог" : "Independent blog",
+        "devlog" => DiscoveryTexts.Devlog(!ru),
+        _ => DiscoveryTexts.IndependentBlog(!ru),
     };
 
     private static string DisplayName(OwnerRow owner) =>

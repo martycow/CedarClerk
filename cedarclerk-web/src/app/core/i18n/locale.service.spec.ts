@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { en } from './en';
+import { en } from '@localization/en';
 import { LocaleService } from './locale.service';
 
 describe('LocaleService', () => {

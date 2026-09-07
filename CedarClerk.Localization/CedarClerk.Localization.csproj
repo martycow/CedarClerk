@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="languages.json" />
         <InternalsVisibleTo Include="CedarClerk.Tests" />
     </ItemGroup>
 

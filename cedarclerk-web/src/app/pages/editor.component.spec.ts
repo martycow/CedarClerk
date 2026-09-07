@@ -17,7 +17,7 @@ import { CurrentProjectService } from '../core/current-project.service';
 import { DraftMeta, DraftsService } from '../core/drafts.service';
 import { FormPresetsService } from '../core/form-presets.service';
 import { GlossaryService } from '../core/glossary.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 import { LocaleService } from '../core/i18n/locale.service';
 import { LinksService } from '../core/links.service';
 import { PostsService } from '../core/posts.service';

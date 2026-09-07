@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-07 — Localization ownership (ADR-292)
+
+Centralize language resources and presentation rules in `CedarClerk.Localization`.
+Move email text, public-page catalogs, document templates, date/time formatting,
+localized value selection, declensions and transliteration into the independent .NET project.
+Move browser dictionaries, emoji search terms and localization utilities into its `Web/` directory.
+Angular imports these sources directly and retains the separate Russian dictionary chunk.
+
+Use one embedded/imported JSON catalog for language codes, endonyms and available interface dictionaries.
+Keep account/HTTP adapters in Server and signal/DOM state in Angular.
+Translation jobs, providers, quotas and document persistence retain their domain ownership.
+Update the architecture, terminology rules and localization guide.
+
+Verification: 1957 backend tests and 769 frontend tests passed, with icon, contrast and density checks.
+The browser smoke suite passed 71 scenarios; 18 optional visual-audit scenarios were skipped by configuration.
+After the final browser resource moves, repeat frontend checks and six relevant browser scenarios; all passed.
+The web/server production build passed. EN/RU/pseudo dictionaries, emoji resources, email text and template bodies
+match their original contents, apart from the C# namespace/import changes.
+No deployment accompanies this refactor.
+
 ## 2026-09-07 — Release 0.22.3
 
 Merge project cleanup and external operations ownership into local `master` (ADR-291).

@@ -6,7 +6,7 @@ import {
     AdminWaitlistEntry,
 } from '../core/admin.service';
 import { AuthService } from '../core/auth.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 async function settle(fixture: ComponentFixture<unknown>) {
     for (let link = 0; link < 5; link++) await fixture.whenStable();

@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { ProjectComponent, daysSince, journalLevel, journalLink } from './project.component';
 import { ActivityItem, ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
 import { Channel, ChannelsService } from '../core/channels.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 import { formatInZone } from '../core/display-time';
 import { AssetsService } from '../core/assets.service';
 

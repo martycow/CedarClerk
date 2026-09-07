@@ -9,7 +9,7 @@ import { PublishService } from '../core/publish.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AuthService } from '../core/auth.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 function sheetFor(marker: string): string {
     const inline = Array.from(document.querySelectorAll('style')).map(style => style.textContent ?? '');

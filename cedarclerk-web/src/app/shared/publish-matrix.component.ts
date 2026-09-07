@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DOCUMENT_KINDS, DocumentKind, DocumentKindCounts } from '../core/document-kinds';
-import { Dict } from '../core/i18n/en';
+import { Dict } from '@localization/en';
 import { LocaleService } from '../core/i18n/locale.service';
 import { PublishCapabilities } from '../core/publish.service';
 import { BrandIconComponent, BrandIconName } from './brand-icon.component';

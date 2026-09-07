@@ -1,18 +1,10 @@
+using CedarClerk.Localization;
 using System.Text;
 
 namespace CedarClerk.Core;
 
 public static class SlugGenerator
 {
-    private static readonly Dictionary<char, string> Cyrillic = new()
-    {
-        ['а'] = "a", ['б'] = "b", ['в'] = "v", ['г'] = "g", ['д'] = "d", ['е'] = "e", ['ё'] = "yo",
-        ['ж'] = "zh", ['з'] = "z", ['и'] = "i", ['й'] = "y", ['к'] = "k", ['л'] = "l", ['м'] = "m",
-        ['н'] = "n", ['о'] = "o", ['п'] = "p", ['р'] = "r", ['с'] = "s", ['т'] = "t", ['у'] = "u",
-        ['ф'] = "f", ['х'] = "h", ['ц'] = "ts", ['ч'] = "ch", ['ш'] = "sh", ['щ'] = "sch", ['ъ'] = "",
-        ['ы'] = "y", ['ь'] = "", ['э'] = "e", ['ю'] = "yu", ['я'] = "ya",
-    };
-
     /// <summary>
     /// Generates a URL-friendly slug
     /// </summary>
@@ -23,7 +15,7 @@ public static class SlugGenerator
 
         foreach (var c in lower)
         {
-            if (Cyrillic.TryGetValue(c, out var latin))
+            if (Transliteration.CyrillicToLatin(c) is { } latin)
                 sb.Append(latin);
             else if (c is >= 'a' and <= 'z' or >= '0' and <= '9')
                 sb.Append(c);

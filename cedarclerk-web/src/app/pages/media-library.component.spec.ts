@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MediaLibraryComponent } from './media-library.component';
 import { AssetsService, LibraryAsset, LibraryKind, LibraryPage, LibrarySort } from '../core/assets.service';
 import { SortDirection } from '../core/collection-query';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 import { formatBytes } from '../core/asset-index.service';
 
 function deferred<T>() {

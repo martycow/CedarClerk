@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { StatsComponent } from './stats.component';
 import { ChannelsService, StatSourceInfo, StatSourceSeries, StatsSeries } from '../core/channels.service';
 import { GrowthChartComponent } from '../bench/worktop/growth-chart.component';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 // The component's own stylesheet, read back out of the document. Two claims this screen makes are
 // claims about CSS — paper's floor holds every size on it, and no colour is written as a literal —

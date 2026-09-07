@@ -581,8 +581,8 @@ public static class LandingEndpoints
 
     private static string WaitlistScript(bool ru) => WaitlistJs
         .Replace("%%LANG%%", ru ? "ru" : "en")
-        .Replace("%%DONE%%", ru ? "Вы в списке — инвайт придёт на эту почту." : "You are on the list — the invite will land in this inbox.")
-        .Replace("%%FAIL%%", ru ? "Не получилось отправить — попробуйте ещё раз." : "Could not send — try again.");
+        .Replace("%%DONE%%", LandingTexts.WaitlistSuccess(ru))
+        .Replace("%%FAIL%%", LandingTexts.WaitlistFailure(ru));
 
     /// <summary>
     /// The consent gate and the provider loader, as one block (T-153, ADR-236).
@@ -598,17 +598,12 @@ public static class LandingEndpoints
     /// </summary>
     private static string ConsentBlock(bool ru, string key, string host)
     {
-        string T(string russian, string english) => ru ? russian : english;
 
-        var title = E(T("Cookies для продуктовой аналитики", "Cookies for product analytics"));
-        var body = E(T(
-            "Мы используем PostHog (EU), чтобы видеть, какими частями Cedar Clerk пользуются и где люди застревают. "
-            + "Ничего из этого не продаётся и не передаётся дальше, а читателей блогов так не считают никогда.",
-            "We use PostHog (EU) to see which parts of Cedar Clerk are used and where people get stuck. "
-            + "Nothing here is sold or shared onward, and blog readers are never counted this way."));
-        var accept = E(T("Принять", "Accept"));
-        var decline = E(T("Отклонить", "Decline"));
-        var privacy = E(T("Политика приватности", "Privacy policy"));
+        var title = E(LandingTexts.ConsentTitle(ru));
+        var body = E(LandingTexts.ConsentDescription(ru));
+        var accept = E(LandingTexts.Accept(ru));
+        var decline = E(LandingTexts.Decline(ru));
+        var privacy = E(LandingTexts.PrivacyPolicy(ru));
 
         return $$"""
             <div class="consent" id="consent" hidden>
@@ -663,98 +658,83 @@ public static class LandingEndpoints
     private static string Render(bool ru, LandingContent c, DiscoveryEndpoints.Snapshot discovery,
         string? analyticsKey, string analyticsHost)
     {
-        string T(string russian, string english) => ru ? russian : english;
 
         var languageCount = Languages.ContentLanguages.Count;
         var networkCount = PublishNetworks.All.Count;
 
-        var title = T("Cedar Clerk — публикуйтесь независимо. Показывайте, что создаёте.",
-                      "Cedar Clerk — publish independently. Show what you make.");
+        var title = LandingTexts.PageTitle(ru);
         var description = c.HeroSub.Pick(ru);
 
         // Stated as what the product does, not as adjectives about it, and in the devlog-first
         // order the positioning sells (ADR-135): write → reach → keep → plan.
         var features = new (string Icon, string Title, string Body)[]
         {
-            ("pencil-simple", T("Блочный редактор", "A block editor"),
-                T("Текст, таблицы, медиа, формулы, спойлеры и код — один документ, из которого рисуется всё остальное.",
-                  "Text, tables, media, formulas, spoilers and code — one document, and everything else is drawn from it.")),
-            ("paper-plane-tilt", T("Публикация в Telegram", "Publishing to Telegram"),
-                T("Пост уходит в канал нативными блоками: медиа с настоящей подписью, а не ссылка на картинку.",
-                  "The post reaches the channel as native blocks: media with a real caption, not a link to a picture.")),
-            ("tree-structure", T($"{networkCount} сети из одного текста", $"{networkCount} networks, one text"),
-                T("Telegram, X, Bluesky и Discord — это рендереры одного документа, а не четыре копии, которые надо держать в согласии.",
-                  "Telegram, X, Bluesky and Discord are renderers of one document, not four copies to keep in agreement.")),
-            ("newspaper", T("Блог на своём поддомене", "A blog on your own subdomain"),
-                T("Не зеркало канала, а полноценный адрес: архив, поиск, RSS и ссылки, которые не пропадут.",
-                  "Not a mirror of the channel but an address of its own: archive, search, RSS and links that will not disappear.")),
-            ("translate", T($"{languageCount} языков в одной записи", $"{languageCount} languages in one entry"),
-                T("Перевод дописывает только то, что изменилось, и не трогает правки, сделанные руками.",
-                  "Auto-translate rewrites only what changed and leaves your own corrections alone.")),
-            ("chat-teardrop-dots", T("Комментарии и реакции", "Comments and reactions"),
-                T("Обсуждение под выбранным фрагментом, а не под всей статьёй. Приватные посты открываются по форме или личной ссылке.",
-                  "Discussion under a chosen fragment, not under the whole article. Private posts open behind a form or a personal link.")),
-            ("kanban", T("Задачи и спринты", "Tasks and sprints"),
-                T("Доска, спринты и сроки живут рядом с текстами — девлог рядом с планом, а не в другой вкладке.",
-                  "A board, sprints and due dates live beside the writing — the devlog next to the plan, not in another tab.")),
-            ("images", T("Индекс ассетов", "An asset index"),
-                T("Каждый скриншот и арт — с описанием и с тем, где он уже опубликован.",
-                  "Every screenshot and art file, described, and told where it has already been published.")),
-            ("cube", T("Сборки", "Builds"),
-                T("Версия, дата, изменения. Закрытый спринт собирается в черновик девлога одной кнопкой.",
-                  "Version, date, changes. A finished sprint assembles into a devlog draft in one button.")),
-            ("timer", T("Планировщик", "A scheduler"),
-                T("Черновик уходит в назначенный час — во все подключённые сети сразу.",
-                  "A draft goes out at the hour you set — to every connected network at once.")),
-            ("eye", T("День и ночь", "Day and night"),
-                T("Тема, кегль и гарнитура — выбор читателя. Обе темы нарисованы, а не инвертированы.",
-                  "Theme, size and typeface are the reader's call. Both themes are drawn, not inverted.")),
-            ("download-simple", T("Тексты остаются вашими", "The texts stay yours"),
-                T("Открытый формат и выгрузка файлом в любой момент — вместе с медиа, без переговоров.",
-                  "An open format and an export file whenever you ask — media included, no conversation required.")),
+            ("pencil-simple", LandingTexts.BlockEditor(ru),
+                LandingTexts.EditorDescription(ru)),
+            ("paper-plane-tilt", LandingTexts.PublishingToTelegram(ru),
+                LandingTexts.TelegramDescription(ru)),
+            ("tree-structure", LandingTexts.NetworksTitle(ru, networkCount),
+                LandingTexts.NetworksDescription(ru)),
+            ("newspaper", LandingTexts.BlogOnYourOwnSubdomain(ru),
+                LandingTexts.BlogDescription(ru)),
+            ("translate", LandingTexts.LanguagesTitle(ru, languageCount),
+                LandingTexts.TranslationDescription(ru)),
+            ("chat-teardrop-dots", LandingTexts.CommentsAndReactions(ru),
+                LandingTexts.DiscussionDescription(ru)),
+            ("kanban", LandingTexts.TasksAndSprints(ru),
+                LandingTexts.TasksDescription(ru)),
+            ("images", LandingTexts.AnAssetIndex(ru),
+                LandingTexts.AssetsDescription(ru)),
+            ("cube", LandingTexts.Builds(ru),
+                LandingTexts.BuildsDescription(ru)),
+            ("timer", LandingTexts.Scheduler(ru),
+                LandingTexts.SchedulerDescription(ru)),
+            ("eye", LandingTexts.DayAndNight(ru),
+                LandingTexts.AppearanceDescription(ru)),
+            ("download-simple", LandingTexts.TheTextsStayYours(ru),
+                LandingTexts.ExportDescription(ru)),
         };
 
         var plans = new (string Name, string Price, string Per, string For, string Badge, string Tone, bool Featured, string[] Lines)[]
         {
-            (T("Бесплатно", "Free"), "$0", T("/ навсегда", "/ forever"),
-                T("Один канал и свой блог", "One channel and your own blog"),
-                T("старт", "start"), "ink", false,
+            (LandingTexts.Free(ru), "$0", LandingTexts.Forever(ru),
+                LandingTexts.OneChannelAndYourOwnBlog(ru),
+                LandingTexts.Start(ru), "ink", false,
                 [
-                    T($"{PlanLimitations.MaxChannels(PlanTiers.Free)} канал", $"{PlanLimitations.MaxChannels(PlanTiers.Free)} channel"),
-                    T($"{Gb(PlanTiers.Free)} на медиа", $"{Gb(PlanTiers.Free)} of media"),
-                    T("Блог, комментарии, реакции, RSS", "Blog, comments, reactions, RSS"),
-                    T("Подпись Cedar Clerk под постом", "A Cedar Clerk line under each post"),
+                    LandingTexts.SingleChannelLimit(ru, PlanLimitations.MaxChannels(PlanTiers.Free)),
+                    LandingTexts.MediaLimit(ru, Gb(PlanTiers.Free)),
+                    LandingTexts.BlogCommentsReactionsRSS(ru),
+                    LandingTexts.FreeSignature(ru),
                 ]),
-            ("Pro", $"${Consts.Plans.ProPrice}", T("/ мес", "/ mo"),
-                T("Несколько каналов и свой голос", "Several channels and your own voice"),
-                T("популярный", "popular"), "pine", true,
+            ("Pro", $"${Consts.Plans.ProPrice}", LandingTexts.PerMonth(ru),
+                LandingTexts.SeveralChannelsAndYourOwnVoice(ru),
+                LandingTexts.Popular(ru), "pine", true,
                 [
-                    T($"{PlanLimitations.MaxChannels(PlanTiers.Pro)} канала", $"{PlanLimitations.MaxChannels(PlanTiers.Pro)} channels"),
-                    T($"{Gb(PlanTiers.Pro)} на медиа", $"{Gb(PlanTiers.Pro)} of media"),
-                    T("Своя подпись со ссылкой", "Your own signature, with a link"),
-                    T($"{PlanLimitations.MaxHeaderSlots(PlanTiers.Pro)} слота в шапке поста", $"{PlanLimitations.MaxHeaderSlots(PlanTiers.Pro)} slots in the post header"),
+                    LandingTexts.ProChannelLimit(ru, PlanLimitations.MaxChannels(PlanTiers.Pro)),
+                    LandingTexts.MediaLimit(ru, Gb(PlanTiers.Pro)),
+                    LandingTexts.YourOwnSignatureWithLink(ru),
+                    LandingTexts.HeaderSlotLimit(ru, PlanLimitations.MaxHeaderSlots(PlanTiers.Pro)),
                 ]),
-            ("Pro+", $"${Consts.Plans.ProPlusPrice}", T("/ мес", "/ mo"),
-                T("С переводом и правкой через ИИ", "With AI translation and editing"),
+            ("Pro+", $"${Consts.Plans.ProPlusPrice}", LandingTexts.PerMonth(ru),
+                LandingTexts.WithAITranslationAndEditing(ru),
                 "ai", "brass", false,
                 [
-                    T($"{PlanLimitations.MaxChannels(PlanTiers.ProPlus)} каналов", $"{PlanLimitations.MaxChannels(PlanTiers.ProPlus)} channels"),
-                    T($"{Gb(PlanTiers.ProPlus)} на медиа", $"{Gb(PlanTiers.ProPlus)} of media"),
-                    T($"Перевод и правка через ИИ — {PlanLimitations.AiDailyLimit} операций в день",
-                      $"AI translation and editing — {PlanLimitations.AiDailyLimit} operations a day"),
-                    T("Всё из Pro", "Everything in Pro"),
+                    LandingTexts.ProPlusChannelLimit(ru, PlanLimitations.MaxChannels(PlanTiers.ProPlus)),
+                    LandingTexts.MediaLimit(ru, Gb(PlanTiers.ProPlus)),
+                    LandingTexts.DailyAiLimit(ru, PlanLimitations.AiDailyLimit),
+                    LandingTexts.EverythingInPro(ru),
                 ]),
         };
 
         var nav = new List<string>();
-        nav.Add($"""<a href="/discovery">{T("Discovery", "Discovery")}</a>""");
-        if (discovery.Settings.Enabled) nav.Add($"""<a href="#discover">{T("Сообщество", "Community")}</a>""");
-        if (c.ShowShots) nav.Add($"""<a href="#shots">{T("Скриншоты", "Screenshots")}</a>""");
-        if (c.ShowFeatures) nav.Add($"""<a href="#features">{T("Что умеет", "What it does")}</a>""");
-        if (c.ShowPricing) nav.Add($"""<a href="#pricing">{T("Цены", "Pricing")}</a>""");
+        nav.Add($"""<a href="/discovery">Discovery</a>""");
+        if (discovery.Settings.Enabled) nav.Add($"""<a href="#discover">{LandingTexts.Community(ru)}</a>""");
+        if (c.ShowShots) nav.Add($"""<a href="#shots">{LandingTexts.Screenshots(ru)}</a>""");
+        if (c.ShowFeatures) nav.Add($"""<a href="#features">{LandingTexts.WhatItDoes(ru)}</a>""");
+        if (c.ShowPricing) nav.Add($"""<a href="#pricing">{LandingTexts.Pricing(ru)}</a>""");
         if (c.ShowRoadmap && c.Roadmap.Count > 0) nav.Add("""<a href="#roadmap">Roadmap</a>""");
-        if (c.ShowStory && c.Story.Count > 0) nav.Add($"""<a href="#story">{T("История", "Story")}</a>""");
-        if (c.ShowDownload) nav.Add($"""<a href="#download">{T("Скачать", "Download")}</a>""");
+        if (c.ShowStory && c.Story.Count > 0) nav.Add($"""<a href="#story">{LandingTexts.Story(ru)}</a>""");
+        if (c.ShowDownload) nav.Add($"""<a href="#download">{LandingTexts.Download(ru)}</a>""");
 
         var check = Icons.Svg("check", 15);
 
@@ -780,8 +760,8 @@ public static class LandingEndpoints
         var gallery = !c.ShowShots || c.Gallery.Count == 0 ? "" : $"""
             <section id="shots">
                 <div class="rule">
-                    <h2>{T("Как это выглядит", "What it looks like")}</h2>
-                    <span class="meta">{T("живые скриншоты, не мокапы", "real screenshots, not mockups")}</span>
+                    <h2>{LandingTexts.WhatItLooksLike(ru)}</h2>
+                    <span class="meta">{LandingTexts.RealScreenshotsNotMockups(ru)}</span>
                 </div>
                 <div class="gallery">
                     {string.Join("", c.Gallery.Select((s, i) => $"""
@@ -798,7 +778,7 @@ public static class LandingEndpoints
             <section id="roadmap">
                 <div class="rule">
                     <h2>Roadmap</h2>
-                    <span class="meta">{T("что готово, что в работе, что дальше", "done, in progress, next")}</span>
+                    <span class="meta">{LandingTexts.DoneInProgressNext(ru)}</span>
                 </div>
                 <div class="shelves">
                     {string.Join("", c.Roadmap.Select(col => $"""
@@ -818,8 +798,8 @@ public static class LandingEndpoints
         var story = !c.ShowStory || c.Story.Count == 0 ? "" : $"""
             <section id="story">
                 <div class="rule">
-                    <h2>{T("Зачем это сделано", "Why this exists")}</h2>
-                    <span class="meta">{T("коротко, по вехам", "briefly, by milestones")}</span>
+                    <h2>{LandingTexts.WhyThisExists(ru)}</h2>
+                    <span class="meta">{LandingTexts.BrieflyByMilestones(ru)}</span>
                 </div>
                 <div class="story">
                     <div class="timeline">
@@ -841,17 +821,16 @@ public static class LandingEndpoints
         var download = !c.ShowDownload ? "" : $"""
             <section id="download">
                 <div class="rule">
-                    <h2>{T("Приложение для рабочего стола", "The desktop app")}</h2>
+                    <h2>{LandingTexts.TheDesktopApp(ru)}</h2>
                     <span class="meta">Windows</span>
                 </div>
                 <div class="paper bright download-card" style="--tilt:.4deg">
                     <div class="lead">
-                        <b>{T("Тот же верстак, в своём окне", "The same bench, in its own window")}</b>
-                        <p>{T("Всё лежит на вашем аккаунте на сервере — приложение только другая дверь к нему. Установите на второй машине и продолжайте с того же места.",
-                              "Everything lives in your account on the server — the app is just another door to it. Install it on a second machine and pick up where you left off.")}</p>
-                        <div class="download-meta">{T("обновляется само при каждом релизе", "keeps itself updated with every release")}</div>
+                        <b>{LandingTexts.TheSameBenchInItsOwnWindow(ru)}</b>
+                        <p>{LandingTexts.DesktopDescription(ru)}</p>
+                        <div class="download-meta">{LandingTexts.KeepsItselfUpdatedWithEveryRelease(ru)}</div>
                     </div>
-                    <a class="btn btn-pine" href="/downloads/latest">{Icons.Svg("download-simple")}{T("Скачать для Windows", "Download for Windows")}</a>
+                    <a class="btn btn-pine" href="/downloads/latest">{Icons.Svg("download-simple")}{LandingTexts.DownloadForWindows(ru)}</a>
                 </div>
             </section>
             """;
@@ -884,7 +863,7 @@ public static class LandingEndpoints
             <header class="rail">
                 {Mark(24)}
                 <span class="rail-name">Cedar Clerk</span>
-                <span class="rail-chip">{T("бета по инвайтам", "invite-only beta")}</span>
+                <span class="rail-chip">{LandingTexts.InviteOnlyBeta(ru)}</span>
                 <span class="spacer"></span>
                 <nav class="rail-nav">{string.Join("", nav)}</nav>
                 <!--Two links rather than a script: the page is server-rendered, and a language is a
@@ -893,8 +872,8 @@ public static class LandingEndpoints
                     <a href="?lang=ru"{(ru ? """ aria-current="true" """ : "")}>RU</a>
                     <a href="?lang=en"{(ru ? "" : """ aria-current="true" """)}>EN</a>
                 </div>
-                <a class="btn btn-paper btn-sm" href="/login">{T("Войти", "Log in")}</a>
-                <a class="btn btn-pine btn-sm" href="#waitlist">{T("В лист ожидания", "Join the waitlist")}</a>
+                <a class="btn btn-paper btn-sm" href="/login">{LandingTexts.LogIn(ru)}</a>
+                <a class="btn btn-pine btn-sm" href="#waitlist">{LandingTexts.JoinTheWaitlist(ru)}</a>
             </header>
 
             <main class="wrap">
@@ -902,24 +881,23 @@ public static class LandingEndpoints
                     <div>
                         <div class="kicker-row">
                             <span class="stamp">{E(c.Kicker.Pick(ru))}</span>
-                            <span class="kicker-meta">{T($"{languageCount} языков · RU / EN интерфейс", $"{languageCount} languages · RU / EN interface")}</span>
+                            <span class="kicker-meta">{LandingTexts.LanguageSummary(ru, languageCount)}</span>
                         </div>
                         <h1>{c.HeroTitle.Pick(ru)}</h1>
                         <p class="hero-sub">{E(description)}</p>
 
                         <div id="waitlist" class="wait-wrap">
                             <div class="paper bright pinned" style="--tilt:-.4deg">
-                                <div class="wait-label">{T("Почта для инвайта", "Email for an invite")}</div>
+                                <div class="wait-label">{LandingTexts.EmailForAnInvite(ru)}</div>
                                 <!--ADR-135 — the primary CTA is the waitlist: while registration is
                                 invite-only, "Create an account" leads to a wall, and a wall converts nobody.-->
                                 <form class="waitlist" id="waitlist-form" autocomplete="off">
                                     <input type="email" name="email" required maxlength="254"
-                                           placeholder="you@studio.dev" aria-label="{T("Почта", "Email")}">
+                                           placeholder="you@studio.dev" aria-label="{LandingTexts.Email(ru)}">
                                     <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-                                    <button class="btn btn-pine" type="submit">{T("Занять место", "Save my seat")}</button>
+                                    <button class="btn btn-pine" type="submit">{LandingTexts.SaveMySeat(ru)}</button>
                                 </form>
-                                <p class="drop" id="waitlist-note">{T("Одно письмо, когда откроются двери. Рассылки не будет.",
-                                    "One letter when the doors open. No newsletter.")}</p>
+                                <p class="drop" id="waitlist-note">{LandingTexts.WaitlistHint(ru)}</p>
                                 {(c.Proof.IsEmpty ? "" : $"""<div class="proof">{E(c.Proof.Pick(ru))}</div>""")}
                             </div>
                             {(c.Note.IsEmpty ? "" : $"""<div class="note" style="margin-top:14px">{E(c.Note.Pick(ru))}</div>""")}
@@ -929,15 +907,15 @@ public static class LandingEndpoints
                     <div>
                         <figure class="paper tight" style="--tilt:1deg;margin:0">
                             <img src="{E(LandingContent.ShotUrl(c.Hero.File))}"
-                                 alt="{E(T("Пост на блоге Cedar Clerk", "A post on a Cedar Clerk blog"))}">
+                                 alt="{E(LandingTexts.PostOnCedarClerkBlog(ru))}">
                             {(c.Hero.Caption.IsEmpty ? "" : $"""<figcaption class="cap" style="text-align:center">{E(c.Hero.Caption.Pick(ru))}</figcaption>""")}
                         </figure>
                         <div class="plaque">
-                            <div class="plaque-title">{T("один пост — все адреса", "one post, every address")}</div>
+                            <div class="plaque-title">{LandingTexts.OnePostEveryAddress(ru)}</div>
                             <div class="flow">
-                                <span>{T("черновик", "draft")}</span><span class="arrow">&rarr;</span>
+                                <span>{LandingTexts.Draft(ru)}</span><span class="arrow">&rarr;</span>
                                 <span>Telegram · X · Bluesky · Discord</span><span class="arrow">&rarr;</span>
-                                <span>{T("блог", "blog")}</span><span class="arrow">&rarr;</span><span>RSS</span>
+                                <span>{LandingTexts.Blog(ru)}</span><span class="arrow">&rarr;</span><span>RSS</span>
                             </div>
                         </div>
                     </div>
@@ -950,8 +928,8 @@ public static class LandingEndpoints
                 {(c.ShowFeatures ? $"""
                 <section id="features">
                     <div class="rule">
-                        <h2>{T("Что уже стоит на верстаке", "What is already on the bench")}</h2>
-                        <span class="meta">{features.Length} {T("инструментов", "tools")}</span>
+                        <h2>{LandingTexts.WhatIsAlreadyOnTheBench(ru)}</h2>
+                        <span class="meta">{features.Length} {LandingTexts.Tools(ru)}</span>
                     </div>
                     <div class="features">{featureCards}</div>
                 </section>
@@ -960,13 +938,11 @@ public static class LandingEndpoints
                 {(c.ShowPricing ? $"""
                 <section id="pricing">
                     <div class="rule">
-                        <h2>{T("Сколько стоит", "What it costs")}</h2>
-                        <span class="meta">{T("цифры берутся из кода, который их применяет", "these numbers come from the code that enforces them")}</span>
+                        <h2>{LandingTexts.WhatItCosts(ru)}</h2>
+                        <span class="meta">{LandingTexts.PricingHint(ru)}</span>
                     </div>
                     <div class="plans">{planCards}</div>
-                    <div class="plan-foot">{T(
-                        $"Пробный доступ — ${Consts.Plans.TrialPrice} за семь дней Pro+, один раз на аккаунт. Регистрация пока по инвайтам.",
-                        $"A trial is ${Consts.Plans.TrialPrice} for seven days of Pro+, once per account. Registration is invite-only for now.")}</div>
+                    <div class="plan-foot">{LandingTexts.TrialPrice(ru, Consts.Plans.TrialPrice)}</div>
                 </section>
                 """ : "")}
 
@@ -977,11 +953,10 @@ public static class LandingEndpoints
                 <div class="band">
                     {Mark(56)}
                     <div style="flex:1;min-width:0">
-                        <b>{T("Двери открываются по списку", "The doors open by list")}</b>
-                        <span class="sub">{T("Оставьте почту — инвайт придёт, когда мы будем готовы вас впустить.",
-                            "Leave an email — the invite arrives when we are ready to let you in.")}</span>
+                        <b>{LandingTexts.TheDoorsOpenByList(ru)}</b>
+                        <span class="sub">{LandingTexts.InviteHint(ru)}</span>
                     </div>
-                    <a class="btn btn-pine" href="#waitlist">{T("Занять место", "Save my seat")}</a>
+                    <a class="btn btn-pine" href="#waitlist">{LandingTexts.SaveMySeat(ru)}</a>
                 </div>
             </main>
 
@@ -989,10 +964,10 @@ public static class LandingEndpoints
                 <span class="label">Cedar Clerk</span>
                 <span>&copy; {DateTime.UtcNow.Year}</span>
                 <span class="spacer"></span>
-                <a href="/terms">{T("Условия", "Terms")}</a>
-                <a href="/privacy">{T("Приватность", "Privacy")}</a>
-                {(c.ShowcaseBlog is null ? "" : $"""<a href="https://{E(c.ShowcaseBlog)}">{T("живой блог", "a live blog")}</a>""")}
-                <a href="/login">{T("Войти", "Log in")}</a>
+                <a href="/terms">{LandingTexts.Terms(ru)}</a>
+                <a href="/privacy">{LandingTexts.Privacy(ru)}</a>
+                {(c.ShowcaseBlog is null ? "" : $"""<a href="https://{E(c.ShowcaseBlog)}">{LandingTexts.LiveBlog(ru)}</a>""")}
+                <a href="/login">{LandingTexts.LogIn(ru)}</a>
             </footer>
             <script>{WaitlistScript(ru)}</script>
             {(analyticsKey is null ? "" : ConsentBlock(ru, analyticsKey, analyticsHost))}

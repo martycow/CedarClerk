@@ -6,28 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Server;
 
-/// <summary>One string in both of the landing's languages. Either half may be missing.</summary>
-public record LandingText(string? En, string? Ru)
-{
-    public static readonly LandingText Empty = new(null, null);
-
-    /// <summary>
-    /// The asked-for language, falling back to the other one rather than to nothing: a maintainer
-    /// who filled in only English meant the Russian reader to see something, not a hole.
-    /// </summary>
-    public string Pick(bool ru)
-    {
-        var first = ru ? Ru : En;
-        var second = ru ? En : Ru;
-        return (string.IsNullOrWhiteSpace(first) ? second : first)?.Trim() ?? "";
-    }
-
-    /// <summary>A question about the value, not a third half of it — and the stored JSON is a
-    /// record of what was written, not of what was derived from it.</summary>
-    [JsonIgnore]
-    public bool IsEmpty => string.IsNullOrWhiteSpace(En) && string.IsNullOrWhiteSpace(Ru);
-}
-
 /// <summary>A screenshot on the page: a file the admin uploaded, plus what it is a picture of.</summary>
 public record LandingShot(string File, LandingText Caption);
 
@@ -98,9 +76,9 @@ public sealed class LandingContent
 
     public static LandingContent From(LandingSettings? row, string? configuredShowcase) => new()
     {
-        Kicker = Fill(row?.KickerEn, row?.KickerRu, Defaults.Kicker),
-        HeroTitle = Fill(row?.HeroTitleEn, row?.HeroTitleRu, Defaults.HeroTitle),
-        HeroSub = Fill(row?.HeroSubEn, row?.HeroSubRu, Defaults.HeroSub),
+        Kicker = Fill(row?.KickerEn, row?.KickerRu, LandingTexts.Kicker),
+        HeroTitle = Fill(row?.HeroTitleEn, row?.HeroTitleRu, LandingTexts.HeroTitle),
+        HeroSub = Fill(row?.HeroSubEn, row?.HeroSubRu, LandingTexts.HeroSub),
         // No default: this slot holds a number about other people, and an invented one makes
         // everything above it read as invented too. Empty until somebody has a true one.
         Proof = new LandingText(Blank(row?.ProofEn), Blank(row?.ProofRu)),
@@ -145,23 +123,4 @@ public sealed class LandingContent
 
     public static string Serialize<T>(IEnumerable<T> items) => JsonSerializer.Serialize(items, Json);
 
-    /// <summary>
-    /// The copy that is not the maintainer's to write, in one place so the render method reads as
-    /// layout. English and Russian only: the landing is the front door, and the nine content
-    /// languages are what a post can be written in, not what this page is translated into.
-    /// </summary>
-    public static class Defaults
-    {
-        public static readonly LandingText Kicker = new("publishing for independent makers", "публикация для независимых авторов");
-
-        public static readonly LandingText HeroTitle = new(
-            "Build in public.<br>Keep your own home.<br>Get discovered.",
-            "Делайте открыто.<br>Храните у себя.<br>Находите читателей.");
-
-        public static readonly LandingText HeroSub = new(
-            "Write a personal blog or connect every devlog to a project. Publish to your own site, "
-            + $"Telegram, X, Bluesky and Discord in {Languages.ContentLanguages.Count} languages — and join Discovery when you choose.",
-            "Ведите личный блог или связывайте каждый девлог с проектом. Публикуйте на своём сайте, "
-            + $"в Telegram, X, Bluesky и Discord на {Languages.ContentLanguages.Count} языках — и включайте Discovery, когда решите.");
-    }
 }

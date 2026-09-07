@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { DialoguesService } from '../core/dialogues.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 import { ProjectDialogueComponent } from './project-dialogue.component';
 
 class FakeDialogues {

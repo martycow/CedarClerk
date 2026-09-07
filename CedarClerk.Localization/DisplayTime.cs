@@ -1,4 +1,4 @@
-namespace CedarClerk.Core;
+namespace CedarClerk.Localization;
 
 // SQLite loses DateTime.Kind, so stored Unspecified values must be interpreted as UTC.
 public static class DisplayTime
@@ -13,10 +13,10 @@ public static class DisplayTime
     {
         var zoneId = TimeZones.NormalizeOrDefault(timeZoneId);
         var zone = TimeZones.ResolveOrDefault(zoneId);
-        if (zoneId == Consts.General.DisplayTimeZone)
+        if (zoneId == TimeZones.DefaultId)
             return zone.IsDaylightSavingTime(AsUtc(utc))
-                ? Consts.General.DisplayTimeZoneDaylight
-                : Consts.General.DisplayTimeZoneStandard;
+                ? TimeZones.DaylightAbbreviation
+                : TimeZones.StandardAbbreviation;
         if (zoneId == "UTC") return "UTC";
 
         var offset = zone.GetUtcOffset(AsUtc(utc));

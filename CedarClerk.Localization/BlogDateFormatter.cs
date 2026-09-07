@@ -1,4 +1,6 @@
-namespace CedarClerk.Core;
+using System.Globalization;
+
+namespace CedarClerk.Localization;
 
 // Explicit month tables keep the reader's language independent of the host's ICU data.
 public static class BlogDateFormatter
@@ -62,4 +64,18 @@ public static class BlogDateFormatter
 
     public static string DateTimeLocal(DateTime utc, string? lang, string? timeZoneId = null) =>
         $"{DateTimeShort(DisplayTime.ToZone(utc, timeZoneId), lang)} {DisplayTime.Abbreviation(utc, timeZoneId)}";
+
+    public static string DocumentDateTime(DateTime utc, string format, string lang = "ru", string? timeZoneId = null)
+    {
+        // The node stores a unix timestamp, so this is a real instant and gets the same treatment as
+        // every other time on the page (ADR-115): shown in the display zone, and named as such
+        // whenever a clock time is part of it.
+        var dt = DisplayTime.ToZone(utc, timeZoneId);
+        var parts = new List<string>();
+        if (format.Contains('w')) parts.Add(dt.ToString("ddd", CultureInfo.InvariantCulture));
+        if (format.Contains('D')) parts.Add(Date(dt, lang));
+        if (format.Contains('T')) parts.Add($"{dt.ToString("HH:mm", CultureInfo.InvariantCulture)} {DisplayTime.Abbreviation(utc, timeZoneId)}");
+        return parts.Count > 0 ? string.Join(' ', parts) : DateTimeLocal(utc, lang, timeZoneId);
+    }
+
 }

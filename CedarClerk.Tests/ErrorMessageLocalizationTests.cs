@@ -184,7 +184,7 @@ public class ErrorMessageLocalizationTests
     [InlineData("zz-ZZ", null)]
     public void Accept_language_picks_the_first_language_the_app_knows(string header, string? expected)
     {
-        Assert.Equal(expected, LanguagePreference.FromAcceptLanguage(header));
+        Assert.Equal(expected, LanguageNegotiation.FromAcceptLanguage(header));
     }
 
     /// <summary>

@@ -1,6 +1,4 @@
-using CedarClerk.Localization;
-
-namespace CedarClerk.Server.Email;
+namespace CedarClerk.Localization;
 
 /// <summary>
 /// The mail this server sends, in the reader's language (T-002). Separate from `ErrorMessages`

@@ -27,9 +27,9 @@ public static partial class BlogEndpoints
         <form class="search-form" method="get" action="/search" role="search">
         {(lang is null ? "" : $"<input type=\"hidden\" name=\"lang\" value=\"{System.Net.WebUtility.HtmlEncode(lang)}\">")}
         <input class="search-input" type="search" name="q" value="{System.Net.WebUtility.HtmlEncode(query)}"
-               maxlength="{BlogSearchQueryMaxLength}" placeholder="{(en ? "Search posts" : "Поиск по постам")}"
-               aria-label="{(en ? "Search posts" : "Поиск по постам")}">
-        <button class="search-btn" type="submit">{SearchIcon}<span>{(en ? "Search" : "Найти")}</span></button>
+               maxlength="{BlogSearchQueryMaxLength}" placeholder="{(BlogTexts.SearchPosts(en))}"
+               aria-label="{(BlogTexts.SearchPosts(en))}">
+        <button class="search-btn" type="submit">{SearchIcon}<span>{(BlogTexts.Search(en))}</span></button>
         </form>
         """;
 
@@ -50,8 +50,8 @@ public static partial class BlogEndpoints
 
         var sb = new StringBuilder();
         sb.Append("<a class=\"back-link\" href=\"/?lang=").Append(Uri.EscapeDataString(lang)).Append("\">").Append(BlogIcons.ArrowLeft).Append(' ')
-          .Append(en ? "All posts" : "Все посты").Append("</a>");
-        sb.Append("<div class=\"search-head\"><h1>").Append(en ? "Search" : "Поиск").Append("</h1>");
+          .Append(BlogTexts.BackToPosts(en)).Append("</a>");
+        sb.Append("<div class=\"search-head\"><h1>").Append(BlogTexts.SearchHeading(en)).Append("</h1>");
         sb.Append(SearchFormHtml(query, en, ctx.Request.Query.ContainsKey("lang") ? lang : null));
         sb.Append("</div>");
 
@@ -64,7 +64,7 @@ public static partial class BlogEndpoints
 
             if (hits.Count == 0)
             {
-                sb.Append("<p class=\"empty\">").Append(en ? "Nothing found." : "Ничего не найдено.").Append("</p>");
+                sb.Append("<p class=\"empty\">").Append(BlogTexts.NothingFound(en)).Append("</p>");
             }
             else
             {
@@ -95,7 +95,7 @@ public static partial class BlogEndpoints
         // for a crawler to keep.
         const string meta = "<meta name=\"robots\" content=\"noindex\">";
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(PageShell(en ? "Search" : "Поиск", sb.ToString(), lang,
+        await ctx.Response.WriteAsync(PageShell(BlogTexts.SearchHeading(en), sb.ToString(), lang,
             RenderHeader(header, lang), meta));
     }
 }

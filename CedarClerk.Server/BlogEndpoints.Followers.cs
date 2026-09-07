@@ -24,31 +24,27 @@ public static partial class BlogEndpoints
     {
         var notice = ctx.Request.Query["follow"].ToString() switch
         {
-            "sent" => en
-                ? "Check your inbox — the link in that mail is what turns it on."
-                : "Проверьте почту — подписка включится по ссылке из письма.",
-            "confirmed" => en ? "Done — you are following this game." : "Готово — вы подписаны на эту игру.",
-            "left" => en ? "You are unsubscribed." : "Вы отписались.",
-            "invalid" => en ? "That does not look like an email address." : "Это не похоже на адрес почты.",
-            "already" => en ? "That address is already following." : "Этот адрес уже подписан.",
-            "toomany" => en ? "Too many attempts. Try again tomorrow." : "Слишком много попыток. Попробуйте завтра.",
-            "expired" => en ? "That link is no longer valid." : "Ссылка больше не действует.",
+            "sent" => BlogTexts.CheckYourInboxTheLinkInThat(en),
+            "confirmed" => BlogTexts.DoneYouAreFollowingThisGame(en),
+            "left" => BlogTexts.YouAreUnsubscribed(en),
+            "invalid" => BlogTexts.ThatDoesNotLookLikeAnEmail(en),
+            "already" => BlogTexts.ThatAddressIsAlreadyFollowing(en),
+            "toomany" => BlogTexts.TooManyAttemptsTryAgainTomorrow(en),
+            "expired" => BlogTexts.ThatLinkIsNoLongerValid(en),
             _ => null,
         };
 
         var sb = new StringBuilder();
-        sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Follow the devlog" : "Следить за девлогом").Append("</h2>");
+        sb.Append("<h2 class=\"showcase-section\">").Append(BlogTexts.FollowTheDevlog(en)).Append("</h2>");
         sb.Append("<form class=\"follow-form\" method=\"post\" action=\"").Append(ShowcasePath(ctx, project, "/follow")).Append("\">");
         sb.Append("<input class=\"follow-input\" type=\"email\" name=\"email\" required maxlength=\"")
           .Append(FollowerEmailMaxLength).Append("\" placeholder=\"")
-          .Append(en ? "your@email" : "ваша@почта").Append("\" aria-label=\"")
-          .Append(en ? "Email address" : "Адрес почты").Append("\">");
-        sb.Append("<button class=\"follow-button\" type=\"submit\">").Append(en ? "Follow" : "Подписаться").Append("</button>");
+          .Append(BlogTexts.YourEmail(en)).Append("\" aria-label=\"")
+          .Append(BlogTexts.EmailAddress(en)).Append("\">");
+        sb.Append("<button class=\"follow-button\" type=\"submit\">").Append(BlogTexts.Follow(en)).Append("</button>");
         sb.Append("</form>");
         sb.Append("<p class=\"follow-hint\">")
-          .Append(en
-              ? "A mail when a new devlog is out, and nothing else. Unsubscribe from any of them."
-              : "Письмо, когда выходит новый девлог, и ничего кроме. Отписаться можно из любого письма.")
+          .Append(BlogTexts.MailWhenNewDevlogIsOutAnd(en))
           .Append(" <a href=\"").Append(ShowcasePath(ctx, project, "/rss.xml")).Append("\">RSS</a></p>");
         if (notice is not null)
             sb.Append("<p class=\"follow-notice\">").Append(Html(notice)).Append("</p>");

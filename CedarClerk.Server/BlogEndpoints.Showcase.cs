@@ -126,7 +126,7 @@ public static partial class BlogEndpoints
                     sb.Append("</div>");
                     sb.Append("<div class=\"showcase-head-text\">");
                     sb.Append("<span class=\"showcase-kicker\">")
-                      .Append(Html(block.Title ?? (en ? "Project showcase" : "Страница проекта")))
+                      .Append(Html(block.Title ?? (BlogTexts.ProjectShowcase(en))))
                       .Append("</span>");
                     sb.Append("<h1>").Append(Html(project.Name)).Append("</h1>");
                     var heroBody = block.Body ?? project.Description;
@@ -134,11 +134,11 @@ public static partial class BlogEndpoints
                         sb.Append("<p class=\"showcase-desc\">").Append(Html(heroBody)).Append("</p>");
                     else
                         sb.Append("<p class=\"showcase-hero-empty\">")
-                          .Append(en ? "No project description has been added yet." : "Описание проекта пока не добавлено.")
+                          .Append(BlogTexts.NoProjectDescriptionHasBeenAddedYet(en))
                           .Append("</p>");
                     sb.Append("<div class=\"showcase-hero-actions\"><a class=\"showcase-press-link\" href=\"")
                       .Append(ShowcasePath(ctx, project, "/press")).Append("\">")
-                      .Append(en ? "Press kit" : "Пресс-кит").Append("</a></div>");
+                      .Append(BlogTexts.PressKit(en)).Append("</a></div>");
 
                     var hasPostFact = visibleKinds.Contains(ShowcaseBlockKinds.Devlog) && posts.Count > 0;
                     var hasGalleryFact = visibleKinds.Contains(ShowcaseBlockKinds.Gallery) && gallery.Count > 0;
@@ -146,10 +146,10 @@ public static partial class BlogEndpoints
                     if (hasPostFact || hasGalleryFact || hasDownloadFact)
                     {
                         sb.Append("<dl class=\"showcase-facts\" aria-label=\"")
-                          .Append(en ? "Project highlights" : "О проекте в цифрах").Append("\">");
-                        if (hasPostFact) HeroFact(posts.Count, en ? "Devlog entries" : "Записи девлога");
-                        if (hasGalleryFact) HeroFact(gallery.Count, en ? "Screenshots" : "Скриншоты");
-                        if (hasDownloadFact) HeroFact(downloads.Count, en ? "Public builds" : "Публичные сборки");
+                          .Append(BlogTexts.ProjectHighlights(en)).Append("\">");
+                        if (hasPostFact) HeroFact(posts.Count, BlogTexts.DevlogEntries(en));
+                        if (hasGalleryFact) HeroFact(gallery.Count, BlogTexts.Screenshots(en));
+                        if (hasDownloadFact) HeroFact(downloads.Count, BlogTexts.PublicBuilds(en));
                         sb.Append("</dl>");
                     }
                     sb.Append("</div></header>");
@@ -157,15 +157,15 @@ public static partial class BlogEndpoints
 
                 case ShowcaseBlockKinds.About:
                     sb.Append("<section class=\"showcase-block showcase-block--about\">");
-                    SectionIntro(block, en ? "About" : "О проекте");
+                    SectionIntro(block, BlogTexts.About(en));
                     if (block.Body is not { Length: > 0 })
-                        EmptyState(en ? "No description has been added." : "Описание пока не добавлено.");
+                        EmptyState(BlogTexts.NoDescriptionHasBeenAdded(en));
                     sb.Append("</section>");
                     break;
 
                 case ShowcaseBlockKinds.Links when links.Count > 0:
                     sb.Append("<section class=\"showcase-block showcase-block--links\">");
-                    SectionIntro(block, en ? "Find the project" : "Где найти проект");
+                    SectionIntro(block, BlogTexts.FindTheProject(en));
                     sb.Append("<div class=\"showcase-links\">");
                     for (var i = 0; i < links.Count; i++)
                         sb.Append("<a class=\"showcase-link\" rel=\"noopener\" target=\"_blank\" href=\"")
@@ -176,15 +176,15 @@ public static partial class BlogEndpoints
 
                 case ShowcaseBlockKinds.Trailer when YouTubeLink.EmbedUrl(project.ShowcaseTrailerUrl) is { } embed:
                     sb.Append("<section class=\"showcase-block showcase-block--trailer\">");
-                    SectionIntro(block, en ? "Trailer" : "Трейлер");
+                    SectionIntro(block, BlogTexts.Trailer(en));
                     sb.Append("<div class=\"showcase-trailer\"><iframe src=\"").Append(Html(embed))
-                      .Append("\" loading=\"lazy\" title=\"").Append(en ? "Project trailer" : "Трейлер проекта")
+                      .Append("\" loading=\"lazy\" title=\"").Append(BlogTexts.ProjectTrailer(en))
                       .Append("\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" allowfullscreen></iframe></div></section>");
                     break;
 
                 case ShowcaseBlockKinds.Gallery when gallery.Count > 0:
                     sb.Append("<section class=\"showcase-block showcase-block--gallery\">");
-                    SectionIntro(block, en ? "Gallery" : "Галерея");
+                    SectionIntro(block, BlogTexts.Gallery(en));
                     sb.Append("<div class=\"showcase-gallery\">");
                     foreach (var image in gallery)
                     {
@@ -198,7 +198,7 @@ public static partial class BlogEndpoints
 
                 case ShowcaseBlockKinds.Downloads when downloads.Count > 0:
                     sb.Append("<section class=\"showcase-block showcase-block--downloads\">");
-                    SectionIntro(block, en ? "Downloads" : "Скачать");
+                    SectionIntro(block, BlogTexts.Downloads(en));
                     sb.Append("<div class=\"download-list\">");
                     foreach (var build in downloads)
                     {
@@ -216,10 +216,10 @@ public static partial class BlogEndpoints
 
                 case ShowcaseBlockKinds.Devlog:
                     sb.Append("<section class=\"showcase-block showcase-block--devlog\">");
-                    SectionIntro(block, en ? "Devlog" : "Девлог");
+                    SectionIntro(block, BlogTexts.Devlog(en));
                     if (posts.Count == 0)
-                        EmptyState(en ? "Nothing published yet." : "Пока ничего не опубликовано.",
-                            en ? "Public project updates will appear here." : "Здесь появятся публичные новости проекта.");
+                        EmptyState(BlogTexts.NothingPublishedYet(en),
+                            BlogTexts.PublicProjectUpdatesWillAppearHere(en));
                     else
                     {
                         sb.Append("<div class=\"post-list\">");
@@ -241,23 +241,23 @@ public static partial class BlogEndpoints
                 case ShowcaseBlockKinds.Follow:
                     sb.Append("<aside class=\"showcase-block showcase-block--follow\">");
                     if (block.Title is { Length: > 0 } || block.Body is { Length: > 0 })
-                        SectionIntro(block, en ? "Follow" : "Следить за проектом");
+                        SectionIntro(block, BlogTexts.FollowLabel(en));
                     sb.Append(RenderFollowForm(ctx, project, en));
                     sb.Append("</aside>");
                     break;
 
                 case ShowcaseBlockKinds.Roadmap when roadmap.Count > 0:
                     sb.Append("<section class=\"showcase-block showcase-block--roadmap\">");
-                    SectionIntro(block, en ? "Roadmap" : "Роадмап");
+                    SectionIntro(block, BlogTexts.Roadmap(en));
                     sb.Append("<div class=\"roadmap-list\">");
                     foreach (var task in roadmap)
                     {
                         var (label, tone) = task.Status switch
                         {
-                            TaskStatuses.InProgress => (en ? "In progress" : "В работе", "now"),
-                            TaskStatuses.Planned => (en ? "Planned" : "Запланировано", "next"),
-                            TaskStatuses.Backlog => (en ? "Someday" : "Когда-нибудь", "later"),
-                            _ => (en ? "Done" : "Готово", "done"),
+                            TaskStatuses.InProgress => (BlogTexts.InProgress(en), "now"),
+                            TaskStatuses.Planned => (BlogTexts.Planned(en), "next"),
+                            TaskStatuses.Backlog => (BlogTexts.Someday(en), "later"),
+                            _ => (BlogTexts.Done(en), "done"),
                         };
                         sb.Append("<div class=\"roadmap-row\"><span class=\"roadmap-status ").Append(tone).Append("\">")
                           .Append(label).Append("</span><span class=\"roadmap-title\">").Append(Html(task.Title)).Append("</span></div>");
@@ -271,7 +271,7 @@ public static partial class BlogEndpoints
         // A showcase on its own domain has no blog around it to go back to.
         var backLink = ctx.RequestServices.GetService<TenantContext>()?.ShowcaseSlug is not null
             ? ""
-            : $"<a class=\"back-link\" href=\"/\">&larr; {(en ? "All posts" : "Все посты")}</a>";
+            : $"<a class=\"back-link\" href=\"/\">&larr; {(BlogTexts.BackToPosts(en))}</a>";
         var body = $"{backLink}{sb}";
 
         var blogBase = site.BaseUrl;
@@ -447,7 +447,7 @@ public static partial class BlogEndpoints
 
         var en = lang != Languages.Russian;
         var sb = new StringBuilder();
-        sb.Append("<h2 class=\"showcase-section\">").Append(en ? "Projects" : "Проекты").Append("</h2>");
+        sb.Append("<h2 class=\"showcase-section\">").Append(BlogTexts.Projects(en)).Append("</h2>");
         sb.Append("<div class=\"games-strip\">");
         foreach (var g in games)
         {
@@ -474,7 +474,7 @@ public static partial class BlogEndpoints
             .FirstOrDefaultAsync();
         if (game is null) return "";
 
-        var label = lang == Languages.Russian ? "Проект" : "Project";
+        var label = BlogTexts.Project(lang != Languages.Russian);
         return $"<p class=\"post-game\">{label}: <a href=\"/showcase/{game.ShowcaseSlug}\">{Html(game.Name)}</a></p>";
     }
 }

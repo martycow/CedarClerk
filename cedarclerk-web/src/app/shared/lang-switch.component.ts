@@ -1,5 +1,6 @@
+import { INTERFACE_LANGUAGE_OPTIONS } from '@localization/dictionaries';
 import { Component, inject } from '@angular/core';
-import { LocaleService, UiLang } from '../core/i18n/locale.service';
+import { LocaleService } from '../core/i18n/locale.service';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 
 // I1 — language picker for the login/register screens, which are the only place the UI language
@@ -36,8 +37,5 @@ export class LangSwitchComponent {
     locale = inject(LocaleService);
 
     // Endonyms in the tooltip — a language name is only useful to someone who reads it.
-    readonly options: { lang: UiLang; code: string; label: string }[] = [
-        { lang: 'ru', code: 'RU', label: 'Русский' },
-        { lang: 'en', code: 'EN', label: 'English' },
-    ];
+    readonly options = INTERFACE_LANGUAGE_OPTIONS;
 }

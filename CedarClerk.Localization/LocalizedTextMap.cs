@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace CedarClerk.Core;
+namespace CedarClerk.Localization;
 
 // One short author-authored string that differs per content language — the cross-link labels today
 // (I15), and the shape any future per-language label should reuse. Primary value in its own column
@@ -9,9 +9,7 @@ namespace CedarClerk.Core;
 // common case and no existing row needs migrating. A malformed blob degrades to "no translations".
 public static class LocalizedTextMap
 {
-    // Core stays free of a project reference to CedarClerk.Localization (same rule as
-    // CedarToBlogHtmlRenderer.Render), so the primary language code is spelled out here.
-    private const string PrimaryLanguage = "ru";
+    private const string PrimaryLanguage = Languages.Russian;
 
     // Blank counts as absent: an author who cleared a field means "use the default", not "show an
     // empty label".

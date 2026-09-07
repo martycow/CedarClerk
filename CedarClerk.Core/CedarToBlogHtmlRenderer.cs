@@ -1,4 +1,4 @@
-using System.Globalization;
+using CedarClerk.Localization;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -63,7 +63,7 @@ public static class CedarToBlogHtmlRenderer
         if (entries.Count == 0)
             return;
 
-        var contentsLabel = ctx.Lang == "en" ? "Contents" : "Оглавление";
+        var contentsLabel = BlogTexts.Contents(ctx.Lang == "en");
         sb.Append($"<nav class=\"toc\"><div class=\"toc-title\">{contentsLabel}</div><ul>");
         foreach (var h in entries)
             sb.Append($"<li class=\"toc-lvl-{h.Level}\"><a href=\"#{EscapeAttr(h.Slug)}\">")
@@ -268,7 +268,7 @@ public static class CedarToBlogHtmlRenderer
                 var unix = (long?)node["attrs"]?["unix"] ?? 0;
                 var format = (string?)node["attrs"]?["format"] ?? "wDT";
                 var dt = DateTimeOffset.FromUnixTimeSeconds(unix).UtcDateTime;
-                sb.Append($"<time datetime=\"{dt:yyyy-MM-ddTHH:mm:ssZ}\">{Escape(FormatDateTime(dt, format, ctx.Lang, ctx.TimeZoneId))}</time>");
+                sb.Append($"<time datetime=\"{dt:yyyy-MM-ddTHH:mm:ssZ}\">{Escape(BlogDateFormatter.DocumentDateTime(dt, format, ctx.Lang, ctx.TimeZoneId))}</time>");
                 break;
 
             case "footnote":
@@ -340,25 +340,25 @@ public static class CedarToBlogHtmlRenderer
         DateTime? publishedAt = null,
         string? timeZoneId = null)
     {
-        var comments = lang == "en" ? "Comments" : "Комментарии";
-        var showMore = lang == "en" ? "Show more comments" : "Показать больше комментариев";
-        var namePlaceholder = lang == "en" ? "Name (optional)" : "Имя (необязательно)";
-        var commentPlaceholder = lang == "en" ? "Add a comment…" : "Добавить комментарий…";
-        var send = lang == "en" ? "Send" : "Отправить";
-        var replyingTo = lang == "en" ? "Replying to" : "Ответ";
-        var cancelReply = lang == "en" ? "Cancel" : "Отмена";
+        var comments = BlogTexts.Comments(lang == "en");
+        var showMore = BlogTexts.ShowMoreComments(lang == "en");
+        var namePlaceholder = BlogTexts.NameOptional(lang == "en");
+        var commentPlaceholder = BlogTexts.AddComment(lang == "en");
+        var send = BlogTexts.Send(lang == "en");
+        var replyingTo = BlogTexts.ReplyingTo(lang == "en");
+        var cancelReply = BlogTexts.Cancel(lang == "en");
 
         var ownerAttr = string.IsNullOrEmpty(ownerName) ? "" : $" data-owner-name=\"{EscapeAttr(ownerName)}\"";
         var publishedLine = publishedAt is { } p
             // T-094 — the third date on this page, missed when the other two were fixed: it printed
             // "1 Aug 2026" under a Russian post. Same formatter as the rest of the blog now.
-            ? $"<div class=\"comment-published-line\">{(lang == "en" ? "Post published" : "Пост опубликован")}: {BlogDateFormatter.DateTimeLocal(p, lang, timeZoneId)}</div>"
+            ? $"<div class=\"comment-published-line\">{(BlogTexts.PostPublished(lang == "en"))}: {BlogDateFormatter.DateTimeLocal(p, lang, timeZoneId)}</div>"
             : "";
 
         return $"""
             <div class="annotation-controls">
-            <button type="button" class="react-btn" data-kind="like" aria-label="{(lang == "en" ? "Like" : "Нравится")}" aria-pressed="false">{BlogIcons.ThumbUp} <span class="count" data-kind-count="like">0</span></button>
-            <button type="button" class="react-btn" data-kind="dislike" aria-label="{(lang == "en" ? "Dislike" : "Не нравится")}" aria-pressed="false">{BlogIcons.ThumbDown} <span class="count" data-kind-count="dislike">0</span></button>
+            <button type="button" class="react-btn" data-kind="like" aria-label="{(BlogTexts.Like(lang == "en"))}" aria-pressed="false">{BlogIcons.ThumbUp} <span class="count" data-kind-count="like">0</span></button>
+            <button type="button" class="react-btn" data-kind="dislike" aria-label="{(BlogTexts.Dislike(lang == "en"))}" aria-pressed="false">{BlogIcons.ThumbDown} <span class="count" data-kind-count="dislike">0</span></button>
             <span class="comment-count-label">{BlogIcons.Chat} <span class="comment-count">0</span></span>
             </div>
             <div class="comment-box"{ownerAttr}>
@@ -379,39 +379,6 @@ public static class CedarToBlogHtmlRenderer
             """;
     }
 
-    private sealed record RegistrationGateChrome(
-        string Heading, string Blurb, string Submit,
-        string NamePlaceholder, string NickPlaceholder, string EmailPlaceholder,
-        string SocialPlaceholder, string ChoosePlaceholder, string AgreeLabel);
-
-    // English is the fallback for any code not listed, which is also what the app's own UI
-    // locales do (ADR-050) — an untranslated gate in English beats one in a language the reader
-    // definitely didn't ask for.
-    private static readonly IReadOnlyDictionary<string, RegistrationGateChrome> GateChrome =
-        new Dictionary<string, RegistrationGateChrome>
-        {
-            ["ru"] = new("Это приватный пост", "Заполните форму ниже, чтобы получить доступ.", "Получить доступ",
-                "Имя и фамилия", "Никнейм", "Почта", "Ссылка на соцсеть", "Выберите…", "Я согласен/-на"),
-            ["en"] = new("This post is private", "Fill in the form below to get access.", "Get access",
-                "First and last name", "Nickname", "Email", "A social link", "Choose…", "I agree"),
-            ["de"] = new("Dieser Beitrag ist privat", "Füllen Sie das Formular aus, um Zugang zu erhalten.", "Zugang erhalten",
-                "Vor- und Nachname", "Spitzname", "E-Mail", "Ein Social-Media-Link", "Auswählen…", "Ich stimme zu"),
-            ["fr"] = new("Cet article est privé", "Remplissez le formulaire ci-dessous pour obtenir l'accès.", "Obtenir l'accès",
-                "Nom et prénom", "Pseudo", "E-mail", "Un lien vers un réseau social", "Choisir…", "J'accepte"),
-            ["es"] = new("Esta publicación es privada", "Rellena el formulario para obtener acceso.", "Obtener acceso",
-                "Nombre y apellidos", "Apodo", "Correo electrónico", "Un enlace a una red social", "Elegir…", "Estoy de acuerdo"),
-            ["ja"] = new("この投稿は非公開です", "アクセスするには以下のフォームにご記入ください。", "アクセスする",
-                "氏名", "ニックネーム", "メールアドレス", "SNSのリンク", "選択してください…", "同意します"),
-            // T-013 — these three have not been read by a native speaker; they are here because an
-            // English gate on a Ukrainian post is a worse default, not because they are polished.
-            ["uk"] = new("Цей допис приватний", "Заповніть форму нижче, щоб отримати доступ.", "Отримати доступ",
-                "Ім'я та прізвище", "Нікнейм", "Пошта", "Посилання на соцмережу", "Оберіть…", "Я погоджуюсь"),
-            ["be"] = new("Гэты пост прыватны", "Запоўніце форму ніжэй, каб атрымаць доступ.", "Атрымаць доступ",
-                "Імя і прозвішча", "Нік", "Пошта", "Спасылка на сацсетку", "Абярыце…", "Я згодны/-ая"),
-            ["ka"] = new("ეს პოსტი პირადია", "წვდომის მისაღებად შეავსეთ ქვემოთ მოცემული ფორმა.", "წვდომის მიღება",
-                "სახელი და გვარი", "მეტსახელი", "ელფოსტა", "სოციალური ქსელის ბმული", "აირჩიეთ…", "ვეთანხმები"),
-        };
-
     // Registration form shown instead of the post body to an uninvited visitor of a private
     // post (B3). Hydrated by the page script in BlogEndpoints' ShellTemplate, same as the
     // comment form above. Every author-authored string (intro, question labels, choice options)
@@ -428,7 +395,7 @@ public static class CedarToBlogHtmlRenderer
         // FI4.1 — the gate's own chrome in every content language, since a post can be read in
         // any of them (NF2). The author's own words (intro, labels, options) are not translated
         // here: they come from whichever language's form was picked, see RegistrationFormSet.
-        var chrome = GateChrome.TryGetValue(lang, out var found) ? found : GateChrome["en"];
+        var chrome = BlogTexts.GateChrome.TryGetValue(lang, out var found) ? found : BlogTexts.GateChrome["en"];
         var heading = chrome.Heading;
         var blurb = chrome.Blurb;
         var submit = chrome.Submit;
@@ -560,19 +527,6 @@ public static class CedarToBlogHtmlRenderer
     // one inside the text, and it follows the page's language for the same reason). The weekday
     // stays invariant: it is three letters and adding nine more month tables for it is not the
     // trade this needs.
-    private static string FormatDateTime(DateTime utc, string format, string lang = "ru", string? timeZoneId = null)
-    {
-        // The node stores a unix timestamp, so this is a real instant and gets the same treatment as
-        // every other time on the page (ADR-115): shown in the display zone, and named as such
-        // whenever a clock time is part of it.
-        var dt = DisplayTime.ToZone(utc, timeZoneId);
-        var parts = new List<string>();
-        if (format.Contains('w')) parts.Add(dt.ToString("ddd", CultureInfo.InvariantCulture));
-        if (format.Contains('D')) parts.Add(BlogDateFormatter.Date(dt, lang));
-        if (format.Contains('T')) parts.Add($"{dt.ToString("HH:mm", CultureInfo.InvariantCulture)} {DisplayTime.Abbreviation(utc, timeZoneId)}");
-        return parts.Count > 0 ? string.Join(' ', parts) : BlogDateFormatter.DateTimeLocal(utc, lang, timeZoneId);
-    }
-
     private static bool IsGifSrc(string src) =>
         Regex.IsMatch(src, @"\.gif(?:[?#]|$)", RegexOptions.IgnoreCase);
 

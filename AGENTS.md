@@ -8,7 +8,7 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 
 - **CedarClerk.Server** — ASP.NET Core (.NET 8) API + static host for the frontend + Telegram bot host
 - **CedarClerk.Core** — the document format and renderers (pure C#, unit-tested)
-- **CedarClerk.Localization** — shared error strings and language constants
+- **CedarClerk.Localization** — language catalogs, UI/email/public-page text, formatting and language rules; see `docs/tech/LOCALIZATION.md`
 - **MooTool** — external operations project. Its `modules/cedar` crate provides the native Rust/Ratatui `cedar` command (ADR-291). Cedar Clerk owns `cedar.json`.
 - **CedarClerk.Tests** — xUnit application tests. Operations console tests belong to MooTool.
 - **cedarclerk-web** — Angular SPA (standalone components, signals, TipTap editor)

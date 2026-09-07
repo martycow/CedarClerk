@@ -1,3 +1,4 @@
+using CedarClerk.Localization;
 using CedarClerk.Server.Email;
 using CedarClerk.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;

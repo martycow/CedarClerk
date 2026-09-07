@@ -1,0 +1,44 @@
+{
+  "languages": [
+    {
+      "code": "ru",
+      "endonym": "Русский"
+    },
+    {
+      "code": "en",
+      "endonym": "English"
+    },
+    {
+      "code": "de",
+      "endonym": "Deutsch"
+    },
+    {
+      "code": "fr",
+      "endonym": "Français"
+    },
+    {
+      "code": "es",
+      "endonym": "Español"
+    },
+    {
+      "code": "ja",
+      "endonym": "日本語"
+    },
+    {
+      "code": "uk",
+      "endonym": "Українська"
+    },
+    {
+      "code": "be",
+      "endonym": "Беларуская"
+    },
+    {
+      "code": "ka",
+      "endonym": "ქართული"
+    }
+  ],
+  "interfaceDictionaries": [
+    "en",
+    "ru"
+  ]
+}

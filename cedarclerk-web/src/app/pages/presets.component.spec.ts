@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PresetsComponent } from './presets.component';
 import { Preset, PresetsService } from '../core/presets.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { en } from '../core/i18n/en';
+import { en } from '@localization/en';
 
 class PresetsStub {
     readonly data: Record<'document' | 'project' | 'export', Preset[]> = {
