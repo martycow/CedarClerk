@@ -4,6 +4,7 @@ using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Email;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace CedarClerk.Server;
@@ -18,32 +19,38 @@ public static class PasswordRecoveryEndpoints
         services.AddTransient<PasswordRecoveryTokenProvider>();
         services.Configure<IdentityOptions>(options =>
         {
-            options.Tokens.PasswordResetTokenProvider = "PasswordRecovery";
-            options.Tokens.ProviderMap["PasswordRecovery"] = new(typeof(PasswordRecoveryTokenProvider));
+            options.Tokens.PasswordResetTokenProvider = PasswordRecoveryTokenProvider.ProviderName;
+            options.Tokens.ProviderMap[PasswordRecoveryTokenProvider.ProviderName] = new(typeof(PasswordRecoveryTokenProvider));
         });
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.AddPolicy("password-recovery", context => RateLimitPartition.GetFixedWindowLimiter(
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = 5, Window = TimeSpan.FromMinutes(15), QueueLimit = 0,
-                }));
+            options.AddFixedWindowLimiter("password-request", limiter =>
+            {
+                limiter.PermitLimit = 20;
+                limiter.Window = TimeSpan.FromMinutes(1);
+                limiter.QueueLimit = 0;
+            });
+            options.AddFixedWindowLimiter("password-reset", limiter =>
+            {
+                limiter.PermitLimit = 60;
+                limiter.Window = TimeSpan.FromMinutes(1);
+                limiter.QueueLimit = 0;
+            });
         });
         services.AddSingleton(new RecoveryMailLimit());
     }
 
     public static void MapPasswordRecoveryEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/auth").RequireRateLimiting("password-recovery");
-        group.MapPost("/forgot-password", ForgotAsync).AllowAnonymous();
+        var group = app.MapGroup("/api/auth");
+        group.MapPost("/forgot-password", ForgotAsync).RequireRateLimiting("password-request").AllowAnonymous();
 
         group.MapPost("/reset-password", async (ResetRequest request, UserManager<ApplicationUser> users) =>
         {
             var result = await ResetAsync(request, users);
             return result.Succeeded ? Results.Ok() : Results.BadRequest(new { error = ErrorMessages.PasswordResetInvalid });
-        }).AllowAnonymous();
+        }).RequireRateLimiting("password-reset").AllowAnonymous();
     }
 
     public static async Task<IResult> ForgotAsync(ForgotRequest request,
@@ -85,15 +92,6 @@ public static class PasswordRecoveryEndpoints
         return await users.ResetPasswordAsync(user, token, request.Password);
     }
 }
-
-public sealed class PasswordRecoveryTokenProvider(
-    Microsoft.AspNetCore.DataProtection.IDataProtectionProvider protection,
-    ILogger<DataProtectorTokenProvider<ApplicationUser>> logger)
-    : DataProtectorTokenProvider<ApplicationUser>(protection,
-        Microsoft.Extensions.Options.Options.Create(new DataProtectionTokenProviderOptions
-        {
-            Name = "CedarPasswordRecovery", TokenLifespan = TimeSpan.FromHours(1),
-        }), logger);
 
 public sealed class RecoveryMailLimit : IDisposable
 {

@@ -31,7 +31,7 @@ import { BrandIconComponent } from './brand-icon.component';
                 <div #telegramHost class="telegram-host"></div>
 
                 @if (error()) { <div class="providers-error" role="alert">{{ error() }}</div> }
-                @if (scriptFailed()) {
+                @if (widgetFailed()) {
                     <app-button variant="paper" (clicked)="retryTelegram()">{{ t().login.retry }}</app-button>
                 }
             </div>
@@ -56,6 +56,7 @@ import { BrandIconComponent } from './brand-icon.component';
 })
 export class ExternalAuthButtonsComponent {
     private external = inject(ExternalAuthService);
+    private destroyRef = inject(DestroyRef);
     private version = inject(VersionService);
     t = inject(LocaleService).t;
 
@@ -66,18 +67,17 @@ export class ExternalAuthButtonsComponent {
     readonly signedIn = output<void>();
 
     protected readonly error = signal('');
-    protected readonly scriptFailed = signal(false);
-    private readonly destroyRef = inject(DestroyRef);
-    private callback?: (user: TelegramWidgetUser) => void;
+    protected readonly widgetFailed = signal(false);
     protected readonly google = this.version.googleAuth;
     protected readonly telegramBot = this.version.telegramBot;
 
     private host = viewChild<ElementRef<HTMLElement>>('telegramHost');
+    private readonly callbackName = `cedarTelegramAuth${crypto.randomUUID().replaceAll('-', '')}`;
 
     constructor() {
         this.destroyRef.onDestroy(() => {
-            const target = window as unknown as Record<string, unknown>;
-            if (target['cedarTelegramAuth'] === this.callback) delete target['cedarTelegramAuth'];
+            delete (window as unknown as Record<string, unknown>)[this.callbackName];
+            this.host()?.nativeElement.replaceChildren();
         });
         // An effect rather than a call in the constructor: the host div lives inside the @if, so it
         // does not exist until the bot name has arrived AND the view has been rendered. The effect
@@ -93,36 +93,35 @@ export class ExternalAuthButtonsComponent {
         this.external.startGoogle(this.returnUrl());
     }
 
+    protected retryTelegram(): void {
+        const host = this.host()?.nativeElement;
+        const bot = this.telegramBot();
+        if (!host || !bot) return;
+        host.replaceChildren();
+        this.error.set('');
+        this.widgetFailed.set(false);
+        this.mountTelegram(bot, host);
+    }
+
     private mountTelegram(bot: string, host: HTMLElement): void {
-        // data-onauth is evaluated by the widget as a global expression, so the handler has to be
-        // reachable by name from window — it cannot stay a method. Only one of these components is
-        // ever on screen (one door at a time), so a single global name is safe.
-        const callbackName = 'cedarTelegramAuth';
-        this.callback = (user: TelegramWidgetUser) => void this.onTelegramAuth(user);
-        (window as unknown as Record<string, unknown>)[callbackName] = this.callback;
+        // Telegram evaluates data-onauth globally; each mount owns its callback to survive navigation.
+        const callbackName = this.callbackName;
+        (window as unknown as Record<string, unknown>)[callbackName] =
+            (user: TelegramWidgetUser) => void this.onTelegramAuth(user);
 
         const script = document.createElement('script');
         script.async = true;
+        script.onerror = () => {
+            if (this.destroyRef.destroyed) return;
+            this.widgetFailed.set(true);
+            this.error.set(this.t().externalAuth.widgetFailed);
+        };
         script.src = 'https://telegram.org/js/telegram-widget.js?22';
         script.setAttribute('data-telegram-login', bot);
         script.setAttribute('data-size', 'large');
         script.setAttribute('data-userpic', 'false');
         script.setAttribute('data-onauth', `${callbackName}(user)`);
-        script.onerror = () => {
-            this.scriptFailed.set(true);
-            this.error.set(this.t().externalAuth.failed);
-        };
         host.appendChild(script);
-    }
-
-    protected retryTelegram(): void {
-        const host = this.host()?.nativeElement;
-        const bot = this.telegramBot();
-        if (!host || !bot) return;
-        this.error.set('');
-        this.scriptFailed.set(false);
-        host.replaceChildren();
-        this.mountTelegram(bot, host);
     }
 
     private async onTelegramAuth(user: TelegramWidgetUser): Promise<void> {

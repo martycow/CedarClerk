@@ -148,6 +148,7 @@ export const en = {
     },
     // T-003 — the provider row on both doors, and the screen that finishes a new account.
     externalAuth: {
+        widgetFailed: 'Telegram could not load. Try again.',
         or: 'or',
         google: 'Continue with Google',
         completeTitle: 'One more step',

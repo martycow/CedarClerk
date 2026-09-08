@@ -131,6 +131,10 @@ Ownership: nearly every table has an `OwnerId` and every endpoint filters by it 
 
 ## Auth
 
+Authentication recovery uses `PasswordRecoveryEndpoints` and a dedicated Identity token provider (ADR-296).
+Password reset links expire after one hour. Their tokens travel in URL fragments and then in POST bodies.
+Only confirmed accounts with passwords receive reset mail. Google route names resolve to the canonical Identity scheme.
+
 ASP.NET Core Identity (`AddIdentityCore<ApplicationUser>`), cookie-based (`IdentityConstants.ApplicationScheme`), backed by the same SQLite DB via `AddEntityFrameworkStores<CedarDbContext>`. Registration is invite-code gated (`Cedar:InviteCode` config). 401/403 are returned directly instead of redirecting to a login page (`OnRedirectToLogin`/`OnRedirectToAccessDenied` overrides), since the client is a SPA. Telegram account linking is a separate, optional step for an already-authenticated user (HMAC-verified via `TelegramLoginVerifier` in Core) — not an alternate login method; see `docs/DECISIONS.md`.
 
 **There is one installation, and identity is simply its own (ADR-117).** ADR-108's `Cedar:Auth:Upstream` — the desktop verifying credentials against production while keeping its own data — is gone, along with `UpstreamAuth`. It existed to make one email mean one person across two databases; with one database the problem it solved does not arise. The desktop is a window onto this installation and signs in against it like any browser. `ApplicationUser.RemoteUserId` survives as a vestigial column: dropping one in SQLite rebuilds `AspNetUsers`, which Identity touches on every authorized request, and that is a real risk for no return.

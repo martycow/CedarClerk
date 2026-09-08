@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-09-08 — Consolidated authentication release 0.23.1 (ADR-296)
+
+Merged `codex/auth-doors` and `codex/auth-recovery`, retaining both source commits.
+One shared branded layout and one recovery implementation replace the overlapping
+versions. The dedicated one-hour token provider, global request limits, hourly mail
+budget, trusted forwarded HTTPS, Google failure return, per-mount Telegram callback
+and analytics exclusions are combined. Successful resets clear form credentials.
+ADR-295 preserves the second branch's decision under a distinct identifier.
+
+Validation: 1,993 backend tests and 776 frontend tests passed. Icon inventory,
+contrast (three documented exceptions), density and production builds passed.
+Browser checks covered five routes, RU/EN, both themes and 360/720/1440 px widths
+(60 combinations), logo loading, horizontal overflow, Enter submission, recovery
+navigation, URL-fragment removal, unavailable email, invalid tokens and rate limits.
+Selected desktop/mobile screenshots were inspected. Local Google challenge produced
+a trusted HTTPS callback and a failed callback returned to login. Real provider
+account sign-in and production email delivery require the provider configuration.
+
 ## 2026-09-08 — Authentication screens and password recovery (ADR-294)
 
 Login, registration and external completion use a shared responsive layout with the
@@ -24,6 +42,45 @@ login fields, recovery navigation, missing mail configuration, invalid reset tok
 and HTTP 429. Selected desktop and mobile screenshots were inspected. A fake mail
 transport verified a generated reset link through the real Identity reset operation;
 production email delivery and real Google/Telegram account sign-in were not exercised.
+
+## 2026-09-08 — Authentication recovery (ADR-295)
+
+Google entry URLs resolve case-insensitively to the registered `Google` scheme.
+OAuth failures return to login. Forwarded HTTPS protocol is accepted from the trusted
+loopback proxy before authentication, preserving the provider callback scheme.
+
+Login exposes password recovery. A dedicated Identity token expires after one hour;
+resetting consumes it through the security stamp change. Tokens travel in fragments,
+then POST bodies. Only confirmed accounts with passwords receive recovery mail.
+Unknown and ineligible addresses get the same response. Missing mail configuration,
+throttling, invalid links and mismatched passwords have localized feedback.
+Authentication calls bypass the client debug journal. Recovery pages suppress analytics
+initialization and events, keeping credentials and recovery tokens outside telemetry.
+
+Login, registration and recovery use the approved transparent Illustrator logo.
+Telegram script failures expose retry, and navigation removes the widget callback.
+The setup runbook uses `cedarclerk.app` for Google callbacks and Telegram domain binding.
+Three visual concepts and slogan proposals were delivered separately; their selection
+and implementation remain pending.
+
+Live diagnosis: `/api/health` reports Google disabled. Telegram accepts the legacy
+`cedarclerk.mooexe.dev` origin but rejects `cedarclerk.app` with `Bot domain invalid`.
+Google credentials and the BotFather domain binding require the owner's provider access.
+No deployment, production configuration change or real recovery email was performed.
+
+Validation: real Identity/SQLite recovery tests cover valid, expired, malformed,
+wrong-user and replayed tokens, password replacement and account eligibility.
+Frontend tests cover duplicate and empty submission, outages, mismatch and fragment removal.
+Journal tests exclude authentication payloads while retaining ordinary diagnostic requests.
+The publish-stepper test explicitly disables pseudo-localization to isolate its English assertions.
+Browser checks cover login-to-recovery navigation, Russian feedback, unavailable mail,
+missing reset links, registration and 390-pixel layouts in light and dark themes.
+An isolated server with fake Google credentials returns a Google authorization redirect
+with an HTTPS callback when the loopback proxy supplies `X-Forwarded-Proto: https`.
+Final checks: 1985 backend tests and 778 frontend tests pass. Icon inventory, contrast,
+density and the Angular production build pass. Temporary test servers were stopped before
+the final backend run because Windows locks loaded build assemblies.
+
 
 ## 2026-09-08 — Autosave history gets an age limit (ADR-065 amended)
 

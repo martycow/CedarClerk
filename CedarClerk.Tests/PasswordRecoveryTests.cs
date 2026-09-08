@@ -66,9 +66,9 @@ public class PasswordRecoveryTests
             [Consts.ExternalAuth.GoogleClientIdCfg] = "test-client",
             [Consts.ExternalAuth.GoogleClientSecretCfg] = "test-secret",
         }).Build();
-        Assert.Equal(expected, ExternalAuthEndpoints.IsConfigured(provider, config));
+        Assert.Equal(expected, (ExternalAuthEndpoints.GoogleScheme(provider, config) is not null));
         config[Consts.ExternalAuth.GoogleClientSecretCfg] = null;
-        Assert.False(ExternalAuthEndpoints.IsConfigured(provider, config));
+        Assert.False((ExternalAuthEndpoints.GoogleScheme(provider, config) is not null));
     }
 
     [Fact]

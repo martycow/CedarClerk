@@ -49,7 +49,8 @@ public static class ExternalAuthEndpoints
 
         group.MapGet("/{provider}", (string provider, string? returnUrl, HttpContext ctx, IConfiguration cfg) =>
         {
-            if (!IsConfigured(provider, cfg))
+            var scheme = GoogleScheme(provider, cfg);
+            if (scheme is null)
                 return Results.Json(new { error = ErrorMessages.ExternalProviderNotConfigured },
                     statusCode: StatusCodes.Status501NotImplemented);
 
@@ -57,7 +58,7 @@ public static class ExternalAuthEndpoints
             // would be a phishing hop wearing our domain.
             var safeReturn = SafeReturnUrl(returnUrl);
             var callback = $"/api/auth/external/callback?returnUrl={Uri.EscapeDataString(safeReturn)}";
-            return Results.Challenge(new AuthenticationProperties { RedirectUri = callback }, [Consts.ExternalAuth.Google]);
+            return Results.Challenge(new AuthenticationProperties { RedirectUri = callback }, [scheme]);
         });
 
         group.MapGet("/callback", async (string? returnUrl,
@@ -259,10 +260,11 @@ public static class ExternalAuthEndpoints
         #endregion
     }
 
-    public static bool IsConfigured(string provider, IConfiguration cfg) =>
+    public static string? GoogleScheme(string provider, IConfiguration cfg) =>
         string.Equals(provider, Consts.ExternalAuth.Google, StringComparison.OrdinalIgnoreCase)
-        && !string.IsNullOrEmpty(cfg[Consts.ExternalAuth.GoogleClientIdCfg])
-        && !string.IsNullOrEmpty(cfg[Consts.ExternalAuth.GoogleClientSecretCfg]);
+        && !string.IsNullOrWhiteSpace(cfg[Consts.ExternalAuth.GoogleClientIdCfg])
+        && !string.IsNullOrWhiteSpace(cfg[Consts.ExternalAuth.GoogleClientSecretCfg])
+            ? Consts.ExternalAuth.Google : null;
 
     /// <summary>Same-origin paths only — anything else is dropped rather than followed.</summary>
     private static string SafeReturnUrl(string? url) =>

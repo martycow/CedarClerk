@@ -13,7 +13,7 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
-- [ ] Authentication rollout (ADR-294) — implemented and locally verified on `codex/auth-doors`: branded forms, Google route fix and password recovery. Remaining: configure both Google credentials and `https://cedarclerk.app/signin-google`, bind `cedar_clerk_bot` to `cedarclerk.app` in BotFather, deploy, and verify real provider sign-in and recovery email delivery. #auth #operations P1
+- [ ] Authentication provider setup (ADR-296) — consolidated in release 0.23.1: branded forms, Google route fix and password recovery. Remaining: configure both Google credentials and `https://cedarclerk.app/signin-google`, bind `cedar_clerk_bot` to `cedarclerk.app` in BotFather, and verify real provider sign-in and recovery email delivery. #auth #operations P1
 
 - [ ] Project modules, step 13a (ADR-293) — `ProjectModule` rows replace the type as the source of what a project can do; `Project.ProjectType` is `CreatedFromPreset`, the offer gains Work and Vault and loses jam/prototype/released, `PUT /api/projects/{id}/modules` is the write path. Done on `claude/project-modules`, **not deployed**: the migration backfills production's two projects (Dev Dairy Diary → Blog column, Cedar Station → Game column). Next: 14a wires the sidebar to the `modules` map, 14b the Settings toggles #indiedev #backend P1
 - [x] Replace the operations console with Rust/Ratatui — animated dashboard, JSON program profiles, streamed actions, deploy/resume/rollback, local tests and bot-disabled local serving; installed as native `cedar.exe`. ADR-252 #cli #operations P1

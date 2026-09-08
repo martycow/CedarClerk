@@ -142,6 +142,7 @@ export const ru: Dict = {
         privacy: 'Политика приватности',
     },
     externalAuth: {
+        widgetFailed: 'Не удалось загрузить Telegram. Попробуйте ещё раз.',
         or: 'или',
         google: 'Продолжить с Google',
         completeTitle: 'Ещё один шаг',

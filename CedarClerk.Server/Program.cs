@@ -13,6 +13,7 @@ using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using PostHog;
 using PostHog.Config;
@@ -109,6 +110,12 @@ if (builder.Configuration[Consts.ExternalAuth.GoogleClientIdCfg] is { Length: > 
         // "does an account already hold this email" question below has nothing to ask about.
         options.Scope.Add("email");
         options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.Events.OnRemoteFailure = context =>
+        {
+            context.HandleResponse();
+            context.Response.Redirect("/login?external=failed");
+            return Task.CompletedTask;
+        };
     });
 }
 
@@ -122,6 +129,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedProto);
 builder.Services.ConfigureApplicationCookie(AuthCookie.Configure);
 builder.Services.AddPasswordRecovery();
 
@@ -286,10 +295,11 @@ app.UseLandingMedia(landingDir);
 // need this switched off is now an agent, and an agent leaves this file before reaching here.
 app.UseDesktopDownloads(downloadsDir);
 
+app.UseForwardedHeaders();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseTenantFromUser();
 app.UseAuthorization();
-app.UseRateLimiter();
 
 // T-050 — every ErrorMessages member reads CultureInfo.CurrentUICulture, which .NET already flows
 // across await boundaries. Setting it once here is what lets ~every existing `ErrorMessages.X`

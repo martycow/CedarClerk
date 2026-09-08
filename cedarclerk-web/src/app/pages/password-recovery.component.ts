@@ -55,10 +55,9 @@ export class PasswordRecoveryComponent {
     private readonly route = inject(ActivatedRoute);
     readonly t = inject(LocaleService).t;
     readonly reset = this.route.snapshot.data['reset'] === true;
-    private readonly parameters = new URLSearchParams(this.route.snapshot.fragment ?? '');
-    private readonly userId = this.parameters.get('userId');
-    private readonly token = this.parameters.get('token');
-    readonly hasToken = !!this.userId && !!this.token;
+    private userId: string | null = null;
+    private token: string | null = null;
+    get hasToken(): boolean { return !!this.userId && !!this.token; }
     readonly busy = signal(false);
     readonly done = signal(false);
     readonly error = signal('');
@@ -67,6 +66,9 @@ export class PasswordRecoveryComponent {
     confirm = '';
 
     constructor() {
+        const parameters = new URLSearchParams(this.route.snapshot.fragment ?? '');
+        this.userId = parameters.get('userId');
+        this.token = parameters.get('token');
         // Keep recovery credentials out of referrers and subsequent analytics events.
         if (this.reset) inject(Location).replaceState('/reset-password');
     }
@@ -88,6 +90,7 @@ export class PasswordRecoveryComponent {
                 this.reset ? { userId: this.userId, token: this.token, password: this.password } : { email: this.email.trim() }));
             this.done.set(true);
             this.password = this.confirm = '';
+            this.userId = this.token = null;
         } catch (error: any) {
             this.error.set(error.status === 429 ? this.t().passwordRecovery.rateLimited
                 : error.status === 400 && this.reset ? this.t().passwordRecovery.invalid
