@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "Se aceptan como máximo {0} vistas previas a la vez.",
         [nameof(AssetThumbBudgetExhausted)] = "El espacio para vistas previas se agotó — el límite es {0} MB. El índice sigue funcionando; las nuevas vistas previas no se guardan.",
         [nameof(UnknownProjectType)] = "Tipo de proyecto desconocido «{0}».",
+        [nameof(UnknownModuleKey)] = "Módulo desconocido «{0}».",
+        [nameof(DocumentsModuleRequired)] = "El módulo «Documentos» no se puede desactivar.",
         [nameof(UnknownDiscoveryCategory)] = "Categoría de Discovery desconocida «{0}».",
         [nameof(UnknownDocumentType)] = "Tipo de documento desconocido «{0}».",
         [nameof(ProjectNameLength)] = "El nombre del proyecto debe tener entre 1 y {0} caracteres",

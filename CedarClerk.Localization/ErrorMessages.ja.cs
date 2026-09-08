@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "一度に受け付けられるプレビューは最大{0}件です。",
         [nameof(AssetThumbBudgetExhausted)] = "プレビューの容量を使い切りました。上限は{0} MBです。インデックスは引き続き動作しますが、新しいプレビューは保存されません。",
         [nameof(UnknownProjectType)] = "不明なプロジェクトの種類「{0}」です。",
+        [nameof(UnknownModuleKey)] = "不明なモジュール「{0}」です。",
+        [nameof(DocumentsModuleRequired)] = "「ドキュメント」モジュールは無効にできません。",
         [nameof(UnknownDiscoveryCategory)] = "不明なDiscoveryカテゴリー「{0}」です。",
         [nameof(UnknownDocumentType)] = "不明なドキュメントの種類「{0}」です。",
         [nameof(ProjectNameLength)] = "プロジェクト名は1〜{0}文字にしてください",

@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "За адзін раз прымаецца не больш за {0} прэв’ю.",
         [nameof(AssetThumbBudgetExhausted)] = "Месца пад прэв’ю вычарпана — ліміт {0} МБ. Індэкс працуе, новыя прэв’ю не захоўваюцца.",
         [nameof(UnknownProjectType)] = "Невядомы тып праекта «{0}».",
+        [nameof(UnknownModuleKey)] = "Невядомы модуль «{0}».",
+        [nameof(DocumentsModuleRequired)] = "Модуль «Дакументы» нельга выключыць.",
         [nameof(UnknownDiscoveryCategory)] = "Невядомая катэгорыя Discovery «{0}».",
         [nameof(UnknownDocumentType)] = "Невядомы тып дакумента «{0}».",
         [nameof(ProjectNameLength)] = "Назва праекта — ад 1 да {0} сімвалаў.",

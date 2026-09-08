@@ -77,10 +77,11 @@ public class DocumentTypesTests
 
     [Theory]
     [InlineData(ProjectTypes.FullGame, DocumentTypes.Design)]
-    [InlineData(ProjectTypes.Jam, DocumentTypes.Design)]
-    [InlineData(ProjectTypes.Prototype, DocumentTypes.Note)]
-    [InlineData(ProjectTypes.Released, DocumentTypes.Changelog)]
+    [InlineData(ProjectTypes.Product, DocumentTypes.Changelog)]
     [InlineData(ProjectTypes.Blog, DocumentTypes.Post)]
+    [InlineData(ProjectTypes.Work, DocumentTypes.Note)]
+    [InlineData(ProjectTypes.Vault, DocumentTypes.Note)]
+    [InlineData(ProjectTypes.Empty, DocumentTypes.Note)]
     public void Each_project_type_starts_with_its_own_document(string projectType, string expected)
     {
         Assert.Equal(expected, ProjectTypes.StarterDocumentType(projectType));

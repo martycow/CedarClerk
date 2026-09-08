@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "За один раз приймається не більше ніж {0} прев'ю.",
         [nameof(AssetThumbBudgetExhausted)] = "Місце під прев'ю вичерпано — ліміт {0} МБ. Індекс працює, нові прев'ю не зберігаються.",
         [nameof(UnknownProjectType)] = "Невідомий тип проєкту «{0}».",
+        [nameof(UnknownModuleKey)] = "Невідомий модуль «{0}».",
+        [nameof(DocumentsModuleRequired)] = "Модуль «Документи» не можна вимкнути.",
         [nameof(UnknownDiscoveryCategory)] = "Невідома категорія Discovery «{0}».",
         [nameof(UnknownDocumentType)] = "Невідомий тип документа «{0}».",
         [nameof(ProjectNameLength)] = "Назва проєкту — від 1 до {0} символів.",

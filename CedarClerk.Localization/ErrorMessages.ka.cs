@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "ერთდროულად მაქსიმუმ {0} პრევიუ მიიღება.",
         [nameof(AssetThumbBudgetExhausted)] = "პრევიუების ლიმიტი ამოწურულია — ზღვარი {0} მბ-ია. ინდექსი მუშაობს, ახალი პრევიუები აღარ ინახება.",
         [nameof(UnknownProjectType)] = "პროექტის უცნობი ტიპი „{0}“.",
+        [nameof(UnknownModuleKey)] = "უცნობი მოდული „{0}“.",
+        [nameof(DocumentsModuleRequired)] = "მოდული „დოკუმენტები“ ვერ გამოირთვება.",
         [nameof(UnknownDiscoveryCategory)] = "Discovery-ის უცნობი კატეგორია „{0}“.",
         [nameof(UnknownDocumentType)] = "დოკუმენტის უცნობი ტიპი „{0}“.",
         [nameof(ProjectNameLength)] = "პროექტის სახელი 1-დან {0} სიმბოლომდე უნდა იყოს",

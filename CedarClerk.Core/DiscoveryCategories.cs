@@ -21,7 +21,7 @@ public static class DiscoveryCategories
 
     public static string ForProjectType(string? value) => value switch
     {
-        ProjectTypes.FullGame or ProjectTypes.Jam or ProjectTypes.Prototype or ProjectTypes.Released => Games,
+        ProjectTypes.FullGame => Games,
         ProjectTypes.Product => AppsTools,
         _ => Other,
     };

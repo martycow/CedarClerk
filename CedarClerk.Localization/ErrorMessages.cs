@@ -246,6 +246,8 @@ public static partial class ErrorMessages
     public static string AssetThumbBudgetExhausted(long budget) => T("The preview allowance is used up — the limit is {0} MB. The index still works; new previews are not being stored.", [budget / (1024 * 1024)]);
 
     public static string UnknownProjectType(string type) => T("Unknown project type '{0}'.", [type]);
+    public static string UnknownModuleKey(string key) => T("Unknown module '{0}'.", [key]);
+    public static string DocumentsModuleRequired => T("The Documents module cannot be switched off.");
     public static string UnknownProjectEngine(string engine) => T("Unknown engine '{0}'.", [engine]);
     public static string UnknownProjectPlatform(string platform) => T("Unknown platform '{0}'.", [platform]);
 

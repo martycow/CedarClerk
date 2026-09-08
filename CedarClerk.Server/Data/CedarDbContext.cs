@@ -78,6 +78,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<ShowcaseStatDaily> ShowcaseStatDailies => Set<ShowcaseStatDaily>();
     public DbSet<ShowcaseFollower> ShowcaseFollowers => Set<ShowcaseFollower>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+    public DbSet<ProjectModule> ProjectModules => Set<ProjectModule>();
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<CanvasBoard> CanvasBoards => Set<CanvasBoard>();
@@ -232,7 +233,15 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<Draft>().Property(d => d.DocumentType).HasDefaultValue(DocumentTypes.Post);
         // Same reason as the line above — EF ignores the property initialiser, and a project with an
         // empty type would fall through StarterDocumentType's unknown branch.
-        builder.Entity<Project>().Property(p => p.ProjectType).HasDefaultValue(ProjectTypes.FullGame);
+        builder.Entity<Project>().Property(p => p.CreatedFromPreset).HasDefaultValue(ProjectTypes.FullGame);
+        // ADR-293 — one switch per (project, key); the rows go with the project, and EF cascades them
+        // through the navigation, which is what lets a plain Remove(project) take them along.
+        builder.Entity<ProjectModule>().HasKey(m => new { m.ProjectId, m.ModuleKey });
+        builder.Entity<ProjectModule>()
+            .HasOne(m => m.Project)
+            .WithMany(p => p.Modules)
+            .HasForeignKey(m => m.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
         // Same lesson again (T-120): EF ignores the property initialiser, so without this the
         // ADD COLUMN backfills every existing project with 0 and their first sprint would be "S0".
         builder.Entity<Project>().Property(p => p.NextSprintNumber).HasDefaultValue(1);
@@ -477,6 +486,7 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         // OwnerId here is the project owner, not the invitee — a membership is the owner's row about
         // somebody else, so it filters like the rest of the project.
         builder.Entity<ProjectMember>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<ProjectModule>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Team>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<TeamMember>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<PublishJob>().HasQueryFilter(e => e.OwnerId == TenantId);

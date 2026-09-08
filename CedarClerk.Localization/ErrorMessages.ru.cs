@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "За один раз принимается не больше {0} превью.",
         [nameof(AssetThumbBudgetExhausted)] = "Место под превью исчерпано — предел {0} МБ. Индекс работает, новые превью не сохраняются.",
         [nameof(UnknownProjectType)] = "Неизвестный тип проекта «{0}».",
+        [nameof(UnknownModuleKey)] = "Неизвестный модуль «{0}».",
+        [nameof(DocumentsModuleRequired)] = "Модуль «Документы» нельзя выключить.",
         [nameof(UnknownDiscoveryCategory)] = "Неизвестная категория Discovery «{0}».",
         [nameof(UnknownDocumentType)] = "Неизвестный тип документа «{0}».",
         [nameof(ProjectNameLength)] = "Имя проекта — от 1 до {0} символов.",

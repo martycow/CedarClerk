@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "Höchstens {0} Vorschaubilder werden auf einmal angenommen.",
         [nameof(AssetThumbBudgetExhausted)] = "Das Kontingent für Vorschaubilder ist aufgebraucht — die Grenze liegt bei {0} MB. Der Index funktioniert weiter; neue Vorschaubilder werden nicht gespeichert.",
         [nameof(UnknownProjectType)] = "Unbekannter Projekttyp „{0}“.",
+        [nameof(UnknownModuleKey)] = "Unbekanntes Modul „{0}“.",
+        [nameof(DocumentsModuleRequired)] = "Das Modul „Dokumente“ lässt sich nicht abschalten.",
         [nameof(UnknownDiscoveryCategory)] = "Unbekannte Discovery-Kategorie „{0}“.",
         [nameof(UnknownDocumentType)] = "Unbekannter Dokumenttyp „{0}“.",
         [nameof(ProjectNameLength)] = "Der Projektname muss 1–{0} Zeichen lang sein",

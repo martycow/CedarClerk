@@ -173,6 +173,8 @@ public static partial class ErrorMessages
         [nameof(AssetThumbBatchTooLarge)] = "Au plus {0} aperçus sont acceptés à la fois.",
         [nameof(AssetThumbBudgetExhausted)] = "Le quota d'aperçus est épuisé — la limite est de {0} Mo. L'index fonctionne toujours ; les nouveaux aperçus ne sont pas stockés.",
         [nameof(UnknownProjectType)] = "Type de projet inconnu « {0} ».",
+        [nameof(UnknownModuleKey)] = "Module inconnu « {0} ».",
+        [nameof(DocumentsModuleRequired)] = "Le module « Documents » ne peut pas être désactivé.",
         [nameof(UnknownDiscoveryCategory)] = "Catégorie Discovery inconnue « {0} ».",
         [nameof(UnknownDocumentType)] = "Type de document inconnu « {0} ».",
         [nameof(ProjectNameLength)] = "Le nom du projet doit faire de 1 à {0} caractères",

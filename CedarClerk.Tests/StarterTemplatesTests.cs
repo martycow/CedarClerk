@@ -8,12 +8,9 @@ public class StarterTemplatesTests
 {
     [Theory]
     [InlineData(DocumentTypes.Design, ProjectTypes.FullGame, "en", "Core loop")]
-    [InlineData(DocumentTypes.Design, ProjectTypes.Jam, "en", "Submission checklist")]
-    [InlineData(DocumentTypes.Note, ProjectTypes.Prototype, "en", "The question this prototype answers")]
-    [InlineData(DocumentTypes.Changelog, ProjectTypes.Released, "en", "Unreleased")]
     [InlineData(DocumentTypes.Changelog, ProjectTypes.Product, "en", "Unreleased")]
     [InlineData(DocumentTypes.Design, ProjectTypes.FullGame, "ru", "Концепт")]
-    [InlineData(DocumentTypes.Note, ProjectTypes.Prototype, "ru", "Вопрос, на который отвечает прототип")]
+    [InlineData(DocumentTypes.Changelog, ProjectTypes.Product, "ru", "Не выпущено")]
     public void Each_starter_gets_its_skeleton_in_the_right_language(string doc, string project, string lang, string expected)
     {
         Assert.Contains(expected, Headings(StarterTemplates.For(doc, project, lang)));
@@ -37,10 +34,13 @@ public class StarterTemplatesTests
             .ToList();
     }
 
-    [Fact]
-    public void Empty_project_starter_carries_no_skeleton()
+    [Theory]
+    [InlineData(ProjectTypes.Empty)]
+    [InlineData(ProjectTypes.Work)]
+    [InlineData(ProjectTypes.Vault)]
+    public void A_note_starter_carries_no_skeleton(string projectType)
     {
-        using var doc = JsonDocument.Parse(StarterTemplates.For(DocumentTypes.Note, ProjectTypes.Empty, "en"));
+        using var doc = JsonDocument.Parse(StarterTemplates.For(DocumentTypes.Note, projectType, "en"));
         var content = doc.RootElement.GetProperty("content");
         Assert.Equal(1, content.GetArrayLength());
         Assert.Equal("paragraph", content[0].GetProperty("type").GetString());
@@ -57,9 +57,8 @@ public class StarterTemplatesTests
 
     [Theory]
     [InlineData(DocumentTypes.Design, ProjectTypes.FullGame)]
-    [InlineData(DocumentTypes.Design, ProjectTypes.Jam)]
-    [InlineData(DocumentTypes.Note, ProjectTypes.Prototype)]
-    [InlineData(DocumentTypes.Changelog, ProjectTypes.Released)]
+    [InlineData(DocumentTypes.Note, ProjectTypes.Vault)]
+    [InlineData(DocumentTypes.Changelog, ProjectTypes.Product)]
     public void Every_skeleton_is_a_valid_tiptap_doc(string docType, string projectType)
     {
         using var doc = JsonDocument.Parse(StarterTemplates.For(docType, projectType, "en"));

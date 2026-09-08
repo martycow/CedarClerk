@@ -14,12 +14,9 @@ public static class StarterTemplates
         var ru = language == Languages.Russian;
         return (documentType, projectType) switch
         {
-            (DocumentTypes.Design, ProjectTypes.Jam) => Sections(DocumentTexts.JamSections(ru)),
             (DocumentTypes.Design, _) => Sections(DocumentTexts.DesignSections(ru)),
-            // An Empty project promises nothing, so its first note carries no skeleton either.
-            (DocumentTypes.Note, ProjectTypes.Empty) => DocJson.Doc([DocJson.Paragraph("")]),
-            (DocumentTypes.Note, _) => Sections(DocumentTexts.PrototypeSections(ru)),
             (DocumentTypes.Changelog, _) => Sections(DocumentTexts.ChangelogSections(ru)),
+            // A note promises nothing, so it carries no skeleton either.
             _ => DocJson.Doc([DocJson.Paragraph("")]),
         };
     }

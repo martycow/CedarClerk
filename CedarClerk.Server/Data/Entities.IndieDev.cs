@@ -32,11 +32,14 @@ public class Project
     public string Description { get; set; } = "";
 
     /// <summary>
-    /// One of <see cref="CedarClerk.Core.ProjectTypes"/>. Decides which document the project is
-    /// created with, and nothing else after that — a project is not locked out of any document type
-    /// by how it started.
+    /// One of <see cref="CedarClerk.Core.ProjectTypes"/> — the preset the project was created from
+    /// (ADR-293). It decides the starter document and the initial <see cref="Modules"/>, then keeps
+    /// only its icon and vocabulary: what a project can do is the module rows, never this.
     /// </summary>
-    public string ProjectType { get; set; } = CedarClerk.Core.ProjectTypes.FullGame;
+    public string CreatedFromPreset { get; set; } = CedarClerk.Core.ProjectTypes.FullGame;
+
+    /// <summary>One row per <see cref="CedarClerk.Core.ProjectModules"/> key, switched-off ones included.</summary>
+    public List<ProjectModule> Modules { get; set; } = [];
 
     /// <summary>
     /// ADR-243 — the fixed public category used by Discovery. It has no effect until the owner
@@ -155,6 +158,22 @@ public class Project
     /// exactly the confusion the number exists to prevent.
     /// </summary>
     public int NextSprintNumber { get; set; } = 1;
+}
+
+/// <summary>
+/// ADR-293 — one switch of one project. A row exists for every <see cref="CedarClerk.Core.ProjectModules"/>
+/// key from the moment the project is created, so the toggles can list the whole set; switching
+/// one off hides its section and deletes nothing. Keyed by (ProjectId, ModuleKey) — there is no
+/// second row to make about the same switch. OwnerId is the project's, which is what lets the
+/// tenant filter apply to it like every other row a project owns.
+/// </summary>
+public class ProjectModule
+{
+    public string OwnerId { get; set; } = default!;
+    public Guid ProjectId { get; set; }
+    public Project? Project { get; set; }
+    public string ModuleKey { get; set; } = "";
+    public bool Enabled { get; set; }
 }
 
 /// <summary>

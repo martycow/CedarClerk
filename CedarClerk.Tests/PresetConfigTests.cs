@@ -16,11 +16,12 @@ public class ProjectPresetConfigTests
     }
 
     [Fact]
-    public void A_known_project_type_survives_and_so_does_a_legacy_one()
+    public void A_known_project_type_survives_and_a_retired_one_falls_back()
     {
         Assert.Equal(ProjectTypes.Blog, ProjectPresetConfig.Parse("""{"projectType":"blog"}""").ProjectType);
-        // An old project's stored type still parses — that is why ProjectTypes keeps its legacy list.
-        Assert.Equal(ProjectTypes.Jam, ProjectPresetConfig.Parse("""{"projectType":"jam"}""").ProjectType);
+        Assert.Equal(ProjectTypes.Vault, ProjectPresetConfig.Parse("""{"projectType":"vault"}""").ProjectType);
+        // "jam" left the offer with ADR-293; a preset still naming it starts the default project instead.
+        Assert.Equal(ProjectPresetConfig.Default.ProjectType, ProjectPresetConfig.Parse("""{"projectType":"jam"}""").ProjectType);
     }
 
     [Fact]

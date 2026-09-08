@@ -28,6 +28,19 @@ public static class ProjectEndpoints
     /// while nothing has shipped — a planned build is a plan, not a version anyone can play.</summary>
     public sealed record BuildSummary(int Count, string? LatestVersion);
 
+    /// <summary>The switch rows of each named project, as the map the API speaks — key to on/off.</summary>
+    public static async Task<Dictionary<Guid, Dictionary<string, bool>>> ModulesAsync(CedarDbContext db, string ownerId, IEnumerable<Guid> projectIds)
+    {
+        var ids = projectIds.ToList();
+        var rows = await db.ProjectModules
+            .Where(m => m.OwnerId == ownerId && ids.Contains(m.ProjectId))
+            .ToListAsync();
+        return rows.GroupBy(m => m.ProjectId).ToDictionary(g => g.Key, g => ToMap(g));
+    }
+
+    public static Dictionary<string, bool> ToMap(IEnumerable<ProjectModule> rows) =>
+        rows.OrderBy(m => ProjectModules.Order(m.ModuleKey)).ToDictionary(m => m.ModuleKey, m => m.Enabled);
+
     public static async Task<Dictionary<Guid, BuildSummary>> BuildSummariesAsync(CedarDbContext db, string ownerId)
     {
         var builds = await db.Builds
@@ -230,6 +243,8 @@ public static class ProjectEndpoints
     // T-247 — Engine/TargetPlatforms are null for "leave alone", so a client written before they
     // existed keeps working; "" and [] clear them.
     public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl, string? Engine = null, string[]? TargetPlatforms = null);
+    /// <summary>ADR-293 — the switches to change, by module key; keys left out keep their state.</summary>
+    public record UpdateModulesRequest(Dictionary<string, bool> Modules);
     public record ArchiveProjectRequest(bool Archived);
     public record CreateDocumentRequest(string? DocumentType, string? Title, Guid? PresetId);
     public record UpdateDocumentTypeRequest(string DocumentType);
@@ -296,13 +311,15 @@ public static class ProjectEndpoints
 
             var builds = await BuildSummariesAsync(db, uid);
             var lastPublished = await LastPublishedAsync(db, uid);
+            var modules = await ModulesAsync(db, uid, projects.Select(p => p.Id));
 
             return Results.Ok(projects.Select(p => new
             {
                 p.Id,
                 p.Name,
                 p.Description,
-                p.ProjectType,
+                createdFromPreset = p.CreatedFromPreset,
+                modules = modules.GetValueOrDefault(p.Id) ?? new Dictionary<string, bool>(),
                 p.DiscoveryCategory,
                 p.CoverUrl,
                 p.Engine,
@@ -351,12 +368,15 @@ public static class ProjectEndpoints
                 .Select(g => new { Status = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.Status, g => g.Count);
 
+            var modules = await ModulesAsync(db, uid, [id]);
+
             return Results.Ok(new
             {
                 project.Id,
                 project.Name,
                 project.Description,
-                project.ProjectType,
+                createdFromPreset = project.CreatedFromPreset,
+                modules = modules.GetValueOrDefault(id) ?? new Dictionary<string, bool>(),
                 project.DiscoveryCategory,
                 project.CoverUrl,
                 project.Engine,
@@ -433,14 +453,22 @@ public static class ProjectEndpoints
             var name = req.Name.Trim();
             var description = req.Description?.Trim();
             if (string.IsNullOrEmpty(description)) description = preset?.Description ?? "";
+            // ADR-293 — the preset unfolds into the module rows here and has no say afterwards.
+            var modules = ProjectModules.ForPreset(projectType);
+            if (modules is null)
+                return Results.Json(new { error = ErrorMessages.UnknownProjectType(projectType) }, statusCode: StatusCodes.Status400BadRequest);
             var project = new Project
             {
                 OwnerId = uid,
                 Name = name,
                 Description = description,
-                ProjectType = projectType,
+                CreatedFromPreset = projectType,
                 DiscoveryCategory = DiscoveryCategories.ForProjectType(projectType),
             };
+            project.Modules.AddRange(modules.Select(m => new ProjectModule
+            {
+                OwnerId = uid, ProjectId = project.Id, ModuleKey = m.Key, Enabled = m.Value,
+            }));
 
             var title = string.IsNullOrWhiteSpace(req.DocumentTitle)
                 ? preset?.DocumentTitle ?? name
@@ -481,6 +509,36 @@ public static class ProjectEndpoints
                 project.Id, project.Name, project.Description, project.CoverUrl, project.Engine,
                 targetPlatforms = ProjectPlatforms.Parse(project.TargetPlatforms),
             });
+        });
+
+        // ADR-293 — the switches. Off hides a section and deletes nothing, so this is not a
+        // destructive call and asks for no confirmation; documents never go off (the invariant lives
+        // in ProjectModules, not the schema), and a key outside the list is refused rather than stored.
+        group.MapPut("/{id:guid}/modules", async (Guid id, UpdateModulesRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var project = await db.Projects.Include(p => p.Modules).FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
+            if (project is null) return Results.NotFound();
+
+            var changes = req.Modules ?? new Dictionary<string, bool>();
+            if (ProjectModules.Refuse(changes) is { } refused)
+            {
+                var error = refused.Reason == ProjectModules.Refusal.UnknownKey
+                    ? ErrorMessages.UnknownModuleKey(refused.Key)
+                    : ErrorMessages.DocumentsModuleRequired;
+                return Results.Json(new { error }, statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            foreach (var (key, enabled) in changes)
+            {
+                var row = project.Modules.FirstOrDefault(m => m.ModuleKey == key);
+                if (row is null)
+                    project.Modules.Add(new ProjectModule { OwnerId = uid, ProjectId = id, ModuleKey = key, Enabled = enabled });
+                else
+                    row.Enabled = enabled;
+            }
+            await db.SaveChangesAsync();
+            return Results.Ok(new { modules = ToMap(project.Modules) });
         });
 
         // T-159 (ADR-134) — the public game page's switch. The slug is slugified server-side and
