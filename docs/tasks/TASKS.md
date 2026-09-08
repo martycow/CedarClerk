@@ -87,7 +87,7 @@ see them.
   do: the account is his. Until then nothing is being measured, which is the honest state and not a
   defect. `/privacy` already names PostHog — it is dated 1 September 2026 and goes to the lawyer with
   the rest of the text under the `BUSINESS.md` §2 gate.
-- Production: **0.20.0 on the droplet, deployed 01.09.2026**, `LIVE` = `4755566`, `LIVE-PREV` = `95fa976`. Everything that had been queued since 0.12.0 is live: the `UI_V2` port and fidelity pass, multitenancy (ADR-206…213), the showcase site and screen, the reference board (ADR-217…219), the 0.17.0 maintainer batch, Waves 1–2, the dialogue tool, and sprint v0.2.0. **The `95fa976` project-frame design (ADR-234 as it was then) was live for three hours and this deploy removed it** — reverted on master by Marty's call, recoverable from the reflog. `LIVE`/`LIVE-PREV` never go to origin (the local-tag rule in CLAUDE.md); the `0.20.0` version tag is local so far.
+- Production: `cedar status` reports the running version. Local `LIVE` identifies the verified deployment and `LIVE-PREV` its rollback target; neither tag is pushed.
 - **The version string can no longer tell two builds apart**: the deploy before this one also called itself 0.20.0, so the health check's version match proved nothing. What proved the swap was `GET /api/teams` answering 401 instead of 404. Bumped to 0.20.1 on 01.09.2026 for exactly this reason; the rule stands for every deploy after it.
 - Sprint v0.2.0 is **closed on master (01.09.2026)**: T-331/T-337/T-338/T-350/T-353/T-358/T-359/T-361
   are done, and T-358 closed T-301/T-302/T-304 with them (CHANGELOG 01.09, ADR-234/235). Three
@@ -100,5 +100,5 @@ see them.
   only. **Committed to master as `3b93004`, not deployed.**
   `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
   from the one on the droplet — which the previous pair of deploys could not do.
-- Active branch: `claude/project-modules` — `0.23.0`, project modules (ADR-293) on top of master's `0.22.3` (project cleanup and the external MooTool operations module, ADR-291). Local `LIVE` remains on `0.22.2`; nothing here deploys. `cedar status` reports the current production version.
+- Active release: `master`, 0.23.3 — forest authentication (ADR-298), based on the consolidated authentication and compact-provider releases.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.

@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-09-08 — Forest authentication (ADR-298, feature branch)
+## 2026-09-08 — Forest authentication 0.23.3 (ADR-298)
 
 Login, registration, external completion and password recovery use the selected
 forest composition: approved logo, centered paper sheet, botanical ornament,
@@ -17,7 +17,8 @@ density contracts, and web/server build passed. Eleven authentication contrast
 pairs cover both themes. Visual QA compares the selected reference with the
 built app and checks narrow Russian forms. Provider visibility uses a local
 health fixture during visual QA; no real Google/Telegram account was signed in.
-This feature branch has not been merged or deployed.
+Release 0.23.3 prepares the forest authentication changes for master and deployment.
+The deployment result is verified through public health and the local LIVE tag.
 
 ## 2026-09-08 — Compact provider button 0.23.2 (ADR-297)
 

@@ -42,7 +42,7 @@ Final result: passed
 
 - The supplied approved logo has different proportions from its image-generated rendering; it is intentionally kept intact. The generated sprig and existing Telegram glyph differ slightly in detail from the source. These are minor asset-fidelity differences.
 - Real Google/Telegram account confirmation, email delivery and mobile device keyboards were not exercised. Provider account testing requires configured services and the registered public origin.
-- The feature branch is locally implemented and committed separately; this review does not certify deployment.
+- This report certifies local implementation and visual checks; deployment is verified separately through public health and the LIVE tag.
 
 ## Implementation checklist
 
