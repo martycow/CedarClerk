@@ -19,9 +19,12 @@ public static class DraftRevisionService
 
     // ADR-065 — a ceiling on the *edit* history only. The autosave fires on every pause in typing,
     // so without one a few weeks of writing is hundreds of megabytes of near-identical documents in
-    // a SQLite file that gets copied to a microSD every night. Publication revisions are never
-    // pruned: they are the baselines the publish guard diffs against.
-    private const int MaxSaveRevisionsPerLanguage = 50;
+    // a SQLite file that gets copied off the box every night. Publication revisions are never
+    // pruned: they are the baselines the publish guard diffs against. Two limits, whichever bites
+    // first: the newest 50 per draft and language, and nothing older than 90 days — the count
+    // alone let a document that was worked on once keep its fifty full copies forever.
+    public const int MaxSaveRevisionsPerLanguage = 50;
+    public static readonly TimeSpan MaxSaveRevisionAge = TimeSpan.FromDays(90);
 
     /// <summary>
     /// Records a revision unless the newest one for the same target already holds this exact
@@ -58,16 +61,29 @@ public static class DraftRevisionService
 
     private static async Task PruneSavesAsync(CedarDbContext db, Guid draftId, string language, CancellationToken ct)
     {
-        var cutoff = await db.DraftRevisions
+        var countCutoff = await db.DraftRevisions
             .Where(r => r.DraftId == draftId && r.Language == language && r.Kind == Kinds.Save)
             .OrderByDescending(r => r.CreatedAt)
             .Skip(MaxSaveRevisionsPerLanguage - 1)
             .Select(r => (DateTime?)r.CreatedAt)
             .FirstOrDefaultAsync(ct);
-        if (cutoff is null) return;
+        var ageCutoff = DateTime.UtcNow - MaxSaveRevisionAge;
 
         await db.DraftRevisions
-            .Where(r => r.DraftId == draftId && r.Language == language && r.Kind == Kinds.Save && r.CreatedAt <= cutoff)
+            .Where(r => r.DraftId == draftId && r.Language == language && r.Kind == Kinds.Save
+                        && (r.CreatedAt < ageCutoff || (countCutoff != null && r.CreatedAt <= countCutoff)))
+            .ExecuteDeleteAsync(ct);
+    }
+
+    /// <summary>
+    /// The age limit over every owner's rows at once — for the nightly job, since the per-save
+    /// pruning above only ever runs on a document somebody is still editing. Returns the count removed.
+    /// </summary>
+    public static Task<int> PruneExpiredSavesAsync(CedarDbContext db, DateTime now, CancellationToken ct = default)
+    {
+        var ageCutoff = now - MaxSaveRevisionAge;
+        return db.DraftRevisions
+            .Where(r => r.Kind == Kinds.Save && r.CreatedAt < ageCutoff)
             .ExecuteDeleteAsync(ct);
     }
 

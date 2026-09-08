@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-08 — Autosave history gets an age limit (ADR-065 amended)
+
+`DraftRevisions` was 13 MB of a 17 MB production database: full document copies, capped at 50 per draft
+and language but never by age, so a document worked on once kept its fifty copies for good. The ceiling is
+now two limits, whichever bites first — the newest 50 and the last 90 days. The per-save pruning applies
+both; the nightly `PruneSaveRevisionsJob` (04:20 UTC, after the snapshot jobs) applies the age limit across
+every owner, because the per-save path never reaches a document nobody is editing. Publication and restore
+revisions stay untouched, as before. Two tests pin the age rule and the job's selectivity.
+
 ## 2026-09-08 — Project modules (ADR-293)
 
 A project now holds the set of modules it has switched on; its type is only the preset it was created from.

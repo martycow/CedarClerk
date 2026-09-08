@@ -236,6 +236,11 @@ builder.Services.AddQuartz(q =>
     var downgradeJobKey = new JobKey("DowngradeExpiredPlans");
     q.AddJob<DowngradeExpiredPlansJob>(opts => opts.WithIdentity(downgradeJobKey));
     q.AddTrigger(t => t.ForJob(downgradeJobKey).WithSimpleSchedule(s => s.WithIntervalInHours(1).RepeatForever()));
+
+    // Nightly, after the snapshot jobs: the age limit on autosave history (ADR-065)
+    var pruneRevisionsJobKey = new JobKey("PruneSaveRevisions");
+    q.AddJob<PruneSaveRevisionsJob>(opts => opts.WithIdentity(pruneRevisionsJobKey));
+    q.AddTrigger(t => t.ForJob(pruneRevisionsJobKey).WithCronSchedule("0 20 4 * * ?"));
 });
 builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 #endregion

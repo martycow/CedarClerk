@@ -257,4 +257,55 @@ public class DraftRevisionServiceTests
         Assert.Equal(3, DraftRevisionService.BlockCount(Doc("a", "b", "c")));
         Assert.Equal(0, DraftRevisionService.BlockCount("not json at all"));
     }
+
+    // The age half of the ceiling. A count alone let a document worked on once keep its fifty full
+    // copies for as long as the account lived.
+    [Fact]
+    public async Task Saves_older_than_the_age_limit_go_on_the_next_save()
+    {
+        using var db = NewDb();
+        var id = (await SeedDraftAsync(db, Doc("seed"))).Id;
+
+        await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("old"));
+        await db.SaveChangesAsync();
+        await Backdate(db, Doc("old"), DraftRevisionService.MaxSaveRevisionAge + TimeSpan.FromDays(1));
+
+        await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("new"));
+        await db.SaveChangesAsync();
+
+        var saves = await db.DraftRevisions.Where(r => r.Kind == DraftRevisionService.Kinds.Save).ToListAsync();
+        Assert.Equal([Doc("new")], saves.Select(r => r.CedarJson));
+    }
+
+    [Fact]
+    public async Task The_nightly_prune_drops_old_saves_and_nothing_else()
+    {
+        using var db = NewDb();
+        var id = (await SeedDraftAsync(db, Doc("seed"))).Id;
+        var old = DraftRevisionService.MaxSaveRevisionAge + TimeSpan.FromDays(1);
+
+        await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("old save"));
+        await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("old publish"), DraftRevisionService.Kinds.Telegram, "chat");
+        await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("old restore"), DraftRevisionService.Kinds.Restore);
+        await DraftRevisionService.RecordAsync(db, id, Languages.Russian, "T", Doc("fresh save"));
+        await db.SaveChangesAsync();
+        foreach (var doc in new[] { "old save", "old publish", "old restore" }) await Backdate(db, Doc(doc), old);
+
+        var removed = await DraftRevisionService.PruneExpiredSavesAsync(db, DateTime.UtcNow);
+
+        Assert.Equal(1, removed);
+        var left = await db.DraftRevisions.Select(r => r.CedarJson).ToListAsync();
+        Assert.Equal(3, left.Count);
+        Assert.DoesNotContain(Doc("old save"), left);
+        Assert.Contains(Doc("old publish"), left);
+        Assert.Contains(Doc("old restore"), left);
+        Assert.Contains(Doc("fresh save"), left);
+    }
+
+    private static Task<int> Backdate(CedarDbContext db, string cedarJson, TimeSpan by)
+    {
+        var at = DateTime.UtcNow - by;
+        return db.DraftRevisions.Where(r => r.CedarJson == cedarJson)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.CreatedAt, at));
+    }
 }
