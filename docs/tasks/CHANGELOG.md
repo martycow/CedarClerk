@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-09-08 — Project modules (ADR-293)
+
+A project now holds the set of modules it has switched on; its type is only the preset it was created from.
+`Project.ProjectType` is renamed to `CreatedFromPreset` by `RenameColumn`, and the new `ProjectModules` table
+carries one `(ProjectId, ModuleKey, Enabled)` row per key — `documents, assets, site, posts, calendar, metrics,
+tasks, planner, builds, canvas, dialogues` — with `OwnerId` for the tenant filter and a cascading foreign key.
+The backfill rides in the same migration: every existing project is unfolded from its preset by the matrix
+in ADR-293, and the retired `jam`/`prototype`/`released` presets fold into `fullgame`/`product` first, so no
+project is left without rows. The offer is now Empty / Blog / Game / Product / Work / Vault; Work and Vault
+start with a blank note, like Empty.
+
+`ProjectModules` (Core) holds the keys, the preset matrix and the two invariants the schema does not:
+`documents` never goes off, and an unknown key is refused. `PUT /api/projects/{id}/modules` is the write path
+(a partial map; refused writes answer 400 with `UnknownModuleKey` / `DocumentsModuleRequired`, in nine
+languages), and every project DTO answers `createdFromPreset` and a `modules` map. Creating a project
+unfolds its preset into rows in the same transaction as its first document.
+
+Angular reads the renamed field and the new map, and its type union drops the retired presets — the
+sidebar still hardcodes its sections and ignores the map by design: that is step 14a, the Settings toggles 14b.
+`docs/ROADMAP.md`, named by the session brief, does not exist; TASKS.md carries the status instead.
+
+Verification: 1972 backend tests (16 new in `ProjectModulesTests`: the matrix per preset, the migration
+backfill on a pre-migration schema including retired presets, the documents invariant, unknown-key refusal,
+cascade delete), `SchemaDriftGuardTests` green, frontend typecheck and unit tests, icon inventory current.
+The migration SQL was reviewed before anything was applied, then applied to the dev database (two projects,
+eleven rows each). `Consts.CurrentVersion` is `0.23.0`, tag `0.23.0` on the branch. Production is not
+touched; the deploy is a separate command.
+
 ## 2026-09-07 — Localization ownership (ADR-292)
 
 Centralize language resources and presentation rules in `CedarClerk.Localization`.

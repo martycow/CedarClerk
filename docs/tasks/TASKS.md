@@ -13,6 +13,7 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [ ] Project modules, step 13a (ADR-293) — `ProjectModule` rows replace the type as the source of what a project can do; `Project.ProjectType` is `CreatedFromPreset`, the offer gains Work and Vault and loses jam/prototype/released, `PUT /api/projects/{id}/modules` is the write path. Done on `claude/project-modules`, **not deployed**: the migration backfills production's two projects (Dev Dairy Diary → Blog column, Cedar Station → Game column). Next: 14a wires the sidebar to the `modules` map, 14b the Settings toggles #indiedev #backend P1
 - [x] Replace the operations console with Rust/Ratatui — animated dashboard, JSON program profiles, streamed actions, deploy/resume/rollback, local tests and bot-disabled local serving; installed as native `cedar.exe`. ADR-252 #cli #operations P1
 - [x] Screenshot-derived UI coherence pass — one persisted sidebar model, task-specific page measures, fluid panes, one scroll owner per axis, shared row and selection anatomy, mutually exclusive overlays, actionable empty states, and an editorial Discovery zero state across the full 18-screen evidence set. ADR-246 #design #ux #a11y P0
 - [x] `T-357` Advanced Showcase editor — an ordered safe-block model, block list + live result + per-block inspector, reviewed AI prose suggestions, and canonical `/showcase/{slug}` routes for Projects of any kind. ADR-245 #showcase #editor P3
@@ -97,5 +98,5 @@ see them.
   only. **Committed to master as `3b93004`, not deployed.**
   `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
   from the one on the droplet — which the previous pair of deploys could not do.
-- Active branch: `master` — local release `0.22.3`, including project cleanup and the external MooTool operations module (ADR-291). Local `LIVE` remains on `0.22.2`; this merge does not deploy. `cedar status` reports the current production version.
+- Active branch: `claude/project-modules` — `0.23.0`, project modules (ADR-293) on top of master's `0.22.3` (project cleanup and the external MooTool operations module, ADR-291). Local `LIVE` remains on `0.22.2`; nothing here deploys. `cedar status` reports the current production version.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.

@@ -264,8 +264,9 @@ checks are shaped by.
 - **Project and export presets.** A project preset appears in New project and builds what it describes
   (type, first document, its title, the description), and editing the fields after picking it still
   wins. An export preset fills the Publish / Export tab's rack in one pick, and a language the post does not
-  have is ignored rather than ticked. New project offers Empty / Blog / Game / Product; Empty's first
-  note has no skeleton, and an older jam or prototype project still names its type on the dashboard.
+  have is ignored rather than ticked. New project offers Empty / Blog / Game / Product / Work / Vault; a
+  note starter has no skeleton, and a project created before ADR-293 still names its preset on the
+  dashboard. `GET /api/projects` answers `createdFromPreset` and a `modules` map of all eleven keys.
 - **Post card thumbnails.** On an account with existing posts the first listing fills covers in (50 at a
   time), a post with no picture keeps its type icon, and adding or removing the first image changes the
   plate on the next listing.
