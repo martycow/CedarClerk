@@ -46,6 +46,7 @@ export class AnalyticsService {
     }
 
     async enableIfConsented(): Promise<void> {
+        if (location.pathname === '/reset-password') return;
         if (this.consent.state() !== 'granted') return;
         await this.readConfig();
         if (!this.config || this.posthog) return;
@@ -55,6 +56,7 @@ export class AnalyticsService {
     }
 
     capture(event: string, properties?: Record<string, unknown>): void {
+        if (location.pathname === '/reset-password') return;
         this.posthog?.capture(event, properties);
     }
 

@@ -4,6 +4,8 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Georgian = new Dictionary<string, string>
     {
+        [nameof(PasswordRecoveryUnavailable)] = "პაროლის აღდგენა დროებით მიუწვდომელია. სცადეთ მოგვიანებით.",
+        [nameof(PasswordResetInvalid)] = "ბმული არასწორია ან ვადაგასულია, ან პაროლი მოთხოვნებს არ აკმაყოფილებს. მოითხოვეთ ახალი ბმული და სცადეთ ხელახლა.",
         [nameof(DraftNotFound)] = "მონახაზი ვერ მოიძებნა.",
         [nameof(InvalidToken)] = "არასწორი ტოკენი.",
         [nameof(DescriptionRequired)] = "აღწერა აუცილებელია.",

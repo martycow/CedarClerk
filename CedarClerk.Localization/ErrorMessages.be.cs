@@ -4,6 +4,8 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Belarusian = new Dictionary<string, string>
     {
+        [nameof(PasswordRecoveryUnavailable)] = "Аднаўленне пароля часова недаступнае. Паспрабуйце пазней.",
+        [nameof(PasswordResetInvalid)] = "Спасылка несапраўдная або пратэрмінаваная, ці пароль не адпавядае патрабаванням. Запытайце новую спасылку і паспрабуйце зноў.",
         [nameof(DraftNotFound)] = "Чарнавік не знойдзены.",
         [nameof(InvalidToken)] = "Недзейсны токен.",
         [nameof(DescriptionRequired)] = "Патрэбна апісанне.",

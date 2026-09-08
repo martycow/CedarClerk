@@ -2,12 +2,10 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ExternalAuthService } from '../core/external-auth.service';
-import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { AuthLayoutComponent } from '../shared/auth-layout.component';
 import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
 
 // T-003 / ADR-237 — where the Google callback lands somebody who has no account yet. The provider
@@ -19,11 +17,11 @@ import { InputComponent } from '../bench/forms/input.component';
 @Component({
     selector: 'app-external-complete',
     imports: [
-        CedarLogoComponent, LangSwitchComponent,
-        ButtonComponent, InputComponent, IconComponent,
+        AuthLayoutComponent, LangSwitchComponent,
+        ButtonComponent, InputComponent,
     ],
     templateUrl: 'external-complete.component.html',
-    styleUrls: ['../pages/register.component.css'],
+    styleUrls: ['auth-form.css'],
 })
 export class ExternalCompleteComponent {
     /** Consts.URLs.TenantHost — where <name> becomes an address, same as on /register. */
@@ -34,7 +32,6 @@ export class ExternalCompleteComponent {
     private external = inject(ExternalAuthService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
-    theme = inject(ThemeService);
     t = inject(LocaleService).t;
 
     inviteCode = '';
@@ -81,6 +78,7 @@ export class ExternalCompleteComponent {
     }
 
     async submit() {
+        if (this.busy()) return;
         this.busy.set(true);
         this.error.set('');
         const result = await this.external.complete(this.inviteCode, this.username());

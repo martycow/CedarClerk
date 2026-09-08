@@ -7,6 +7,8 @@ import { DebugLogService } from './debug-log.service';
 // panel — the only way (short of SSH-ing into the server) to see the raw body of a failed request,
 // e.g. a Telegram publish rejection with its full server-side error text.
 export const debugLogInterceptor: HttpInterceptorFn = (req, next) => {
+    // Auth payloads include passwords, signed identities and recovery tokens.
+    if (/\/api\/auth(?:\/|\?|$)/.test(req.url)) return next(req);
     const log = inject(DebugLogService);
     const requestBody = req.body instanceof FormData ? '[FormData]' : req.body;
     const entry = log.start(req.method, req.urlWithParams, requestBody);

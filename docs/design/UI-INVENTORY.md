@@ -367,21 +367,33 @@ The tab body is paper (ADR-154) and every rule in the sheet is scoped to that, s
 
 ## `login.component` / `register.component` (`cedarclerk-web/src/app/pages/{login,register}.component.{ts,html}`)
 
-**The four pages outside the shell** (`/login`, `/register`, `/terms`, `/privacy`) are the one place where nothing above them declares the surface, so the door declares it itself (ADR-166): the canvas (`--canvas`, `--wood-ink`) as the ground, one `.card` on it, and the theme toggle as a plain paper button (ADR-239 clause 12: the doors lose the wood and keep their own toggle). No wood, no deckle, no rotation.
+The authentication forms stay outside the application shell. `AuthLayoutComponent`
+places the approved Sly Cedar artwork and a short introduction beside the paper form
+on a textured canvas. Below 720 px, the logo sits above the form and the introduction
+is hidden. Both themes keep paper surfaces, so the logo uses pine/coral artwork.
+
 
 | Element | Location | Type | Purpose | Loading state | Notes |
 |---|---|---|---|---|---|
-| Theme toggle | both, `app-button.theme-toggle variant="paper" size="sm"` | button | No account menu out here to hold it (ADR-166 clause 2) | N/A | Paper on the canvas; draws the `sun`/`moon` icons, no glyph characters |
+| Theme toggle | shared auth layout, `app-button.theme-toggle variant="paper"` | button | No account menu out here to hold it (ADR-166 clause 2) | N/A | Paper on the canvas; draws the `sun`/`moon` icons, no glyph characters |
 | Language switch | both, `app-lang-switch` | tag / pick-one | RU / EN before there is an account to hold the choice | N/A | Two `app-leaf-tag`s, the endonym in the hint; was a pair of hand-drawn `.lang-code` buttons |
-| Auth card | both, `section.card.auth-card[data-surface="paper"]` | surface | The card the form is written on | N/A | The 8 `wk-decor` spans are gone with the skin — they were `data-skin`-scoped, unmatchable and already `display: none`. `FormsModule` went with the last `ngModel` |
-| Email/password inputs | both, `app-input` (`#cc-login-email`, `#cc-login-pass` kept for the smoke suite) | input | Credentials | N/A | Enter-to-submit is on the `app-input` host, where the event bubbles to — on **both** pages now, which closes the old invite-code-only inconsistency. `autocomplete` is passed through by `app-input`, so the password manager still gets `username`/`current-password` here and `username`/`new-password`/`off` on `/register` |
+| Auth card | both, `section.card.auth-card[data-surface="paper"]` | surface | The card the form is written on | N/A | Shared `auth-form.css`, a native form, and a responsive width inside the branded layout |
+| Email/password inputs | both, `app-input` (`#cc-login-email`, `#cc-login-pass` kept for the smoke suite) | input | Credentials | N/A | Native form submission handles Enter from every field; duplicate submissions are ignored while busy. `autocomplete` is passed through by `app-input`, so the password manager still gets `username`/`current-password` here and `username`/`new-password`/`off` on `/register` |
 | Account name field + availability note | register, `.username-field` (`app-input#cc-reg-username` + `.username-note`) | input | The tenant name, which is also the blog's subdomain — sits between password and invite code, on the register card, because that is where the account's own fields already live | Needed & present — the note reads "Checking…" while the debounced request is in flight | Input is lowercased, trimmed and stripped to `a–z 0–9 -` on the way in, matching `Usernames.IsValidFormat`; the server is still the authority. The `app-input` hint renders the address live (`<name>.cedarclerk.app`) and says it cannot be changed later, since there is no rename endpoint. Availability is checked on a 400 ms debounce against `GET /api/auth/username-available` and **never blocks submit** — a server that cannot be asked leaves the note blank rather than reading as "taken". Tone is `--ok` for free, `--danger` for taken/invalid/reserved |
-| Log in / Create account button | both, `app-button.primary-btn variant="pine"` | button | Submits, navigates to `/editor` on success | Needed & present — `busy()` disables + shows "…" | `.primary-btn` stays as a class on the host, which the inner button fills — the smoke suite binds it |
+| Log in / Create account button | both, `app-button.primary-btn variant="pine"` | button | Submits and preserves the requested destination | Needed & present — `busy()` disables + shows "…" | `.primary-btn` stays as a class on the host, which the inner button fills — the smoke suite binds it |
+| Password recovery | login, `.forgot-link` below the password field | link | Open `/forgot-password` | N/A | Always available; the recovery page reports unavailable email delivery explicitly |
 | Session notice | login, `.session-notice` | toast (inline) | Two things the door has to say before the form: the session ended under an open screen (the expiry interceptor sent them here), or the server did not answer and the session is unknown — the second carries a retry | N/A — the retry shows "Checking…" | `returnUrl` rides the redirect and the form navigates back to it after signing in; `authGuard` sets it too, and `guestGuard` honours it when the cookie turns out to be alive |
-| Error message | login `.error-box[role="alert"]`; register `.field-error` | toast (inline) | Login: the server's sentence ("Invalid email or password", a provider's «Bot domain invalid») in a bordered `--danger-soft` block under the button, and the same block for the `?external=failed` outcome above the password field. Register: server-provided, more specific | N/A | The login block replaced a bare red line that read as page text |
+| Error message | login `.error-box[role="alert"]`; register `.field-error` | toast (inline) | Login: the server's sentence ("Invalid email or password", a provider sign-in failure) in a bordered `--danger-soft` block under the button, and the same block for the `?external=failed` outcome above the password field. Register: server-provided, more specific | N/A | The login block replaced a bare red line that read as page text |
 | Register/Log in cross-link | both, `.auth-footer a[routerLink]` | link | Nav between the two | N/A | Login page notes "invite required" |
 | Terms/Privacy links | register, `.auth-footer` | link | Nav to `/terms`/`/privacy` | N/A | Required by consent copy but not gated by a checkbox |
 | Provider row | both, `app-external-auth-buttons` above `.auth-footer` | panel | T-003 — Google and Telegram, the same pair on both doors: which of sign-in and sign-up happens is the server's decision, not the page's | See the shared row | On login it also carries the two outcomes the callback can send back: `?external=link` prints `externalAuth.linkPrompt` above the password field (an account already holds that address, and the password is what proves it is the same person), and `?external=failed` prints an error. Linking happens after the password is accepted and is deliberately best-effort — a failed link must not become a failed login |
+
+
+ADR-294: `AuthLayoutComponent` owns the theme toggle, approved Sly Cedar horizontal
+artwork (pine/coral on paper), a brand introduction, and responsive two-column layout.
+Login, registration and external completion use `auth-form.css` and native forms;
+Enter submits from every credential field. The login card includes the
+`/forgot-password` link. The shared layout is outside the authenticated shell.
 
 ## `onboarding.component` (`cedarclerk-web/src/app/pages/onboarding.component.{ts,html,css}`)
 
@@ -396,7 +408,7 @@ The mandatory first stop after registration (T-328), a fifth door outside the sh
 
 ## `external-complete.component` (`cedarclerk-web/src/app/pages/external-complete.component.{ts,html}`)
 
-Where the Google callback lands somebody who has no account yet (T-003, ADR-237). The provider gave a verified address and nothing else; this screen asks for the two things it cannot give — the account name and the invite code — and it is the same pair `/register` asks for, drawn from the same fields with the same live blog-address preview. It reuses `register.component.css` rather than owning a second copy.
+Where the Google callback lands somebody who has no account yet (T-003, ADR-237). The provider gave a verified address and nothing else; this screen asks for the two things it cannot give — the account name and the invite code — and it is the same pair `/register` asks for, drawn from the same fields with the same live blog-address preview. It uses `AuthLayoutComponent` and `auth-form.css` alongside the other authentication forms.
 
 **The provider identity is not on this screen and never travels through the browser**: it sits in Identity's external cookie, and the server reads it back when the form is submitted. Nothing the client posts can change whose account this becomes.
 
@@ -1001,3 +1013,12 @@ Collection selects and filter buttons use an explicit desktop size fallback for 
 Documents use narrower default columns and place the folder panel below the list up to 1600px.
 Modal footers wrap long actions. Preview destination settings stack below the strip on phones.
 The [audit report](UI-AUDIT-2026-09-05.md) records browser evidence and coverage limits.
+
+
+## `password-recovery.component` (`/forgot-password`, `/reset-password`)
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Recovery email form | `/forgot-password`, `cc-recovery-email` | form | Request a reset link for a confirmed email account with a password | Submit disabled while busy | Same acknowledgement for unknown and ineligible addresses; explicit unavailable and rate-limit messages |
+| New password form | `/reset-password`, `cc-reset-password`, `cc-reset-confirm` | form | Replace the password using the emailed token | Submit disabled while busy | Password requirements and matching confirmation; missing, expired or invalid tokens offer a fresh link; success links to login |
+| Auth layout and language | Both recovery routes, `app-auth-layout`, `app-lang-switch` | layout | Approved logo, responsive paper form, theme and language selection | N/A | No automatic sign-in after reset |

@@ -123,6 +123,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.ConfigureApplicationCookie(AuthCookie.Configure);
+builder.Services.AddPasswordRecovery();
 
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddSingleton<TelegramBotService>();
@@ -288,6 +289,7 @@ app.UseDesktopDownloads(downloadsDir);
 app.UseAuthentication();
 app.UseTenantFromUser();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // T-050 — every ErrorMessages member reads CultureInfo.CurrentUICulture, which .NET already flows
 // across await boundaries. Setting it once here is what lets ~every existing `ErrorMessages.X`
@@ -311,6 +313,7 @@ app.MapWhen(TenantRouting.IsTenantRequest,
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
 app.MapAuthEndpoints();
+app.MapPasswordRecoveryEndpoints();
 app.MapExternalAuthEndpoints();
 app.MapWaitlistEndpoint();
 app.MapDiscoveryEndpoint();

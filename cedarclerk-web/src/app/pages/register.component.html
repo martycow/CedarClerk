@@ -1,13 +1,8 @@
-<div class="door">
-    <app-button class="theme-toggle" variant="paper" size="sm" [title]="t().common.toggleTheme"
-                (clicked)="theme.toggle()">
-        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
-    </app-button>
-
+<app-auth-layout>
     <section class="card auth-card" data-surface="paper">
+        <form (submit)="$event.preventDefault(); submit()">
         <div class="auth-header">
-            <app-cedar-logo [size]="28"></app-cedar-logo>
-            <div class="auth-title">{{ t().register.title }}</div>
+            <h1 class="auth-title">{{ t().register.title }}</h1>
             <!-- "Invite-only, ask Marty for a code" is true of the hosted server and nonsense in
                  the desktop app, where there is nobody to ask and no code to be given. -->
             <div class="auth-tagline">
@@ -31,8 +26,7 @@
             <app-input inputId="cc-reg-username" [label]="t().register.username"
                        placeholder="alexwriter" autocomplete="off"
                        [hint]="t().register.usernameHint(blogHost())"
-                       [value]="username()" (valueChange)="onUsernameInput($any($event) ?? '')"
-                       (keyup.enter)="submit()" />
+                       [value]="username()" (valueChange)="onUsernameInput($any($event) ?? '')" />
             @if (usernameNote()) {
             <div class="username-note" [class.ok]="usernameTone() === 'ok'"
                  [class.bad]="usernameTone() === 'bad'">{{ usernameNote() }}</div>
@@ -49,8 +43,7 @@
         to this host.-->
         <app-input class="invite" inputId="cc-reg-invite" [label]="t().register.inviteCode"
                    placeholder="CEDAR-MOO-0" autocomplete="off"
-                   [value]="inviteCode" (valueChange)="inviteCode = $any($event) ?? ''"
-                   (keyup.enter)="submit()" />
+                   [value]="inviteCode" (valueChange)="inviteCode = $any($event) ?? ''" />
         }
         }
 
@@ -58,7 +51,7 @@
         <div class="field-error">{{ error() }}</div>
         }
 
-        <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="submit()">
+        <app-button class="primary-btn" variant="pine" [disabled]="busy()" type="submit">
             {{ busy() ? '…' : t().register.submit }}
         </app-button>
 
@@ -67,6 +60,7 @@
         <div class="auth-footer">{{ t().register.haveAccount }} <a routerLink="/login">{{ t().register.login }}</a></div>
         <div class="auth-footer muted">{{ t().register.legalPrefix }} <a routerLink="/terms">{{ t().register.legalTerms }}</a> {{ t().register.legalAnd }} <a routerLink="/privacy">{{ t().register.legalPrivacy }}</a></div>
 
+        </form>
         <app-lang-switch></app-lang-switch>
     </section>
-</div>
+</app-auth-layout>

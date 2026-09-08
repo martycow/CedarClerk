@@ -4,6 +4,8 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Spanish = new Dictionary<string, string>
     {
+        [nameof(PasswordRecoveryUnavailable)] = "La recuperación de contraseña no está disponible temporalmente. Inténtalo más tarde.",
+        [nameof(PasswordResetInvalid)] = "El enlace no es válido o ha caducado, o la contraseña no cumple los requisitos. Solicita un nuevo enlace e inténtalo de nuevo.",
         [nameof(DraftNotFound)] = "Borrador no encontrado.",
         [nameof(InvalidToken)] = "Token no válido.",
         [nameof(DescriptionRequired)] = "Se necesita una descripción.",

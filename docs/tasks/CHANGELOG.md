@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-09-08 — Authentication screens and password recovery (ADR-294)
+
+Login, registration and external completion use a shared responsive layout with the
+approved Sly Cedar horizontal artwork, paper forms, theme control and RU/EN text.
+Native forms submit from every field and guard duplicate submissions. Login links
+to email password recovery; one-hour Identity tokens reset confirmed password
+accounts without signing them in or clearing administrative lockout. Tokens travel
+in the email link fragment, are removed from the address bar, and authentication
+requests are excluded from the client debug log.
+
+Google provider routing accepts case-insensitive URLs and challenges the registered
+`Google` scheme. Telegram has script-error feedback, retry and callback cleanup.
+Live diagnosis found Google disabled in the health response and Telegram accepting
+`cedarclerk.mooexe.dev` but rejecting `cedarclerk.app`. The setup runbook uses the
+current domain. Provider configuration and production rollout remain pending.
+
+Validation: `cedar test` passed 1,982 backend and 771 frontend tests, icon inventory,
+contrast and density contracts, and the Angular production build. `cedar build
+--no-desktop` passed. Browser checks covered five routes in RU/EN, both themes and
+360/720/1440 px widths (60 combinations), logo loading, overflow, Enter from both
+login fields, recovery navigation, missing mail configuration, invalid reset tokens
+and HTTP 429. Selected desktop and mobile screenshots were inspected. A fake mail
+transport verified a generated reset link through the real Identity reset operation;
+production email delivery and real Google/Telegram account sign-in were not exercised.
+
 ## 2026-09-08 — Autosave history gets an age limit (ADR-065 amended)
 
 `DraftRevisions` was 13 MB of a 17 MB production database: full document copies, capped at 50 per draft

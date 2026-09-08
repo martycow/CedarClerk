@@ -19,6 +19,8 @@ namespace CedarClerk.Localization;
 /// </summary>
 public static partial class ErrorMessages
 {
+    public static string PasswordRecoveryUnavailable => T("Password recovery is temporarily unavailable. Please try again later.");
+    public static string PasswordResetInvalid => T("The link is invalid or expired, or the password does not meet the requirements. Request a new link and try again.");
     public static string DraftNotFound => T("Draft not found.");
     public static string InvalidToken => T("Invalid token.");
     // T-050, second half (01.08.2026): the ~60 messages that used to live as inline English

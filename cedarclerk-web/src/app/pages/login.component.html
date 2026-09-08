@@ -1,17 +1,9 @@
-<div class="door">
-    <!--The rail's dots menu holds the theme toggle everywhere else; there is no rail out here
-    (ADR-166 clause 2). Paper stock on a chrome box: the wall is light by day, and the rail's
-    cream ink does not read on it.-->
-    <app-button class="theme-toggle" variant="paper" size="sm" [title]="t().common.toggleTheme"
-                (clicked)="theme.toggle()">
-        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
-    </app-button>
-
+<app-auth-layout>
     <section class="card auth-card" data-surface="paper">
+        <form (submit)="$event.preventDefault(); submit()">
         <div class="auth-header">
-            <app-cedar-logo [size]="34"></app-cedar-logo>
-            <div class="auth-title">Cedar Clerk</div>
-            <div class="auth-tagline">{{ t().login.tagline }}</div>
+            <h1 class="auth-title">{{ t().authLayout.welcome }}</h1>
+            <div class="auth-tagline">{{ t().authLayout.welcomeDescription }}</div>
         </div>
 
         <!--Said before the form, not after it: whoever lands here from a screen they were using
@@ -42,10 +34,11 @@
 
         <app-input inputId="cc-login-pass" type="password" [label]="t().login.password"
                    placeholder="••••••••" autocomplete="current-password"
-                   [value]="password" (valueChange)="password = $any($event) ?? ''"
-                   (keyup.enter)="submit()" />
+                   [value]="password" (valueChange)="password = $any($event) ?? ''" />
 
-        <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="submit()">
+        <a class="forgot-link" routerLink="/forgot-password">{{ t().passwordRecovery.forgot }}</a>
+
+        <app-button class="primary-btn" variant="pine" [disabled]="busy()" type="submit">
             {{ busy() ? '…' : t().login.submit }}
         </app-button>
 
@@ -55,6 +48,7 @@
 
         <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register" [queryParams]="registerParams">{{ t().login.register }}</a> <span class="muted">{{ t().login.inviteRequired }}</span></div>
 
+        </form>
         <app-lang-switch></app-lang-switch>
     </section>
-</div>
+</app-auth-layout>

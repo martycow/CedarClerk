@@ -291,3 +291,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-291 — Project cleanup and external operations ownership](adr/ADR-291.md)
 - [ADR-292 — Localization owns language resources and presentation rules](adr/ADR-292.md)
 - [ADR-293 - Project stores modules[], project's type is creation preset](adr/ADR-293.md)
+- [ADR-294 — Branded authentication and email password recovery](adr/ADR-294.md)

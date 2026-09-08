@@ -57,7 +57,7 @@ public static class ExternalAuthEndpoints
             // would be a phishing hop wearing our domain.
             var safeReturn = SafeReturnUrl(returnUrl);
             var callback = $"/api/auth/external/callback?returnUrl={Uri.EscapeDataString(safeReturn)}";
-            return Results.Challenge(new AuthenticationProperties { RedirectUri = callback }, [provider]);
+            return Results.Challenge(new AuthenticationProperties { RedirectUri = callback }, [Consts.ExternalAuth.Google]);
         });
 
         group.MapGet("/callback", async (string? returnUrl,
@@ -259,8 +259,8 @@ public static class ExternalAuthEndpoints
         #endregion
     }
 
-    private static bool IsConfigured(string provider, IConfiguration cfg) =>
-        provider == Consts.ExternalAuth.Google
+    public static bool IsConfigured(string provider, IConfiguration cfg) =>
+        string.Equals(provider, Consts.ExternalAuth.Google, StringComparison.OrdinalIgnoreCase)
         && !string.IsNullOrEmpty(cfg[Consts.ExternalAuth.GoogleClientIdCfg])
         && !string.IsNullOrEmpty(cfg[Consts.ExternalAuth.GoogleClientSecretCfg]);
 

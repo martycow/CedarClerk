@@ -2,25 +2,23 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnalyticsService } from '../core/analytics.service';
 import { AuthService } from '../core/auth.service';
-import { ThemeService } from '../core/theme.service';
 import { VersionService } from '../core/version.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { AuthLayoutComponent } from '../shared/auth-layout.component';
 import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { ExternalAuthButtonsComponent } from '../shared/external-auth-buttons.component';
 
 @Component({
     selector: 'app-register',
     imports: [
-        RouterLink, CedarLogoComponent, LangSwitchComponent,
-        ButtonComponent, InputComponent, IconComponent,
+        RouterLink, AuthLayoutComponent, LangSwitchComponent,
+        ButtonComponent, InputComponent,
         ExternalAuthButtonsComponent,
     ],
     templateUrl: 'register.component.html',
-    styleUrls: ['register.component.css']
+    styleUrls: ['auth-form.css']
 })
 export class RegisterComponent {
     /** Consts.URLs.TenantHost — where <name> becomes an address. */
@@ -30,7 +28,6 @@ export class RegisterComponent {
     private auth = inject(AuthService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
-    theme = inject(ThemeService);
     // T-121 follow-up — the desktop shell has no invite codes and nowhere to get one, so the field
     // would be asking for something that does not exist. See Consts.General.OpenRegistrationCfg.
     version = inject(VersionService);
@@ -112,6 +109,7 @@ export class RegisterComponent {
     }
 
     async submit() {
+        if (this.busy()) return;
         // The one funnel step the server cannot see: signup_completed is written when the account
         // exists, so without this the people who tried and were refused are invisible, and that
         // gap is the whole point of measuring registration (docs/product/METRICS.md).

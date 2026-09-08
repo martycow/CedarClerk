@@ -8,6 +8,15 @@ namespace CedarClerk.Localization;
 /// </summary>
 public static class EmailTexts
 {
+    public static string PasswordResetSubject => Localized("Сброс пароля — Cedar Clerk", "Reset your password — Cedar Clerk");
+
+    public static string PasswordResetBody(string link)
+    {
+        var safeLink = System.Net.WebUtility.HtmlEncode(link);
+        return Localized(
+            $"<p>Чтобы задать новый пароль Cedar Clerk, откройте ссылку. Она действует один час.</p><p><a href=\"{safeLink}\">Сбросить пароль</a></p><p>Если вы не запрашивали сброс, проигнорируйте это письмо. Ваш пароль не изменится.</p>",
+            $"<p>Open this link to choose a new Cedar Clerk password. It expires in one hour.</p><p><a href=\"{safeLink}\">Reset password</a></p><p>If you did not request a reset, ignore this email. Your password will stay the same.</p>");
+    }
     public static string ConfirmSubject => Localized(
         "Подтвердите адрес почты — Cedar Clerk",
         "Confirm your email — Cedar Clerk");

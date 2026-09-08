@@ -4,6 +4,8 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Ukrainian = new Dictionary<string, string>
     {
+        [nameof(PasswordRecoveryUnavailable)] = "Відновлення пароля тимчасово недоступне. Спробуйте пізніше.",
+        [nameof(PasswordResetInvalid)] = "Посилання недійсне або застаріле, чи пароль не відповідає вимогам. Запросіть нове посилання та спробуйте ще раз.",
         [nameof(DraftNotFound)] = "Чернетку не знайдено.",
         [nameof(InvalidToken)] = "Недійсний токен.",
         [nameof(DescriptionRequired)] = "Потрібен опис.",

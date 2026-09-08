@@ -264,11 +264,11 @@ Environment=Cedar__Analytics__Host=https://eu.i.posthog.com
 
 1. **console.cloud.google.com** → новый проект (или существующий).
 2. APIs & Services → **OAuth consent screen**: тип External, название, почта поддержки, домен
-   `cedarclerk.mooexe.dev`, ссылки на `/terms` и `/privacy`. Пока приложение в Testing, входить
+   `cedarclerk.app`, ссылки на `/terms` и `/privacy`. Пока приложение в Testing, входить
    могут только добавленные тестовые адреса — для закрытой беты этого хватает; для открытой нужен
    Publish, а он требует верификации домена.
 3. Credentials → Create credentials → **OAuth client ID** → Web application.
-   - Authorized redirect URI: **`https://cedarclerk.mooexe.dev/signin-google`**
+   - Authorized redirect URI: **`https://cedarclerk.app/signin-google`**
    - Это путь по умолчанию у `AddGoogle`, он не совпадает с нашим `/api/auth/external/callback` —
      колбэк провайдера и наш экран после него разные вещи.
 4. Client ID и Client secret — в дроп-ин:
@@ -287,18 +287,19 @@ Environment=Cedar__Auth__Google__ClientSecret=GOCSPX-....
 привязанный к боту**, иначе он не отрисуется:
 
 ```
-@BotFather → /setdomain → выбрать бота → cedarclerk.mooexe.dev
+@BotFather → /setdomain → выбрать бота → cedarclerk.app
 ```
 
-Без этого шага кнопка Telegram просто не появится, и никакой ошибки в консоли не будет — виджет
-молча откажется рисоваться на незарегистрированном домене.
+При неправильном домене виджет показывает `Bot domain invalid`. Для `cedar_clerk_bot`
+должен быть разрешён фактический домен страницы: `cedarclerk.app`. Localhost не наследует
+разрешение production-домена.
 
 **Вход через Telegram не создаёт аккаунт** (ADR-237 п.4): у Telegram нет почты, а она нужна для
 приглашений, чеков и восстановления. Незнакомому Telegram отвечает 404 с объяснением. Привязка —
 по-прежнему в Настройках → Интеграции.
 
 Проверка после рестарта:
-- `curl -s https://cedarclerk.mooexe.dev/api/health | grep -o '"externalAuth":{[^}]*}'` — видно
+- `curl -s https://cedarclerk.app/api/health | grep -o '"externalAuth":{[^}]*}'` — видно
   `"google":true` и имя бота
 - на `/login` появились кнопка Google и виджет Telegram
 

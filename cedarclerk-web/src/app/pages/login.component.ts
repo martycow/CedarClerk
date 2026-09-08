@@ -2,30 +2,27 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ExternalAuthService } from '../core/external-auth.service';
-import { ThemeService } from '../core/theme.service';
 import { LocaleService } from '../core/i18n/locale.service';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
+import { AuthLayoutComponent } from '../shared/auth-layout.component';
 import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { ButtonComponent } from '../bench/forms/button.component';
-import { IconComponent } from '../shared/icon.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { ExternalAuthButtonsComponent } from '../shared/external-auth-buttons.component';
 
 @Component({
     selector: 'app-login',
     imports: [
-        RouterLink, CedarLogoComponent, LangSwitchComponent,
-        ButtonComponent, InputComponent, IconComponent,
+        RouterLink, AuthLayoutComponent, LangSwitchComponent,
+        ButtonComponent, InputComponent,
         ExternalAuthButtonsComponent,
     ],
     templateUrl: 'login.component.html',
-    styleUrls: ['login.component.css']
+    styleUrls: ['auth-form.css']
 })
 export class LoginComponent {
     auth = inject(AuthService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
-    theme = inject(ThemeService);
     private external = inject(ExternalAuthService);
 
     // T-003 — the callback sent this person here because an account already holds the address the
@@ -77,6 +74,7 @@ export class LoginComponent {
     }
 
     async submit() {
+        if (this.busy()) return;
         this.busy.set(true);
         this.error.set('');
         const result = await this.auth.login(this.email, this.password);

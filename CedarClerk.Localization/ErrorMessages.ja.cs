@@ -4,6 +4,8 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Japanese = new Dictionary<string, string>
     {
+        [nameof(PasswordRecoveryUnavailable)] = "現在、パスワードの再設定は利用できません。しばらくしてからもう一度お試しください。",
+        [nameof(PasswordResetInvalid)] = "リンクが無効または期限切れか、パスワードが要件を満たしていません。新しいリンクをリクエストして、もう一度お試しください。",
         [nameof(DraftNotFound)] = "下書きが見つかりません。",
         [nameof(InvalidToken)] = "無効なトークンです。",
         [nameof(DescriptionRequired)] = "説明を入力してください。",
