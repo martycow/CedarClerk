@@ -294,3 +294,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-294 — Branded authentication and email password recovery](adr/ADR-294.md)
 - [ADR-295 — Authentication recovery and provider configuration](adr/ADR-295.md)
 - [ADR-296 — Consolidate authentication recovery](adr/ADR-296.md)
+- [ADR-297 — Compact Telegram sign-in widget](adr/ADR-297.md)

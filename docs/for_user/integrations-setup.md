@@ -281,6 +281,17 @@ Environment=Cedar__Auth__Google__ClientSecret=GOCSPX-....
 Обе строки обязательны: без любой из них схема не регистрируется и `/api/auth/external/google`
 отвечает 501.
 
+После изменения systemd drop-in выполните на сервере:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart cedarclerk
+```
+
+Если Google всё ещё скрыт, проверьте `systemctl show cedarclerk -p NeedDaemonReload`
+и поле `externalAuth.google` в `/api/health`. Создание credentials в Google Cloud
+не передаёт их приложению автоматически. Значения ключей не публикуйте в логах.
+
 ### Telegram
 
 Отдельных ключей не нужно — используется тот же `Cedar:Telegram:BotToken`. Но **виджету нужен домен,

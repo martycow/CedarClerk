@@ -48,7 +48,7 @@ import { BrandIconComponent } from './brand-icon.component';
             content: ''; flex: 1; height: 1px; background: var(--paper-edge);
         }
 
-        .telegram-host { min-height: 40px; display: flex; justify-content: center; }
+        .telegram-host { display: flex; align-self: center; border-radius: var(--radius-field); overflow: hidden; }
         .telegram-host:empty { display: none; }
 
         .providers-error { font-size: var(--fs-meta); color: var(--danger); }
@@ -118,8 +118,9 @@ export class ExternalAuthButtonsComponent {
         };
         script.src = 'https://telegram.org/js/telegram-widget.js?22';
         script.setAttribute('data-telegram-login', bot);
-        script.setAttribute('data-size', 'large');
+        script.setAttribute('data-size', 'medium');
         script.setAttribute('data-userpic', 'false');
+        script.setAttribute('data-radius', getComputedStyle(host).getPropertyValue('--radius-field').trim().replace('px', ''));
         script.setAttribute('data-onauth', `${callbackName}(user)`);
         host.appendChild(script);
     }

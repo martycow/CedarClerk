@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-08 — Compact provider button 0.23.2 (ADR-297)
+
+Telegram sign-in uses the medium 28-pixel button and the form field radius.
+The iframe host clips matching corners so the provider's dark canvas does not
+show around the button. The widget retains its signed callback and retry flow.
+The setup runbook explains daemon-reload before restarting after credential edits.
+
+Validation: 776 frontend tests, icon inventory, contrast and density contracts,
+and the complete web/server build passed. Browser checks used the built frontend
+with Telegram's real widget on its registered origin: login/register, 360/1440 px,
+both application themes and both browser color schemes. Google diagnosis found
+pending systemd changes and no credentials in the running service environment;
+applying those changes requires privileged daemon-reload on the server.
+
 ## 2026-09-08 — Consolidated authentication release 0.23.1 (ADR-296)
 
 Merged `codex/auth-doors` and `codex/auth-recovery`, retaining both source commits.
