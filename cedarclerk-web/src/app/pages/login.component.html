@@ -24,6 +24,8 @@
         </div>
         }
 
+        <app-external-auth-buttons [returnUrl]="externalReturnUrl" (signedIn)="afterExternalSignIn()" />
+
         <app-input inputId="cc-login-email" type="email" [label]="t().login.email"
                    placeholder="you@example.com" autocomplete="username"
                    [value]="email" (valueChange)="email = $any($event) ?? ''" />
@@ -32,11 +34,11 @@
         @if (linkPending) { <p class="session-notice">{{ t().externalAuth.linkPrompt }}</p> }
         @if (externalOutcome === 'failed') { <p class="error-box" role="alert">{{ t().externalAuth.failed }}</p> }
 
-        <app-input inputId="cc-login-pass" type="password" [label]="t().login.password"
+        <app-input inputId="cc-login-pass" type="password" revealable [label]="t().login.password"
                    placeholder="••••••••" autocomplete="current-password"
-                   [value]="password" (valueChange)="password = $any($event) ?? ''" />
-
-        <a class="forgot-link" routerLink="/forgot-password">{{ t().passwordRecovery.forgot }}</a>
+                   [value]="password" (valueChange)="password = $any($event) ?? ''">
+            <a labelAction class="forgot-link" routerLink="/forgot-password">{{ t().passwordRecovery.forgot }}</a>
+        </app-input>
 
         <app-button class="primary-btn" variant="pine" [disabled]="busy()" type="submit">
             {{ busy() ? '…' : t().login.submit }}
@@ -44,11 +46,9 @@
 
         @if (error()) { <p class="error-box" role="alert">{{ error() }}</p> }
 
-        <app-external-auth-buttons [returnUrl]="externalReturnUrl" (signedIn)="afterExternalSignIn()" />
 
-        <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register" [queryParams]="registerParams">{{ t().login.register }}</a> <span class="muted">{{ t().login.inviteRequired }}</span></div>
+        <div class="auth-footer">{{ t().login.noAccount }} <a routerLink="/register" [queryParams]="registerParams">{{ t().login.register }}</a> <span class="invite-only">{{ t().authLayout.inviteOnly }}</span></div>
 
         </form>
-        <app-lang-switch></app-lang-switch>
     </section>
 </app-auth-layout>

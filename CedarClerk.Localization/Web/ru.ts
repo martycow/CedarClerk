@@ -144,6 +144,10 @@ export const ru: Dict = {
     externalAuth: {
         widgetFailed: 'Не удалось загрузить Telegram. Попробуйте ещё раз.',
         or: 'или',
+        emailAlternative: 'или по почте',
+        telegram: 'Продолжить с Telegram',
+        loading: 'Подключение…',
+        popupBlocked: 'Разрешите всплывающее окно Telegram и попробуйте снова',
         google: 'Продолжить с Google',
         completeTitle: 'Ещё один шаг',
         completeTagline: 'Адрес подтверждён. Выберите имя аккаунта и введите инвайт-код.',
@@ -152,11 +156,14 @@ export const ru: Dict = {
         failed: 'Вход через провайдера не завершился. Попробуйте ещё раз или войдите паролем.',
     },
     authLayout: {
+        legalTerms: 'Условия', legalPrivacy: 'Конфиденциальность',
+        showPassword: 'Показать пароль', hidePassword: 'Скрыть пароль',
+        inviteOnly: 'Регистрация по приглашению.',
         eyebrow: 'Место для вашей работы',
         title: 'Создавайте то, чем хочется делиться.',
         description: 'Собирайте идеи, готовьте публикации и рассказывайте о том, что создаёте.',
         welcome: 'С возвращением',
-        welcomeDescription: 'Войдите, чтобы продолжить с того места, где остановились.',
+        welcomeDescription: 'Здесь начинается ваша следующая идея.',
     },
     passwordRecovery: {
         forgot: 'Забыли пароль?', title: 'Вернём вас к работе',

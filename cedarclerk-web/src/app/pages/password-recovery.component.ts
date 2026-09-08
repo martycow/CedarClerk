@@ -5,13 +5,12 @@ import { firstValueFrom } from 'rxjs';
 import { Location } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AuthLayoutComponent } from '../shared/auth-layout.component';
-import { LangSwitchComponent } from '../shared/lang-switch.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 
 @Component({
     selector: 'app-password-recovery',
-    imports: [AuthLayoutComponent, LangSwitchComponent, InputComponent, ButtonComponent, RouterLink],
+    imports: [AuthLayoutComponent, InputComponent, ButtonComponent, RouterLink],
     styleUrls: ['auth-form.css'],
     template: `
         <app-auth-layout>
@@ -28,10 +27,10 @@ import { ButtonComponent } from '../bench/forms/button.component';
                 } @else {
                     <form (submit)="$event.preventDefault(); submit()">
                         @if (reset) {
-                            <app-input inputId="cc-reset-password" type="password" autocomplete="new-password" [maxlength]="128"
+                            <app-input inputId="cc-reset-password" type="password" revealable autocomplete="new-password" [maxlength]="128"
                                 [label]="t().passwordRecovery.newPassword" [hint]="t().passwordRecovery.requirements"
                                 [value]="password" (valueChange)="password = $any($event) ?? ''" />
-                            <app-input inputId="cc-reset-confirm" type="password" autocomplete="new-password" [maxlength]="128"
+                            <app-input inputId="cc-reset-confirm" type="password" revealable autocomplete="new-password" [maxlength]="128"
                                 [label]="t().passwordRecovery.confirmPassword" [value]="confirm" (valueChange)="confirm = $any($event) ?? ''" />
                         } @else {
                             <app-input inputId="cc-recovery-email" type="email" autocomplete="email" [maxlength]="254"
@@ -45,7 +44,6 @@ import { ButtonComponent } from '../bench/forms/button.component';
                     @if (reset) { <p class="auth-footer"><a routerLink="/forgot-password">{{ t().passwordRecovery.newLink }}</a></p> }
                 }
                 <p class="auth-footer"><a routerLink="/login">{{ t().passwordRecovery.back }}</a></p>
-                <app-lang-switch />
             </section>
         </app-auth-layout>
     `,

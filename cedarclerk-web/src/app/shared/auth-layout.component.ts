@@ -1,53 +1,68 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
 import { ThemeService } from '../core/theme.service';
-import { ButtonComponent } from '../bench/forms/button.component';
 import { IconComponent } from './icon.component';
+import { LangSwitchComponent } from './lang-switch.component';
 
 @Component({
     selector: 'app-auth-layout',
-    imports: [ButtonComponent, IconComponent],
+    imports: [RouterLink, IconComponent, LangSwitchComponent],
     template: `
         <div class="door">
-            <app-button class="theme-toggle" variant="paper" [title]="t().common.toggleTheme" (clicked)="theme.toggle()">
-                <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" />
-            </app-button>
+            <header class="door-header">
+                <a href="/" class="brand-home" aria-label="Cedar Clerk">
+                    <img src="/assets/brand/cedar-clerk-horizontal.svg" alt="Cedar Clerk" width="216" height="60" />
+                </a>
+                <div class="door-controls">
+                    <app-lang-switch appearance="plain" />
+                    <button class="theme-toggle" type="button" [attr.aria-label]="t().common.toggleTheme" (click)="theme.toggle()">
+                        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="sm" />
+                    </button>
+                </div>
+            </header>
             <main class="auth-layout">
-                <aside class="brand-panel">
-                    <a href="/" class="brand-home" aria-label="Cedar Clerk">
-                        <img src="/assets/brand/cedar-clerk-horizontal.svg" alt="Cedar Clerk" width="320" height="116" />
-                    </a>
-                    <div class="brand-story">
-                        <p class="eyebrow">{{ t().authLayout.eyebrow }}</p>
-                        <h2>{{ t().authLayout.title }}</h2>
-                        <p class="description">{{ t().authLayout.description }}</p>
-                    </div>
-                    <div class="brand-footnote"><span class="brand-rule"></span>{{ t().login.tagline }}</div>
-                </aside>
-                <ng-content />
+                <div class="auth-sheet">
+                    <span class="bookmark" aria-hidden="true"></span>
+                    <img class="sprig" src="/assets/auth/cedar-sprig.webp" alt="" width="90" height="56" />
+                    <ng-content />
+                </div>
             </main>
+            <footer class="door-footer">
+                <p>{{ t().login.tagline }}</p>
+                <nav><a routerLink="/terms">{{ t().authLayout.legalTerms }}</a><span aria-hidden="true">·</span><a routerLink="/privacy">{{ t().authLayout.legalPrivacy }}</a></nav>
+            </footer>
         </div>
     `,
     styles: [`
-        :host { display: block; min-height: 100dvh; background: var(--canvas); font-family: var(--font-sans); }
-        .door { min-height: 100dvh; box-sizing: border-box; display: grid; place-items: center; padding: calc(var(--space-8) * 2) var(--space-5); background-image: var(--tex-wood); }
-        .theme-toggle { position: absolute; top: var(--space-4); right: var(--space-4); }
-        .auth-layout { width: min(100%, 960px); display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; box-shadow: var(--shadow-lg); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-        .brand-panel { min-width: 0; padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-8); background: var(--surface); color: var(--text); border-right: 1px solid var(--border); }
-        .brand-home { display: block; }
-        img { display: block; width: 100%; max-width: 320px; height: auto; }
-        .brand-story { margin: auto 0; }
-        .eyebrow { font-size: var(--fs-meta); letter-spacing: .1em; text-transform: uppercase; color: var(--t2); font-weight: 700; }
-        h2 { margin: var(--space-4) 0; font-family: var(--font-display); font-size: var(--fs-27); line-height: 1.25; text-wrap: balance; }
-        .description { font-size: var(--fs-body); line-height: 1.65; color: var(--t2); }
-        .brand-footnote { font-size: var(--fs-meta); color: var(--t2); line-height: 1.5; }
-        .brand-rule { display: block; width: var(--space-8); border-top: 3px solid var(--accent); margin-bottom: var(--space-4); }
-        @media (max-width: 720px) {
-            .door { padding: calc(var(--space-8) + var(--space-4)) var(--space-3) var(--space-5); }
-            .auth-layout { max-width: 480px; grid-template-columns: 1fr; }
-            .brand-panel { padding: var(--space-5) var(--space-6); border-right: 0; border-bottom: 1px solid var(--border); }
-            img { max-width: 200px; margin: auto; }
-            .brand-story, .brand-footnote { display: none; }
+        :host { display: block; font-family: var(--font-sans); }
+        .door { position: relative; isolation: isolate; min-height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column; background: var(--auth-canvas); color: var(--auth-forest-ink); }
+        .door::before { content: ''; position: fixed; inset: 0; z-index: -1; background: url('/assets/auth/forest-background.webp') center / cover; opacity: var(--auth-scenery-opacity); pointer-events: none; }
+        .door-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-5) var(--space-8); }
+        .brand-home { display: block; width: 216px; border-radius: var(--radius-sm); overflow: hidden; background: var(--auth-sheet); }
+        .brand-home img { display: block; width: 100%; height: 60px; object-fit: contain; }
+        .door-controls { display: flex; align-items: center; gap: var(--space-3); }
+        .theme-toggle { display: grid; place-items: center; width: var(--hit-touch); height: var(--hit-touch); padding: 0; border: 0; border-left: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+        .auth-layout { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; flex: 1; padding: var(--space-5) var(--space-4); }
+        .auth-sheet { position: relative; min-width: 0; width: min(100%, var(--auth-sheet-width)); box-sizing: border-box; padding: var(--space-10) var(--space-7); border: 1px solid var(--auth-border); border-radius: var(--radius-sm); background: var(--auth-sheet); color: var(--auth-ink); box-shadow: var(--shadow-lg);
+            --fs-ui: var(--auth-body-size); --fs-meta: var(--auth-meta-size); --border-field: 1px solid var(--auth-border); --field-label-ink: var(--auth-soft-ink); --shadow-field-inset: none; --sheet: var(--auth-sheet); --surface: var(--auth-field); --paper-bright: var(--auth-field); --text: var(--auth-ink); --t2: var(--auth-soft-ink); --ink-3: var(--auth-soft-ink); --border: var(--auth-border); --border-strong: var(--auth-border); --paper-edge: var(--auth-border); --accent: var(--auth-pine); --pine: var(--auth-pine); --pine-deep: var(--auth-pine-hover); --text-on-pine: var(--auth-forest-ink); --field-label-transform: none; --field-label-spacing: normal; --hit-target: var(--hit-touch); }
+        .bookmark { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 36px; height: 32px; background: var(--auth-coral); mask: url('/assets/auth/bookmark.svg') center / contain no-repeat; }
+        .sprig { display: block; width: 90px; height: 56px; object-fit: contain; margin: var(--space-2) auto var(--space-4); }
+        .door-footer { text-align: center; padding: var(--space-3) var(--space-4) var(--space-8); }
+        .door-footer::before { content: ''; display: block; width: var(--space-8); border-top: 1px solid currentColor; margin: 0 auto var(--space-5); opacity: .65; }
+        .door-footer p { font-family: var(--font-serif); font-size: var(--auth-slogan-size); font-weight: 400; margin: 0 0 var(--space-4); }
+        nav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-3); font-size: var(--auth-meta-size); }
+        nav a { color: inherit; text-decoration: none; padding: var(--space-2) 0; }
+        nav a:hover { text-decoration: underline; }
+        @media (max-width: 600px) {
+            .door-header { padding: var(--space-3) var(--space-4); gap: var(--space-2); }
+            .brand-home { width: 160px; }
+            .brand-home img { height: 48px; }
+            .door-controls { gap: 0; }
+            .brand-home { width: min(160px, calc(100vw - 176px)); }
+            .auth-layout { padding: var(--space-3); }
+            .auth-sheet { --auth-title-size: var(--fs-27); padding: var(--space-7) var(--space-5); }
+            .door-footer { padding-bottom: var(--space-5); }
         }
     `],
 })

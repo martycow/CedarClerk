@@ -150,6 +150,10 @@ export const en = {
     externalAuth: {
         widgetFailed: 'Telegram could not load. Try again.',
         or: 'or',
+        emailAlternative: 'or use your email',
+        telegram: 'Continue with Telegram',
+        loading: 'Connecting…',
+        popupBlocked: 'Allow the Telegram popup and try again',
         google: 'Continue with Google',
         completeTitle: 'One more step',
         completeTagline: 'Your address is confirmed. Pick your account name and enter your invite code.',
@@ -158,11 +162,14 @@ export const en = {
         failed: 'That sign-in did not finish. Try again, or use your password.',
     },
     authLayout: {
+        legalTerms: 'Terms', legalPrivacy: 'Privacy',
+        showPassword: 'Show password', hidePassword: 'Hide password',
+        inviteOnly: 'Registration is invite-only.',
         eyebrow: 'A home for your work',
         title: 'Make something worth sharing.',
         description: 'Gather your ideas, shape your next post, and share the story of what you are building.',
         welcome: 'Welcome back',
-        welcomeDescription: 'Log in to pick up where you left off.',
+        welcomeDescription: 'Your next idea starts here.',
     },
     passwordRecovery: {
         forgot: 'Forgot password?', title: 'Find your way back',

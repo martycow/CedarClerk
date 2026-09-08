@@ -357,6 +357,15 @@ function score(fgValue, bgValue, vars, backdrops) {
 const PAPER = ['--surface', '--sheet', '--alt', '--paper-bright'];
 const WALL = ['--bg', '--canvas'];
 const pairs = [];
+for (const bg of ['--auth-sheet', '--auth-field']) {
+    for (const fg of ['--auth-ink', '--auth-soft-ink', '--auth-pine']) {
+        pairs.push({ fg, bg, min: 4.5, note: 'authentication paper text' });
+    }
+    pairs.push({ fg: '--auth-border', bg, min: 3.0, note: 'authentication control boundary' });
+}
+for (const bg of ['--auth-pine', '--auth-pine-hover', '--auth-canvas']) {
+    pairs.push({ fg: '--auth-forest-ink', bg, min: 4.5, note: 'authentication light text' });
+}
 for (const s of WALL) {
     pairs.push({ fg: '--wood-ink', bg: s, min: 4.5, note: 'chrome text on the wall' });
     // The page meta line, a margin note and a ghost button's label all stand on the wall in the

@@ -1,5 +1,5 @@
 import { INTERFACE_LANGUAGE_OPTIONS } from '@localization/dictionaries';
-import { Component, inject } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { LocaleService } from '../core/i18n/locale.service';
 import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 
@@ -17,14 +17,21 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
     selector: 'app-lang-switch',
     imports: [LeafTagComponent],
     template: `
-        <div class="lang-switch">
+        <div class="lang-switch" [class.plain]="appearance() === 'plain'">
             @for (o of options; track o.lang) {
+            @if (appearance() === 'plain') {
+                <button type="button" [attr.aria-pressed]="locale.uiLang() === o.lang" [title]="o.label" (click)="locale.set(o.lang)">{{ o.code }}</button>
+            } @else {
             <app-leaf-tag interactive [state]="locale.uiLang() === o.lang ? 'active' : 'idle'"
                           [hint]="o.label" (activated)="locale.set(o.lang)">{{ o.code }}</app-leaf-tag>
+            }
             }
         </div>
     `,
     styles: [`
+        .plain.lang-switch { margin: 0; gap: 0; }
+        .plain button { min-width: var(--hit-touch); min-height: var(--hit-touch); background: transparent; border: 0; font: inherit; color: inherit; cursor: pointer; opacity: .7; }
+        .plain button[aria-pressed="true"] { opacity: 1; font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
         .lang-switch {
             display: flex;
             justify-content: center;
@@ -34,6 +41,7 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
     `],
 })
 export class LangSwitchComponent {
+    readonly appearance = input<'tags' | 'plain'>('tags');
     locale = inject(LocaleService);
 
     // Endonyms in the tooltip — a language name is only useful to someone who reads it.

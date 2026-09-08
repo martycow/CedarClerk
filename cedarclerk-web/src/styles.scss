@@ -53,6 +53,23 @@
        night it is the one family that travels towards white (ADR-141). */
     --bg: #F3EDDE;
     --canvas: #E9E1CC;
+    --auth-pine: #365441;
+    --auth-pine-hover: #274431;
+    --auth-scenery-opacity: .82;
+    --auth-canvas: #302F26;
+    --auth-sheet: #F4F0E1;
+    --auth-field: #FAF8F1;
+    --auth-ink: #303127;
+    --auth-soft-ink: #62684F;
+    --auth-border: #7D8466;
+    --auth-forest-ink: #F1EEDC;
+    --auth-telegram: #269DD7;
+    --auth-coral: #EF7356;
+    --auth-body-size: 16px;
+    --auth-meta-size: 14px;
+    --auth-slogan-size: 18px;
+    --auth-title-size: 32px;
+    --auth-sheet-width: 436px;
 
     /* Paper — every reading surface, cream in both themes. --surface is the deepest of the three
        and is therefore what every dark-on-light ratio is measured against, not --sheet. */
@@ -432,6 +449,18 @@
    Only what actually moves is restated — anything absent is inherited, and a second copy of a
    value is a second place to change it. */
 :root[data-theme="dark"] {
+    --auth-canvas: #302F26;
+    --auth-sheet: #EEE9D7;
+    --auth-field: #F6F2E6;
+    --auth-ink: #303127;
+    --auth-soft-ink: #62684F;
+    --auth-border: #7D8466;
+    --auth-forest-ink: #F1EEDC;
+    --auth-telegram: #269DD7;
+    --auth-coral: #EF7356;
+    --auth-pine: #365441;
+    --auth-pine-hover: #274431;
+    --auth-scenery-opacity: 1;
     --bg: #2E2718;
     --canvas: #251F13;
     --surface: #D9CEAE;

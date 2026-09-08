@@ -443,13 +443,14 @@ app.MapGet("/api/health", () => Results.Ok(new
                 && app.Configuration[Consts.Analytics.ProjectKeyCfg] is { Length: > 0 } key
         ? new { key, host = app.Configuration[Consts.Analytics.HostCfg] ?? Consts.Analytics.DefaultHost }
         : null,
-    // T-003 — which sign-in buttons the doors may draw. Read here rather than from a settings call,
-    // because /login and /register run before there is a session to make one with. The Telegram
-    // widget needs the bot's username to render at all, and it is public by nature.
+    // Provider availability is public because the sign-in pages have no authenticated session.
     externalAuth = new
     {
         google = !string.IsNullOrEmpty(app.Configuration[Consts.ExternalAuth.GoogleClientIdCfg])
                  && !string.IsNullOrEmpty(app.Configuration[Consts.ExternalAuth.GoogleClientSecretCfg]),
+        telegramBotId = app.Services.GetRequiredService<TelegramBotService>() is { IsRunning: true } authBot
+            ? (long?)authBot.Me.Id
+            : null,
         telegramBot = app.Services.GetRequiredService<TelegramBotService>() is { IsRunning: true } bot
             ? bot.Me.Username
             : null,

@@ -1,4 +1,6 @@
-import { booleanAttribute, Component, computed, effect, forwardRef, input, output, signal } from '@angular/core';
+import { booleanAttribute, Component, computed, effect, forwardRef, inject, input, output, signal } from '@angular/core';
+import { LocaleService } from '../../core/i18n/locale.service';
+import { IconComponent } from '../../shared/icon.component';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export type BenchInputType = 'text' | 'email' | 'password' | 'search' | 'number' | 'date' | 'url' | 'tel';
@@ -14,26 +16,41 @@ let nextId = 0;
 // without leaning on its label to reach the floor.
 @Component({
     selector: 'app-input',
+    imports: [IconComponent],
     host: { '[attr.data-surface]': 'surface()' },
     providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => InputComponent), multi: true }],
     template: `
-        @if (label()) { <label class="label" [attr.for]="fieldId()">{{ label() }}</label> }
-        <input class="field" [class.serif]="serif()" [id]="fieldId()" [attr.type]="type()"
+        @if (label()) { <div class="label-row"><label class="label" [attr.for]="fieldId()">{{ label() }}</label><ng-content select="[labelAction]" /></div> }
+        <div class="field-wrap" [class.has-toggle]="revealable() && type() === 'password'">
+        <input class="field" [class.serif]="serif()" [id]="fieldId()" [attr.type]="revealable() && revealed() && type() === 'password' ? 'text' : type()"
                [attr.placeholder]="placeholder() || null" [attr.autocomplete]="autocomplete() || null"
                [attr.maxlength]="maxlength() || null" [attr.aria-label]="ariaLabel() || null"
                [disabled]="isDisabled()"
                [value]="text()" (input)="onInput($event)" (blur)="onBlur()">
+        @if (revealable() && type() === 'password') {
+            <button class="reveal" type="button" [disabled]="isDisabled()" [attr.aria-pressed]="revealed()"
+                [attr.aria-label]="revealed() ? t().authLayout.hidePassword : t().authLayout.showPassword"
+                (click)="revealed.set(!revealed())">
+                <app-icon [name]="revealed() ? 'eye-slash' : 'eye'" size="sm" />
+            </button>
+        }
+        </div>
         @if (hint()) { <p class="hint">{{ hint() }}</p> }
     `,
     styles: [`
         :host { display: block; }
 
+        .label-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+        .field-wrap { position: relative; }
+        .has-toggle .field { padding-right: var(--hit-touch) !important; }
+        .reveal { position: absolute; right: 0; top: 0; height: 100%; width: var(--hit-touch); display: grid; place-items: center; border: 0; background: transparent; color: var(--t2); cursor: pointer; border-radius: var(--radius-field); }
+        .reveal:hover { color: var(--accent); }
         .label {
             display: block;
             font-family: var(--font-sans);
             font-weight: 700;
-            letter-spacing: .07em;
-            text-transform: uppercase;
+            letter-spacing: var(--field-label-spacing, .07em);
+            text-transform: var(--field-label-transform, uppercase);
             color: var(--field-label-ink, var(--surface-ink-soft, var(--t2)));
             margin-bottom: var(--space-1);
         }
@@ -82,6 +99,9 @@ let nextId = 0;
     `],
 })
 export class InputComponent implements ControlValueAccessor {
+    readonly t = inject(LocaleService).t;
+    readonly revealable = input(false, { transform: booleanAttribute });
+    readonly revealed = signal(false);
     label = input('');
     hint = input('');
     placeholder = input('');

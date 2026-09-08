@@ -14,7 +14,7 @@ interface TelegramAuthData {
 
 declare global {
     interface Window {
-        Telegram?: { Login: { auth(options: { bot_id: string; request_access?: string }, cb: (data: TelegramAuthData | false) => void): void } };
+        Telegram?: { Login: { auth(options: { bot_id: string; request_access?: string; lang?: string }, cb: (data: TelegramAuthData | false) => void): void } };
     }
 }
 
@@ -25,7 +25,7 @@ export class TelegramLinkService {
     private http = inject(HttpClient);
     private scriptPromise: Promise<void> | null = null;
 
-    private loadWidgetScript(): Promise<void> {
+    prepare(): Promise<void> {
         if (window.Telegram?.Login) return Promise.resolve();
         if (this.scriptPromise) return this.scriptPromise;
 
@@ -33,11 +33,36 @@ export class TelegramLinkService {
             const script = document.createElement('script');
             script.src = WIDGET_SRC;
             script.async = true;
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load Telegram widget script'));
+            const fail = () => {
+                clearTimeout(timeout);
+                script.remove();
+                this.scriptPromise = null;
+                reject(new Error('Failed to load Telegram widget script'));
+            };
+            const timeout = setTimeout(fail, 15000);
+            script.onload = () => {
+                if (!window.Telegram?.Login) { fail(); return; }
+                clearTimeout(timeout);
+                resolve();
+            };
+            script.onerror = fail;
             document.head.appendChild(script);
         });
         return this.scriptPromise;
+    }
+
+    authorizeLogin(botId: number, lang: string, callback: (data: TelegramAuthData | false) => void): boolean {
+        if (!window.Telegram?.Login) throw new Error('Telegram widget unavailable');
+        // Reuse the SDK's named window so blocked popups can be reported before its silent retry loop.
+        const popup = window.open('', `telegram_oauth_bot${botId}`, 'width=550,height=470');
+        if (!popup) return false;
+        try {
+            window.Telegram.Login.auth({ bot_id: String(botId), lang }, callback);
+        } catch (error) {
+            popup.close();
+            throw error;
+        }
+        return true;
     }
 
     getConfig() {
@@ -53,7 +78,7 @@ export class TelegramLinkService {
     // will not work on localhost, only on the deployed domain.
     async link(): Promise<void> {
         const config = await this.getConfig();
-        await this.loadWidgetScript();
+        await this.prepare();
 
         const authData = await new Promise<TelegramAuthData | false>((resolve, reject) => {
             if (!window.Telegram?.Login) { reject(new Error('Telegram widget unavailable')); return; }

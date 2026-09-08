@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-08 — Forest authentication (ADR-298, feature branch)
+
+Login, registration, external completion and password recovery use the selected
+forest composition: approved logo, centered paper sheet, botanical ornament,
+coral marker and shared language/theme controls. Google and Telegram precede
+email as equal buttons. Password fields offer opt-in visibility controls.
+
+Telegram sign-in reuses the existing SDK popup with a public numeric bot ID.
+Script failures can be retried; blocked windows report an error; cancellation
+and callbacks after navigation do not submit. The existing signed-payload
+endpoint, Google redirect and account-linking permissions are preserved.
+
+Validation: 1,993 backend tests, 783 frontend tests, icon inventory, contrast and
+density contracts, and web/server build passed. Eleven authentication contrast
+pairs cover both themes. Visual QA compares the selected reference with the
+built app and checks narrow Russian forms. Provider visibility uses a local
+health fixture during visual QA; no real Google/Telegram account was signed in.
+This feature branch has not been merged or deployed.
+
 ## 2026-09-08 — Compact provider button 0.23.2 (ADR-297)
 
 Telegram sign-in uses the medium 28-pixel button and the form field radius.

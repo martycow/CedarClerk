@@ -1,133 +1,101 @@
-import { Component, DestroyRef, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
 import { ExternalAuthService, TelegramWidgetUser } from '../core/external-auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { VersionService } from '../core/version.service';
+import { TelegramLinkService } from '../core/telegram-link.service';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { BrandIconComponent } from './brand-icon.component';
 
-// T-003 / ADR-237 — the provider row under the password form on both doors. One component rather
-// than two copies: /login and /register offer exactly the same buttons, and the difference between
-// signing in and signing up is decided by the server, not by which page was open.
-//
-// The row draws nothing when no provider is configured, so a self-hosted install with neither set
-// looks exactly as it did before this existed.
 @Component({
     selector: 'app-external-auth-buttons',
     imports: [ButtonComponent, BrandIconComponent],
     template: `
-        @if (google() || telegramBot()) {
+        @if (google() || telegramBotId()) {
             <div class="providers">
-                <div class="providers-rule"><span>{{ t().externalAuth.or }}</span></div>
-
                 @if (google()) {
-                    <app-button variant="paper" (clicked)="signInWithGoogle()">
-                        <app-brand-icon name="google" [size]="16" />
-                        {{ t().externalAuth.google }}
+                    <app-button variant="paper" [disabled]="busy()" (clicked)="signInWithGoogle()">
+                        <img src="/assets/auth/google-g.png" alt="" width="20" height="20" />{{ t().externalAuth.google }}
                     </app-button>
                 }
-
-                <!-- Telegram's widget is an iframe the script injects here; it draws its own button
-                     and we cannot restyle it, which is why it sits below ours rather than beside. -->
-                <div #telegramHost class="telegram-host"></div>
-
-                @if (error()) { <div class="providers-error" role="alert">{{ error() }}</div> }
-                @if (widgetFailed()) {
-                    <app-button variant="paper" (clicked)="retryTelegram()">{{ t().login.retry }}</app-button>
+                @if (telegramBotId()) {
+                    <app-button variant="paper" [disabled]="loading() || busy()" (clicked)="signInWithTelegram()">
+                        <app-brand-icon class="telegram-mark" name="telegram" [size]="18" />
+                        {{ loading() || busy() ? t().externalAuth.loading : t().externalAuth.telegram }}
+                    </app-button>
                 }
+                @if (error()) { <div class="providers-error" role="alert">{{ error() }}</div> }
+                <div class="providers-rule"><span>{{ t().externalAuth.emailAlternative }}</span></div>
             </div>
         }
     `,
     styles: [`
-        .providers { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-4); }
-
-        .providers-rule {
-            display: flex; align-items: center; gap: var(--space-3);
-            font-size: var(--fs-meta); color: var(--ink-3);
-        }
-        .providers-rule::before, .providers-rule::after {
-            content: ''; flex: 1; height: 1px; background: var(--paper-edge);
-        }
-
-        .telegram-host { display: flex; align-self: center; border-radius: var(--radius-field); overflow: hidden; }
-        .telegram-host:empty { display: none; }
-
-        .providers-error { font-size: var(--fs-meta); color: var(--danger); }
+        .telegram-mark { color: var(--auth-telegram); }
+        .providers { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-5); }
+        .providers-rule { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); font-size: var(--fs-meta); color: var(--t2); }
+        .providers-rule::before, .providers-rule::after { content: ''; flex: 1; height: 1px; background: var(--border); opacity: .6; }
+        .providers-error { font-size: var(--fs-ui); color: var(--danger); }
     `],
 })
 export class ExternalAuthButtonsComponent {
     private external = inject(ExternalAuthService);
     private destroyRef = inject(DestroyRef);
     private version = inject(VersionService);
-    t = inject(LocaleService).t;
-
-    /** Where to land after signing in; the server refuses anything that is not same-origin. */
+    private telegram = inject(TelegramLinkService);
+    private locale = inject(LocaleService);
+    readonly t = this.locale.t;
     readonly returnUrl = input('');
-
-    /** Telegram signs in without leaving the page, so the door decides what happens next. */
     readonly signedIn = output<void>();
-
     protected readonly error = signal('');
-    protected readonly widgetFailed = signal(false);
+    protected readonly loading = signal(false);
+    protected readonly busy = signal(false);
     protected readonly google = this.version.googleAuth;
-    protected readonly telegramBot = this.version.telegramBot;
-
-    private host = viewChild<ElementRef<HTMLElement>>('telegramHost');
-    private readonly callbackName = `cedarTelegramAuth${crypto.randomUUID().replaceAll('-', '')}`;
+    protected readonly telegramBotId = this.version.telegramBotId;
+    private ready = false;
 
     constructor() {
-        this.destroyRef.onDestroy(() => {
-            delete (window as unknown as Record<string, unknown>)[this.callbackName];
-            this.host()?.nativeElement.replaceChildren();
-        });
-        // An effect rather than a call in the constructor: the host div lives inside the @if, so it
-        // does not exist until the bot name has arrived AND the view has been rendered. The effect
-        // re-runs on both, and mounts on the first pass where the two are true together.
-        effect(() => {
-            const bot = this.telegramBot();
-            const host = this.host()?.nativeElement;
-            if (bot && host && host.childElementCount === 0) this.mountTelegram(bot, host);
-        });
+        effect(() => { if (this.telegramBotId()) void this.prepareTelegram(); });
     }
 
-    protected signInWithGoogle(): void {
-        this.external.startGoogle(this.returnUrl());
-    }
+    protected signInWithGoogle(): void { this.external.startGoogle(this.returnUrl()); }
 
-    protected retryTelegram(): void {
-        const host = this.host()?.nativeElement;
-        const bot = this.telegramBot();
-        if (!host || !bot) return;
-        host.replaceChildren();
+    private async prepareTelegram(): Promise<void> {
+        this.loading.set(true);
         this.error.set('');
-        this.widgetFailed.set(false);
-        this.mountTelegram(bot, host);
+        try {
+            await this.telegram.prepare();
+            if (!this.destroyRef.destroyed) this.ready = true;
+        } catch {
+            if (!this.destroyRef.destroyed) this.error.set(this.t().externalAuth.widgetFailed);
+        } finally {
+            if (!this.destroyRef.destroyed) this.loading.set(false);
+        }
     }
 
-    private mountTelegram(bot: string, host: HTMLElement): void {
-        // Telegram evaluates data-onauth globally; each mount owns its callback to survive navigation.
-        const callbackName = this.callbackName;
-        (window as unknown as Record<string, unknown>)[callbackName] =
-            (user: TelegramWidgetUser) => void this.onTelegramAuth(user);
-
-        const script = document.createElement('script');
-        script.async = true;
-        script.onerror = () => {
-            if (this.destroyRef.destroyed) return;
-            this.widgetFailed.set(true);
+    protected signInWithTelegram(): void {
+        const botId = this.telegramBotId();
+        if (!botId || this.busy() || this.loading()) return;
+        if (!this.ready) { void this.prepareTelegram(); return; }
+        this.error.set('');
+        let completed = false;
+        try {
+            const opened = this.telegram.authorizeLogin(botId, this.locale.uiLang(), user => {
+                if (completed || this.destroyRef.destroyed) return;
+                completed = true;
+                if (user) void this.onTelegramAuth(user);
+            });
+            if (!opened) this.error.set(this.t().externalAuth.popupBlocked);
+        } catch {
+            this.ready = false;
             this.error.set(this.t().externalAuth.widgetFailed);
-        };
-        script.src = 'https://telegram.org/js/telegram-widget.js?22';
-        script.setAttribute('data-telegram-login', bot);
-        script.setAttribute('data-size', 'medium');
-        script.setAttribute('data-userpic', 'false');
-        script.setAttribute('data-radius', getComputedStyle(host).getPropertyValue('--radius-field').trim().replace('px', ''));
-        script.setAttribute('data-onauth', `${callbackName}(user)`);
-        host.appendChild(script);
+        }
     }
 
     private async onTelegramAuth(user: TelegramWidgetUser): Promise<void> {
-        this.error.set('');
+        if (this.busy()) return;
+        this.busy.set(true);
         const result = await this.external.telegram(user);
+        if (this.destroyRef.destroyed) return;
+        this.busy.set(false);
         if (result.ok) this.signedIn.emit();
         else this.error.set(result.error);
     }

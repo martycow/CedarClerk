@@ -102,7 +102,30 @@ describe('bench Input', () => {
         expect(field().getAttribute('aria-label')).toBe('Find a project');
     });
 
-    it('disables the native field', () => {
+    it('reveals a password without changing its value or submitting the form', () => {
+        fixture.componentRef.setInput('type', 'password');
+        fixture.componentRef.setInput('value', 'Example-Password8');
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('button')).toBeNull();
+        fixture.componentRef.setInput('revealable', true);
+        fixture.detectChanges();
+        const toggle = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+        expect(toggle.type).toBe('button');
+        toggle.click();
+        fixture.detectChanges();
+        expect(field().type).toBe('text');
+        expect(field().value).toBe('Example-Password8');
+        expect(toggle.getAttribute('aria-pressed')).toBe('true');
+        expect(toggle.getAttribute('aria-label')).toBe(fixture.componentInstance.t().authLayout.hidePassword);
+        toggle.click();
+        fixture.detectChanges();
+        expect(field().type).toBe('password');
+        fixture.componentRef.setInput('disabled', true);
+        fixture.detectChanges();
+        expect(toggle.disabled).toBe(true);
+    });
+
+    it('disables the native field' , () => {
         fixture.componentRef.setInput('disabled', true);
         fixture.detectChanges();
         expect(field().disabled).toBe(true);
