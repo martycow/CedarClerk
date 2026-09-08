@@ -327,7 +327,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     frameKicker(): string {
         const summary = this.draftProjectSummary();
         if (!summary) return '';
-        const kind = this.t().projects.projectTypes[summary.projectType]?.name ?? '';
+        const kind = this.t().projects.projectTypes[summary.createdFromPreset]?.name ?? '';
         return [summary.name, kind, this.t().editor.frame.documents(summary.documentCount)].filter(Boolean).join(' · ');
     }
 

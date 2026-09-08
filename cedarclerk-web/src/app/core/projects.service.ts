@@ -14,12 +14,21 @@ import { Sprint } from './sprints.service';
 // endpoints simply are not mapped when it is off.
 
 /**
- * One of CedarClerk.Core.ProjectTypes — decides the project's starter document and nothing else.
- * The offer was cut to four (31.08.2026): Empty, Blog, Game ("fullgame" stays as the stored key),
- * Product. The legacy values remain in the type so an old project's rows still parse.
+ * One of CedarClerk.Core.ProjectTypes — the preset a project is created from (ADR-293). It picks
+ * the starter document, the modules the project is born with, its icon and its vocabulary, and
+ * decides nothing after that. "fullgame" stays as the stored key of what the UI calls Game.
  */
-export type ProjectType = 'empty' | 'blog' | 'fullgame' | 'product' | 'jam' | 'prototype' | 'released';
-export const PROJECT_TYPES: ProjectType[] = ['empty', 'blog', 'fullgame', 'product'];
+export type ProjectType = 'empty' | 'blog' | 'fullgame' | 'product' | 'work' | 'vault';
+export const PROJECT_TYPES: ProjectType[] = ['empty', 'blog', 'fullgame', 'product', 'work', 'vault'];
+
+/** One of CedarClerk.Core.ProjectModules — a section of the workbench a project has on or off. */
+export type ModuleKey =
+    'documents' | 'assets' | 'site' | 'posts' | 'calendar' | 'metrics'
+    | 'tasks' | 'planner' | 'builds' | 'canvas' | 'dialogues';
+export const PROJECT_MODULES: ModuleKey[] = [
+    'documents', 'assets', 'site', 'posts', 'calendar', 'metrics',
+    'tasks', 'planner', 'builds', 'canvas', 'dialogues',
+];
 
 export type DiscoveryCategory = 'games' | 'apps-tools' | 'comics-art' | 'film-animation' | 'music-audio' | 'hardware' | 'other';
 export const DISCOVERY_CATEGORIES: DiscoveryCategory[] = [
@@ -53,9 +62,8 @@ export const PROJECT_TYPE_ICONS: Record<ProjectType, IconName> = {
     blog: 'newspaper',
     fullgame: 'game-controller',
     product: 'rocket-launch',
-    jam: 'timer',
-    prototype: 'flask',
-    released: 'rocket-launch',
+    work: 'kanban',
+    vault: 'lock',
 };
 
 /** Which document type a project of each type starts with — mirrors ProjectTypes.StarterDocumentType. */
@@ -64,16 +72,17 @@ export const STARTER_DOCUMENT_TYPE: Record<ProjectType, DocumentType> = {
     blog: 'post',
     fullgame: 'design',
     product: 'changelog',
-    jam: 'design',
-    prototype: 'note',
-    released: 'changelog',
+    work: 'note',
+    vault: 'note',
 };
 
 export interface ProjectSummary {
     id: string;
     name: string;
     description: string;
-    projectType: ProjectType;
+    createdFromPreset: ProjectType;
+    /** ADR-293 — every module key, on or off; what the project can do, where the preset cannot. */
+    modules: Partial<Record<ModuleKey, boolean>>;
     discoveryCategory?: DiscoveryCategory;
     coverUrl: string | null;
     createdAt: string;

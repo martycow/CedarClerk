@@ -254,8 +254,7 @@ export class ProjectsComponent {
     // in the interface language, which is the language the document is created in.
     starterOutline(documentType: DocumentType, projectType: ProjectType): string[] {
         const o = this.t().projects.create.outline;
-        if (documentType === 'design') return projectType === 'jam' ? o.jamDesign : o.design;
-        if (documentType === 'note') return projectType === 'empty' ? [] : o.note;
+        if (documentType === 'design') return o.design;
         if (documentType === 'changelog') return o.changelog;
         return [];
     }

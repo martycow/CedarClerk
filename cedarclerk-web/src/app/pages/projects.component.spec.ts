@@ -5,7 +5,7 @@ import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { en } from '@localization/en';
 
 const ONE: ProjectSummary = {
-    id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
+    id: 'p1', name: 'Cedar Quest', description: '', createdFromPreset: 'fullgame', modules: {}, coverUrl: null,
     createdAt: '2026-08-01T09:00:00', archivedAt: null,
     documentCount: 3, openTaskCount: 8, assetCount: 2481, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, engine: '', targetPlatforms: [], lastActivityAt: '2026-08-19T11:00:00',
 };
@@ -118,14 +118,14 @@ describe('project index', () => {
         expect(el().querySelector('.cards app-empty-state.new-card')?.textContent).toContain(t.startNew);
     });
 
-    it('offers the four types as cards, reads the pick back and asks for the name explicitly', () => {
+    it('offers the six presets as cards, reads the pick back and asks for the name explicitly', () => {
         fixture.componentInstance.startCreate();
         fixture.detectChanges();
         const types = [...el().querySelectorAll('.type-name')].map(x => x.textContent?.trim());
-        expect(types).toEqual(['Empty', 'Blog', 'Game', 'Product']);
-        expect(el().querySelectorAll('.type-card .cover-art').length).toBe(4);
+        expect(types).toEqual(['Empty', 'Blog', 'Game', 'Product', 'Work', 'Vault']);
+        expect(el().querySelectorAll('.type-card .cover-art').length).toBe(6);
         expect(el().querySelector('.type-card:last-child .type-starter')?.textContent)
-            .toContain(t.create.startsWith(t.projectTypes.product.starter));
+            .toContain(t.create.startsWith(t.projectTypes.vault.starter));
         expect(el().querySelector('.type-card.selected .type-name')?.textContent?.trim()).toBe('Empty');
         expect(el().querySelector('.detail-name')?.textContent?.trim()).toBe('Empty');
         expect(el().querySelector('.tree-doc .tree-label')?.textContent?.trim()).toBe(t.projectTypes.empty.starter);

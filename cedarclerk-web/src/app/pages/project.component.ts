@@ -212,7 +212,7 @@ export class ProjectComponent {
         const t = this.t().projects;
         const meta: HeaderMeta[] = [
             { text: p.archivedAt ? t.stateArchived : t.stateActive, tag: true, tone: p.archivedAt ? 'muted' : 'ok' },
-            { text: t.projectTypes[p.projectType].name },
+            { text: t.projectTypes[p.createdFromPreset].name },
         ];
         // ADR-160 clause 7 — the kit's "Unity 6.1 · Windows / Linux" edge, drawn only from what is stored.
         const toolchain = this.toolchainLabel(p);

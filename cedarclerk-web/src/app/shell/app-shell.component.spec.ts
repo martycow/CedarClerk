@@ -234,7 +234,7 @@ describe('app shell', () => {
     it('draws the counts the project list already holds, and never a zero', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/projects/p1');
-        await flushProjects([{ id: 'p1', name: 'Cedar Quest', projectType: 'blog', documentCount: 23, openTaskCount: 0, assetCount: 77 }]);
+        await flushProjects([{ id: 'p1', name: 'Cedar Quest', createdFromPreset: 'blog', modules: {}, documentCount: 23, openTaskCount: 0, assetCount: 77 }]);
         const count = (label: string) => items().find(a => a.textContent?.includes(label))!.querySelector('.side-count')?.textContent?.trim();
         expect(count('Documents')).toBe('23');
         expect(count('Assets')).toBe('77');
@@ -285,7 +285,7 @@ describe('app shell', () => {
         }
         TestBed.inject(HttpTestingController)
             .expectOne(r => r.url.startsWith('/api/projects') && !r.url.includes('/access'))
-            .flush([{ id: 'p-new', name: 'New project', projectType: 'empty' }]);
+            .flush([{ id: 'p-new', name: 'New project', createdFromPreset: 'empty', modules: {} }]);
         await fixture.whenStable();
         fixture.detectChanges();
 

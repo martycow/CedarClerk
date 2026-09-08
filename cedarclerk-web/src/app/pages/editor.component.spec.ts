@@ -118,7 +118,7 @@ describe('editor UI contract', () => {
     it('names the project before its kind and document count in the frame kicker', () => {
         currentProjectId.set('p1');
         fixture.componentInstance.projectSummaries.set([{
-            id: 'p1', name: 'Cedar Quest', description: '', projectType: 'blog', coverUrl: null,
+            id: 'p1', name: 'Cedar Quest', description: '', createdFromPreset: 'blog', modules: {}, coverUrl: null,
             createdAt: '2026-09-01T00:00:00Z', archivedAt: null, documentCount: 23,
             openTaskCount: 0, assetCount: 0, buildCount: 0, latestBuildVersion: null, lastPublishedAt: null, engine: '', targetPlatforms: [], lastActivityAt: '2026-09-01T00:00:00Z',
         }]);

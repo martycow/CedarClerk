@@ -9,7 +9,7 @@ import { formatInZone } from '../core/display-time';
 import { AssetsService } from '../core/assets.service';
 
 const SUMMARY: ProjectSummary = {
-    id: 'p1', name: 'Cedar Quest', description: '', projectType: 'fullgame', coverUrl: null,
+    id: 'p1', name: 'Cedar Quest', description: '', createdFromPreset: 'fullgame', modules: {}, coverUrl: null,
     createdAt: '2026-08-01T09:00:00', archivedAt: null,
     documentCount: 3, openTaskCount: 8, assetCount: 2481, buildCount: 2, latestBuildVersion: '0.3.1',
     lastActivityAt: '2026-08-19T11:00:00',
@@ -20,7 +20,7 @@ const SUMMARY: ProjectSummary = {
 const OTHER: ProjectSummary = { ...SUMMARY, id: 'p2', name: 'Night Lanterns', assetCount: 0 };
 
 const DETAIL: ProjectDetail = {
-    id: 'p1', name: 'Cedar Quest', description: 'A game about a bench.', projectType: 'fullgame',
+    id: 'p1', name: 'Cedar Quest', description: 'A game about a bench.', createdFromPreset: 'fullgame', modules: {},
     coverUrl: null, teamId: null, createdAt: '2026-08-01T09:00:00', archivedAt: null, engine: '', targetPlatforms: [],
     showcaseSlug: null, showcaseLinks: '', showcaseGallery: '', showcaseTrailerUrl: null, showcaseBlocksJson: '', customDomain: null,
     pressContactEmail: null, pressPrice: null, pressEngine: null, pressGenre: null, pressFactsheetRows: null,

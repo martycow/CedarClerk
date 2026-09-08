@@ -71,7 +71,7 @@
                     </span>
                     <span class="card-body">
                         <span class="card-name" [title]="p.name">{{ p.name }}</span>
-                        <span class="card-type">{{ t().projects.projectTypes[p.projectType].name }}</span>
+                        <span class="card-type">{{ t().projects.projectTypes[p.createdFromPreset].name }}</span>
                         <span class="card-stats">
                             <span>{{ t().projects.documentCount(p.documentCount) }}</span>
                             <!--The open count, so a finished project does not show its largest

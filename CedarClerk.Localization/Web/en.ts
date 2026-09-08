@@ -1067,8 +1067,6 @@ export const en = {
             // Mirrors StarterTemplates.cs on the server — the headings the starter document is born with.
             outline: {
                 design: ['Concept', 'Core loop', 'Systems', 'Content', 'Open questions'],
-                jamDesign: ['The idea', 'Scope: what ships', 'Schedule', 'Submission checklist'],
-                note: ['The question this prototype answers', 'How we’ll know the answer is yes'],
                 changelog: ['Unreleased', 'Known issues'],
             },
             nameLabel: 'Project name',
@@ -1085,8 +1083,7 @@ export const en = {
             workingMaterial: 'Working material — never published',
             failed: 'Could not create the document.',
         },
-        // The four presets on offer (31.08.2026); the legacy entries stay so an old project's
-        // dashboard can still name its own type.
+        // The presets on offer (ADR-293) — what a project is created from, and nothing more.
         projectTypes: {
             empty: {
                 name: 'Empty',
@@ -1112,23 +1109,17 @@ export const en = {
                 starter: 'Changelog',
                 about: 'Anything already shipped: the changelog leads, releases and builds follow, and the press page tells the world what changed.',
             },
-            jam: {
-                name: 'Game jam entry',
-                blurb: 'Deadline first — one sprint, a plan, a submission checklist.',
-                starter: 'Jam plan',
-                about: 'One sprint, a plan and a submission checklist — the deadline decides everything else.',
+            work: {
+                name: 'Work',
+                blurb: 'A studio or a practice: site, posts, metrics, a board to think on.',
+                starter: 'First note',
+                about: 'What you do for others: a site that says so, posts that keep it current, metrics that tell whether it lands, and a canvas for the thinking in between.',
             },
-            prototype: {
-                name: 'Prototype',
-                blurb: 'A question to answer. Notes and tasks, no ceremony.',
-                starter: 'Hypothesis note',
-                about: 'A question to answer. Notes and tasks, nothing else, until the answer is in.',
-            },
-            released: {
-                name: 'Released game',
-                blurb: 'Post-launch: patches, changelogs, press.',
-                starter: 'Changelog',
-                about: 'A game that is out: the changelog leads, releases and press follow.',
+            vault: {
+                name: 'Vault',
+                blurb: 'Documents only — a place to keep what is written.',
+                starter: 'First note',
+                about: 'Nothing but documents: notes, references, drafts kept for their own sake. No site, no posts, no board — switch any of them on later if the vault outgrows itself.',
             },
         },
         // `group` is the heading over a section of the dashboard; `name` is what the picker calls it.

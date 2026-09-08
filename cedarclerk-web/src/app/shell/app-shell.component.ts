@@ -180,7 +180,7 @@ export class AppShellComponent {
         if (!this.projectOpen()) return { id: '', name: this.t().shell.allProjects, kind: '', link: '/projects' };
         const id = this.openProjectId();
         const summary = this.openSummary();
-        const kind = summary ? this.t().projects.projectTypes[summary.projectType]?.name ?? '' : '';
+        const kind = summary ? this.t().projects.projectTypes[summary.createdFromPreset]?.name ?? '' : '';
         const count = this.summaries().length;
         const sub = [kind, count ? this.t().shell.projectsCount(count) : ''].filter(Boolean).join(' · ');
         return { id, name: this.openName(), kind: sub, link: ['/projects', id] };
