@@ -9,8 +9,7 @@
 
     <section class="card auth-card" data-surface="paper">
         <div class="auth-header">
-            <app-cedar-logo [size]="34"></app-cedar-logo>
-            <div class="auth-title">Cedar Clerk</div>
+            <img class="auth-logo" src="/assets/brand/cedar-clerk-primary.svg" alt="Cedar Clerk" width="727" height="413" />
             <div class="auth-tagline">{{ t().login.tagline }}</div>
         </div>
 
@@ -45,6 +44,7 @@
                    [value]="password" (valueChange)="password = $any($event) ?? ''"
                    (keyup.enter)="submit()" />
 
+        <p class="recovery-link"><a routerLink="/forgot-password">{{ t().recovery.forgot }}</a></p>
         <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="submit()">
             {{ busy() ? '…' : t().login.submit }}
         </app-button>

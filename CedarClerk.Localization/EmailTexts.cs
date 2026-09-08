@@ -8,6 +8,13 @@ namespace CedarClerk.Localization;
 /// </summary>
 public static class EmailTexts
 {
+    public static string ResetPasswordSubject => Localized(
+        "Сброс пароля — Cedar Clerk", "Reset your password — Cedar Clerk");
+
+    public static string ResetPasswordBody(string link) => Localized(
+        $"<p>Чтобы задать новый пароль Cedar Clerk, откройте ссылку. Она действует один час и только один раз.</p><p><a href=\"{link}\">Задать новый пароль</a></p><p>Если вы не запрашивали сброс, проигнорируйте письмо. Пароль останется прежним.</p>",
+        $"<p>Open this link to set a new Cedar Clerk password. It expires in one hour and can be used once.</p><p><a href=\"{link}\">Set a new password</a></p><p>If you did not request this, ignore this email. Your password will stay the same.</p>");
+
     public static string ConfirmSubject => Localized(
         "Подтвердите адрес почты — Cedar Clerk",
         "Confirm your email — Cedar Clerk");

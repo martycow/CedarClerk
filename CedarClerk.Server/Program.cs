@@ -13,6 +13,8 @@ using CedarClerk.Server.Tenancy;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using PostHog;
 using PostHog.Config;
@@ -109,6 +111,12 @@ if (builder.Configuration[Consts.ExternalAuth.GoogleClientIdCfg] is { Length: > 
         // "does an account already hold this email" question below has nothing to ask about.
         options.Scope.Add("email");
         options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.Events.OnRemoteFailure = context =>
+        {
+            context.HandleResponse();
+            context.Response.Redirect("/login?external=failed");
+            return Task.CompletedTask;
+        };
     });
 }
 
@@ -120,7 +128,29 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     })
     .AddEntityFrameworkStores<CedarDbContext>()
     .AddSignInManager()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddTokenProvider<PasswordRecoveryTokenProvider>(PasswordRecoveryTokenProvider.ProviderName);
+
+builder.Services.Configure<IdentityOptions>(options =>
+    options.Tokens.PasswordResetTokenProvider = PasswordRecoveryTokenProvider.ProviderName);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedProto);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("password-request", limiter =>
+    {
+        limiter.PermitLimit = 20;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
+    options.AddFixedWindowLimiter("password-reset", limiter =>
+    {
+        limiter.PermitLimit = 60;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
+});
 
 builder.Services.ConfigureApplicationCookie(AuthCookie.Configure);
 
@@ -285,6 +315,8 @@ app.UseLandingMedia(landingDir);
 // need this switched off is now an agent, and an agent leaves this file before reaching here.
 app.UseDesktopDownloads(downloadsDir);
 
+app.UseForwardedHeaders();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseTenantFromUser();
 app.UseAuthorization();
@@ -311,6 +343,7 @@ app.MapWhen(TenantRouting.IsTenantRequest,
     blogApp => blogApp.Run(BlogEndpoints.HandleRequest));
 
 app.MapAuthEndpoints();
+app.MapPasswordRecoveryEndpoints();
 app.MapExternalAuthEndpoints();
 app.MapWaitlistEndpoint();
 app.MapDiscoveryEndpoint();

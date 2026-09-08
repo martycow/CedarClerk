@@ -6,6 +6,10 @@ import { ConsentService } from './consent.service';
 
 interface AnalyticsConfig { key: string; host: string; }
 
+function isRecoveryPage(): boolean {
+    return /^\/(?:forgot-password|reset-password)\/?$/.test(location.pathname);
+}
+
 /**
  * The SPA's half of T-153 (ADR-236). The server owns the eight events that happen behind an
  * account; this owns the two things a browser is the only witness to — where the visitor came from,
@@ -46,6 +50,7 @@ export class AnalyticsService {
     }
 
     async enableIfConsented(): Promise<void> {
+        if (isRecoveryPage()) return;
         if (this.consent.state() !== 'granted') return;
         await this.readConfig();
         if (!this.config || this.posthog) return;
@@ -55,16 +60,19 @@ export class AnalyticsService {
     }
 
     capture(event: string, properties?: Record<string, unknown>): void {
+        if (isRecoveryPage()) return;
         this.posthog?.capture(event, properties);
     }
 
     private async load(config: AnalyticsConfig): Promise<void> {
         const { default: posthog } = await import('posthog-js');
+        if (isRecoveryPage()) return;
         posthog.init(config.key, {
             api_host: config.host,
             // The page view on load would otherwise fire before the router has resolved the first
             // route, recording every entry as the bare origin.
             capture_pageview: false,
+            before_send: event => isRecoveryPage() ? null : event,
             defaults: '2025-05-24',
         });
         this.posthog = posthog;

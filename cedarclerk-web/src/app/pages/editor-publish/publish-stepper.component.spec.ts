@@ -21,6 +21,7 @@ describe('publishStepStates', () => {
 describe('PublishStepperComponent', () => {
     it('is four real buttons, marks the current one and emits the step that was pressed', () => {
         TestBed.inject(LocaleService).uiLang.set('en');
+        TestBed.inject(LocaleService).pseudo.set(false);
         const fixture = TestBed.createComponent(PublishStepperComponent);
         fixture.componentRef.setInput('steps', publishStepStates({ languages: 1, anyDestination: true, settingsComplete: false }));
         fixture.detectChanges();

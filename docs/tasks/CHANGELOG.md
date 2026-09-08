@@ -1,5 +1,43 @@
 # Changelog
 
+## 2026-09-08 — Authentication recovery (ADR-294)
+
+Google entry URLs resolve case-insensitively to the registered `Google` scheme.
+OAuth failures return to login. Forwarded HTTPS protocol is accepted from the trusted
+loopback proxy before authentication, preserving the provider callback scheme.
+
+Login exposes password recovery. A dedicated Identity token expires after one hour;
+resetting consumes it through the security stamp change. Tokens travel in fragments,
+then POST bodies. Only confirmed accounts with passwords receive recovery mail.
+Unknown and ineligible addresses get the same response. Missing mail configuration,
+throttling, invalid links and mismatched passwords have localized feedback.
+Authentication calls bypass the client debug journal. Recovery pages suppress analytics
+initialization and events, keeping credentials and recovery tokens outside telemetry.
+
+Login, registration and recovery use the approved transparent Illustrator logo.
+Telegram script failures expose retry, and navigation removes the widget callback.
+The setup runbook uses `cedarclerk.app` for Google callbacks and Telegram domain binding.
+Three visual concepts and slogan proposals were delivered separately; their selection
+and implementation remain pending.
+
+Live diagnosis: `/api/health` reports Google disabled. Telegram accepts the legacy
+`cedarclerk.mooexe.dev` origin but rejects `cedarclerk.app` with `Bot domain invalid`.
+Google credentials and the BotFather domain binding require the owner's provider access.
+No deployment, production configuration change or real recovery email was performed.
+
+Validation: real Identity/SQLite recovery tests cover valid, expired, malformed,
+wrong-user and replayed tokens, password replacement and account eligibility.
+Frontend tests cover duplicate and empty submission, outages, mismatch and fragment removal.
+Journal tests exclude authentication payloads while retaining ordinary diagnostic requests.
+The publish-stepper test explicitly disables pseudo-localization to isolate its English assertions.
+Browser checks cover login-to-recovery navigation, Russian feedback, unavailable mail,
+missing reset links, registration and 390-pixel layouts in light and dark themes.
+An isolated server with fake Google credentials returns a Google authorization redirect
+with an HTTPS callback when the loopback proxy supplies `X-Forwarded-Proto: https`.
+Final checks: 1985 backend tests and 778 frontend tests pass. Icon inventory, contrast,
+density and the Angular production build pass. Temporary test servers were stopped before
+the final backend run because Windows locks loaded build assemblies.
+
 ## 2026-09-08 — Autosave history gets an age limit (ADR-065 amended)
 
 `DraftRevisions` was 13 MB of a 17 MB production database: full document copies, capped at 50 per draft

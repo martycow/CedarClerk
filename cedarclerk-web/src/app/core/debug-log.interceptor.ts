@@ -8,6 +8,7 @@ import { DebugLogService } from './debug-log.service';
 // e.g. a Telegram publish rejection with its full server-side error text.
 export const debugLogInterceptor: HttpInterceptorFn = (req, next) => {
     const log = inject(DebugLogService);
+    if (/^\/api\/auth(?:\/|\?|$)/.test(req.url)) return next(req);
     const requestBody = req.body instanceof FormData ? '[FormData]' : req.body;
     const entry = log.start(req.method, req.urlWithParams, requestBody);
 

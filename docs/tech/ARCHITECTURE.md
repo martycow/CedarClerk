@@ -9,6 +9,10 @@ guard: none
 
 ## Core idea: one document, many renderers
 
+Authentication recovery uses `PasswordRecoveryEndpoints` and a dedicated Identity token provider (ADR-294).
+Password reset links expire after one hour. Their tokens travel in URL fragments and then in POST bodies.
+Only confirmed accounts with passwords receive reset mail. Google route names resolve to the canonical Identity scheme.
+
 The internal post format is a single TipTap JSON document, stored in SQLite as `Draft.CedarJson`. It is never edited or interpreted per-target — instead, pure-C# renderers in `CedarClerk.Core` turn it into whatever output format a target needs:
 
 ```

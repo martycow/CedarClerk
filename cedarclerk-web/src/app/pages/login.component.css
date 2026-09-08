@@ -27,7 +27,7 @@
 /* The attribute is on the card because the card is the paper: it is what declares the touch floor
    the controls inside spend (ADR-156), and it is what tools/check-density.mjs measures. */
 .auth-card[data-surface="paper"] {
-    width: 340px;
+    width: min(100%, 380px);
     box-sizing: border-box;
     padding: var(--space-7) var(--space-6) var(--space-6);
 
@@ -46,6 +46,10 @@
         letter-spacing: -.01em;
         color: var(--text);
     }
+
+    .auth-logo { display: block; width: 200px; max-width: 100%; height: auto; }
+    .recovery-link { margin: 0 0 var(--space-3); font-size: var(--fs-ui); }
+    a { color: var(--accent); }
 
     .auth-tagline {
         font-size: var(--fs-ui);

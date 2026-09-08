@@ -367,6 +367,16 @@ The tab body is paper (ADR-154) and every rule in the sheet is scoped to that, s
 
 ## `login.component` / `register.component` (`cedarclerk-web/src/app/pages/{login,register}.component.{ts,html}`)
 
+Authentication also includes `/forgot-password` and `/reset-password` in `password-recovery.component` (ADR-294).
+
+| Element | Location | Type | Purpose | Loading state | Notes |
+|---|---|---|---|---|---|
+| Approved logo | login, register and recovery `.auth-logo` | image | Cedar Clerk identity | N/A | Transparent source SVG with intrinsic aspect ratio and alt text; width 200px within the paper form |
+| Forgot password | login `.recovery-link` | link | Open `/forgot-password` | N/A | Before the submit button |
+| Recovery form | `password-recovery.component` | form | Request a link or enter and repeat a new password | Busy text and disabled submit | Shared form controls; email autocomplete and new-password autocomplete; no account enumeration |
+| Recovery outcome | `password-recovery.component` | status / alert | Accepted request, successful reset, expired link, mismatch, outage or throttling | N/A | Missing links offer a fresh request; successful reset offers sign-in; both languages supported |
+| Telegram retry | `external-auth-buttons.component` | button | Reload a failed widget script | N/A | Failed script exposes an alert and retry. Each component owns and removes its unique callback |
+
 **The four pages outside the shell** (`/login`, `/register`, `/terms`, `/privacy`) are the one place where nothing above them declares the surface, so the door declares it itself (ADR-166): the canvas (`--canvas`, `--wood-ink`) as the ground, one `.card` on it, and the theme toggle as a plain paper button (ADR-239 clause 12: the doors lose the wood and keep their own toggle). No wood, no deckle, no rotation.
 
 | Element | Location | Type | Purpose | Loading state | Notes |

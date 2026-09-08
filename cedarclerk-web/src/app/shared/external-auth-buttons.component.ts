@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { ExternalAuthService, TelegramWidgetUser } from '../core/external-auth.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { VersionService } from '../core/version.service';
@@ -30,7 +30,10 @@ import { BrandIconComponent } from './brand-icon.component';
                      and we cannot restyle it, which is why it sits below ours rather than beside. -->
                 <div #telegramHost class="telegram-host"></div>
 
-                @if (error()) { <div class="providers-error">{{ error() }}</div> }
+                @if (error()) { <div class="providers-error" role="alert">{{ error() }}</div> }
+                @if (widgetFailed()) {
+                    <app-button variant="paper" size="sm" (clicked)="retryTelegram()">{{ t().login.retry }}</app-button>
+                }
             </div>
         }
     `,
@@ -52,6 +55,7 @@ import { BrandIconComponent } from './brand-icon.component';
 })
 export class ExternalAuthButtonsComponent {
     private external = inject(ExternalAuthService);
+    private destroyRef = inject(DestroyRef);
     private version = inject(VersionService);
     t = inject(LocaleService).t;
 
@@ -62,12 +66,18 @@ export class ExternalAuthButtonsComponent {
     readonly signedIn = output<void>();
 
     protected readonly error = signal('');
+    protected readonly widgetFailed = signal(false);
     protected readonly google = this.version.googleAuth;
     protected readonly telegramBot = this.version.telegramBot;
 
     private host = viewChild<ElementRef<HTMLElement>>('telegramHost');
+    private readonly callbackName = `cedarTelegramAuth${crypto.randomUUID().replaceAll('-', '')}`;
 
     constructor() {
+        this.destroyRef.onDestroy(() => {
+            delete (window as unknown as Record<string, unknown>)[this.callbackName];
+            this.host()?.nativeElement.replaceChildren();
+        });
         // An effect rather than a call in the constructor: the host div lives inside the @if, so it
         // does not exist until the bot name has arrived AND the view has been rendered. The effect
         // re-runs on both, and mounts on the first pass where the two are true together.
@@ -82,16 +92,29 @@ export class ExternalAuthButtonsComponent {
         this.external.startGoogle(this.returnUrl());
     }
 
+    protected retryTelegram(): void {
+        const host = this.host()?.nativeElement;
+        const bot = this.telegramBot();
+        if (!host || !bot) return;
+        host.replaceChildren();
+        this.error.set('');
+        this.widgetFailed.set(false);
+        this.mountTelegram(bot, host);
+    }
+
     private mountTelegram(bot: string, host: HTMLElement): void {
-        // data-onauth is evaluated by the widget as a global expression, so the handler has to be
-        // reachable by name from window — it cannot stay a method. Only one of these components is
-        // ever on screen (one door at a time), so a single global name is safe.
-        const callbackName = 'cedarTelegramAuth';
+        // Telegram evaluates data-onauth globally; each mount owns its callback to survive navigation.
+        const callbackName = this.callbackName;
         (window as unknown as Record<string, unknown>)[callbackName] =
             (user: TelegramWidgetUser) => void this.onTelegramAuth(user);
 
         const script = document.createElement('script');
         script.async = true;
+        script.onerror = () => {
+            if (this.destroyRef.destroyed) return;
+            this.widgetFailed.set(true);
+            this.error.set(this.t().externalAuth.widgetFailed);
+        };
         script.src = 'https://telegram.org/js/telegram-widget.js?22';
         script.setAttribute('data-telegram-login', bot);
         script.setAttribute('data-size', 'medium');

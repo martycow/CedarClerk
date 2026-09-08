@@ -12,6 +12,14 @@ import { indieDevGuard } from './core/indiedev.guard';
 // screen, could paint. Preloading is what keeps the split from costing anything: opening the
 // editor still finds its chunk in cache, because the fetch started while the drafts list rendered.
 export const routes: Routes = [
+    {
+        path: 'forgot-password',
+        loadComponent: () => import('./pages/password-recovery.component').then(m => m.PasswordRecoveryComponent),
+    },
+    {
+        path: 'reset-password', data: { reset: true },
+        loadComponent: () => import('./pages/password-recovery.component').then(m => m.PasswordRecoveryComponent),
+    },
     // guestGuard, not none: a live session means you are already past these two pages.
     {
         path: 'login',
