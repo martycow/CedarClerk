@@ -431,7 +431,7 @@ Keyword-монитор на `/api/health` — не роскошь: Cloudflare о
 Оба подключаются пользователем в **Settings → Integrations** (ADR-095), ключи приложений — в drop-in.
 
 **X/Twitter** (ADR-092/093): приложение в X Developer Portal (аккаунт Марти), OAuth 2.0 PKCE,
-callback `https://cedarclerk.mooexe.dev/api/targets/x/callback`. В drop-in:
+callback `https://cedarclerk.app/api/targets/x/callback` (хост из `Consts.URLs.MainHost`). В drop-in:
 `Cedar__X__ClientId` + `Cedar__X__ClientSecret`. Права приложения — Read and write; подключение
 запрашивает scope `tweet.read tweet.write users.read offline.access media.write` (ADR-241 —
 `media.write` нужен для картинок; аккаунт, подключённый до 02.09.2026, надо переподключить, иначе
@@ -443,7 +443,7 @@ callback `https://cedarclerk.mooexe.dev/api/targets/x/callback`. В drop-in:
 на вкладке **Products** добавить два self-serve продукта — **Sign In with LinkedIn using OpenID Connect**
 и **Share on LinkedIn** (оба без review; без первого не будет scope `openid profile`, без второго —
 `w_member_social`). На вкладке **Auth** в *Authorized redirect URLs* вписать ровно
-`https://cedarclerk.mooexe.dev/api/targets/linkedin/callback` (LinkedIn сравнивает строку целиком).
+`https://cedarclerk.app/api/targets/linkedin/callback` — хост берётся из `Consts.URLs.MainHost`/`Cedar:MainHost`, не из адреса дроплета (LinkedIn сравнивает строку целиком).
 В drop-in: `Cedar__LinkedIn__ClientId` + `Cedar__LinkedIn__ClientSecret` (Primary Client Secret с той же
 вкладки Auth). Необязательно: `Cedar__LinkedIn__ApiVersion=YYYYMM` — заголовок `Linkedin-Version`;
 в коде зашит `202608`, LinkedIn гасит каждую версию через год, так что когда посты начнут падать с
