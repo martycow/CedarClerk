@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-09-14 — LinkedIn connector 0.23.4 (ADR-299, T-381)
+
+LinkedIn is the fifth publish network: connect in Settings → Integrations (OAuth to
+linkedin.com and back, member id from `/v2/userinfo`), tick it in the Publish tab, press
+Publish. The post is the document itself, up to 3,000 characters, with its layout carried into
+plain text — blank lines, list markers, quotes, a rule, `label (url)` links, footnotes — and
+headings/bold/italic in the Mathematical Sans-Serif block. Up to twenty pictures ride along
+through the Images API with their alt text; a post without pictures carries the blog page as
+an article card with the OG image as its thumbnail. The commentary is escaped as LinkedIn's
+"little" text, hashtags left intact.
+
+Post-now only, by the API terms: the scheduler, the queue slots and the evergreen fill all
+refuse a LinkedIn target, and the editor marks it blocking while a time is set. The 60-day
+token has no refresh — the card shows its expiry and asks for a reconnect a week ahead.
+
+Validation: 2,016 backend tests (22 new for the builder and the wire shapes, three new error
+messages in all nine language tables) and the frontend suite green; nothing sent to LinkedIn
+yet — the app keys are not on the droplet, and the first real post is the eye-check.
+
 ## 2026-09-08 — Forest authentication 0.23.3 (ADR-298)
 
 Login, registration, external completion and password recovery use the selected

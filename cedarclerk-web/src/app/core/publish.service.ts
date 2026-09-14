@@ -29,6 +29,8 @@ export interface PublishAccount {
     remoteId: string;
     lastPublishedAt: string | null;
     lastError: string | null;
+    /** ADR-299 — when the stored token stops working; only LinkedIn, whose token cannot be refreshed, answers this. */
+    expiresAt?: string | null;
 }
 
 export interface PublishNetwork {
@@ -108,6 +110,10 @@ export class PublishService {
 
     connectX() {
         return firstValueFrom(this.http.post<{ url: string }>('/api/publish/x/connect', {}));
+    }
+
+    connectLinkedIn() {
+        return firstValueFrom(this.http.post<{ url: string }>('/api/publish/linkedin/connect', {}));
     }
 
     disconnect(targetId: string) {

@@ -32,6 +32,7 @@ public static class MicroPreviewProjection
         {
             PublishNetworks.X => XPostBuilder.Build(authorText, cedarJson, blogUrl).Text,
             PublishNetworks.Bluesky => BlueskyPostBuilder.Build(authorText, cedarJson, blogUrl).Text,
+            PublishNetworks.LinkedIn => LinkedInPostBuilder.Build(authorText, cedarJson, blogUrl).Text,
             _ => DiscordPostBuilder.Build(authorText, cedarJson, blogUrl),
         };
 

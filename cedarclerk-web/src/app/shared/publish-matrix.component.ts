@@ -170,7 +170,7 @@ export class PublishMatrixComponent {
     protected readonly t = inject(LocaleService).t;
     protected readonly kinds = DOCUMENT_KINDS;
 
-    private readonly order = ['telegram', 'x', 'bluesky', 'discord'];
+    private readonly order = ['telegram', 'x', 'bluesky', 'discord', 'linkedin'];
 
     protected readonly columns = computed<MatrixColumn[]>(() => {
         const words = this.t().matrix;
@@ -218,8 +218,8 @@ export function matrixCell(kind: DocumentKind, cap: PublishCapabilities | undefi
     }
 }
 
-const NAMES: Record<string, string> = { telegram: 'Telegram', x: 'X', bluesky: 'Bluesky', discord: 'Discord' };
-const BRANDS: Record<string, BrandIconName> = { telegram: 'telegram', x: 'twitter', bluesky: 'bluesky', discord: 'discord' };
+const NAMES: Record<string, string> = { telegram: 'Telegram', x: 'X', bluesky: 'Bluesky', discord: 'Discord', linkedin: 'LinkedIn' };
+const BRANDS: Record<string, BrandIconName> = { telegram: 'telegram', x: 'twitter', bluesky: 'bluesky', discord: 'discord', linkedin: 'linkedin' };
 
 function zeroCounts(): DocumentKindCounts {
     return Object.fromEntries(DOCUMENT_KINDS.map(k => [k, 0])) as DocumentKindCounts;

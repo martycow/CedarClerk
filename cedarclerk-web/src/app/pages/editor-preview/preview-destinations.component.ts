@@ -4,7 +4,7 @@ import { LocaleService } from '../../core/i18n/locale.service';
 import { IconComponent } from '../../shared/icon.component';
 import { DestinationState, StateTagComponent } from './state-tag.component';
 
-export type PreviewDestination = 'blog' | 'telegram' | 'x' | 'bluesky' | 'discord';
+export type PreviewDestination = 'blog' | 'telegram' | 'x' | 'bluesky' | 'discord' | 'linkedin';
 export type Readiness = DestinationState;
 
 /** One row of the destinations card. Readiness is composed by the tab, never fetched. */

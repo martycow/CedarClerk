@@ -9,7 +9,7 @@ public static class Consts
     // Bump this before every deploy. Two consecutive builds once both called themselves 0.20.0,
     // so the health check's version match proved nothing and the swap had to be confirmed by an
     // endpoint's status code instead.
-    public const string CurrentVersion = "0.23.3";
+    public const string CurrentVersion = "0.23.4";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
@@ -200,6 +200,14 @@ public static class Consts
     {
         public const string ClientIdCfg = "Cedar:X:ClientId";
         public const string ClientSecretCfg = "Cedar:X:ClientSecret";
+    }
+
+    public static class LinkedIn
+    {
+        public const string ClientIdCfg = "Cedar:LinkedIn:ClientId";
+        public const string ClientSecretCfg = "Cedar:LinkedIn:ClientSecret";
+        // Versioned API: a YYYYMM that LinkedIn sunsets a year after issue, so it is overridable without a build.
+        public const string ApiVersionCfg = "Cedar:LinkedIn:ApiVersion";
     }
 
     public static class Stripe

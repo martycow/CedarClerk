@@ -96,6 +96,8 @@ public class FillQueueSlotsJob(CedarDbContext db, TenantProvider tenant, ILogger
         {
             if (!targets.TryGetValue(slot.TargetId, out var target) || target.OwnerId != slot.OwnerId)
                 continue;
+            // ADR-299 — an evergreen slot on LinkedIn would be exactly the automated posting its terms forbid.
+            if (target.Network == PublishNetworks.LinkedIn) continue;
 
             foreach (var occurrence in Occurrences(slot, from, to))
             {

@@ -832,6 +832,62 @@
                         </div>
                     </div>
 
+                    <!--LinkedIn: one button out to linkedin.com and back (ADR-299), the same shape as X. The
+                    token lives 60 days with no refresh, so the card carries its expiry and a reconnect prompt;
+                    posts go out on Publish only, never on a schedule (API terms).-->
+                    <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.linkedin">
+                        <div class="net-sheet">
+                            <div class="net-head">
+                                <span class="integration-icon linkedin"><app-brand-icon name="linkedin" [size]="14"></app-brand-icon></span>
+                                <span class="net-id">
+                                    <span class="net-name">{{ t().settings.integrations.linkedin }}</span>
+                                    @if (linkedInAccount(); as account) {
+                                    <span class="net-status is-on">
+                                        {{ account.displayName }}
+                                        @if (account.lastPublishedAt; as when) { · {{ t().settings.integrations.lastPublished }} {{ when | zonedDate:'MM/dd/yyyy' }} }
+                                    </span>
+                                    @if (account.lastError; as err) { <span class="net-status is-error">{{ err }}</span> }
+                                    @if (linkedInExpiry(account); as expiry) {
+                                    <span class="net-status" [class.is-error]="expiry.state !== 'ok'">
+                                        {{ expiry.state === 'expired' ? t().settings.integrations.linkedinExpired
+                                            : expiry.state === 'soon' ? t().settings.integrations.linkedinExpiresSoon(expiry.date)
+                                            : t().settings.integrations.linkedinExpires(expiry.date) }}
+                                    </span>
+                                    }
+                                    } @else {
+                                    <span class="net-status">{{ t().settings.integrations.notConnected }}</span>
+                                    }
+                                </span>
+                                <span class="spacer"></span>
+                                @if (linkedInAccount(); as account) {
+                                <app-button variant="danger" size="sm" (clicked)="disconnectLinkedIn(account.id)" [disabled]="linkedInBusy()">
+                                    {{ t().settings.integrations.disconnect }}
+                                </app-button>
+                                }
+                            </div>
+                            @if (linkedInNotice() === 'connected') {
+                            <div class="success-banner"><app-icon name="check" size="xs"></app-icon>{{ t().settings.integrations.linkedinConnected }}</div>
+                            } @else if (linkedInNotice() === 'error') {
+                            <p class="field-error">{{ t().settings.integrations.linkedinFailed }}</p>
+                            }
+                            @if (!linkedInAccount()) {
+                            <p class="field-hint">{{ t().settings.integrations.linkedinConnectHint }}</p>
+                            <div class="connect-row">
+                                <app-button variant="pine" size="sm" (clicked)="connectLinkedIn()" [disabled]="linkedInBusy()">
+                                    {{ linkedInBusy() ? '…' : t().settings.integrations.linkedinConnect }}
+                                </app-button>
+                            </div>
+                            } @else if (linkedInExpiry(linkedInAccount()!)?.state !== 'ok') {
+                            <div class="connect-row">
+                                <app-button variant="pine" size="sm" (clicked)="connectLinkedIn()" [disabled]="linkedInBusy()">
+                                    {{ linkedInBusy() ? '…' : t().settings.integrations.linkedinReconnect }}
+                                </app-button>
+                            </div>
+                            }
+                            @if (linkedInError()) { <p class="field-error">{{ linkedInError() }}</p> }
+                        </div>
+                    </div>
+
                     <!--Discord: a channel webhook pasted whole (ADR-131) — the URL is the credential, so it
                     is verified against Discord before being stored encrypted, and never shown back.-->
                     <div class="card net-card" role="region" [attr.aria-label]="t().settings.integrations.discord">

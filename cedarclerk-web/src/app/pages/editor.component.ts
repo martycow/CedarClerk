@@ -154,7 +154,7 @@ type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 type PublishRunStatus = 'waiting' | 'running' | 'done' | 'failed';
 
 /** The networks that derive a short post rather than taking the document (ADR-077). */
-type MicroNetwork = 'bluesky' | 'x' | 'discord';
+type MicroNetwork = 'bluesky' | 'x' | 'discord' | 'linkedin';
 /** T-318 — stores with no publish API: the document renders to their own markup and goes out
  *  through the clipboard, never through a PublishJob. */
 type CopyTarget = 'steam' | 'itch';
@@ -579,7 +579,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // Connecting is not here at all any more: it lives in Settings → Integrations (ADR-095).
     private publishApi = inject(PublishService);
     private billingApi = inject(BillingService);
-    readonly microNetworks: MicroNetwork[] = ['bluesky', 'x', 'discord'];
+    readonly microNetworks: MicroNetwork[] = ['bluesky', 'x', 'discord', 'linkedin'];
     // T-318 — Steam and itch.io left the unsupported list: their store editors take pasted
     // BBCode/HTML, so the window renders the text and hands it to the clipboard instead.
     readonly copyTargets: { id: CopyTarget; name: string; icon: BrandIconName }[] = [
@@ -592,19 +592,23 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         { id: 'youtube', name: 'YouTube', icon: 'youtube' },
     ];
     activeExportDestination = signal<ExportDestination>('blog');
-    readonly microLimits: Record<MicroNetwork, number> = { bluesky: 300, x: 280, discord: 2000 };
-    readonly microLabels: Record<MicroNetwork, string> = { bluesky: 'Bluesky', x: 'X', discord: 'Discord' };
-    /** Discord never threads (ADR-131) — a webhook message has no reply structure to chain. */
-    readonly microThreadable: Record<MicroNetwork, boolean> = { bluesky: true, x: true, discord: false };
+    readonly microLimits: Record<MicroNetwork, number> = { bluesky: 300, x: 280, discord: 2000, linkedin: 3000 };
+    readonly microLabels: Record<MicroNetwork, string> = { bluesky: 'Bluesky', x: 'X', discord: 'Discord', linkedin: 'LinkedIn' };
+    /** Discord never threads (ADR-131) — a webhook message has no reply structure to chain; LinkedIn takes the document as one 3,000-character post (ADR-299). */
+    readonly microThreadable: Record<MicroNetwork, boolean> = { bluesky: true, x: true, discord: false, linkedin: false };
+    /** ADR-299 — LinkedIn's API terms forbid automated posting: it takes the Publish button and refuses a time. */
+    readonly microSchedulable: Record<MicroNetwork, boolean> = { bluesky: true, x: true, discord: true, linkedin: false };
 
     destBluesky = signal(false);
     destX = signal(false);
     destDiscord = signal(false);
+    destLinkedIn = signal(false);
     /** The last short-post failure, so the success toast stays honest about a partial publish. */
     microError = signal('');
     blueskyAccount = signal<PublishAccount | null>(null);
     xAccount = signal<PublishAccount | null>(null);
     discordAccount = signal<PublishAccount | null>(null);
+    linkedInAccount = signal<PublishAccount | null>(null);
     xCredits = signal<number | null>(null);
 
     /** Every network's capabilities as the server describes them — what the publish matrix reads (ADR-241). */
@@ -616,6 +620,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.xAccount()) list.push('x');
         if (this.blueskyAccount()) list.push('bluesky');
         if (this.discordAccount()) list.push('discord');
+        if (this.linkedInAccount()) list.push('linkedin');
         return list;
     });
 
@@ -630,24 +635,24 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
      * publications, not one with an option, so the window asks which rather than offering a
      * checkbox beside a text field the thread mode does not even read.
      */
-    microMode = signal<Record<MicroNetwork, MicroMode>>({ bluesky: 'link', x: 'link', discord: 'link' });
+    microMode = signal<Record<MicroNetwork, MicroMode>>({ bluesky: 'link', x: 'link', discord: 'link', linkedin: 'link' });
     /** Parts per network for the currently previewed language; 0 while unknown. */
-    microParts = signal<Record<MicroNetwork, number>>({ bluesky: 0, x: 0, discord: 0 });
-    microCounting = signal<Record<MicroNetwork, boolean>>({ bluesky: false, x: false, discord: false });
+    microParts = signal<Record<MicroNetwork, number>>({ bluesky: 0, x: 0, discord: 0, linkedin: 0 });
+    microCounting = signal<Record<MicroNetwork, boolean>>({ bluesky: false, x: false, discord: false, linkedin: false });
 
     // Per network, per language. One field for "the current language" silently sent the same text
     // to every ticked version, which is the one thing a per-language override must not do.
-    private microTexts: Record<MicroNetwork, Record<string, string>> = { bluesky: {}, x: {}, discord: {} };
-    private microDirty: Record<MicroNetwork, Set<string>> = { bluesky: new Set(), x: new Set(), discord: new Set() };
+    private microTexts: Record<MicroNetwork, Record<string, string>> = { bluesky: {}, x: {}, discord: {}, linkedin: {} };
+    private microDirty: Record<MicroNetwork, Set<string>> = { bluesky: new Set(), x: new Set(), discord: new Set(), linkedin: new Set() };
     /** Which language's text the panel is editing — its own tab row, shown only when >1 is ticked. */
-    microTextLang = signal<Record<MicroNetwork, string>>({ bluesky: DEFAULT_PRIMARY_LANGUAGE, x: DEFAULT_PRIMARY_LANGUAGE, discord: DEFAULT_PRIMARY_LANGUAGE });
+    microTextLang = signal<Record<MicroNetwork, string>>({ bluesky: DEFAULT_PRIMARY_LANGUAGE, x: DEFAULT_PRIMARY_LANGUAGE, discord: DEFAULT_PRIMARY_LANGUAGE, linkedin: DEFAULT_PRIMARY_LANGUAGE });
 
     /**
      * ADR-100 — which versions actually go out on this network, a subset of the window's ticked
      * ones. Empty means "all of them", which is both the default and what the window did before:
      * one account with a bilingual audience is a real case, two tweets nobody asked for is not.
      */
-    microLangs = signal<Record<MicroNetwork, string[]>>({ bluesky: [], x: [], discord: [] });
+    microLangs = signal<Record<MicroNetwork, string[]>>({ bluesky: [], x: [], discord: [], linkedin: [] });
 
     microLangsOf(network: MicroNetwork): string[] {
         const picked = this.microLangs()[network].filter(l => this.exportLangs().includes(l));
@@ -669,12 +674,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     anyDestination(): boolean {
-        return this.destBlog() || this.destTelegram() || this.destBluesky() || this.destX() || this.destDiscord();
+        return this.destBlog() || this.destTelegram() || this.destBluesky() || this.destX() || this.destDiscord() || this.destLinkedIn();
     }
 
     /** The counter carved beside step 2's title (ADR-190). Shown as written, zero included. */
     tickedDestinationCount(): number {
-        return [this.destBlog(), this.destTelegram(), this.destBluesky(), this.destX(), this.destDiscord()]
+        return [this.destBlog(), this.destTelegram(), this.destBluesky(), this.destX(), this.destDiscord(), this.destLinkedIn()]
             .filter(Boolean).length;
     }
 
@@ -682,6 +687,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         switch (network) {
             case 'x': return this.xAccount();
             case 'discord': return this.discordAccount();
+            case 'linkedin': return this.linkedInAccount();
             default: return this.blueskyAccount();
         }
     }
@@ -714,6 +720,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         switch (network) {
             case 'x': return this.destX;
             case 'discord': return this.destDiscord;
+            case 'linkedin': return this.destLinkedIn;
             default: return this.destBluesky;
         }
     }
@@ -721,13 +728,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     // ─── The Publish / Export workspace (ADR-242) ─────────────────────────────────────────────
     // Everything below is read off the ticks, the accounts and the checks the window already
     // held; nothing here is a second source of truth about what can publish.
-    readonly publishDestinationIds: ExportDestination[] = ['blog', 'telegram', 'bluesky', 'x', 'discord'];
+    readonly publishDestinationIds: ExportDestination[] = ['blog', 'telegram', 'bluesky', 'x', 'discord', 'linkedin'];
 
     isIncluded(destination: ExportDestination): boolean {
         switch (destination) {
             case 'blog': return this.destBlog();
             case 'telegram': return this.destTelegram();
-            case 'bluesky': case 'x': case 'discord': return this.destination(destination)();
+            case 'bluesky': case 'x': case 'discord': case 'linkedin': return this.destination(destination)();
             default: return false;
         }
     }
@@ -737,7 +744,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         switch (destination) {
             case 'blog': this.destBlog.set(on); break;
             case 'telegram': this.destTelegram.set(on); break;
-            case 'bluesky': case 'x': case 'discord': this.destination(destination).set(on); break;
+            case 'bluesky': case 'x': case 'discord': case 'linkedin': this.destination(destination).set(on); break;
             default: return;
         }
         if (on && !this.isIncluded(this.activeExportDestination())) this.activeExportDestination.set(destination);
@@ -760,6 +767,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         if (this.isWorkingMaterial()) return 'blocking';
         if (this.destination(network)() && this.microOverLimit(network)) return 'blocking';
         if (network === 'x' && this.destX() && this.xCreditsShort()) return 'blocking';
+        if (!this.microSchedulable[network] && this.destination(network)() && this.scheduledAt) return 'blocking';
         return account.lastError ? 'warn' : 'ready';
     }
 
@@ -774,6 +782,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             return chosen.length ? [...new Set(chosen)].join(' · ') : this.channels()[0].title;
         }
         const account = this.account(destination as MicroNetwork);
+        if (account && !this.microSchedulable[destination as MicroNetwork] && this.scheduledAt) return tx.exportModal.linkedinPostNow;
         return account ? account.displayName : tx.exportModal.notConnected;
     }
 
@@ -1025,7 +1034,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     }
 
     /** The brand mark for a short-post network — X's is still served under the `twitter` key. */
-    brandOf(network: MicroNetwork): 'twitter' | 'bluesky' | 'discord' {
+    brandOf(network: MicroNetwork): 'twitter' | 'bluesky' | 'discord' | 'linkedin' {
         return network === 'x' ? 'twitter' : network;
     }
 
@@ -1069,11 +1078,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         }
     }
 
-    /** Graphemes for Bluesky, t.co-weighted units for X, plain length for Discord. */
+    /** Graphemes for Bluesky, t.co-weighted units for X, plain length for Discord and LinkedIn. */
     microLength(network: MicroNetwork): number {
         switch (network) {
             case 'x': return this.xWeighted();
             case 'discord': return this.microText('discord').length;
+            case 'linkedin': return this.microText('linkedin').length;
             default: return this.blueskyGraphemes();
         }
     }
@@ -1118,16 +1128,19 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             this.blueskyAccount.set(networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null);
             this.xAccount.set(networks.find(n => n.network === 'x')?.accounts[0] ?? null);
             this.discordAccount.set(networks.find(n => n.network === 'discord')?.accounts[0] ?? null);
+            this.linkedInAccount.set(networks.find(n => n.network === 'linkedin')?.accounts[0] ?? null);
         } catch {
             this.blueskyAccount.set(null);
             this.xAccount.set(null);
             this.discordAccount.set(null);
+            this.linkedInAccount.set(null);
         }
         // A network that is no longer connected must not stay ticked — Publish would queue against
         // an account that is gone and report it as a failure of the post rather than of the setup.
         if (!this.blueskyAccount()) this.destBluesky.set(false);
         if (!this.xAccount()) this.destX.set(false);
         if (!this.discordAccount()) this.destDiscord.set(false);
+        if (!this.linkedInAccount()) this.destLinkedIn.set(false);
 
         try {
             this.xCredits.set((await this.billingApi.credits()).balance);
@@ -1135,12 +1148,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
         const id = this.currentId();
         if (!id) return;
-        this.microTexts = { bluesky: {}, x: {}, discord: {} };
-        this.microDirty = { bluesky: new Set(), x: new Set(), discord: new Set() };
+        this.microTexts = { bluesky: {}, x: {}, discord: {}, linkedin: {} };
+        this.microDirty = { bluesky: new Set(), x: new Set(), discord: new Set(), linkedin: new Set() };
         try {
             const { texts } = await this.publishApi.texts(id);
             for (const entry of texts) {
-                if (entry.network === 'x' || entry.network === 'bluesky' || entry.network === 'discord')
+                if (entry.network === 'x' || entry.network === 'bluesky' || entry.network === 'discord' || entry.network === 'linkedin')
                     this.microTexts[entry.network][entry.language] = entry.text;
             }
         } catch { /* no overrides loaded means every version falls back to its teaser */ }
@@ -3820,7 +3833,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     /** Everything a schedule can apply to — the blog is not a publish target (ADR-099). */
     anyNetworkDestination(): boolean {
-        return this.destTelegram() || this.destBluesky() || this.destX() || this.destDiscord();
+        return this.destTelegram() || this.destBluesky() || this.destX() || this.destDiscord() || this.destLinkedIn();
     }
 
     /** True when pressing Publish will schedule the networks rather than send them now. */
@@ -4290,6 +4303,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             for (const network of this.microNetworks) {
                 const account = this.account(network);
                 if (!this.destination(network)() || !account) continue;
+                // ADR-299 — LinkedIn is never scheduled; the rack marks it blocking while a time is set.
+                if (!this.microSchedulable[network]) continue;
                 // The override has to exist server-side before a send that happens without this
                 // page open — the scheduled job reads the stored text, never the field.
                 await this.saveMicroTexts(network);

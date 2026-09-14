@@ -943,6 +943,11 @@
                         </div>
                         }
 
+                        <!--ADR-299 — LinkedIn's API terms forbid automated posting: a set time skips it, and the panel says so.-->
+                        @if (!microSchedulable[network] && scheduledAt) {
+                        <p class="hint-bubble blocking"><app-icon name="warning" size="sm"></app-icon>{{ t().editor.exportModal.linkedinPostNow }}</p>
+                        }
+
                         @if (microMode()[network] === 'link') {
                         <!--One field per version: a single field wrote the same override into every
                         ticked language, which is the one thing a per-language text must not do.-->
@@ -959,7 +964,7 @@
                             <span class="form-field-label">{{ t().editor.exportModal.textForLanguage(microTextLang()[network].toUpperCase()) }}</span>
                             <textarea class="chat-input" rows="4"
                                       [ngModel]="microText(network)" (ngModelChange)="setMicroText(network, $event)"
-                                      [placeholder]="network === 'x' ? t().editor.exportModal.xTextPlaceholder : network === 'discord' ? t().editor.exportModal.discordTextPlaceholder : t().editor.exportModal.blueskyTextPlaceholder"></textarea>
+                                      [placeholder]="network === 'x' ? t().editor.exportModal.xTextPlaceholder : network === 'discord' ? t().editor.exportModal.discordTextPlaceholder : network === 'linkedin' ? t().editor.exportModal.linkedinTextPlaceholder : t().editor.exportModal.blueskyTextPlaceholder"></textarea>
                             <p class="field-hint-inline" [class.over-limit]="microOverLimit(network)">
                                 {{ microLength(network) }} / {{ microLimits[network] }}
                                 @if (!microText(network).trim()) { · {{ t().editor.exportModal.blueskyFallback }} }
@@ -1700,6 +1705,10 @@
                 </app-spec-row>
                 <app-spec-row scope="document" label="Discord">
                     @if (discordAccount(); as a) { <span>{{ a.displayName }}</span> }
+                    @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
+                </app-spec-row>
+                <app-spec-row scope="document" label="LinkedIn">
+                    @if (linkedInAccount(); as a) { <span>{{ a.displayName }}</span> }
                     @else { <span class="insp-off">{{ t().manager.inspector.none }}</span> }
                 </app-spec-row>
 

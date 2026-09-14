@@ -164,6 +164,8 @@ builder.Services.AddScoped<XPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<XPublishTarget>());
 builder.Services.AddScoped<DiscordPublishTarget>();
 builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<DiscordPublishTarget>());
+builder.Services.AddScoped<LinkedInPublishTarget>();
+builder.Services.AddScoped<IPublishTarget>(sp => sp.GetRequiredService<LinkedInPublishTarget>());
 builder.Services.AddSingleton<PublishJobRunner>();
 builder.Services.AddScoped<IDraftSearchIndex, DraftSearchIndex>();
 builder.Services.AddHostedService<DraftSearchBackfill>();

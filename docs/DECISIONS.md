@@ -296,3 +296,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-296 — Consolidate authentication recovery](adr/ADR-296.md)
 - [ADR-297 — Compact Telegram sign-in widget](adr/ADR-297.md)
 - [ADR-298 — Forest authentication screens](adr/ADR-298.md)
+- [ADR-299 — LinkedIn: a post-now connector that carries the document's layout](adr/ADR-299.md)

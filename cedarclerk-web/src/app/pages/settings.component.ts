@@ -171,7 +171,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         const handle = this.auth.telegramUsername();
         if (this.auth.telegramLinked() && handle) meta.push({ text: `@${handle}`, title: t.integrations.telegramAccount });
         if (this.channels().length) meta.push({ text: t.meta.channels(this.channels().length) });
-        const networks = [this.blueskyAccount(), this.xAccount(), this.discordAccount()].filter(Boolean).length;
+        const networks = [this.blueskyAccount(), this.xAccount(), this.discordAccount(), this.linkedInAccount()].filter(Boolean).length;
         if (networks) meta.push({ text: t.meta.networks(networks) });
         const credits = this.credits();
         if (credits) meta.push({ text: t.meta.credits(credits.balance), title: t.credits.balanceLabel });
@@ -240,6 +240,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
     discordError = signal<string | null>(null);
     /** Set by the OAuth callback's `?x=` (ADR-095) — the only sign the round trip finished. */
     xNotice = signal<'connected' | 'error' | null>(null);
+
+    linkedInAccount = signal<PublishAccount | null>(null);
+    linkedInBusy = signal(false);
+    linkedInError = signal<string | null>(null);
+    /** Same round trip as X's, landing with `?linkedin=` (ADR-299). */
+    linkedInNotice = signal<'connected' | 'error' | null>(null);
 
     // Not connectable yet, and named rather than hidden: "planned" is an answer, an empty screen
     // is not. Moved out of the export window, where six greyed-out rows sat beside live ones.
@@ -311,6 +317,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.xNotice.set(x);
             setTimeout(() => this.jump('sec-integrations'));
         }
+        const linkedin = this.route.snapshot.queryParamMap.get('linkedin');
+        if (linkedin === 'connected' || linkedin === 'error') {
+            this.tab.set('integrations');
+            this.linkedInNotice.set(linkedin);
+            setTimeout(() => this.jump('sec-integrations'));
+        }
     }
 
     private async loadPublishAccounts() {
@@ -319,10 +331,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.blueskyAccount.set(networks.find(n => n.network === 'bluesky')?.accounts[0] ?? null);
             this.xAccount.set(networks.find(n => n.network === 'x')?.accounts[0] ?? null);
             this.discordAccount.set(networks.find(n => n.network === 'discord')?.accounts[0] ?? null);
+            this.linkedInAccount.set(networks.find(n => n.network === 'linkedin')?.accounts[0] ?? null);
         } catch {
             this.blueskyAccount.set(null);
             this.xAccount.set(null);
             this.discordAccount.set(null);
+            this.linkedInAccount.set(null);
         }
     }
 
@@ -514,6 +528,47 @@ export class SettingsComponent implements OnInit, OnDestroy {
         } finally {
             this.xBusy.set(false);
         }
+    }
+
+    // ADR-299 — the same OAuth round trip as X's, to linkedin.com and back through the server.
+    async connectLinkedIn() {
+        this.linkedInBusy.set(true);
+        this.linkedInError.set(null);
+        this.linkedInNotice.set(null);
+        try {
+            const { url } = await this.publishApi.connectLinkedIn();
+            window.location.href = url;
+        } catch (e) {
+            this.linkedInError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+            this.linkedInBusy.set(false);
+        }
+    }
+
+    async disconnectLinkedIn(targetId: string) {
+        if (!await this.confirmation.confirm({ message: this.t().common.disconnectConfirm('LinkedIn'), confirmLabel: this.t().common.confirm })) return;
+        this.linkedInBusy.set(true);
+        try {
+            await this.publishApi.disconnect(targetId);
+            this.linkedInAccount.set(null);
+            this.linkedInNotice.set(null);
+        } catch (e) {
+            this.linkedInError.set(httpErrorMessage(e, this.t().settings.errors.connectChannel));
+        } finally {
+            this.linkedInBusy.set(false);
+        }
+    }
+
+    /**
+     * A LinkedIn token lives 60 days and cannot be refreshed (ADR-299): the card says when it
+     * ends, and turns into a reconnect prompt a week before, so the author is asked before a
+     * publish fails on it.
+     */
+    linkedInExpiry(account: PublishAccount): { state: 'ok' | 'soon' | 'expired'; date: string } | null {
+        if (!account.expiresAt) return null;
+        const at = new Date(account.expiresAt);
+        const daysLeft = (at.getTime() - Date.now()) / 86_400_000;
+        const date = at.toLocaleDateString(this.locale.uiLang(), { day: 'numeric', month: 'short', year: 'numeric' });
+        return { state: daysLeft < 0 ? 'expired' : daysLeft < 7 ? 'soon' : 'ok', date };
     }
 
     hasProHeaderSlot(): boolean {

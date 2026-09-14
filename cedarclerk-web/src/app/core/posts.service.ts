@@ -60,7 +60,7 @@ export interface UpdatePreview {
 
 // ADR-096 — 'telegram' | 'blog' plus any network name: every destination the export window offers
 // now asks the same "you are about to overwrite a live post" question before it sends.
-export type PublishTarget = 'telegram' | 'blog' | 'bluesky' | 'x' | 'discord';
+export type PublishTarget = 'telegram' | 'blog' | 'bluesky' | 'x' | 'discord' | 'linkedin';
 
 // T-180 — the answer to editing the last single-message send in place. `unchanged` is Telegram's
 // own "message is not modified"; the timestamp is stamped either way.

@@ -471,7 +471,7 @@ export class PostsManagerComponent implements OnInit {
     }
 
     /** ADR-099 — network names are display strings, not translated: "Bluesky" is "Bluesky". */
-    private readonly networkLabels: Record<string, string> = { telegram: 'Telegram', bluesky: 'Bluesky', x: 'X', discord: 'Discord' };
+    private readonly networkLabels: Record<string, string> = { telegram: 'Telegram', bluesky: 'Bluesky', x: 'X', discord: 'Discord', linkedin: 'LinkedIn' };
 
     scheduledNetworkLabel(post: ScheduledPost): string {
         return this.networkLabels[post.network] ?? post.network;
@@ -743,7 +743,9 @@ export class PostsManagerComponent implements OnInit {
     }
 
     networkLabel(network: string): string {
-        return network === 'x' ? 'X' : network.charAt(0).toUpperCase() + network.slice(1);
+        if (network === 'x') return 'X';
+        if (network === 'linkedin') return 'LinkedIn';
+        return network.charAt(0).toUpperCase() + network.slice(1);
     }
 
     telegramUrl(d: DraftMeta): string | null {

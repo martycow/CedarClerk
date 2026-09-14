@@ -43,7 +43,7 @@ interface PublishIssue { code: string; blocking: boolean; actual: number; limit:
 
 type Device = 'desktop' | 'mobile';
 
-const MICRO_NETWORKS: readonly MicroNetwork[] = ['x', 'bluesky', 'discord'];
+const MICRO_NETWORKS: readonly MicroNetwork[] = ['x', 'bluesky', 'discord', 'linkedin'];
 
 function isMicro(destination: PreviewDestination): destination is MicroNetwork {
     return (MICRO_NETWORKS as readonly string[]).includes(destination);
@@ -370,7 +370,7 @@ export class EditorPreviewComponent implements OnDestroy {
             const parts = this.partCounts()[id];
             return { id, name, readiness: 'ready', detail: parts && parts > 1 ? words.parts(parts) : account.displayName };
         };
-        return [blog, telegram, micro('x', 'X'), micro('bluesky', 'Bluesky'), micro('discord', 'Discord')];
+        return [blog, telegram, micro('x', 'X'), micro('bluesky', 'Bluesky'), micro('discord', 'Discord'), micro('linkedin', 'LinkedIn')];
     });
 
     readonly checks = computed<PreviewCheck[]>(() => {

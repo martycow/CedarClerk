@@ -39,7 +39,7 @@ export interface TelegramPreview {
     buttons: TelegramPreviewButton[];
 }
 
-export type MicroNetwork = 'x' | 'bluesky' | 'discord';
+export type MicroNetwork = 'x' | 'bluesky' | 'discord' | 'linkedin';
 
 /** One post the way the network's builder would send it. Mirrors CedarClerk.Core/MicroPreviewProjection.cs. */
 export interface MicroPreviewPost {

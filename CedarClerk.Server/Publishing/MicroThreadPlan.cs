@@ -31,6 +31,7 @@ public static class MicroThreadPlan
     {
         PublishNetworks.X => XPostBuilder.UrlWeight + 2,
         PublishNetworks.Bluesky => BlueskyPostBuilder.GraphemeCount(blogUrl) + 2,
+        PublishNetworks.LinkedIn => LinkedInPostBuilder.Measure(blogUrl) + 2,
         _ => 0,
     };
 

@@ -643,7 +643,8 @@
 .net-sheet > .net-head + * { margin-top: var(--space-1); }
 
 /* Brand colours, same rule as .integration-icon.telegram above. #0085FF is Bluesky's blue; X's is
-   black on both themes, so its foreground is the one that flips; #5865F2 is Discord's blurple. */
+   black on both themes, so its foreground is the one that flips; #5865F2 is Discord's blurple;
+   #0A66C2 is LinkedIn's blue. */
 .integration-icon.bluesky {
     background: #0085FF;
 }
@@ -655,6 +656,10 @@
 
 .integration-icon.discord {
     background: #5865F2;
+}
+
+.integration-icon.linkedin {
+    background: #0A66C2;
 }
 
 /* The shell owns normal-page vertical scrolling. Keeping the channel lists in document flow

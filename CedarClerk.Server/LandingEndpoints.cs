@@ -914,7 +914,7 @@ public static class LandingEndpoints
                             <div class="plaque-title">{LandingTexts.OnePostEveryAddress(ru)}</div>
                             <div class="flow">
                                 <span>{LandingTexts.Draft(ru)}</span><span class="arrow">&rarr;</span>
-                                <span>Telegram · X · Bluesky · Discord</span><span class="arrow">&rarr;</span>
+                                <span>Telegram · X · Bluesky · LinkedIn · Discord</span><span class="arrow">&rarr;</span>
                                 <span>{LandingTexts.Blog(ru)}</span><span class="arrow">&rarr;</span><span>RSS</span>
                             </div>
                         </div>

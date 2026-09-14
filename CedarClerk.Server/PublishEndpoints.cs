@@ -33,6 +33,12 @@ public static class PublishEndpoints
     private static string XRedirectUri(IConfiguration cfg) =>
         $"{cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost}/api/targets/x/callback";
 
+    private sealed record LinkedInConnectState(string OwnerId, DateTime CreatedAt);
+    private static readonly ConcurrentDictionary<string, LinkedInConnectState> PendingLinkedInConnects = new();
+
+    private static string LinkedInRedirectUri(IConfiguration cfg) =>
+        $"{cfg[Consts.General.MainHostCfg] ?? Consts.URLs.MainHost}/api/targets/linkedin/callback";
+
     private static string Base64Url(byte[] bytes) =>
         Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
@@ -42,13 +48,21 @@ public static class PublishEndpoints
 
         // Every network this build can publish to, with its limits — the capability matrix (T-086)
         // as data the editor can render, plus which of the owner's accounts are connected.
-        group.MapGet("/networks", async (ClaimsPrincipal user, CedarDbContext db, IEnumerable<IPublishTarget> targets) =>
+        group.MapGet("/networks", async (ClaimsPrincipal user, CedarDbContext db, IEnumerable<IPublishTarget> targets,
+            LinkedInPublishTarget linkedIn) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var connected = await db.PublishTargets
+            var rows = await db.PublishTargets
                 .Where(t => t.OwnerId == uid && t.IsActive)
-                .Select(t => new { t.Id, t.Network, t.DisplayName, t.RemoteId, t.LastPublishedAt, t.LastError })
                 .ToListAsync();
+
+            // ADR-299 — a LinkedIn token cannot be refreshed, so its expiry is a fact the author
+            // has to be shown before a publish fails on it; every other network answers null.
+            var connected = rows.Select(t => new
+            {
+                t.Id, t.Network, t.DisplayName, t.RemoteId, t.LastPublishedAt, t.LastError,
+                ExpiresAt = t.Network == PublishNetworks.LinkedIn ? linkedIn.ExpiresAt(t) : null,
+            }).ToList();
 
             return Results.Ok(targets.Select(t => new
             {
@@ -312,6 +326,114 @@ public static class PublishEndpoints
 
             await db.SaveChangesAsync(ct);
             return Results.Redirect("/settings?tab=account&x=connected");
+        }).RequireAuthorization();
+
+        // ── LinkedIn: OAuth 2.0 Authorization Code (T-381, ADR-299) ──────────────────────────
+        // X's round trip without PKCE, which LinkedIn's self-serve flow does not document; the
+        // state alone ties the callback to the account that started it. No refresh token comes
+        // back — the token lives 60 days and the connection is then a reconnect, by design.
+        group.MapPost("/linkedin/connect", (ClaimsPrincipal user, IConfiguration cfg) =>
+        {
+            var clientId = cfg[Consts.LinkedIn.ClientIdCfg];
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(cfg[Consts.LinkedIn.ClientSecretCfg]))
+                return Results.Json(new { error = ErrorMessages.LinkedInNotConfigured }, statusCode: StatusCodes.Status501NotImplemented);
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var state = Base64Url(RandomNumberGenerator.GetBytes(32));
+
+            foreach (var (key, entry) in PendingLinkedInConnects)
+                if (entry.CreatedAt < DateTime.UtcNow - XConnectTtl) PendingLinkedInConnects.TryRemove(key, out _);
+            PendingLinkedInConnects[state] = new LinkedInConnectState(uid, DateTime.UtcNow);
+
+            var url = "https://www.linkedin.com/oauth/v2/authorization?response_type=code"
+                + $"&client_id={Uri.EscapeDataString(clientId)}"
+                + $"&redirect_uri={Uri.EscapeDataString(LinkedInRedirectUri(cfg))}"
+                + $"&scope={Uri.EscapeDataString(LinkedInPublishTarget.Scopes)}"
+                + $"&state={state}";
+            return Results.Ok(new { url });
+        });
+
+        app.MapGet("/api/targets/linkedin/callback", async (
+            string? code, string? state, string? error,
+            ClaimsPrincipal user,
+            CedarDbContext db,
+            PublishTargetSecrets secrets,
+            IHttpClientFactory httpFactory,
+            IConfiguration cfg,
+            ILogger<LinkedInPublishTarget> logger,
+            CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            if (error is not null || code is null || state is null
+                || !PendingLinkedInConnects.TryRemove(state, out var pending)
+                || pending.OwnerId != uid
+                || pending.CreatedAt < DateTime.UtcNow - XConnectTtl)
+            {
+                return Results.Redirect("/settings?tab=account&linkedin=error");
+            }
+
+            var clientId = cfg[Consts.LinkedIn.ClientIdCfg];
+            var clientSecret = cfg[Consts.LinkedIn.ClientSecretCfg];
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                return Results.Redirect("/settings?tab=account&linkedin=error");
+
+            var http = httpFactory.CreateClient();
+            var tokenResponse = await http.PostAsync("https://www.linkedin.com/oauth/v2/accessToken",
+                new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["code"] = code,
+                    ["client_id"] = clientId,
+                    ["client_secret"] = clientSecret,
+                    ["redirect_uri"] = LinkedInRedirectUri(cfg),
+                }), ct);
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                logger.LogWarning("LinkedIn refused the code exchange: {Status} {Body}",
+                    (int)tokenResponse.StatusCode, await tokenResponse.Content.ReadAsStringAsync(ct));
+                return Results.Redirect("/settings?tab=account&linkedin=error");
+            }
+
+            var tokens = await tokenResponse.Content.ReadFromJsonAsync<LinkedInPublishTarget.TokenResponse>(cancellationToken: ct);
+            if (tokens?.AccessToken is null || tokens.ExpiresIn <= 0)
+                return Results.Redirect("/settings?tab=account&linkedin=error");
+
+            using var meRequest = new HttpRequestMessage(HttpMethod.Get, $"{LinkedInPublishTarget.ApiBase}/v2/userinfo");
+            meRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+            var meResponse = await http.SendAsync(meRequest, ct);
+            if (!meResponse.IsSuccessStatusCode) return Results.Redirect("/settings?tab=account&linkedin=error");
+
+            var me = await meResponse.Content.ReadFromJsonAsync<LinkedInPublishTarget.UserInfo>(cancellationToken: ct);
+            if (me?.Sub is null) return Results.Redirect("/settings?tab=account&linkedin=error");
+
+            var credentials = new LinkedInCredentials(me.Sub, me.Name ?? "LinkedIn", tokens.AccessToken,
+                DateTime.UtcNow.AddSeconds(tokens.ExpiresIn));
+            var stored = secrets.Protect(JsonSerializer.Serialize(credentials));
+
+            // Keyed by the member id — the name is what LinkedIn shows, not who the account is.
+            var existing = await db.PublishTargets.FirstOrDefaultAsync(
+                t => t.OwnerId == uid && t.Network == PublishNetworks.LinkedIn && t.RemoteId == me.Sub, ct);
+            if (existing is not null)
+            {
+                existing.DisplayName = credentials.Name;
+                existing.CredentialsProtected = stored;
+                existing.IsActive = true;
+                existing.LastError = null;
+            }
+            else
+            {
+                db.PublishTargets.Add(new PublishTarget
+                {
+                    OwnerId = uid,
+                    Network = PublishNetworks.LinkedIn,
+                    DisplayName = credentials.Name,
+                    RemoteId = me.Sub,
+                    CredentialsProtected = stored,
+                });
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Redirect("/settings?tab=account&linkedin=connected");
         }).RequireAuthorization();
 
         // Deactivate and forget the credentials, but keep the row: it is what "this post went there"

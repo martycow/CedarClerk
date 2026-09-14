@@ -82,6 +82,7 @@ public class PublishNetworkTests
     [InlineData(PublishNetworks.Telegram)]
     [InlineData(PublishNetworks.Bluesky)]
     [InlineData(PublishNetworks.Discord)]
+    [InlineData(PublishNetworks.LinkedIn)]
     public void Known_networks_are_recognised(string network) => Assert.True(PublishNetworks.IsKnown(network));
 
     [Theory]

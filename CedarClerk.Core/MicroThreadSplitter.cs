@@ -60,6 +60,8 @@ public static class MicroThreadSplitter
         PublishNetworks.Bluesky => (BlueskyPostBuilder.GraphemeCount, BlueskyPostBuilder.MaxGraphemes),
         // Discord never threads (ADR-131) — this only serves length displays and previews.
         PublishNetworks.Discord => (static text => text.Length, DiscordPostBuilder.MaxChars),
+        // LinkedIn never threads either — measured in escaped wire characters, the unit its limit is in.
+        PublishNetworks.LinkedIn => (LinkedInPostBuilder.Measure, LinkedInPostBuilder.MaxChars),
         _ => throw new NotSupportedException($"No micro-thread rules for network '{network}'"),
     };
 

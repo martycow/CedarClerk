@@ -79,6 +79,9 @@ public static class ScheduledPostEndpoints
                     return Results.Json(new { error = ErrorMessages.DestinationNotConnected }, statusCode: StatusCodes.Status403Forbidden);
                 network = target.Network;
                 targetId = target.Id;
+                // ADR-299 — LinkedIn's API terms forbid automated posting; it takes the Publish button only.
+                if (network == PublishNetworks.LinkedIn)
+                    return Results.Json(new { error = ErrorMessages.LinkedInNoScheduling }, statusCode: StatusCodes.Status422UnprocessableEntity);
                 if (network == PublishNetworks.Telegram) chatId = target.RemoteId;
             }
             else if (!string.IsNullOrWhiteSpace(req.ChatId))

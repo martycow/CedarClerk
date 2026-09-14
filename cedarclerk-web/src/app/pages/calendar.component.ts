@@ -47,12 +47,12 @@ interface CalendarCell {
 
 /** One entity, one colour (ADR-158): every surface drawing a network reads this map. */
 const NETWORK_SLOTS: Record<string, 1 | 2 | 3 | 4 | 5 | 6> = {
-    telegram: 1, blog: 2, bluesky: 3, discord: 4, x: 5,
+    telegram: 1, blog: 2, bluesky: 3, discord: 4, x: 5, linkedin: 6,
 };
 
 /** The chip names its network by icon, never by colour alone (ADR-149). */
 const NETWORK_ICONS: Record<string, IconName> = {
-    telegram: 'paper-plane-tilt', blog: 'globe', bluesky: 'cloud', discord: 'chat-teardrop-dots', x: 'at',
+    telegram: 'paper-plane-tilt', blog: 'globe', bluesky: 'cloud', discord: 'chat-teardrop-dots', x: 'at', linkedin: 'user',
 };
 
 export function networkColor(network: string): string {
@@ -305,11 +305,11 @@ export class CalendarComponent implements OnInit {
     /** Networks actually on the board, for the legend. */
     legendNetworks = computed(() => {
         const seen = new Set(this.visiblePosts().map(ticket => ticket.network));
-        return ['telegram', 'bluesky', 'discord', 'x', 'blog'].filter(n => seen.has(n));
+        return ['telegram', 'bluesky', 'discord', 'x', 'linkedin', 'blog'].filter(n => seen.has(n));
     });
 
     networkLabel(network: string): string {
-        const labels: Record<string, string> = { telegram: 'Telegram', bluesky: 'Bluesky', discord: 'Discord', x: 'X', blog: 'Blog' };
+        const labels: Record<string, string> = { telegram: 'Telegram', bluesky: 'Bluesky', discord: 'Discord', x: 'X', linkedin: 'LinkedIn', blog: 'Blog' };
         return labels[network] ?? network;
     }
 

@@ -426,7 +426,7 @@ Keyword-монитор на `/api/health` — не роскошь: Cloudflare о
 
 ---
 
-## 7. Соцсети-коннекторы — X и Bluesky. **Работают на проде**
+## 7. Соцсети-коннекторы — X, LinkedIn и Bluesky. **X и Bluesky работают на проде, LinkedIn ждёт ключей**
 
 Оба подключаются пользователем в **Settings → Integrations** (ADR-095), ключи приложений — в drop-in.
 
@@ -438,6 +438,19 @@ callback `https://cedarclerk.mooexe.dev/api/targets/x/callback`. В drop-in:
 посты уходят без картинок и строка аккаунта об этом говорит). Публикация платная **для автора** — 1 кредит за
 пост (пакеты кредитов см. §1/Stripe и Stars ниже); у самого приложения в X — свой pay-per-use
 баланс, пополняется в портале X.
+
+**LinkedIn** (ADR-299): приложение в LinkedIn Developer Portal (developers.linkedin.com → My apps),
+на вкладке **Products** добавить два self-serve продукта — **Sign In with LinkedIn using OpenID Connect**
+и **Share on LinkedIn** (оба без review; без первого не будет scope `openid profile`, без второго —
+`w_member_social`). На вкладке **Auth** в *Authorized redirect URLs* вписать ровно
+`https://cedarclerk.mooexe.dev/api/targets/linkedin/callback` (LinkedIn сравнивает строку целиком).
+В drop-in: `Cedar__LinkedIn__ClientId` + `Cedar__LinkedIn__ClientSecret` (Primary Client Secret с той же
+вкладки Auth). Необязательно: `Cedar__LinkedIn__ApiVersion=YYYYMM` — заголовок `Linkedin-Version`;
+в коде зашит `202608`, LinkedIn гасит каждую версию через год, так что когда посты начнут падать с
+«version not supported», достаточно поменять переменную и перезапустить сервис.
+Токен живёт 60 дней и не обновляется программно — карточка в Settings показывает дату и за неделю
+просит переподключить. Постинг только по кнопке Publish: отложенная отправка и evergreen-слоты для
+LinkedIn отказывают (условия API §3.1 п. 26). Бесплатно — кредиты не списываются.
 
 **Bluesky** (ADR-079): без приложения и review — пользователь вводит handle + app password,
 хранится зашифрованным (DataProtection), сессия на каждую публикацию. Ключей в drop-in не требует.

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CedarClerk.Core;
 using CedarClerk.Localization;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,8 +47,11 @@ public static class QueueSlotEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (Invalid(req) is { } error) return error;
 
-            var ownsTarget = await db.PublishTargets.AnyAsync(t => t.Id == req.TargetId && t.OwnerId == uid && t.IsActive);
-            if (!ownsTarget) return Results.NotFound();
+            var target = await db.PublishTargets.FirstOrDefaultAsync(t => t.Id == req.TargetId && t.OwnerId == uid && t.IsActive);
+            if (target is null) return Results.NotFound();
+            // ADR-299 — LinkedIn's API terms forbid automated posting; a slot there cannot exist.
+            if (target.Network == PublishNetworks.LinkedIn)
+                return Results.Json(new { error = ErrorMessages.LinkedInNoScheduling }, statusCode: StatusCodes.Status422UnprocessableEntity);
 
             var slot = new QueueSlot
             {
@@ -72,8 +76,11 @@ public static class QueueSlotEndpoints
             var slot = await db.QueueSlots.FirstOrDefaultAsync(s => s.Id == id && s.OwnerId == uid);
             if (slot is null) return Results.NotFound();
 
-            var ownsTarget = await db.PublishTargets.AnyAsync(t => t.Id == req.TargetId && t.OwnerId == uid && t.IsActive);
-            if (!ownsTarget) return Results.NotFound();
+            var target = await db.PublishTargets.FirstOrDefaultAsync(t => t.Id == req.TargetId && t.OwnerId == uid && t.IsActive);
+            if (target is null) return Results.NotFound();
+            // ADR-299 — LinkedIn's API terms forbid automated posting; a slot there cannot exist.
+            if (target.Network == PublishNetworks.LinkedIn)
+                return Results.Json(new { error = ErrorMessages.LinkedInNoScheduling }, statusCode: StatusCodes.Status422UnprocessableEntity);
 
             slot.TargetId = req.TargetId;
             slot.Name = req.Name.Trim();

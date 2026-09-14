@@ -165,6 +165,9 @@ public static partial class ErrorMessages
     public static string NotEnoughCredits => T("Not enough credits — top up your balance in Settings → Credits.");
     public static string XApiCreditsDepleted => T("The X app is out of API credits — top up pay-per-use billing in the X Developer Portal (this is not your Cedar Clerk credits).");
     public static string BlueskyReconnect => T("Could not sign in to Bluesky — reconnect the account in settings.");
+    public static string LinkedInReconnect => T("The LinkedIn connection has expired or was revoked — reconnect the account in Settings → Integrations.");
+    public static string LinkedInNotConfigured => T("LinkedIn publishing is not configured on the server.");
+    public static string LinkedInNoScheduling => T("LinkedIn takes posts only when you press Publish — its API terms forbid scheduled sending.");
     public static string DiscordWebhookRequired => T("Paste a Discord webhook URL — the channel's settings issue one under Integrations → Webhooks.");
     public static string DiscordWebhookInvalid => T("Discord refused this webhook — check the URL (it must start with https://discord.com/api/webhooks/).");
     public static string WaitlistEmailInvalid => T("That does not look like an email address.");
