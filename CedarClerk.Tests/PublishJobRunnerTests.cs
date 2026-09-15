@@ -1,4 +1,4 @@
-using CedarClerk.Core;
+﻿using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server;
 using CedarClerk.Server.Analytics;
@@ -91,6 +91,13 @@ public class PublishJobRunnerTests
             .PublishJobs.AsNoTracking().FirstAsync(j => j.Id == jobId);
     }
 
+    private static async Task<PublishTarget> ReadTargetAsync(ServiceProvider provider, Guid targetId)
+    {
+        using var scope = provider.CreatePlatformScope();
+        return await scope.ServiceProvider.GetRequiredService<CedarDbContext>()
+            .PublishTargets.AsNoTracking().FirstAsync(t => t.Id == targetId);
+    }
+
     private static PublishJobRunner Runner(ServiceProvider provider) =>
         new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<PublishJobRunner>.Instance,
             DisabledAnalytics);
@@ -114,6 +121,32 @@ public class PublishJobRunnerTests
         Assert.Equal(PublishJobStatus.Succeeded, stored.Status);
         Assert.Equal(1, target.Calls);
         Assert.Equal(1, stored.Attempts);
+    }
+
+    // A post that went out with its pictures left behind is a success with something to say, and
+    // the target is where the author reads it. The X media-scope hint was written straight onto
+    // the target and then overwritten with null by the success that followed, so Settings never
+    // showed it (14.09.2026).
+    [Fact]
+    public async Task A_warning_on_a_successful_publish_lands_on_the_target_until_a_clean_one()
+    {
+        var (provider, connection, target) = Build();
+        using var _ = connection;
+        var (draftId, targetId) = await SeedAsync(provider);
+
+        await QueueAsync(provider, draftId, targetId);
+        target.Next = () => PublishOutcome.Ok(new PublishReceipt("1", null), "pictures were left out");
+        await Runner(provider).SweepAsync(CancellationToken.None);
+
+        var warned = await ReadTargetAsync(provider, targetId);
+        Assert.Equal("pictures were left out", warned.LastError);
+        Assert.NotNull(warned.LastPublishedAt);
+
+        await QueueAsync(provider, draftId, targetId);
+        target.Next = () => PublishOutcome.Ok(new PublishReceipt("2", null));
+        await Runner(provider).SweepAsync(CancellationToken.None);
+
+        Assert.Null((await ReadTargetAsync(provider, targetId)).LastError);
     }
 
     [Fact]

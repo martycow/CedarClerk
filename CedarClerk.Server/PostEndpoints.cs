@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Publishing;
@@ -187,7 +187,7 @@ public static class PostEndpoints
 
         // Recorded on the target either way: a connection that is failing should be visible before
         // the next send rather than after it.
-        target.LastError = outcome.Error;
+        target.LastError = outcome.Error ?? outcome.Warning;
         if (outcome.Success)
             target.LastPublishedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);

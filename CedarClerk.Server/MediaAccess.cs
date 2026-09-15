@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Security.Claims;
 using CedarClerk.Core;
 using CedarClerk.Server.Modules.IndieDev;
@@ -270,14 +270,14 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
         // 404 rather than 403 throughout: a 403 confirms the file exists for somebody else.
         if (!MediaFileNames.TryParse(remainder.Value?.TrimStart('/') ?? "", out var reference))
         {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            NotFound(ctx);
             return;
         }
 
         var ownerId = await owners.OwnerOfAsync(reference, ctx.RequestAborted);
         if (ownerId is null)
         {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            NotFound(ctx);
             return;
         }
 
@@ -285,7 +285,7 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
         // why this needs no host string of its own and no second lookup.
         if (blog.TenantId is { } blogOwner && blogOwner != ownerId)
         {
-            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            NotFound(ctx);
             return;
         }
 
@@ -311,7 +311,7 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
             if (caller != ownerId
                 && !await boards.MayReadAsync(ownerId, reference.Id, caller, ctx.RequestAborted))
             {
-                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+                NotFound(ctx);
                 return;
             }
         }
@@ -319,6 +319,18 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
         // The edge caches by URL, and this one is answered differently for two readers.
         ctx.Response.Headers.CacheControl = "private, no-store";
         await next(ctx);
+    }
+
+    /// <summary>
+    /// A refusal is answered for one reader and must not be kept for the next. The edge caches
+    /// by URL and extension, and a 404 it was handed for an anonymous fetch of a draft's picture
+    /// went on being served to the signed-in owner — with a browser TTL on top — until it
+    /// expired: the picture looked deleted while the file and its row were fine (14.09.2026).
+    /// </summary>
+    private static void NotFound(HttpContext ctx)
+    {
+        ctx.Response.Headers.CacheControl = "private, no-store";
+        ctx.Response.StatusCode = StatusCodes.Status404NotFound;
     }
 
     private static bool HasGrant(HttpContext ctx, PrivateAccess access, Guid[] posts) =>

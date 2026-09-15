@@ -1,4 +1,19 @@
-# Changelog
+﻿# Changelog
+
+## 2026-09-14 — Media 404s no longer cached, X media-scope hint shows (ADR-300)
+
+Pictures that "disappeared" from a draft and the library after a visit were on disk and in
+the database all along: Cloudflare had cached the 404 the media gate answers an anonymous
+fetch with, and served it to the signed-in owner too, with a four-hour browser TTL on top.
+Every refusal from `MediaOwnershipMiddleware` now carries `private, no-store`. Separately,
+an X thread that went out without its pictures (the connection predates `media.write`) left
+no trace in Settings because the success overwrote the target's hint; `PublishOutcome` now
+carries a warning and the publish path records it on the target. The X account still has to
+be reconnected once to gain the scope.
+
+Validation: `MediaOwnershipTests` (30) and `PublishJobRunnerTests` (11) green with one new
+test each; full backend suite green. Reproduced and confirmed against production from the
+owner's browser before the fix; not yet deployed.
 
 ## 2026-09-14 — LinkedIn connector 0.23.4 (ADR-299, T-381)
 

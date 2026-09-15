@@ -1,4 +1,4 @@
-# Production environment (do not break these assumptions)
+﻿# Production environment (do not break these assumptions)
 
 **Production moved from the Raspberry Pi to a DigitalOcean droplet on 11.08.2026.** Everything below
 was read off the running machine that day, not remembered. The Pi is no longer production; anything
@@ -45,6 +45,11 @@ purged 24.08.2026 in the archive cleanup) — this file is the surviving source 
   SSH (port 22) to the internet, and that is deliberate: the tunnel is the only way in. Port 8080 is
   fixed by the tunnel config. Blog (`blog.mooexe.dev`) is host-routed inside the same Kestrel process
   (`Program.cs` `MapWhen` on `Host.Host`).
+- **Cloudflare caches `/media/*` by extension, status code included.** A response without
+  `Cache-Control` is kept at the edge and re-served with a `max-age=14400` browser TTL — that is how
+  a 404 given to an anonymous fetch of a draft's picture was read back by the signed-in owner for
+  hours (ADR-300). Anything answered differently per reader must say `private, no-store`; check with
+  `curl -sD - -o /dev/null <url> | grep -iE 'cf-cache-status|cache-control|age'`.
 - **SSH**: key-based to `martycow@periwinkle.mooexe.dev` (165.227.155.148). **The name changed on
   12.08.2026** — it was `deploy.mooexe.dev`, whose DNS record is gone, so anything still saying
   `deploy.` fails at resolution, not at login. `docs/tasks/CHANGELOG.md` and `docs/DECISIONS.md` still

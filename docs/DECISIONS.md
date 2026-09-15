@@ -1,4 +1,4 @@
----
+﻿---
 owner: marty
 last_verified: 2026-09-05
 source_of_truth_for: ADR index — which decisions exist and where their texts live
@@ -297,3 +297,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-297 — Compact Telegram sign-in widget](adr/ADR-297.md)
 - [ADR-298 — Forest authentication screens](adr/ADR-298.md)
 - [ADR-299 — LinkedIn: a post-now connector that carries the document's layout](adr/ADR-299.md)
+- [ADR-300 — A media refusal is never cacheable; a publish warning lands on the target](adr/ADR-300.md)

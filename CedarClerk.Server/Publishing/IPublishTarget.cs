@@ -1,4 +1,4 @@
-using CedarClerk.Core;
+﻿using CedarClerk.Core;
 
 namespace CedarClerk.Server.Publishing;
 
@@ -79,7 +79,15 @@ public record PublishOutcome(PublishReceipt? Receipt, string? Error, int StatusC
 {
     public bool Success => Error is null;
 
-    public static PublishOutcome Ok(PublishReceipt receipt) => new(receipt, null);
+    /// <summary>
+    /// What the author should know about a post that did go out — pictures left behind for a
+    /// permission the connection lacks. Recorded on the target the way an error is, because a
+    /// success that overwrote it with null was how the X media-scope hint never showed.
+    /// </summary>
+    public string? Warning { get; init; }
+
+    public static PublishOutcome Ok(PublishReceipt receipt, string? warning = null) =>
+        new(receipt, null) { Warning = warning };
 
     public static PublishOutcome Fail(string error, int statusCode = StatusCodes.Status400BadRequest) =>
         new(null, error, statusCode);

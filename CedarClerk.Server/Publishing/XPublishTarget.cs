@@ -120,10 +120,15 @@ public class XPublishTarget(
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", credentials.AccessToken);
 
             // The pictures ride on the first post only, like Bluesky's — a thread that repeats
-            // its four pictures on every part is not what a thread looks like anywhere.
-            var mediaIds = request.Part is null or { Index: 0 }
-                ? await UploadImagesAsync(http, request, ct)
-                : [];
+            // its four pictures on every part is not what a thread looks like anywhere. The
+            // scope hint is decided with them and carried by the later parts, so the last part
+            // of a thread does not clear what the first one found out.
+            List<string> mediaIds = [];
+            string? warning = null;
+            if (request.Part is null or { Index: 0 })
+                (mediaIds, warning) = await UploadImagesAsync(http, request, ct);
+            else if (request.Target.LastError == ErrorMessages.XMediaScopeMissing)
+                warning = ErrorMessages.XMediaScopeMissing;
 
             // ADR-094 — a thread part replies to the one before it, which is what makes X render
             // a thread rather than a scatter of posts.
@@ -177,7 +182,7 @@ public class XPublishTarget(
             }
             await db.SaveChangesAsync(ct);
 
-            return PublishOutcome.Ok(new PublishReceipt(tweetId, $"https://x.com/{credentials.Username}/status/{tweetId}"));
+            return PublishOutcome.Ok(new PublishReceipt(tweetId, $"https://x.com/{credentials.Username}/status/{tweetId}"), warning);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -249,9 +254,10 @@ public class XPublishTarget(
     /// <summary>
     /// The document's first pictures as X media ids, at most <see cref="PublishCapabilities.MaxMediaItems"/>.
     /// Never fails the publish: a post without its picture is worth more than no post. A 403 means
-    /// the connection predates the media scope — the target says so until a reconnect clears it.
+    /// the connection predates the media scope — the warning stays on the target until a
+    /// reconnect, or an upload that succeeds, clears it.
     /// </summary>
-    private async Task<List<string>> UploadImagesAsync(HttpClient http, PublishRequest request, CancellationToken ct)
+    private async Task<(List<string> Ids, string? Warning)> UploadImagesAsync(HttpClient http, PublishRequest request, CancellationToken ct)
     {
         var ids = new List<string>();
         foreach (var image in CedarImageRefs.Collect(request.CedarJson))
@@ -288,8 +294,7 @@ public class XPublishTarget(
             if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
             {
                 logger.LogWarning("X refused a media upload for target {TargetId} (403): the connection lacks media.write", request.Target.Id);
-                request.Target.LastError = ErrorMessages.XMediaScopeMissing;
-                return ids;
+                return (ids, ErrorMessages.XMediaScopeMissing);
             }
             if (!response.IsSuccessStatusCode)
             {
@@ -301,9 +306,7 @@ public class XPublishTarget(
             if (uploaded?.Data?.Id is { } id) ids.Add(id);
         }
 
-        if (ids.Count > 0 && request.Target.LastError == ErrorMessages.XMediaScopeMissing)
-            request.Target.LastError = null;
-        return ids;
+        return (ids, null);
     }
 
     private static string ContentTypeOf(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch

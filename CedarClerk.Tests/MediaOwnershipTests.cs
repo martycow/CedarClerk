@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Encodings.Web;
 using CedarClerk.Core;
 using CedarClerk.Server;
@@ -341,6 +341,26 @@ public class MediaOwnershipTests : IDisposable
         var ctx = await GetAsync($"/media/asset_{orphan}.jpg", OwnerA);
 
         Assert.Equal(StatusCodes.Status404NotFound, ctx.Response.StatusCode);
+    }
+
+    // The edge caches /media by extension and the browser was handed a four-hour TTL on top: one
+    // anonymous fetch of a draft's picture answered 404, and the signed-in owner then read that 404
+    // back for the same URL until it expired — the picture looked deleted while the file and its
+    // row were fine (14.09.2026). Every refusal says no-store, whichever question it failed.
+    [Fact]
+    public async Task A_refusal_is_never_cacheable()
+    {
+        var unparseable = await GetAsync("/media/not-an-asset.jpg", blogOwner: null);
+        var noRow = await GetAsync($"/media/asset_{Guid.NewGuid()}.jpg", blogOwner: null);
+        var anotherTenant = await GetAsync($"/media/asset_{assetB}.jpg", OwnerA);
+        var stranger = await GetAsync($"/media/asset_{assetB}.jpg", blogOwner: null,
+            prepare: c => c.Request.Headers[SignedInAs.Header] = OwnerA);
+
+        foreach (var refused in new[] { unparseable, noRow, anotherTenant, stranger })
+        {
+            Assert.Equal(StatusCodes.Status404NotFound, refused.Response.StatusCode);
+            Assert.Equal("private, no-store", refused.Response.Headers.CacheControl.ToString());
+        }
     }
 
     private sealed class ExplodingScopes : IServiceScopeFactory
