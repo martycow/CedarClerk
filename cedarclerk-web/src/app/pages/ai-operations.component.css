@@ -7,13 +7,17 @@
     padding: var(--space-4);
 }
 
+/* The header stands on the wall, not on paper, so it takes the ink the shell hands down — a paper
+   --t2 here vanishes at night (ADR-141, the same deviation app-page-header itself makes). */
 .ops-link {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--t2);
+    color: var(--surface-ink-soft, var(--t2));
     font-size: var(--fs-ui);
 }
+
+.ops-link:hover { color: var(--surface-ink, var(--text)); }
 
 .ops-grid {
     display: grid;

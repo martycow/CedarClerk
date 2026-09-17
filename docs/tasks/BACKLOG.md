@@ -174,6 +174,7 @@ and the realtime path has only ever run on one machine with two browser contexts
 
 ## Bugs
 
+- [ ] T-388 `17-density.spec.ts` "the shipped shell resolves the same two floors" fails in the full smoke run and passes alone — reproduced on `master` and on a feature branch with byte-identical results (1 failed, 18 skipped, 70 passed), so it is the spec, not a regression. Its paper half reads `main[data-surface="paper"] app-button button`, and on the hub with zero projects the only control in `main` is the empty state's plain `<button>`; the test waits for `app-index-tabs` and then measures something it never waited for. Point it at a control that is always there, or wait for the one it measures #tests P2
 - [ ] T-375 `core/display-time.spec.ts` leaks locale under parallel vitest — seen once in the 05.09 sweep: an expectation of `11 Aug` got `11 авг`, so another worker's Russian locale bled into the formatter under test. Pin the locale inside the spec (or the formatter takes it as an argument) rather than re-run #tests P3
 
 ## Tech debt

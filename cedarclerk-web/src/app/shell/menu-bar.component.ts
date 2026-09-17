@@ -105,7 +105,7 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
             top: 100%;
             left: 0;
             z-index: 60;
-            min-width: 232px;
+            min-width: 260px;
             padding: var(--space-1) 0;
             background: var(--surface);
             border: 1px solid var(--border);
@@ -120,6 +120,7 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
             width: 100%;
             min-height: 30px;
             padding: 0 var(--space-3) 0 var(--space-1);
+            white-space: nowrap;
             border: 0;
             background: transparent;
             color: var(--text);
@@ -140,7 +141,9 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
             color: var(--accent);
         }
 
-        .row-label { flex: 1; min-width: 0; }
+        /* A label never wraps around its shortcut — the drop grows instead, which is what a menu
+           does; two lines for one command was how the palette row read before this. */
+        .row-label { flex: 1; min-width: 0; white-space: nowrap; }
 
         .keys {
             color: var(--t3);

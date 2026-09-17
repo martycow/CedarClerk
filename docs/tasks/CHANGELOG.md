@@ -35,8 +35,9 @@ Validation: `dotnet test` 2018/2018 green (`UiInventoryDriftTests` included); fr
 with 28 new ones across `commands.service`, `workspace-context.service`, `menu-bar.component` and
 `ai-operations.component`; contrast, density and icon checks green. The three frontend specs still
 red under full-suite parallel load are red on `master` too (seven of them there) — the known
-timeout flake, `T-375`. Smoke suite: 70 passed. Nothing eye-checked in a browser yet, and nothing
-deployed.
+timeout flake, `T-375`. Smoke suite: 70 passed, 18 audit skips, and one failure — `17-density`'s
+shell-floor check, which fails identically on `master` in a full run and passes alone on both, so it
+is the spec's own defect and now `T-388`. Nothing eye-checked in a browser yet, and nothing deployed.
 
 ## 2026-09-14 — Media 404s no longer cached, X media-scope hint shows (ADR-300)
 

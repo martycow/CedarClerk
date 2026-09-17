@@ -25,13 +25,16 @@ export class CommandPaletteComponent implements OnDestroy {
     query = signal('');
     index = signal(0);
 
-    /** Menu order, so a command sits where the bar put it — the palette is a second view, not a
-        second ranking. Disabled commands stay listed: knowing a command exists is the point. */
+    /** Menu order, so a command sits where the bar put it — the palette is a second view of one
+        registry, not a second ranking, and a reader who learned File's order should not have to
+        learn another. Registration order within a group is what the menu draws, so the sort is by
+        group alone. Disabled commands stay listed: knowing a command exists is the point. */
     readonly results = computed<readonly AppCommand[]>(() => {
         const order: Record<CommandGroup, number> = { file: 0, edit: 1, view: 2, tools: 3, help: 4 };
         return filterCommands(this.commands.all(), this.query())
-            .slice()
-            .sort((a, b) => order[a.group] - order[b.group] || a.label.localeCompare(b.label));
+            .map((command, index) => ({ command, index }))
+            .sort((a, b) => order[a.command.group] - order[b.command.group] || a.index - b.index)
+            .map(entry => entry.command);
     });
 
     private readonly queryInput = viewChild<ElementRef<HTMLInputElement>>('queryInput');
