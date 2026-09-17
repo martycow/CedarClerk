@@ -1,5 +1,43 @@
 ﻿# Changelog
 
+## 2026-09-17 — The workshop chrome: menu bar, command palette, inspector rail, AI operations (ADR-301)
+
+Cedar Clerk stops reading as an admin panel for a blog. Four things land on branch
+`claude/app-chrome`, front-end only — no entity, no migration, no endpoint.
+
+**A menu bar** (`File · Edit · View · Tools · Help`, 28px) sits above the sidebar, which is the
+one thing ADR-239 said would never be there; ADR-301 supersedes that clause for the signed-in
+shell and leaves the pre-auth doors and the blog alone. Navigation stays in the sidebar on
+purpose — the project tree does not go into `File`.
+
+**One command registry** (`core/commands.service.ts`) feeds the menu, the palette and the
+keyboard from a single definition, so a disabled command is disabled in all three at once. A page
+registers its own on mount and releases on destroy; a later registration wins a colliding id, which
+is how a screen's own Save replaces the shell's. **`Ctrl+Shift+P`** opens the command palette;
+**`Ctrl+K`** still searches documents. The two stay separate because "which document" and "which
+action" are different questions.
+
+**A shell-level inspector rail** on the right — **Properties** (what the open object is) and **AI**
+(what an operation would do to it) — collapsible, resizable, remembered in `AppearancePrefs`. The
+AI panel states the three scope lines before anything runs, and its scope is exactly what
+`core/workspace-context.service.ts` reports: the ticked objects, or the open one when nothing is
+ticked, never the whole project. Only the shell writes to that service so far, so the panel is
+empty on every screen until the pages publish their own scope — `T-386`.
+
+**`/ai`** is the log every AI run leaves: task, scope, protected fields, per-object changes, model,
+credits, duration. *Undo* appears only where a revision exists to go back to, and is absent with the
+reason in its place where none does, rather than present and lying. The log is client-side per
+account for now — a durable one needs an entity and a migration, `T-385`. Credits are **not**
+restated here: the header links to Settings → Billing, which stays their one home, exactly as
+revision history stays the editor's.
+
+Validation: `dotnet test` 2018/2018 green (`UiInventoryDriftTests` included); frontend 811 tests
+with 28 new ones across `commands.service`, `workspace-context.service`, `menu-bar.component` and
+`ai-operations.component`; contrast, density and icon checks green. The three frontend specs still
+red under full-suite parallel load are red on `master` too (seven of them there) — the known
+timeout flake, `T-375`. Smoke suite: 70 passed. Nothing eye-checked in a browser yet, and nothing
+deployed.
+
 ## 2026-09-14 — Media 404s no longer cached, X media-scope hint shows (ADR-300)
 
 Pictures that "disappeared" from a draft and the library after a visit were on disk and in

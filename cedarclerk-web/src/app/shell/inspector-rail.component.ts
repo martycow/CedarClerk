@@ -18,7 +18,7 @@ import { IconComponent } from '../shared/icon.component';
     imports: [FormsModule, RouterLink, IconComponent, ButtonComponent],
     host: {
         'data-surface': 'paper',
-        '[style.--inspector-w.px]': 'width()',
+        '[style.--inspector-w]': 'widthPx()',
         '[class.is-open]': 'open()',
     },
     template: `
@@ -329,6 +329,8 @@ export class InspectorRailComponent {
 
     readonly open = computed(() => this.appearance.prefs().inspectorOpen);
     protected readonly width = computed(() => this.appearance.prefs().inspectorWidth);
+    /** A custom property takes no unit suffix from a binding — the unit travels in the value. */
+    protected readonly widthPx = computed(() => `${this.width()}px`);
     protected readonly activeTab = computed(() => this.appearance.prefs().inspectorTab);
 
     protected readonly scopeCount = computed(() => this.context.scope().length);

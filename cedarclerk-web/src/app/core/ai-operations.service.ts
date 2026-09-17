@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { AuthService } from './auth.service';
 import { WorkspaceObject } from './workspace-context.service';
 
@@ -49,15 +49,21 @@ export class AiOperationsService {
     private readonly items = signal<readonly AiOperation[]>([]);
     private loadedOwner: string | null | undefined;
 
-    readonly operations = computed<readonly AiOperation[]>(() => {
-        this.ensureLoaded();
-        return this.items();
-    });
+    readonly operations = this.items.asReadonly();
 
     readonly running = computed(() => this.operations().filter(op => op.status === 'running'));
 
     readonly creditsSpent = computed(() =>
         this.operations().reduce((total, op) => total + (op.credits ?? 0), 0));
+
+    // An effect rather than a read-time load: a signal written inside a `computed` is NG0600, and
+    // the owner is the only thing that decides which log is the right one.
+    constructor() {
+        effect(() => {
+            const owner = this.auth.userEmail();
+            untracked(() => this.loadFor(owner));
+        });
+    }
 
     find(id: string): AiOperation | undefined {
         return this.operations().find(op => op.id === id);
@@ -66,7 +72,6 @@ export class AiOperationsService {
     /** Opens the record before the work starts, so a run that never answers is still visible. */
     start(seed: Omit<AiOperation, 'id' | 'status' | 'startedAt' | 'changes'>
         & Partial<Pick<AiOperation, 'changes'>>): AiOperation {
-        this.ensureLoaded();
         const operation: AiOperation = {
             ...seed,
             id: `op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
@@ -80,7 +85,6 @@ export class AiOperationsService {
     }
 
     update(id: string, patch: Partial<Omit<AiOperation, 'id'>>): void {
-        this.ensureLoaded();
         this.items.update(list => list.map(op => op.id === id ? { ...op, ...patch } : op));
         this.persist();
     }
@@ -90,7 +94,6 @@ export class AiOperationsService {
     }
 
     remove(id: string): void {
-        this.ensureLoaded();
         this.items.update(list => list.filter(op => op.id !== id));
         this.persist();
     }
@@ -106,8 +109,7 @@ export class AiOperationsService {
             && operation.changes.some(change => change.changed && !!change.revisionId);
     }
 
-    private ensureLoaded(): void {
-        const owner = this.auth.userEmail();
+    private loadFor(owner: string | null): void {
         if (owner === this.loadedOwner) return;
         this.loadedOwner = owner;
         this.items.set(this.read(owner));
