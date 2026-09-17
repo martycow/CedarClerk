@@ -31,13 +31,22 @@ account for now — a durable one needs an entity and a migration, `T-385`. Cred
 restated here: the header links to Settings → Billing, which stays their one home, exactly as
 revision history stays the editor's.
 
-Validation: `dotnet test` 2018/2018 green (`UiInventoryDriftTests` included); frontend 811 tests
-with 28 new ones across `commands.service`, `workspace-context.service`, `menu-bar.component` and
-`ai-operations.component`; contrast, density and icon checks green. The three frontend specs still
-red under full-suite parallel load are red on `master` too (seven of them there) — the known
-timeout flake, `T-375`. Smoke suite: 70 passed, 18 audit skips, and one failure — `17-density`'s
-shell-floor check, which fails identically on `master` in a full run and passes alone on both, so it
-is the spec's own defect and now `T-388`. Nothing eye-checked in a browser yet, and nothing deployed.
+Validation: `dotnet test` 2018/2018 green (`UiInventoryDriftTests` included); frontend 818 tests with
+35 new ones across `commands.service`, `workspace-context.service`, `ai-operations.service`,
+`menu-bar.component` and `ai-operations.component`; contrast, density and icon checks green. The two
+frontend specs still red under full-suite parallel load are red on `master` too (seven of them
+there) — the known timeout flake, `T-375`. Smoke suite: 70 passed, 18 audit skips, and one
+failure — `17-density`'s shell-floor check, which fails identically on `master` in a full run and
+passes alone on both, so it is the spec's own defect and now `T-388`. Not deployed.
+
+**Opened in a browser** against the E2E stack at 1600×1000, both themes — the hub, each menu group,
+the palette, both inspector tabs, and `/ai` empty and with records. Four defects found that way and
+fixed: a signal written inside a `computed` (NG0600 on the first read of the log), a `.px` unit
+suffix on a custom-property binding that never reached the rail's width, a menu row wrapping around
+its own shortcut, and — the documented ADR-141 trap — a paper `--t2` on a control standing on the
+wall, which all but vanished at night. What is still unchecked by eye: the Russian dictionary (the
+E2E account's profile language overrides the stored one, so every capture came back English), a
+phone width, and a keyboard-only pass.
 
 ## 2026-09-14 — Media 404s no longer cached, X media-scope hint shows (ADR-300)
 
