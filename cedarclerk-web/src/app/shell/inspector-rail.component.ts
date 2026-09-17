@@ -296,7 +296,14 @@ import { IconComponent } from '../shared/icon.component';
         }
 
         .action:hover:not(:disabled) { background: var(--hover); }
-        .action:disabled { color: var(--t3); cursor: default; }
+
+        /* A refused action must not read as an offered one: the ink alone was too close, so the
+           sheet under it goes too — an offered action is a raised card, a refused one an outline. */
+        .action:disabled {
+            color: var(--t3);
+            background: transparent;
+            cursor: default;
+        }
 
         .empty, .note { margin: 0; color: var(--t2); font-size: var(--fs-ui); }
 

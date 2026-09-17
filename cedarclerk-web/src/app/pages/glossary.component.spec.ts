@@ -3,6 +3,8 @@ import { GlossaryComponent } from './glossary.component';
 import { GlossaryService, GlossaryTerm } from '../core/glossary.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
+import { CommandsService } from '../core/commands.service';
+import { WorkspaceContextService } from '../core/workspace-context.service';
 import { en } from '@localization/en';
 
 const term = (over: Partial<GlossaryTerm>): GlossaryTerm => ({
@@ -210,5 +212,76 @@ describe('glossary screen', () => {
         (newTerm.querySelector('button') as HTMLButtonElement).click();
         fixture.detectChanges();
         expect(page().editing()).toBe(true);
+    });
+
+    // ADR-301 clause 4/5 — T-386. What the inspector rail and the AI panel read off this screen.
+    describe('workspace context', () => {
+        const workspace = () => TestBed.inject(WorkspaceContextService);
+        const commands = () => TestBed.inject(CommandsService);
+
+        it('names the surface and publishes nothing else until a term is picked', () => {
+            expect(workspace().surface()).toBe(en.shell.context.glossary);
+            expect(workspace().open()).toBeNull();
+            expect(workspace().scope()).toEqual([]);
+        });
+
+        // Clicking a card opens the preview; `selectedId` only ever names the term an edit form is
+        // open on. Reading that one alone left the rail empty for the ordinary case.
+        it('follows the card the user clicked, not only the one being edited', async () => {
+            cards()[0].click();
+            await settle();
+
+            expect(page().previewId()).toBe('ru1');
+            expect(workspace().open()).toMatchObject({ id: 'ru1', title: 'Рендерер' });
+        });
+
+        it('publishes the picked term, its scope and the spelling no AI run may rewrite', async () => {
+            page().selectedId.set('ru2');
+            await settle();
+
+            expect(workspace().open()).toMatchObject({ id: 'ru2', kind: 'term', title: 'Верстак' });
+            expect(workspace().scope().map(o => o.id)).toEqual(['ru2']);
+            const props = workspace().properties();
+            expect(props.find(p => p.label === en.shell.context.scope)?.value).toBe('Cedar Quest');
+            expect(workspace().protectedFields()).toEqual([en.shell.context.identifier]);
+        });
+
+        it('calls a global term global rather than printing a null project id', async () => {
+            page().selectedId.set('ru1');
+            await settle();
+            expect(workspace().properties().find(p => p.label === en.shell.context.scope)?.value)
+                .toBe(en.shell.context.scopeGlobal);
+        });
+
+        it('registers both translate runs as AI commands, gated on the plan and the selection', async () => {
+            const ids = commands().all().filter(c => c.ai).map(c => c.id);
+            expect(ids).toEqual(['glossary.ai.translate', 'glossary.ai.translateAll']);
+
+            const auth = TestBed.inject(AuthService);
+            auth.planTier.set(null);
+            await settle();
+            expect(commands().all().filter(c => c.ai).every(c => !commands().isEnabled(c))).toBe(true);
+
+            auth.planTier.set('Pro');
+            await settle();
+            const perTerm = commands().find('glossary.ai.translate')!;
+            // Nothing selected: the run has no term to translate, so it stays off rather than
+            // silently picking the first row.
+            expect(commands().isEnabled(perTerm)).toBe(false);
+
+            page().selectedId.set('ru1');
+            await settle();
+            expect(commands().isEnabled(commands().find('glossary.ai.translate')!)).toBe(true);
+            expect(commands().isEnabled(commands().find('glossary.ai.translateAll')!)).toBe(true);
+        });
+
+        it('lets go of the context when the screen does', async () => {
+            page().selectedId.set('ru1');
+            await settle();
+            fixture.destroy();
+
+            expect(workspace().open()).toBeNull();
+            expect(commands().all().filter(c => c.ai)).toEqual([]);
+        });
     });
 });

@@ -16,6 +16,7 @@ import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component'
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ariaSort, SortDirection } from '../core/collection-query';
 import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
+import { WorkspaceContextService, WorkspaceProperty } from '../core/workspace-context.service';
 
 const PAGE_SIZE = 60;
 
@@ -37,6 +38,7 @@ export class MediaLibraryComponent implements OnDestroy {
     private api = inject(AssetsService);
     private projectsApi = inject(ProjectsService);
     private auth = inject(AuthService);
+    private readonly workspace = inject(WorkspaceContextService);
     t = inject(LocaleService).t;
 
     /**
@@ -106,11 +108,39 @@ export class MediaLibraryComponent implements OnDestroy {
             this.skip.set(0);
             void this.load();
         });
+
+        // ADR-301 clause 4 — T-386. Only the page publishes: this component is also mounted inside
+        // the project's Assets board and inside the picker, and an embedded copy writing here would
+        // replace the host screen's own object with whatever the picker happens to be showing.
+        effect(() => {
+            if (this.embedded()) return;
+            const asset = this.selected();
+            const c = this.t().shell.context;
+            if (!asset) {
+                this.workspace.set({ surface: c.assets });
+                return;
+            }
+            const used = this.usedBy();
+            const properties: WorkspaceProperty[] = [
+                { label: c.type, value: asset.contentType },
+                { label: c.size, value: formatBytes(asset.sizeBytes) },
+                { label: c.added, value: asset.createdAt.slice(0, 10) },
+                { label: c.usedIn, value: c.documentCount(used.length) },
+                { label: c.file, value: asset.localPath, protected: true },
+                { label: c.identifier, value: asset.id, protected: true },
+            ];
+            this.workspace.set({
+                surface: c.assets,
+                open: { id: asset.id, kind: 'asset', title: asset.fileName, detail: asset.contentType, icon: 'image' },
+                properties,
+            });
+        });
     }
 
     ngOnDestroy() {
         if (this.searchTimer) clearTimeout(this.searchTimer);
         this.listRequestSequence++;
+        if (!this.embedded()) this.workspace.clear();
     }
 
     async load() {

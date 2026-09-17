@@ -1,5 +1,43 @@
 ﻿# Changelog
 
+## 2026-09-17 — Five screens publish what they have open (T-386, ADR-301)
+
+The inspector rail shipped knowing nothing: only the shell wrote to `WorkspaceContextService`, so
+Properties and the AI panel's scope line were empty everywhere. Now the drafts list, the editor, the
+media library, the Posts Manager and the glossary each publish their surface, their open object and
+their property rows in one `effect`, cleared on destroy.
+
+The protected rows are the point of the exercise — the fields an AI run may never rewrite, named on
+the object rather than guessed at by the panel: a document's blog address and id, an asset's file
+path and id, a glossary term's spelling (the key every wikilink and every match resolves through).
+`draftWorkspaceObject()` maps the `DraftMeta` the three document screens share, so the title, icon
+and detail line cannot disagree between the list, the editor and the Posts Manager.
+
+Two screens have real AI, so they register it: the editor offers fix-errors, the Schizo-izer and
+translate-all; the glossary offers translate-this-term and translate-all. One gate covers all of
+them — a plan that reaches AI, something open, and nothing already running, because a second run
+against a document still being rewritten spends credits on a stale copy. The media library publishes
+**only** from the page instance: it is also mounted inside the project's Assets board and the media
+picker, and an embedded copy would replace the host screen's object with whatever the picker shows.
+
+No screen has multi-select, so `selection` is `[]` and the scope falls back to the open object —
+the service's documented fallback. Making a batch reachable is `T-389`.
+
+Opened in a browser, which is where the one real defect turned up: on the glossary `selectedId`
+names the term an *edit form* is open on, while the user's own pick is `previewId`, so the rail
+stayed empty for anyone who just clicked a term. The pick now wins and the edit is the fallback. A
+refused AI action also read too much like an offered one — same ink, same sheet — so a disabled one
+now drops its fill and reads as an outline.
+
+Two findings went to the board rather than into the diff, because both are decisions: the rail and
+the page-local inspectors now print the same rows on the three list screens (`T-390`), and opening
+the rail scrolls the drafts table sideways past its own Title column (`T-391`).
+
+Gates: frontend 828 tests, 12 of them new across the drafts and glossary specs; contrast, density
+and icon checks green. The two frontend and two backend specs red under full-suite load all pass in
+isolation and alternate between runs — the branch changes no C# at all, so the backend pair is the
+suite measuring the machine (`T-392`, new).
+
 ## 2026-09-17 — The workshop chrome: menu bar, command palette, inspector rail, AI operations (ADR-301)
 
 Cedar Clerk stops reading as an admin panel for a blog. Four things land on branch

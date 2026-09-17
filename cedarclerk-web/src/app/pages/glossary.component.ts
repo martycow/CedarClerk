@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -18,6 +18,8 @@ import { PlanLockComponent } from '../shared/plan-lock.component';
 import { HintDotComponent } from '../shared/hint-dot.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
+import { AppCommand, CommandRelease, CommandsService } from '../core/commands.service';
+import { WorkspaceContextService, WorkspaceProperty } from '../core/workspace-context.service';
 
 // Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
 // the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
@@ -31,11 +33,87 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
     templateUrl: 'glossary.component.html',
     styleUrls: ['glossary.component.css'],
 })
-export class GlossaryComponent implements OnInit {
+export class GlossaryComponent implements OnInit, OnDestroy {
     t = inject(LocaleService).t;
     private api = inject(GlossaryService);
     private projectsApi = inject(ProjectsService);
     auth = inject(AuthService);
+    private readonly workspace = inject(WorkspaceContextService);
+    private readonly commands = inject(CommandsService);
+    private commandRelease?: CommandRelease;
+
+    // ADR-301 clause 4/5 — T-386. The glossary's two translate runs are real AI, so this screen
+    // registers them and the rail's AI panel offers them against the term the list has selected.
+    constructor() {
+        effect(() => {
+            const term = this.selectedTerm();
+            const c = this.t().shell.context;
+            if (!term) {
+                this.workspace.set({ surface: c.glossary });
+                return;
+            }
+            const properties: WorkspaceProperty[] = [
+                { label: c.language, value: term.language || this.primaryLanguage },
+                { label: c.scope, value: this.scopeName(term) },
+                { label: c.aliases, value: term.aliases || c.none },
+                { label: c.usedIn, value: c.documentCount(term.usedInDrafts ?? 0) },
+                // The spelling is the key every document's wikilink and every match is found by;
+                // rewriting it silently unlinks the term everywhere it is used.
+                { label: c.identifier, value: term.term, protected: true },
+            ];
+            this.workspace.set({
+                surface: c.glossary,
+                open: { id: term.id, kind: 'term', title: term.term, detail: term.language, icon: 'book-bookmark' },
+                properties,
+            });
+        });
+
+        effect(() => {
+            this.t();
+            this.auth.hasAiPlan();
+            untracked(() => {
+                this.commandRelease?.();
+                this.commandRelease = this.commands.register(this.aiCommands());
+            });
+        });
+    }
+
+    ngOnDestroy() {
+        this.commandRelease?.();
+        this.workspace.clear();
+    }
+
+    /** `previewId` is the user's pick — clicking a card opens the preview; `selectedId` is only
+        ever the term an edit form is open on. Reading the second alone left the rail empty for
+        everyone who just clicked a term, which is the ordinary case. */
+    selectedTerm(): GlossaryTerm | null {
+        const id = this.previewId() ?? this.selectedId();
+        return id ? this.terms().find(term => term.id === id) ?? null : null;
+    }
+
+    private scopeName(term: GlossaryTerm): string {
+        if (!term.projectId) return this.t().shell.context.scopeGlobal;
+        return this.projects().find(p => p.id === term.projectId)?.name ?? term.projectId;
+    }
+
+    private aiCommands(): readonly AppCommand[] {
+        const ready = () => this.auth.hasAiPlan() && !this.translatingLang();
+        return [
+            {
+                id: 'glossary.ai.translate', group: 'tools', label: this.t().glossary.translate,
+                icon: 'translate', ai: true,
+                enabled: () => ready() && !!this.selectedTerm(),
+                run: () => {
+                    const term = this.selectedTerm();
+                    if (term) this.openTranslate(term);
+                },
+            },
+            {
+                id: 'glossary.ai.translateAll', group: 'tools', label: this.t().glossary.translateAll,
+                icon: 'translate', ai: true, enabled: ready, run: () => this.openTranslateAll(),
+            },
+        ];
+    }
 
     readonly contentLanguages = CONTENT_LANGUAGES;
     readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;

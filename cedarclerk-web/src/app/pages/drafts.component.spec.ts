@@ -4,6 +4,7 @@ import { DraftsPageComponent, TreeRow, treeDropTarget } from './drafts.component
 import { DraftMeta, DraftsService, FolderMeta, SeriesMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
 import { SeriesService } from '../core/series.service';
+import { WorkspaceContextService } from '../core/workspace-context.service';
 import { en } from '@localization/en';
 
 async function settle(fixture: ComponentFixture<unknown>) {
@@ -305,5 +306,49 @@ describe('drafts page', () => {
         expect(rows[1].querySelectorAll('.draft-lang-badge.is-stale').length).toBe(1);
         expect([...rows[2].querySelectorAll('.tag-chip-ro')].map(x => x.textContent!.trim())).toEqual(['#devlog', '#art']);
         expect(rows[2].querySelector('app-folder-picker')).toBeTruthy();
+    });
+
+    // ADR-301 clause 4 — T-386. The list has one selectable row, so the AI panel's scope is that
+    // row or nothing; it must never widen to the whole library behind the user's back.
+    describe('workspace context', () => {
+        const workspace = () => TestBed.inject(WorkspaceContextService);
+
+        it('names the surface and holds no object until a row is picked', () => {
+            expect(workspace().surface()).toBe(en.shell.context.documents);
+            expect(workspace().open()).toBeNull();
+            expect(workspace().scope()).toEqual([]);
+        });
+
+        it('publishes the picked row and keeps the scope to it alone', async () => {
+            fixture.componentInstance.selectedId.set('alpha');
+            fixture.detectChanges();
+
+            expect(workspace().open()).toMatchObject({ id: 'alpha', kind: 'document', title: 'alpha' });
+            expect(workspace().scope().map(o => o.id)).toEqual(['alpha']);
+            expect(workspace().properties().find(p => p.label === en.shell.context.tags)?.value)
+                .toBe('devlog,art');
+        });
+
+        it('marks the blog address and the id as fields an AI run may not rewrite', async () => {
+            fixture.componentInstance.selectedId.set('alpha');
+            fixture.detectChanges();
+
+            expect(workspace().protectedFields())
+                .toEqual([en.shell.context.blogAddress, en.shell.context.identifier]);
+        });
+
+        it('drops back to the surface when the row is deselected, and lets go on destroy', async () => {
+            fixture.componentInstance.selectedId.set('alpha');
+            fixture.detectChanges();
+            fixture.componentInstance.selectedId.set(null);
+            fixture.detectChanges();
+            expect(workspace().open()).toBeNull();
+            expect(workspace().surface()).toBe(en.shell.context.documents);
+
+            fixture.componentInstance.selectedId.set('beta');
+            fixture.detectChanges();
+            fixture.destroy();
+            expect(workspace().surface()).toBe('');
+        });
     });
 });

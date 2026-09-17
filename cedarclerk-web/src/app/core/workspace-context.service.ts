@@ -1,5 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { IconName } from '../shared/icon-data.generated';
+import { DraftMeta } from './drafts.service';
+import { DOCUMENT_TYPE_ICONS, DocumentType } from './projects.service';
 
 export type WorkspaceObjectKind = 'document' | 'asset' | 'task' | 'term' | 'post' | 'project';
 
@@ -65,4 +67,16 @@ export class WorkspaceContextService {
     clear(): void {
         this.state.set(EMPTY);
     }
+}
+
+/** Three screens publish the same noun, and a fourth reads it back on `/ai` — one mapping so the
+    title, the icon and the detail line cannot disagree between the drafts list and the editor. */
+export function draftWorkspaceObject(draft: DraftMeta, untitled: string, detail = ''): WorkspaceObject {
+    return {
+        id: draft.id,
+        kind: 'document',
+        title: draft.title?.trim() || untitled,
+        detail: detail || draft.primaryLanguage,
+        icon: DOCUMENT_TYPE_ICONS[draft.documentType as DocumentType] ?? 'file-text',
+    };
 }

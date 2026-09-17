@@ -108,6 +108,8 @@ import { ToolbarFit, fitToolbar } from '../core/toolbar-fit';
 import { NodeLike, SelectionKind, SelectionSpec, describeSelection, mediaPathOf } from '../core/selection-spec';
 import { OutlineEntry, OutlineNodeLike, buildOutline, topLevelStart } from '../core/document-outline';
 import { DocumentOutlineComponent } from '../shared/document-outline.component';
+import { AppCommand, CommandRelease, CommandsService } from '../core/commands.service';
+import { WorkspaceContextService, WorkspaceProperty, draftWorkspaceObject } from '../core/workspace-context.service';
 
 // FI2.11 — how long the "published" confirmation with its links stays up.
 
@@ -273,6 +275,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     private router = inject(Router);
     private previewApi = inject(PreviewService);
     private currentProject = inject(CurrentProjectService);
+    private readonly workspace = inject(WorkspaceContextService);
+    private readonly commands = inject(CommandsService);
+    private commandRelease?: CommandRelease;
 
     // ─── The document frame (ADR-239 clause 9, CONTRACT §D3) ─────────────────────────────────
     // One document, three tabs, addressed by ?tab= (ADR-242): Write is the bare URL, Preview and
@@ -2352,6 +2357,80 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.save();
     }
 
+    // ADR-301 clause 4/5 — T-386. The editor is the one screen that always has an object open, and
+    // the only one with real AI actions, so it publishes both. `title` and `primaryLanguage` are
+    // plain fields rather than signals; `savedVersion()` and `currentId()` are what move when they
+    // do, which is why they are read here even though nothing below prints them.
+    constructor() {
+        effect(() => {
+            this.savedVersion();
+            this.currentId();
+            this.lang();
+            this.documentType();
+            this.currentBlog();
+            this.isPrivate();
+            this.drafts();
+            untracked(() => this.publishContext());
+        });
+
+        effect(() => {
+            this.t();
+            this.auth.hasAiPlan();
+            untracked(() => {
+                this.commandRelease?.();
+                this.commandRelease = this.commands.register(this.aiCommands());
+            });
+        });
+    }
+
+    private publishContext(): void {
+        const meta = this.currentMeta();
+        if (!meta) {
+            this.workspace.set({ surface: this.t().shell.context.editor });
+            return;
+        }
+        const c = this.t().shell.context;
+        const type = this.t().projects.docTypes[this.documentType()].name;
+        const blog = this.currentBlog();
+        const properties: WorkspaceProperty[] = [
+            { label: c.type, value: type },
+            { label: c.language, value: this.primaryLanguage },
+            { label: c.editingLanguage, value: this.lang() },
+            { label: c.visibility, value: this.isPrivate() ? c.private : c.public },
+            // Two fields an AI operation must never rewrite: one is the public URL a reader has
+            // bookmarked, the other is what every reference to this document is keyed by.
+            { label: c.blogAddress, value: blog?.slug || c.none, protected: true },
+            { label: c.identifier, value: meta.id, protected: true },
+        ];
+        this.workspace.set({
+            surface: this.t().shell.context.editor,
+            open: draftWorkspaceObject(meta, c.untitled, `${type} · ${this.lang()}`),
+            properties,
+        });
+    }
+
+    private aiCommands(): readonly AppCommand[] {
+        const ai = this.t().editor.ai;
+        // One gate for all three: a plan that reaches AI, a document open, and nothing already
+        // running — a second run while the first is in flight spends credits on a stale document.
+        const ready = () => this.auth.hasAiPlan() && !!this.currentId()
+            && !this.aiEditBusy() && !this.autoTranslating() && !this.translateAllBusy();
+        return [
+            {
+                id: 'editor.ai.fix', group: 'tools', label: ai.fixDocument, icon: 'sparkle', ai: true,
+                enabled: ready, run: () => this.askAiEdit('fix-errors'),
+            },
+            {
+                id: 'editor.ai.schizo', group: 'tools', label: ai.schizoDocument, icon: 'sparkle', ai: true,
+                enabled: ready, run: () => this.askAiEdit('schizo'),
+            },
+            {
+                id: 'editor.ai.translate', group: 'tools', label: this.t().editor.lang.translateAllTitle,
+                icon: 'translate', ai: true, enabled: ready, run: () => this.openTranslateAll(),
+            },
+        ];
+    }
+
     async ngAfterViewInit() {
         if (this.toolStrip && typeof ResizeObserver !== 'undefined') {
             this.stripObserver = new ResizeObserver(() => this.measureToolbar());
@@ -2531,6 +2610,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.aiEditCancelled = true;
         this.autoTranslateCancelled = true;
         this.editor?.destroy();
+        this.commandRelease?.();
+        this.workspace.clear();
     }
 
     markDirty() {
