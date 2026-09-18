@@ -38,7 +38,10 @@ purged 24.08.2026 in the archive cleanup) — this file is the surviving source 
   `martycow` still cannot see is *other* units' output (not in `adm`/`systemd-journal`), and without
   `-q` journalctl prints a "you are not seeing messages from other users" hint that reads like a
   refusal but isn't. `sudo journalctl` also works over `ssh -t`, it is simply not required.
-  **Always bound the query**: the service logs every EF statement, which is ~1.5 million lines a day.
+  **Always bound the query.** Successful EF commands are suppressed by the application's default
+  `Microsoft.EntityFrameworkCore.Database.Command=Warning` setting (ADR-302); an older deployment
+  or an operator override can still emit every statement. Check `cedar status` for free disk space
+  when writes fail, and follow the full-disk recovery section in `docs/for_user/operations-console.md`.
 - **Networking**: public URL `https://cedarclerk.mooexe.dev` via **Cloudflare Tunnel**
   (`cloudflared.service`, running as root from `/etc/cloudflared/config.yml`) → `http://127.0.0.1:8080`.
   TLS terminates at Cloudflare. **Kestrel listens on loopback only** — the droplet exposes nothing but

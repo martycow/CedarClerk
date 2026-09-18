@@ -42,6 +42,34 @@ The console executable itself needs no .NET runtime or source checkout.
 
 The dashboard uses arrows or J/K to select, Enter to execute, Tab or Left/Right to switch programs, `/` to filter actions, `R` to reload JSON, and Q to exit. During a job, PageUp/PageDown scroll output and C requests cancellation. Enter returns after completion. Production confirmations default to Cancel; Y confirms.
 
+## SQLite rollback errors and a full disk
+
+If saves fail with `cannot rollback - no transaction is active`, check `cedar status`
+before changing transaction code. SQLite can automatically roll back after `SQLITE_FULL`,
+so the rollback exception can conceal the original storage failure.
+
+Use bounded diagnostics: `df -h /`, `journalctl -q --disk-usage`, and
+`ls -lhS /var/log`. A successful HTTP health response does not prove that database writes
+work. Do not remove database files, WAL files, media, backups or `app.prev` to reclaim space.
+
+Clearing a system log is destructive and requires the maintainer's explicit approval and
+elevated access. For a confirmed oversized `/var/log/syslog`, an operator can preserve its
+last MiB in root-only tmpfs storage and then truncate that exact file:
+
+```sh
+sudo sh -c 'umask 077; tail -c 1048576 /var/log/syslog > /run/cedar-syslog-tail.log && truncate -s 0 /var/log/syslog'
+df -h /
+```
+
+The sample disappears on reboot; copy it to a protected diagnostic location if needed.
+Inspect it for the source of the flood. Set a size limit in the host's rsyslog rotation
+policy and run its timer frequently enough to enforce that limit. Application SQL command
+logs default to `Warning` (ADR-302); keep any `Information` override temporary.
+
+After recovery, run `cedar db`, create and reopen a disposable empty language version, and
+retry translation. Confirm the log growth rate has fallen before considering the incident
+resolved. Restart Cedar Clerk only if it continues to fail after space is available.
+
 ## Configuration
 
 Resolution order: `--config <path>`, the nearest ancestor `cedar.json`, then `%APPDATA%/cedar/config.json` on Windows (`$XDG_CONFIG_HOME/cedar/config.json` or `~/.config/cedar/config.json` elsewhere). Relative program roots resolve against the JSON file's directory. Command working directories and copy/clear paths resolve within the selected program root. `{root}` expands in argument and environment values.

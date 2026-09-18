@@ -1,5 +1,20 @@
 ﻿# Changelog
 
+## 2026-09-18 — Translation save failures on a full production disk (ADR-302)
+
+Production reported zero available disk space, with `/var/log/syslog` consuming 39 GB.
+The live configuration emitted successful EF Core SQL commands at `Information` level.
+A disposable in-memory SQLite capacity test reproduced `database or disk is full` followed
+by `cannot rollback - no transaction is active`, matching the editor's displayed error.
+
+The default SQL command category is now `Warning`, preserving failed-command diagnostics.
+The operations runbook covers bounded storage checks, explicit approval for log clearing,
+preserving a recent sample and verifying database writes after recovery.
+
+Validation: `cedar test --backend` passed all 2,018 tests. Production recovery, log-retention
+changes and live language creation/translation verification remain pending elevated operator
+access. No production files or user documents were changed; the logging change is not deployed.
+
 ## 2026-09-14 — Media 404s no longer cached, X media-scope hint shows (ADR-300)
 
 Pictures that "disappeared" from a draft and the library after a visit were on disk and in
