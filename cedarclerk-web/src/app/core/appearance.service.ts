@@ -22,6 +22,20 @@ export interface AppearancePrefs {
     showWordCount: boolean;
     focusModeHideToolbar: boolean;
     sheetFlush: boolean; // no paper card — sheet merges with the canvas
+    // ADR-301 clause 4 — the shell-level inspector, remembered like the sidebar mode is.
+    inspectorOpen: boolean;
+    inspectorWidth: number; // px
+    inspectorTab: InspectorTab;
+}
+
+export type InspectorTab = 'properties' | 'ai';
+
+export const INSPECTOR_WIDTH_MIN = 260;
+export const INSPECTOR_WIDTH_MAX = 520;
+
+export function clampInspectorWidth(px: number): number {
+    if (!Number.isFinite(px)) return DEFAULT_APPEARANCE.inspectorWidth;
+    return Math.min(INSPECTOR_WIDTH_MAX, Math.max(INSPECTOR_WIDTH_MIN, Math.round(px)));
 }
 
 // check-contrast.mjs verifies each tone as text and button fill against its theme's paper (ADR-141).
@@ -100,6 +114,9 @@ export const DEFAULT_APPEARANCE: AppearancePrefs = {
     showWordCount: true,
     focusModeHideToolbar: false,
     sheetFlush: false,
+    inspectorOpen: false,
+    inspectorWidth: 320,
+    inspectorTab: 'properties',
 };
 
 // A table wider or taller than this stops being a table and starts being a spreadsheet — and
@@ -154,6 +171,8 @@ export class AppearanceService {
             sidebarMode: stored.sidebarMode === 'rail' ? 'rail' as const : 'full' as const,
             accentLight: storedAccent(String(stored.accentLight), 'light'),
             accentDark: storedAccent(String(stored.accentDark), 'dark'),
+            inspectorWidth: clampInspectorWidth(Number(stored.inspectorWidth)),
+            inspectorTab: stored.inspectorTab === 'ai' ? 'ai' as const : 'properties' as const,
         };
         this.prefs.set(merged);
         this.loadedOwner = owner;

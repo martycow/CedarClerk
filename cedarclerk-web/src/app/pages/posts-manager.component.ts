@@ -1,5 +1,5 @@
 import { ConfirmationService } from '../core/confirmation.service';
-import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { formatInZone } from '../core/display-time';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -44,6 +44,7 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
 import { BrandIconComponent } from '../shared/brand-icon.component';
 import { PopoverComponent } from '../shared/popover.component';
 import { SortDirection } from '../core/collection-query';
+import { WorkspaceContextService, WorkspaceProperty, draftWorkspaceObject } from '../core/workspace-context.service';
 
 // FI3.5 removed the 'feedback' tab; ?tab=feedback still resolves (to posts, where feedback now
 // lives) because links to it exist in the wild — the account menu, and Marty's own bookmarks.
@@ -74,8 +75,9 @@ type PresetSort = 'created' | 'name' | 'questions';
     templateUrl: 'posts-manager.component.html',
     styleUrls: ['posts-manager.component.css'],
 })
-export class PostsManagerComponent implements OnInit {
+export class PostsManagerComponent implements OnInit, OnDestroy {
     private readonly confirmation = inject(ConfirmationService);
+    private readonly workspace = inject(WorkspaceContextService);
     auth = inject(AuthService);
     private draftsApi = inject(DraftsService);
     private presetsApi = inject(FormPresetsService);
@@ -238,6 +240,38 @@ export class PostsManagerComponent implements OnInit {
         if (tab === 'forms') this.resetPresetScroll();
         // Presets are needed by both tabs now: authored on forms, applied to a post on posts.
         if ((tab === 'forms' || tab === 'posts') && !this.presetsLoaded()) void this.loadPresets();
+    }
+
+    // ADR-301 clause 4 — T-386. A post is a `DraftMeta` here too, so the object the rail draws is
+    // the same one the editor and the drafts list publish; only the property rows differ.
+    constructor() {
+        effect(() => {
+            const post = this.selected();
+            const c = this.t().shell.context;
+            if (!post) {
+                this.workspace.set({ surface: c.posts });
+                return;
+            }
+            const type = this.t().projects.docTypes[post.documentType].name;
+            const properties: WorkspaceProperty[] = [
+                { label: c.status, value: this.publishStateLabel(post) },
+                { label: c.language, value: post.primaryLanguage },
+                { label: c.translations, value: post.languages.join(', ') || c.none },
+                { label: c.visibility, value: post.isPrivate ? c.private : c.public },
+                { label: c.views, value: String(post.viewCount ?? 0) },
+                { label: c.blogAddress, value: post.blogSlug || c.none, protected: true },
+                { label: c.identifier, value: post.id, protected: true },
+            ];
+            this.workspace.set({
+                surface: c.posts,
+                open: draftWorkspaceObject(post, c.untitled, type),
+                properties,
+            });
+        });
+    }
+
+    ngOnDestroy() {
+        this.workspace.clear();
     }
 
     selected(): DraftMeta | null {

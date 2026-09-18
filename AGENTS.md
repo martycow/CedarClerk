@@ -4,7 +4,8 @@ Shared root context for every AI tool working in this repo (Claude Code, Codex C
 
 ## What this project is
 
-Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor whose posts are published to Telegram channels via a bot, and to mirrored blog pages. Being turned from a single-operator tool into a multi-tenant public SaaS (Phase 6, in progress).
+Cedar Clerk — blog platform application for indie creators.
+A web rich-text editor whose posts are published to Telegram channels via a bot, to mirrored blog pages, and other social media. Being turned from a single-operator tool into a multi-tenant public SaaS.
 
 - **CedarClerk.Server** — ASP.NET Core (.NET 8) API + static host for the frontend + Telegram bot host
 - **CedarClerk.Core** — the document format and renderers (pure C#, unit-tested)
@@ -13,17 +14,16 @@ Cedar Clerk — self-hosted personal publishing SaaS. A web rich-text editor who
 - **CedarClerk.Tests** — xUnit application tests. Operations console tests belong to MooTool.
 - **cedarclerk-web** — Angular SPA (standalone components, signals, TipTap editor)
 
-Document model: TipTap JSON stored in SQLite (`Draft.CedarJson`). One document → many renderers (Telegram HTML, blog HTML, `.cedar` export) is the core architectural idea — see `docs/tech/ARCHITECTURE.md`.
-
-**Since 10.08.2026 the product is turned towards indie game developers** (Phase 13; MUST list complete 11.08.2026, merged to `master`): a post is one document type among several, living inside a `Project`, alongside tasks, sprints and an asset index. It is a **module inside the same codebase, not a fork** (ADR-101), behind `Cedar:Modules:IndieDev` — read `docs/product/INDIEDEV.md` before touching anything in that area.
+It is a **module inside the same codebase, not a fork** (ADR-101), behind `Cedar:Modules:IndieDev` — read `docs/product/INDIEDEV.md` before touching anything in that area.
 
 ## Anti-desynchronization mechanism
 
-Before implementation of anything, firstly read docs/product/PRD.md and docs/tech/ARCHITECTURE.md. If you change ANY of your decisions, you must record the ADR first, then write code — since 18.08.2026 that means a new `docs/adr/ADR-xxx.md` (first line `# ADR-xxx — Title`) plus its row in the `docs/DECISIONS.md` index.
+Before implementation of anything, firstly read `docs/product/PRD.md` and `docs/tech/ARCHITECTURE.md`. If you change ANY of your decisions, you must record the ADR first, then write code —  that means a new `docs/adr/ADR-xxx.md` (first line `# ADR-xxx — Title`) plus its row in the `docs/DECISIONS.md` index.
 
 ## Stack
 
-.NET 8 (minimal APIs, EF Core + SQLite, ASP.NET Identity, Quartz.NET) + Angular 21/TipTap 3 (standalone components, signals, Vitest). Full detail: `docs/tech/ARCHITECTURE.md`.
+To see the product's architecture, see `docs/tech/ARCHITECTURE.md`.
+.NET 8 (APIs, EF Core + SQLite, ASP.NET Identity, Quartz.NET) + Angular 21/TipTap 3 (standalone components, signals, Vitest).
 
 ## Key commands
 

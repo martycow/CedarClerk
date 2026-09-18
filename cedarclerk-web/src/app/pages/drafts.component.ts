@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, signal, viewChild } from '@angular/core';
 import {
     CdkDrag, CdkDragDrop, CdkDragHandle, CdkDragMove, CdkDragPlaceholder, CdkDropList,
 } from '@angular/cdk/drag-drop';
@@ -37,6 +37,7 @@ import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component'
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
 import { ariaSort } from '../core/collection-query';
+import { WorkspaceContextService, WorkspaceProperty, draftWorkspaceObject } from '../core/workspace-context.service';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
 
@@ -193,6 +194,35 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     private foldersApi = inject(FoldersService);
     private seriesApi = inject(SeriesService);
     private router = inject(Router);
+    private readonly workspace = inject(WorkspaceContextService);
+
+    // ADR-301 clause 4 — T-386. One row is selectable here, so the scope is that row or nothing;
+    // the rail's Properties tab reads what the list already holds, with no request of its own.
+    constructor() {
+        effect(() => {
+            const draft = this.selectedDraft();
+            const c = this.t().shell.context;
+            if (!draft) {
+                this.workspace.set({ surface: c.documents });
+                return;
+            }
+            const type = this.t().projects.docTypes[draft.documentType].name;
+            const properties: WorkspaceProperty[] = [
+                { label: c.type, value: type },
+                { label: c.language, value: draft.primaryLanguage },
+                { label: c.translations, value: draft.languages.join(', ') || c.none },
+                { label: c.status, value: this.status(draft).label },
+                { label: c.tags, value: draft.tags || c.none },
+                { label: c.blogAddress, value: draft.blogSlug || c.none, protected: true },
+                { label: c.identifier, value: draft.id, protected: true },
+            ];
+            this.workspace.set({
+                surface: c.documents,
+                open: draftWorkspaceObject(draft, c.untitled, type),
+                properties,
+            });
+        });
+    }
 
     loading = signal(true);
     drafts = signal<DraftMeta[]>([]);
@@ -259,6 +289,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     ngOnDestroy() {
         this.importMarkdownSub?.unsubscribe();
         window.removeEventListener('resize', this.onResize);
+        this.workspace.clear();
     }
 
     status(d: DraftMeta): DraftStatus {

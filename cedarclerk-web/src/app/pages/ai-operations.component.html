@@ -1,0 +1,114 @@
+<div class="page ai-ops" data-density="compact">
+    <app-page-header [title]="t().ai.crumb" [meta]="headerMeta()">
+        <a secondary class="ops-link" routerLink="/settings" [queryParams]="{ tab: 'billing' }">
+            <app-icon name="drop" size="sm" /> {{ t().ai.openBilling }}
+        </a>
+        @if (api.operations().length) {
+        <app-button primary variant="paper" (clicked)="clear()">
+            <app-icon name="trash" size="sm" /> {{ t().ai.clear }}
+        </app-button>
+        }
+    </app-page-header>
+
+    <app-index-tabs [items]="tabs()" [value]="filter()" [label]="t().ai.filterLabel"
+                    (selected)="setFilter($event)" />
+
+    @if (!operations().length) {
+    <app-empty-state icon="sparkle" [title]="t().ai.emptyTitle" [text]="t().ai.emptyText"
+                     [note]="t().ai.emptyNote" />
+    } @else {
+    <div class="ops-grid split-workspace">
+        <ul class="ops-list row-list" [attr.aria-label]="t().ai.crumb">
+            @for (op of operations(); track op.id) {
+            <li>
+                <button type="button" class="op-card" [class.on]="selected()?.id === op.id"
+                        [attr.aria-current]="selected()?.id === op.id" (click)="pick(op.id)">
+                    <span class="op-head">
+                        <span class="op-task">{{ op.task }}</span>
+                        <span class="op-status" [attr.data-status]="op.status">
+                            <app-icon [name]="statusIcon(op.status)" size="xs" />
+                            {{ statusLabel(op.status) }}
+                        </span>
+                    </span>
+                    <span class="op-meta">
+                        {{ t().ai.changedCount(changedCount(op)) }}
+                        @if (untouchedCount(op)) { · {{ t().ai.untouchedCount(untouchedCount(op)) }} }
+                        @if (op.credits) { · {{ t().ai.creditsSpent(op.credits) }} }
+                        @if (duration(op)) { · {{ duration(op) }} }
+                    </span>
+                </button>
+            </li>
+            }
+        </ul>
+
+        @if (selected(); as op) {
+        <aside class="card inspector split-pane" [attr.aria-label]="t().ai.detailsLabel">
+            <h2 class="insp-title">{{ op.task }}</h2>
+            <p class="insp-status" [attr.data-status]="op.status">
+                <app-icon [name]="statusIcon(op.status)" size="xs" /> {{ statusLabel(op.status) }}
+            </p>
+
+            <h3 class="insp-sub">{{ t().ai.scopeTitle }}</h3>
+            <ul class="insp-objects">
+                @for (object of op.scope; track object.id) {
+                <li>
+                    <button type="button" class="obj" [disabled]="object.kind !== 'document'"
+                            (click)="openObject(object)">
+                        @if (object.icon) { <app-icon [name]="object.icon" size="xs" /> }
+                        <span class="obj-title">{{ object.title }}</span>
+                        @if (object.detail) { <span class="obj-detail">{{ object.detail }}</span> }
+                    </button>
+                </li>
+                }
+            </ul>
+
+            @if (op.protectedFields.length) {
+            <p class="insp-protected">
+                <app-icon name="lock" size="xs" />
+                {{ t().ai.protectedFields }}: {{ op.protectedFields.join(', ') }}
+            </p>
+            }
+
+            @if (op.changes.length) {
+            <h3 class="insp-sub">{{ t().ai.changesTitle }}</h3>
+            <ul class="insp-changes">
+                @for (change of op.changes; track change.objectId) {
+                <li class="change" [class.untouched]="!change.changed">
+                    <app-icon [name]="change.changed ? 'check' : 'prohibit'" size="xs" />
+                    <span class="change-main">
+                        <span class="change-title">{{ change.title }}</span>
+                        @if (change.note) { <span class="change-note">{{ change.note }}</span> }
+                    </span>
+                </li>
+                }
+            </ul>
+            }
+
+            @if (op.error) { <p class="insp-error">{{ op.error }}</p> }
+
+            <dl class="insp-facts">
+                @if (op.model) {
+                <div><dt>{{ t().ai.model }}</dt><dd>{{ op.model }}</dd></div>
+                }
+                @if (op.credits) {
+                <div><dt>{{ t().ai.credits }}</dt><dd>{{ op.credits }}</dd></div>
+                }
+                @if (duration(op)) {
+                <div><dt>{{ t().ai.durationLabel }}</dt><dd>{{ duration(op) }}</dd></div>
+                }
+            </dl>
+
+            <div class="insp-actions">
+                @if (canUndo(op)) {
+                <app-button variant="danger" size="sm" (clicked)="undo(op)">
+                    <app-icon name="arrow-counter-clockwise" size="sm" /> {{ t().ai.undo }}
+                </app-button>
+                } @else if (op.status === 'applied') {
+                <p class="insp-note">{{ t().ai.undoUnavailable }}</p>
+                }
+            </div>
+        </aside>
+        }
+    </div>
+    }
+</div>

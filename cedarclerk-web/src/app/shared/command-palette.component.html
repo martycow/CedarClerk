@@ -1,0 +1,51 @@
+@if (open()) {
+<div class="cp-scrim" (click)="close()">
+    <div #panel class="cp-panel" data-surface="paper" role="dialog" aria-modal="true" tabindex="-1"
+         [attr.aria-label]="t().shell.commandPalette.title"
+         (click)="$event.stopPropagation()">
+        <div class="cp-input-row">
+            <app-icon name="terminal-window" size="sm"></app-icon>
+            <input #queryInput class="cp-input" type="text"
+                   [ngModel]="query()" (ngModelChange)="onQueryChange($event)"
+                   (keydown)="onInputKeydown($event)"
+                   [placeholder]="t().shell.commandPalette.placeholder"
+                   [attr.aria-label]="t().shell.commandPalette.title"
+                   role="combobox" aria-autocomplete="list" [attr.aria-expanded]="results().length > 0"
+                   [attr.aria-controls]="results().length ? 'cedar-command-results' : null"
+                   [attr.aria-activedescendant]="results().length ? 'cedar-command-option-' + index() : null"
+                   autocomplete="off" spellcheck="false">
+            <span class="cp-kbd" aria-hidden="true">Esc</span>
+        </div>
+
+        @if (results().length) {
+        <ul id="cedar-command-results" class="cp-results" role="listbox"
+            [attr.aria-label]="t().shell.commandPalette.title">
+            @for (command of results(); track command.id; let i = $index) {
+            <li role="presentation">
+                <button type="button" class="cp-row" role="option" [id]="'cedar-command-option-' + i"
+                        [class.active]="i === index()" [class.disabled]="!isEnabled(command)"
+                        [attr.aria-selected]="i === index()" [attr.aria-disabled]="!isEnabled(command)"
+                        (mouseenter)="index.set(i)" (click)="pick(command)">
+                    @if (command.icon) {
+                    <app-icon [name]="command.icon" size="sm"></app-icon>
+                    } @else {
+                    <span class="cp-dot" aria-hidden="true"></span>
+                    }
+                    <span class="cp-row-main">
+                        <span class="cp-row-title">{{ command.label }}</span>
+                        <span class="cp-row-group">{{ groupLabel(command.group) }}</span>
+                    </span>
+                    @if (command.shortcut) { <kbd class="cp-keys">{{ command.shortcut }}</kbd> }
+                </button>
+            </li>
+            }
+        </ul>
+        <p class="cp-hint">{{ t().shell.commandPalette.keys }}</p>
+        } @else if (query().trim()) {
+        <p class="cp-note">{{ t().shell.commandPalette.empty }}</p>
+        } @else {
+        <p class="cp-note">{{ t().shell.commandPalette.hint }}</p>
+        }
+    </div>
+</div>
+}

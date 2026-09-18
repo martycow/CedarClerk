@@ -68,11 +68,17 @@ describe('app shell', () => {
         fixture.detectChanges();
     });
 
-    it('draws the sidebar beside the ground and nothing above or below them', () => {
-        expect(el().querySelector('.shell > app-sidebar')).toBeTruthy();
-        expect(el().querySelector('.shell > main.body router-outlet')).toBeTruthy();
+    // ADR-301 clause 1 supersedes ADR-239's "nothing above" for the signed-in shell: the menu row
+    // is the one thing over the sidebar, and the inspector rail the one thing after the page.
+    it('draws the menu row over the sidebar, the ground and the inspector rail', () => {
+        expect(el().querySelector('.shell > app-menu-bar')).toBeTruthy();
+        expect(el().querySelector('.shell > .row > app-sidebar')).toBeTruthy();
+        expect(el().querySelector('.shell > .row > main.body router-outlet')).toBeTruthy();
+        expect(el().querySelector('.shell > .row > app-inspector-rail')).toBeTruthy();
         expect(el().querySelectorAll('.shell > *').length).toBe(2);
+        expect(el().querySelectorAll('.shell > .row > *').length).toBe(3);
         expect(el().querySelector('app-debug-console')).toBeTruthy();
+        expect(el().querySelector('app-command-palette')).toBeTruthy();
     });
 
     it('stands every screen on paper', () => {
@@ -131,7 +137,7 @@ describe('app shell', () => {
     });
 
     it('lists the account-wide screens while the module is off, in their groups', () => {
-        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets']);
+        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets', 'AI operations']);
         expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship', 'Library']);
         expect(el().querySelector('app-project-switcher')).toBeNull();
     });
@@ -140,7 +146,7 @@ describe('app shell', () => {
         TestBed.inject(AuthService).indieDev.set(true);
         fixture.detectChanges();
         await go('/projects');
-        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets']);
+        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets', 'AI operations']);
         expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship', 'Library']);
         const card = el().querySelector('app-project-switcher .side-project') as HTMLButtonElement;
         expect(card.tagName).toBe('BUTTON');
@@ -213,7 +219,7 @@ describe('app shell', () => {
             'Documents', 'Assets', 'Canvas', 'Dialogues', 'Site',
             'Tasks', 'Planner', 'Calendar',
             'Builds', 'Posts', 'Metrics',
-            'Glossary', 'Presets',
+            'Glossary', 'Presets', 'AI operations',
         ]);
         expect(items().find(a => a.textContent?.includes('Tasks'))!.getAttribute('href')).toBe('/projects/p1/tasks');
         expect(items().find(a => a.textContent?.includes('Metrics'))!.getAttribute('href')).toBe('/posts?tab=stats');
@@ -228,7 +234,7 @@ describe('app shell', () => {
             .flush({ role: 'editor', canWrite: true, archived: false });
         await fixture.whenStable();
         fixture.detectChanges();
-        expect(labels()).toEqual(['Canvas', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets']);
+        expect(labels()).toEqual(['Canvas', 'Calendar', 'Posts', 'Metrics', 'Glossary', 'Presets', 'AI operations']);
     });
 
     it('draws the counts the project list already holds, and never a zero', async () => {

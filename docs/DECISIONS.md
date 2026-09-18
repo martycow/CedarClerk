@@ -298,5 +298,6 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-298 — Forest authentication screens](adr/ADR-298.md)
 - [ADR-299 — LinkedIn: a post-now connector that carries the document's layout](adr/ADR-299.md)
 - [ADR-300 — A media refusal is never cacheable; a publish warning lands on the target](adr/ADR-300.md)
+- [ADR-301 — The workshop chrome: a menu bar, a command registry and a shell-level inspector](adr/ADR-301.md)
 - [ADR-302 — Database command logs are warnings by default](adr/ADR-302.md)
 - [ADR-303 — Empty language versions need a full translation](adr/ADR-303.md)

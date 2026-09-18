@@ -97,6 +97,13 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/presets.component').then(m => m.PresetsComponent),
                 canActivate: [authGuard],
             },
+            // ADR-301 — the AI operations log. authGuard, not a module flag: the AI features it
+            // records (ai-edit, auto-translate, glossary) exist with every module off.
+            {
+                path: 'ai',
+                loadComponent: () => import('./pages/ai-operations.component').then(m => m.AiOperationsComponent),
+                canActivate: [authGuard],
+            },
             {
                 // 'library', not 'media' — /media/* is the uploaded files' own URL space (server static
                 // route + dev proxy), and the dev proxy forwards the whole prefix to the backend.

@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## 2026-09-18 — Combined workshop and language recovery release (0.23.6)
+
+Merged `claude/app-chrome` into `master`, retaining the workshop menu, command palette,
+inspector rail and AI operations alongside the SQL logging and empty-language translation
+fixes. Documentation conflicts preserve both branches' decision and change records.
+Version and tag are `0.23.6`; deployment uses the standard Cedar operations console.
+
+Validation: `cedar test --smoke` passed 2,025 backend tests, 828 frontend tests, icon,
+contrast and density checks, the production Angular build, and 71 browser smoke tests;
+18 optional visual-audit scenarios were skipped. A fresh production backup was restored
+to a temporary database and passed `quick_check`. The backup command's cleanup returned
+an error for leftover WAL sidecars, but the compressed backup itself was complete and valid.
+
 ## 2026-09-18 — Language recovery fixes merged to master (0.23.5)
 
 Merged the SQL command logging default (ADR-302) and empty-language translation fix
@@ -41,6 +54,92 @@ version fix is committed on `codex/fix-language-versions` and is not deployed. T
 setting is active; its repository counterpart still needs integration before the next release.
 Host log-rotation limits remain an administrator action. The unpublished test Note remains
 available as `Language recovery check — unpublished test`.
+
+## 2026-09-17 — Five screens publish what they have open (T-386, ADR-301)
+
+The inspector rail shipped knowing nothing: only the shell wrote to `WorkspaceContextService`, so
+Properties and the AI panel's scope line were empty everywhere. Now the drafts list, the editor, the
+media library, the Posts Manager and the glossary each publish their surface, their open object and
+their property rows in one `effect`, cleared on destroy.
+
+The protected rows are the point of the exercise — the fields an AI run may never rewrite, named on
+the object rather than guessed at by the panel: a document's blog address and id, an asset's file
+path and id, a glossary term's spelling (the key every wikilink and every match resolves through).
+`draftWorkspaceObject()` maps the `DraftMeta` the three document screens share, so the title, icon
+and detail line cannot disagree between the list, the editor and the Posts Manager.
+
+Two screens have real AI, so they register it: the editor offers fix-errors, the Schizo-izer and
+translate-all; the glossary offers translate-this-term and translate-all. One gate covers all of
+them — a plan that reaches AI, something open, and nothing already running, because a second run
+against a document still being rewritten spends credits on a stale copy. The media library publishes
+**only** from the page instance: it is also mounted inside the project's Assets board and the media
+picker, and an embedded copy would replace the host screen's object with whatever the picker shows.
+
+No screen has multi-select, so `selection` is `[]` and the scope falls back to the open object —
+the service's documented fallback. Making a batch reachable is `T-389`.
+
+Opened in a browser, which is where the one real defect turned up: on the glossary `selectedId`
+names the term an *edit form* is open on, while the user's own pick is `previewId`, so the rail
+stayed empty for anyone who just clicked a term. The pick now wins and the edit is the fallback. A
+refused AI action also read too much like an offered one — same ink, same sheet — so a disabled one
+now drops its fill and reads as an outline.
+
+Two findings went to the board rather than into the diff, because both are decisions: the rail and
+the page-local inspectors now print the same rows on the three list screens (`T-390`), and opening
+the rail scrolls the drafts table sideways past its own Title column (`T-391`).
+
+Gates: frontend 828 tests, 12 of them new across the drafts and glossary specs; contrast, density
+and icon checks green. The two frontend and two backend specs red under full-suite load all pass in
+isolation and alternate between runs — the branch changes no C# at all, so the backend pair is the
+suite measuring the machine (`T-392`, new).
+
+## 2026-09-17 — The workshop chrome: menu bar, command palette, inspector rail, AI operations (ADR-301)
+
+Cedar Clerk stops reading as an admin panel for a blog. Four things land on branch
+`claude/app-chrome`, front-end only — no entity, no migration, no endpoint.
+
+**A menu bar** (`File · Edit · View · Tools · Help`, 28px) sits above the sidebar, which is the
+one thing ADR-239 said would never be there; ADR-301 supersedes that clause for the signed-in
+shell and leaves the pre-auth doors and the blog alone. Navigation stays in the sidebar on
+purpose — the project tree does not go into `File`.
+
+**One command registry** (`core/commands.service.ts`) feeds the menu, the palette and the
+keyboard from a single definition, so a disabled command is disabled in all three at once. A page
+registers its own on mount and releases on destroy; a later registration wins a colliding id, which
+is how a screen's own Save replaces the shell's. **`Ctrl+Shift+P`** opens the command palette;
+**`Ctrl+K`** still searches documents. The two stay separate because "which document" and "which
+action" are different questions.
+
+**A shell-level inspector rail** on the right — **Properties** (what the open object is) and **AI**
+(what an operation would do to it) — collapsible, resizable, remembered in `AppearancePrefs`. The
+AI panel states the three scope lines before anything runs, and its scope is exactly what
+`core/workspace-context.service.ts` reports: the ticked objects, or the open one when nothing is
+ticked, never the whole project. Only the shell writes to that service so far, so the panel is
+empty on every screen until the pages publish their own scope — `T-386`.
+
+**`/ai`** is the log every AI run leaves: task, scope, protected fields, per-object changes, model,
+credits, duration. *Undo* appears only where a revision exists to go back to, and is absent with the
+reason in its place where none does, rather than present and lying. The log is client-side per
+account for now — a durable one needs an entity and a migration, `T-385`. Credits are **not**
+restated here: the header links to Settings → Billing, which stays their one home, exactly as
+revision history stays the editor's.
+
+Validation: `dotnet test` 2018/2018 green (`UiInventoryDriftTests` included); frontend 818 tests with
+35 new ones across `commands.service`, `workspace-context.service`, `ai-operations.service`,
+`menu-bar.component` and `ai-operations.component`; contrast, density and icon checks green. The two
+frontend specs still red under full-suite parallel load are red on `master` too (seven of them
+there) — the known timeout flake, `T-375`. Smoke suite: 70 passed, 18 audit skips, and one
+failure — `17-density`'s shell-floor check, which fails identically on `master` in a full run and
+passes alone on both, so it is the spec's own defect and now `T-388`. Not deployed.
+
+**Opened in a browser** against the E2E stack at 1600×1000, both themes — the hub, each menu group,
+the palette, both inspector tabs, and `/ai` empty and with records. Four defects found that way and
+fixed: a signal written inside a `computed` (NG0600 on the first read of the log), a `.px` unit
+suffix on a custom-property binding that never reached the rail's width, a menu row wrapping around
+its own shortcut, and — the documented ADR-141 trap — a paper `--t2` on a control standing on the
+wall, which all but vanished at night. What is still unchecked by eye: the Russian dictionary (the
+E2E account's profile language overrides the stored one, so every capture came back English), a
+phone width, and a keyboard-only pass.
 
 ## 2026-09-14 — Media 404s no longer cached, X media-scope hint shows (ADR-300)
 

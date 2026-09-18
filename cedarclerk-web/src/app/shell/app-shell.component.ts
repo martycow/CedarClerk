@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { AppearanceService } from '../core/appearance.service';
+import { AppCommand, CommandRelease, CommandsService } from '../core/commands.service';
 import { CommentsService } from '../core/comments.service';
 import { CreditBalanceService } from '../core/credit-balance.service';
 import { CurrentProjectService } from '../core/current-project.service';
@@ -9,9 +10,12 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
 import { ProjectAccessService } from '../core/project-access.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
+import { CommandPaletteComponent } from '../shared/command-palette.component';
 import { DebugConsoleComponent } from '../shared/debug-console.component';
 import { FeedbackPanelComponent } from '../shared/feedback-panel.component';
 import { SearchOverlayComponent } from '../shared/search-overlay.component';
+import { InspectorRailComponent } from './inspector-rail.component';
+import { MenuBarComponent } from './menu-bar.component';
 import { NavGroup, NavItem, SidebarComponent, SidebarProject, SidebarUser } from './sidebar.component';
 
 /** Which item stands for a path. Longest match first — the board is a child of the hub. */
@@ -33,6 +37,7 @@ const NAV_PREFIXES: readonly (readonly [string, string])[] = [
     ['settings', '/settings'],
     ['glossary', '/glossary'],
     ['presets', '/presets'],
+    ['ai', '/ai'],
     ['teams', '/teams'],
 ];
 
@@ -57,6 +62,7 @@ function matches(path: string, pattern: string): boolean {
     imports: [
         RouterOutlet, SidebarComponent, FeedbackPanelComponent,
         SearchOverlayComponent, DebugConsoleComponent,
+        MenuBarComponent, InspectorRailComponent, CommandPaletteComponent,
     ],
     host: {
         'data-surface': 'paper',
@@ -64,29 +70,44 @@ function matches(path: string, pattern: string): boolean {
     },
     template: `
         <div class="shell" [class.is-rail]="mode() === 'rail'">
-            <app-sidebar [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
-                         [project]="project()" [projects]="switcher()" [projectHint]="t().shell.switchProject"
-                         [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
-                         [brand]="t().shell.brand" [brandLabel]="t().shell.logoLabel"
-                         [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts" />
-            <main class="body" data-surface="paper">
-                <router-outlet />
-            </main>
+            <app-menu-bar />
+            <div class="row">
+                <app-sidebar [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
+                             [project]="project()" [projects]="switcher()" [projectHint]="t().shell.switchProject"
+                             [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
+                             [brand]="t().shell.brand" [brandLabel]="t().shell.logoLabel"
+                             [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts" />
+                <main class="body" data-surface="paper">
+                    <router-outlet />
+                </main>
+                <app-inspector-rail />
+            </div>
         </div>
 
         <app-feedback-panel />
         <app-search-overlay />
+        <app-command-palette />
         <app-debug-console />
     `,
     styles: [`
         :host { display: block; }
 
-        /* The shell owns the viewport, so the page never sizes itself from it (ADR-239 clause 7). */
+        /* The shell owns the viewport, so the page never sizes itself from it (ADR-239 clause 7).
+           ADR-301 clause 1 puts the menu row above it — the one thing ADR-239 said would never be
+           there, and the reason that clause is superseded for the signed-in shell. */
         .shell {
             position: fixed;
             inset: 0;
             display: flex;
+            flex-direction: column;
             align-items: stretch;
+        }
+
+        .row {
+            display: flex;
+            flex: 1;
+            align-items: stretch;
+            min-height: 0;
         }
 
         /* The ground is the wall, and the wall carries the wall's ink (ADR-141); a card restates
@@ -106,7 +127,7 @@ function matches(path: string, pattern: string): boolean {
         }
     `],
 })
-export class AppShellComponent {
+export class AppShellComponent implements OnDestroy {
     private readonly router = inject(Router);
     private readonly projects = inject(ProjectsService);
     private readonly current = inject(CurrentProjectService);
@@ -115,11 +136,15 @@ export class AppShellComponent {
     private readonly creditBalance = inject(CreditBalanceService);
     private readonly overlays = inject(OverlayCoordinatorService);
     private readonly appearance = inject(AppearanceService);
+    private readonly commands = inject(CommandsService);
 
     protected readonly auth = inject(AuthService);
     protected readonly t = inject(LocaleService).t;
 
     protected readonly search = viewChild.required(SearchOverlayComponent);
+    protected readonly palette = viewChild.required(CommandPaletteComponent);
+
+    private commandRelease?: CommandRelease;
 
     private readonly url = signal(this.router.url);
     private readonly path = computed(() => this.url().split('?')[0].split('#')[0]);
@@ -228,6 +253,7 @@ export class AppShellComponent {
         const library: NavItem[] = [
             { id: 'glossary', label: this.t().glossary.crumb, icon: 'book-bookmark', link: '/glossary' },
             { id: 'presets', label: this.t().presets.crumb, icon: 'squares-four', link: '/presets' },
+            { id: 'ai', label: this.t().ai.crumb, icon: 'sparkle', link: '/ai' },
         ];
         if (!this.auth.indieDev() || !this.projectOpen()) {
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts' });
@@ -273,8 +299,91 @@ export class AppShellComponent {
         return { name, avatarUrl: this.auth.avatarUrl(), initial: (name[0] ?? '?').toUpperCase() };
     });
 
+    /** ADR-301 clause 2 — the account-wide set. A page adds its own on mount; later wins a
+        collision, so a screen's Save replaces this one without either side knowing about the other. */
+    private shellCommands(): readonly AppCommand[] {
+        const labels = this.t().shell.commands;
+        const go = (path: string, queryParams?: Record<string, string>) =>
+            () => void this.router.navigate([path], queryParams ? { queryParams } : {});
+        const commands: AppCommand[] = [
+            { id: 'file.new', group: 'file', label: labels.newDocument, icon: 'plus', run: go('/editor') },
+            { id: 'file.documents', group: 'file', label: labels.openDocuments, icon: 'file-text', run: go('/drafts') },
+            { id: 'file.library', group: 'file', label: labels.library, icon: 'images', run: go('/library') },
+            {
+                id: 'file.download', group: 'file', label: labels.download, icon: 'download-simple',
+                separatorBefore: true, run: go('/download'),
+            },
+            {
+                id: 'file.signOut', group: 'file', label: labels.signOut, icon: 'sign-out',
+                separatorBefore: true, run: () => void this.auth.logout(),
+            },
+            {
+                id: 'edit.search', group: 'edit', label: labels.search, icon: 'magnifying-glass',
+                shortcut: 'Ctrl+K', run: () => this.search().openOverlay(),
+            },
+            { id: 'edit.glossary', group: 'edit', label: labels.glossary, icon: 'book-bookmark', separatorBefore: true, run: go('/glossary') },
+            { id: 'edit.presets', group: 'edit', label: labels.presets, icon: 'squares-four', run: go('/presets') },
+            {
+                id: 'view.sidebar', group: 'view', label: labels.toggleSidebar, icon: 'layout',
+                checked: () => this.appearance.prefs().sidebarMode === 'rail',
+                run: () => this.setPref({ sidebarMode: this.appearance.prefs().sidebarMode === 'rail' ? 'full' : 'rail' }),
+            },
+            {
+                id: 'view.inspector', group: 'view', label: labels.toggleInspector, icon: 'list',
+                checked: () => this.appearance.prefs().inspectorOpen,
+                run: () => this.setPref({ inspectorOpen: !this.appearance.prefs().inspectorOpen }),
+            },
+            {
+                id: 'view.theme', group: 'view', label: labels.toggleTheme, icon: 'moon',
+                checked: () => this.appearance.prefs().theme === 'dark',
+                run: () => this.setPref({ theme: this.appearance.prefs().theme === 'dark' ? 'light' : 'dark' }),
+            },
+            { id: 'view.calendar', group: 'view', label: labels.calendar, icon: 'calendar-blank', separatorBefore: true, run: go('/calendar') },
+            { id: 'view.posts', group: 'view', label: labels.posts, icon: 'paper-plane-tilt', run: go('/posts') },
+            {
+                id: 'tools.palette', group: 'tools', label: labels.palette, icon: 'terminal-window',
+                shortcut: 'Ctrl+Shift+P', run: () => this.palette().openOverlay(),
+            },
+            { id: 'tools.ai', group: 'tools', label: labels.aiOperations, icon: 'sparkle', run: go('/ai') },
+            { id: 'tools.settings', group: 'tools', label: labels.settings, icon: 'gear', separatorBefore: true, run: go('/settings') },
+            {
+                id: 'tools.debug', group: 'tools', label: labels.debugConsole, icon: 'terminal-window',
+                shortcut: 'Ctrl+`', run: () => this.overlays.toggle('debug'),
+            },
+            { id: 'help.terms', group: 'help', label: labels.terms, icon: 'info', run: go('/terms') },
+            { id: 'help.privacy', group: 'help', label: labels.privacy, icon: 'shield-check', run: go('/privacy') },
+        ];
+        if (this.auth.isAdmin()) {
+            commands.push(
+                { id: 'tools.styleguide', group: 'tools', label: labels.styleguide, icon: 'palette', separatorBefore: true, run: go('/dev/styleguide') },
+                { id: 'tools.icons', group: 'tools', label: labels.icons, icon: 'image', run: go('/dev/icons') },
+            );
+        }
+        return commands;
+    }
+
+    private setPref(patch: Parameters<AppearanceService['preview']>[0]): void {
+        this.appearance.preview(patch);
+        void this.appearance.commit();
+    }
+
+    ngOnDestroy(): void {
+        this.commandRelease?.();
+    }
+
     constructor() {
         this.feedback.refreshNewCount();
+
+        // Labels are locale-bound, so the set is rebuilt when the dictionary or the admin flag
+        // changes — a menu row that kept its English label after a language switch was the bug.
+        effect(() => {
+            this.t();
+            this.auth.isAdmin();
+            untracked(() => {
+                this.commandRelease?.();
+                this.commandRelease = this.commands.register(this.shellCommands());
+            });
+        });
 
         this.router.events.subscribe(e => {
             if (e instanceof NavigationEnd) this.url.set(e.urlAfterRedirects);
@@ -339,6 +448,13 @@ export class AppShellComponent {
     }
 
     onKeydown(event: KeyboardEvent): void {
+        // Shift first: Ctrl+Shift+P is a command, Ctrl+P is the browser's print and stays its own.
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey
+            && (event.key.toLowerCase() === 'p' || event.code === 'KeyP')) {
+            event.preventDefault();
+            this.palette().toggleOverlay();
+            return;
+        }
         if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
             event.preventDefault();
             this.search().toggleOverlay();
