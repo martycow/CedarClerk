@@ -15,6 +15,26 @@ Validation: `cedar test --backend` passed all 2,018 tests. Production recovery, 
 changes and live language creation/translation verification remain pending elevated operator
 access. No production files or user documents were changed; the logging change is not deployed.
 
+### Production recovery and empty-version translation (ADR-303)
+
+After the maintainer cleared syslog while retaining a recent sample, production had 39 GB
+available and SQLite `quick_check` returned `ok`. The SQL command log level was applied to
+the running application's configuration with a protected backup; reload took effect without
+a service restart. Syslog grew by about 22 KB over five minutes after the change.
+
+A separate unpublished Note verified `Start empty` and first-time AI translation in the live
+browser. The French translation remained intact after reload. The same check exposed a
+second defect: re-translating the empty English version reused its blank paragraph because
+the source snapshot matched. Incremental planning now falls back to full translation for
+targets containing only empty or whitespace-only paragraphs when the source contains text.
+Partially written targets, images and code blocks retain the existing preservation rules.
+
+Validation: all 2,025 backend tests passed, including seven new regression cases. The empty
+version fix is committed on `codex/fix-language-versions` and is not deployed. The live logging
+setting is active; its repository counterpart still needs integration before the next release.
+Host log-rotation limits remain an administrator action. The unpublished test Note remains
+available as `Language recovery check — unpublished test`.
+
 ## 2026-09-14 — Media 404s no longer cached, X media-scope hint shows (ADR-300)
 
 Pictures that "disappeared" from a draft and the library after a visit were on disk and in

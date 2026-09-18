@@ -26,6 +26,11 @@ public static class IncrementalTranslationPlan
         var translation = Blocks(existingTranslationJson);
         if (oldSource.Count == 0 || newSource.Count == 0 || translation.Count == 0) return null;
 
+        // Start empty stores a source snapshot too; matching paragraph counts do not make its blank body a translation.
+        if (translation.All(IsEmptyParagraph)
+            && CedarPlainText.Paragraphs(newSourceJson).Any(text => !string.IsNullOrWhiteSpace(text)))
+            return null;
+
         // The whole mechanism rests on "block i of the snapshot became block i of the
         // translation". A count mismatch means that stopped being true — most often because the
         // translation was edited by hand — and splicing by position would shuffle paragraphs.
@@ -93,6 +98,20 @@ public static class IncrementalTranslationPlan
             else if (x < n && dp[x + 1, y] >= dp[x, y + 1]) { x++; } // a block was removed
             else { yield return (-1, y); y++; }                     // a block is new or changed
         }
+    }
+
+    private static bool IsEmptyParagraph(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var block = doc.RootElement;
+        if (block.ValueKind != JsonValueKind.Object
+            || !block.TryGetProperty("type", out var type) || type.GetString() != "paragraph") return false;
+        if (!block.TryGetProperty("content", out var content)) return true;
+        return content.ValueKind == JsonValueKind.Array && content.EnumerateArray().All(node =>
+            node.ValueKind == JsonValueKind.Object
+            && node.TryGetProperty("type", out var nodeType) && nodeType.GetString() == "text"
+            && node.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String
+            && string.IsNullOrWhiteSpace(text.GetString()));
     }
 
     private static List<string> Blocks(string json)

@@ -74,6 +74,54 @@ public class IncrementalTranslationPlanTests
         Assert.Null(IncrementalTranslationPlan.Build("", Doc("one"), Doc("один")));
     }
 
+    [Theory]
+    [InlineData("{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\"}]}")]
+    [InlineData("{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[]}]}")]
+    public void Start_empty_requires_a_full_translation_even_when_the_source_is_unchanged(string empty)
+    {
+        Assert.Null(IncrementalTranslationPlan.Build(Doc("one"), Doc("one"), empty));
+    }
+
+    [Fact]
+    public void Whitespace_only_translation_requires_a_full_translation()
+    {
+        Assert.Null(IncrementalTranslationPlan.Build(Doc("one", "two"), Doc("one", "two"), Doc(" ", "  ")));
+    }
+
+    [Fact]
+    public void Partially_written_translation_preserves_manual_text_and_empty_blocks()
+    {
+        var existing = Doc("manual wording", " ");
+        var plan = IncrementalTranslationPlan.Build(Doc("one", "two"), Doc("one", "two"), existing);
+
+        Assert.NotNull(plan);
+        Assert.Empty(plan!.BlocksToTranslate);
+        Assert.Equal(["manual wording", " "], TextsOf(IncrementalTranslationPlan.Assemble(plan, existing, Doc())));
+    }
+
+    [Fact]
+    public void A_source_without_text_can_still_reuse_empty_blocks()
+    {
+        var empty = Doc(" ");
+        var plan = IncrementalTranslationPlan.Build(empty, empty, empty);
+
+        Assert.NotNull(plan);
+        Assert.Empty(plan!.BlocksToTranslate);
+    }
+
+    [Theory]
+    [InlineData("{\"type\":\"image\",\"attrs\":{\"src\":\"/media/manual.png\"}}")]
+    [InlineData("{\"type\":\"codeBlock\",\"content\":[{\"type\":\"text\",\"text\":\"manual code\"}]}")]
+    public void Authored_non_paragraph_content_is_not_an_empty_translation(string block)
+    {
+        var existing = "{\"type\":\"doc\",\"content\":[" + block + "]}";
+        var plan = IncrementalTranslationPlan.Build(Doc("one"), Doc("one"), existing);
+
+        Assert.NotNull(plan);
+        Assert.Empty(plan!.BlocksToTranslate);
+        Assert.Equal(1, plan.ReusedCount);
+    }
+
     [Fact]
     public void A_hand_restructured_translation_falls_back_to_a_full_translation()
     {
