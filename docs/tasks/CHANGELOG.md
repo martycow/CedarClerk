@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## 2026-09-18 — Language recovery fixes merged to master (0.23.5)
+
+Merged the SQL command logging default (ADR-302) and empty-language translation fix
+(ADR-303) into local `master`, with version and tag `0.23.5`. The application fixes passed
+all 2,025 backend tests. No push or deployment was requested. Production retains the live
+logging configuration applied during recovery; the empty-version fix awaits deployment.
+
 ## 2026-09-18 — Translation save failures on a full production disk (ADR-302)
 
 Production reported zero available disk space, with `/var/log/syslog` consuming 39 GB.

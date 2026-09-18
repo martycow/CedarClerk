@@ -100,5 +100,5 @@ see them.
   only. **Committed to master as `3b93004`, not deployed.**
   `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
   from the one on the droplet — which the previous pair of deploys could not do.
-- Active release: `master`, 0.23.3 — forest authentication (ADR-298), based on the consolidated authentication and compact-provider releases.
+- Local release: `master`, 0.23.5 — SQL command logging and empty-language translation fixes (ADR-302/303). Not deployed; `cedar status` reports the running production version.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.
