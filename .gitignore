@@ -1,4 +1,4 @@
-# === .NET ===
+# .NET
 bin/
 obj/
 publish/
@@ -6,68 +6,70 @@ publish/
 *.suo
 .vs/
  
-# Rider / ReSharper
+# Rider
 .idea/
 *.sln.iml
+
+# VS Code
+.vscode
  
-# === Angular / Node ===
+# Angular
 node_modules/
 dist/
 .angular/
 npm-debug.log*
 yarn-error.log*
  
-# === Secrets and local data===
+# Secrets and local data
 appsettings.Development.json
 appsettings.*.local.json
 *.env
 .env*
 /test.ps1
 
-# Local SQLite (path is case-sensitive on purpose — CedarClerk.Server/Data/ holds source files)
+# Local SQLite
 CedarClerk.Server/Data/media/
 *.db
 *.db-wal
 *.db-shm
  
-# === OS / editors ===
+# OS
 .DS_Store
 Thumbs.db
 *.swp
  
-# === Misc ===
+# Misc
 *.log
 TestResults/
 coverage/
 MISC_FILES/**/*
-# === Playwright (Phase 10 smoke suite) ===
+
+# Playwright
 cedarclerk-web/test-results/
 cedarclerk-web/playwright-report/
 cedarclerk-web/blob-report/
 cedarclerk-web/.playwright/
-# scratch database the e2e launcher creates and wipes
+
+# e2e testing data
 .e2e-data/
 .e2e-server.log
 .e2e-server.log.err
 .e2e-audit/
 
-# Local uploads and DataProtection keys must remain private.
+# Private data
 CedarClerk.Server/Data/dataprotection-keys/
 CedarClerk.Server/Data/import-tmp/
 
 # Published desktop server
 CedarClerk.Desktop/server/
 
-# Dynamic prompt inbox; rewrites are tracked by mtime against CHANGELOG.
+# Dynamic prompt inbox
 docs/INPUT_PROMPT.md
 
-# Mirror of the Claude Design system — re-fetchable from the project id in config.json
+# Claude Design system
 .design-sync/
 
-# === Marty's review drops ===
-# Screenshots, annotations and a design-system copy handed over for a correction round. Review
-# material rather than source: it is read once and replaced, and the decisions it produced live in
-# docs/adr/ and CHANGELOG.md. Same reasoning as the prompt inbox above.
+# Marty's review drops
 CedarClerk_BAD/
 
 # Local operations profile

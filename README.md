@@ -1,6 +1,6 @@
 # About Cedar Clerk
 
-**Cedar Clerk is the home base for indie creators.** Write your devlog once and publish it everywhere, from your own blog to Telegram, X, Bluesky and LinkedIn, with formatting that survives each platform. Keep your docs, glossary and translations in one place alongside it. Use our cloud, or run it on your own server.
+**Cedar Clerk is a tools suite for indie creators.** Plan, conceptualize, develop, market and tell. Write your devlog once and publish it everywhere, from your own blog to Telegram, X, Bluesky and LinkedIn, with formatting that survives each platform. Keep your docs, glossary and translations in one place alongside it. Use our cloud, or run it on your own server.
 
 Cedar Clerk is built for people making games, software and other creative work on their own or in small teams, not for enterprise marketing departments.
 
