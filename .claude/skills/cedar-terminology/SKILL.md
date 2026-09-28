@@ -16,7 +16,6 @@ code reference). Use these names exactly; never invent synonyms for existing ter
 | `CedarClerk.Core` | Document format + renderers, pure C#: `CedarToTelegramBlocksRenderer` (canon for sending), `CedarToBlogHtmlRenderer`, legacy HTML/MD renderers, `CedarPackage`, `PublishValidator`, `Consts` |
 | `CedarClerk.Server` | Minimal APIs (`XxxEndpoints` static classes), EF Core + SQLite, Identity, Quartz, Telegram bot host, blog host (`BlogEndpoints.HandleRequest`), static Angular host |
 | `CedarClerk.Localization` | Language catalogs, errors, email/public-page text, formatting, `Web/` dictionaries; `docs/tech/LOCALIZATION.md` |
-| MooTool (external) | Rust/Ratatui `cedar` — the build/test/deploy entry point (ADR-291); Cedar Clerk owns `cedar.json` |
 | `cedarclerk-web` | Angular 21 standalone + signals, TipTap 3; `LocaleService` adapts `Localization/Web` resources; `en.ts` defines shape, `ru.ts` is `typeof en` |
 | `Modules/IndieDev` (Server) + module pages (web) | Phase 13 behind `Cedar:Modules:IndieDev` (ADR-101) — Project, tasks, planner, asset index, builds |
 

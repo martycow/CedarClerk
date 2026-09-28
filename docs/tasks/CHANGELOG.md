@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 2026-09-28 — Context audit, `cedar` removed, .NET 10 (ADR-304, ADR-305)
+
+AI context audit for the move to macOS. `telegram-bot.md` rewritten for Bot API 10.3 with current code paths; `renderers.md` lists every renderer; `production-environment.md` cut to the facts. The MooTool `cedar` console and `cedar.json` are removed (ADR-304); its cross-platform replacement is `T-393`. Deleted the fleet README, the Cedar Bench briefs, the UI V2 plan and `design-qa.md`; `UI-AUDIT-2026-09-05.md` moved to `archive/`. The `ultracode` skill is removed (no agent fleet exists). The UI-inventory hook is now bash.
+
+All four projects target `net10.0` (ADR-305, closes `T-072`). No migration needed. 2,024/2,024 backend tests pass. The droplet needs the ASP.NET Core 10 runtime before the next deploy.
+
 ## 2026-09-18 — Combined workshop and language recovery release (0.23.6)
 
 Merged `claude/app-chrome` into `master`, retaining the workshop menu, command palette,

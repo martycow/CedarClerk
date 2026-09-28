@@ -301,3 +301,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-301 — The workshop chrome: a menu bar, a command registry and a shell-level inspector](adr/ADR-301.md)
 - [ADR-302 — Database command logs are warnings by default](adr/ADR-302.md)
 - [ADR-303 — Empty language versions need a full translation](adr/ADR-303.md)
+- [ADR-304 — Remove the MooTool `cedar` console](adr/ADR-304.md)
+- [ADR-305 — Move to .NET 10 LTS](adr/ADR-305.md)

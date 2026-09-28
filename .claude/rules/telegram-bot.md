@@ -1,57 +1,51 @@
 # Telegram bot rules
 
-## 409 Conflict — only one process may *long-poll* the bot token
-The Telegram Bot API allows exactly one process to long-poll (`getUpdates`) a given bot token at a time. `TelegramBotService : BackgroundService` (`CedarClerk.Server/Bot/TelegramBotService.cs`) polls in production on the DigitalOcean droplet (`.claude/rules/production-environment.md`).
+Bot API **10.3** (24.08.2026), `Telegram.Bot` **22.10.3**. Production host: see `production-environment.md`.
 
-Before running the **full local dev server** with a real token (it starts its own `TelegramBotService` long-polling loop):
-```
-ssh martycow@periwinkle.mooexe.dev "sudo systemctl stop cedarclerk"
-```
-...run/test locally, then:
-```
-ssh martycow@periwinkle.mooexe.dev "sudo systemctl start cedarclerk"
-```
-Locally with no token configured, the bot is disabled by design — `TelegramBotService.IsRunning` returns false and `PostEndpoints`/export return 503 with a clear message instead of throwing. This lets local dev proceed without ever touching the production bot process.
+## 1. One long-poller per token (409 Conflict)
 
-### A local launch has exactly two safe forms (three incidents, 13.07 / 26.07 / 09.08.2026)
+`TelegramBotService` long-polls `getUpdates` in production. A second poller → 409 on both sides. It starts on every local launch, so this applies even to a plain `curl` check. (Three incidents: 13.07 / 26.07 / 09.08.2026.)
 
-`TelegramBotService` polls as part of normal startup regardless of which endpoint is being tested, so this applies even to a pure `curl` check. Production logged 409s twice because the rule was *known* and not *acted on*.
+| Need the bot? | Do this |
+|---|---|
+| No (UI, HTTP) | `mkdir -p CedarClerk.Server/wwwroot && ASPNETCORE_ENVIRONMENT=LocalNoBot ASPNETCORE_URLS=http://localhost:8080 Cedar__Telegram__BotToken=' ' dotnet run --project CedarClerk.Server --no-launch-profile`. **Confirm `Cedar:BotToken not set — bot is disabled` in the log** before anything else. |
+| Yes | `ssh martycow@periwinkle.mooexe.dev "sudo systemctl stop cedarclerk"` → run → `… start cedarclerk`. Stopping also kills `/media/*`. |
 
-- **Bot not needed** (UI work, HTTP checks):
-  `$env:ASPNETCORE_ENVIRONMENT='LocalNoBot'; $env:ASPNETCORE_URLS='http://localhost:8080'; dotnet run --project CedarClerk.Server --no-launch-profile`
-  Then **read the startup log and confirm `Cedar:BotToken not set — bot is disabled`** before doing anything else. That line is the only proof; "I set an env var" is not one of the safe forms.
-- **Bot actually needed**: stop the production service, run, start it again — and remember that stopping it also kills `/media/*`.
+Traps:
+- **`--no-launch-profile` is mandatory** — `launchSettings.json` pins `Development` in every profile, which loads the real token.
+- **Key is `Cedar__Telegram__BotToken`** (`Consts.Telegram.BotTokenCfg`), not `Cedar__BotToken`. Whitespace = absent; an *empty* value removes the override and exposes the file's token.
+- **`CedarClerk.Server/wwwroot` must exist** (`mkdir -p`), or startup throws `DirectoryNotFoundException`.
+- One-off send calls (`SendRichMessage`, `SendPhoto`, …) don't conflict — don't stop prod for a test message.
 
-Two traps that defeated earlier attempts:
-- **`--no-launch-profile` is load-bearing.** `launchSettings.json` pins `ASPNETCORE_ENVIRONMENT=Development` in all three profiles, so without the flag the real token from `appsettings.Development.json` loads anyway.
-- **Use the canonical setting `Cedar__Telegram__BotToken`, not `Cedar__BotToken`.** `Consts.Telegram.BotTokenCfg` is the source of truth. The local console forces a single space and `LocalNoBot`; `TelegramBotService` treats whitespace as absent. An empty PowerShell environment assignment can remove the override and expose a file's token.
-- **`CedarClerk.Server/wwwroot` must exist or startup crashes** (`DirectoryNotFoundException` from the static-web-assets loader) — it is a build artifact, absent in a clean tree. Create it to run locally; the deploy writes the Angular build into `publish/wwwroot`, so a stray pre-existing one nests as `wwwroot/browser`.
+## 2. Sending: `sendRichMessage` + Blocks only
 
-**This does NOT apply to a one-off `SendRichMessage`/`SendPhoto`/etc. call** (e.g. a diagnostic script that builds a `TelegramBotClient` and sends a single message) — the 409 is specific to concurrent `getUpdates`, not to ordinary send-type API calls. Don't stop the production service just to send a test message; stopping it also takes down `/media/*` (same process serves both — see below), which can actively break what you're trying to test.
+Pipeline: `CedarToTelegramBlocksRenderer` (Core, → `RichBlockModel`) → `TelegramPublishTarget.ToInputRichBlock`/`ToRichText` (Server) → `SendRichMessage`.
 
-## sendRichMessage — Bot API 10.3, Blocks is canonical (superseded 10.1 guidance below)
-Bot API bumped to **10.2 on 14.07.2026**. Verified live against `@testingandfun` on 16.07.2026:
-Bumped again to **10.3** (Telegram.Bot 22.10.3) on 29.08.2026 — Blocks stays canonical; the new wire pieces used are `InputRichBlockButtons` (per-post CTA button rows, appended at the wire level from `Draft.CtaButtonsJson`, never stored in the document) and `InputRichBlockExpandableBlockQuotation` (paragraph-only expandable blockquotes).
-- **`InputRichMessage.Blocks` is the only mechanism that reliably embeds media with a real, natively-styled caption.** `CedarToTelegramBlocksRenderer` (Core) + the mapping in `PostEndpoints.ToInputRichBlock`/`ToRichText` (Server) is what actually gets used to send now — see ADR in `docs/DECISIONS.md`.
-- `InputRichMessage.Markdown`/`.Html` + the `InputRichMessageMedia`/`tg://{kind}?id={Id}` reference mechanism (`InputRichMessageMedia.Id` docs literally describe this) is **accepted by Telegram without error but silently drops the media** — confirmed empirically, not just theorized. Don't reach for this combination expecting it to display an image.
-- Within `Blocks`, media (`InputRichBlockPhoto`/`Video`/`Audio`) takes an `InputMediaPhoto`/`Video`/`Audio` object directly (no id-indirection) and a separate `Caption` (`RichBlockCaption`) that renders with real native caption styling (muted, small, tight under the media) — unlike a caption placed as plain text near a `Markdown`/`Html`-mode image, which is NOT styled and displays as ordinary body text since `InputMediaPhoto.Caption` is ignored outside of Blocks.
-- `CedarToTelegramMarkdownRenderer`/`CedarToTelegramHtmlRenderer` are **kept but no longer used for sending** — see the "NOT USED" note at the top of each file before touching them.
-- **Tag name lesson**: a photo block's tag is `<img>` (or, in Blocks, `InputRichBlockPhoto`) — **not** `<photo>`. An earlier commit renamed `<img>`→`<photo>` reacting to the same 10.2 change and got it backwards; `<photo>` is not a recognized tag and silently drops the media too, same as the Markdown/Html+id approach above.
-- **Own media reaches Telegram as bytes since 01.08.2026 (ADR-088/089)** — but NOT as `InputFileStream` inside Blocks: `SendRichMessageRequest` derives from `RequestBase` (JSON-only), so a stream in Blocks serialises to a bytes-less `attach://…` and Telegram answers `can't parse InputRichBlock: media not found`. Each local file is instead pre-uploaded once via `SendPhoto`/`SendVideo`/`SendAudio` (real multipart, `FileRequestBase`) to a storage chat — the owner's own private chat with the bot — silently and self-deleting; the `file_id` is cached on the Asset (`TelegramFileId` + `TelegramFileIdSourcePath`) and Blocks go out by file_id. Forced by two production incidents in one day: the fetcher timing out on many concurrent downloads from the Pi (`failed to get HTTP URL content` — NOT flood control, which answers 429; that host was a Raspberry Pi behind a home upstream, and production moved to a droplet on 11.08.2026, so the *timeout* may no longer reproduce — the file_id mechanism stays regardless, because the negative cache below does) and its per-URL negative cache (below). Fallbacks: no linked Telegram / failed upload → that file goes by stamped URL; `Cedar:Telegram:MediaDelivery=url` in the systemd drop-in reverts the whole target without a redeploy.
-- Media Telegram still fetches by URL (YouTube thumbnails, or `MediaDelivery=url` mode) must be publicly reachable — `localhost` never works; see `Cedar:PublicBaseUrl` fallback in `PostEndpoints`. A stopped `cedarclerk` service on the server also kills `/media/*` (same process serves both) — Telegram's fetcher can hit a dead origin even when your own `curl` gets a lucky Cloudflare cache HIT, producing a confusing "wrong type of the web page content" error that looks like a Bot API problem but isn't.
-- **`wrong type of the web page content` can also mean Telegram cached an earlier failed fetch of that exact URL** (verified 16.07.2026: a genuinely-reachable, correctly-served image kept failing until a `?cb=<timestamp>` cache-busting query string was appended to the same URL, after which it worked immediately; second incident 01.08.2026 killed part 3 of a 12-part thread). URL-delivered media **from our own `/media/`** gets a per-send `?v=<stamp>` (`TelegramPublishTarget.StampUrl`, ADR-087 → narrowed by ADR-088 → narrowed again by ADR-091); the stored document/blog/`.cedar` export never carry the stamp. **External URLs are never stamped**: `img.youtube.com` answers 404 to unknown query strings (verified 04.08.2026), so a stamped YouTube thumbnail is a guaranteed `failed to get HTTP URL content`.
-- **Empty media groups are rejected outright**: an `InputRichBlockSlideshow`/`InputRichBlockCollage` with zero child blocks (a `carousel`/`collage` TipTap node with an empty `images` array — a real editor artifact from repeated insert/delete) gets `Bad Request: RICH_MESSAGE_CONTENT_REQUIRED`. `CedarToTelegramBlocksRenderer` drops these nodes entirely rather than emit them (see ADR-019, `docs/DECISIONS.md`).
-- **True preview only comes from sending to the test channel** `@testingandfun` ("Marty's Channel For Testing and Having Fun"). Local render is an approximation. **Never post to Dev Dairy Diary (the real channel) without explicit permission.**
-- `SendRichMessageDraft` (ephemeral 30s preview, must be finalized with a normal `SendRichMessage`) only targets **private chats**, not channels — confirmed via Telegram.Bot XML docs. It cannot do a "progressive reveal" effect on a channel post; don't reach for it for that use case.
-- `ExportRequest.Format`/`ScheduledPost.Format` (Markdown vs Html) are still accepted by the API/DB but **no longer change what actually gets sent** — `PublishAsync` always renders via Blocks now. The frontend's format selector is effectively vestigial; flagged as a cleanup candidate, not yet acted on.
+- **Blocks is the only mode that shows media with a native caption** (`InputRichBlockPhoto/Video/Audio` + `RichBlockCaption`). Markdown/Html + `InputRichMessageMedia`/`tg://…?id=` is accepted and **silently drops the media**.
+- Photo tag is `<img>` / `InputRichBlockPhoto`, **never `<photo>`** (silently dropped).
+- 10.3 pieces in use: `InputRichBlockButtons` (CTA rows from `Draft.CtaButtonsJson`, wire-level only, never stored), `InputRichBlockExpandableBlockQuotation` (paragraph-only). **Not yet used:** `InputRichBlockDocument`, `RichMessageButton`, `rich_message` in `editEphemeralMessageText`.
+- Empty `Slideshow`/`Collage` → `RICH_MESSAGE_CONTENT_REQUIRED`; the renderer drops them (ADR-019).
+- `CedarToTelegramHtmlRenderer`/`MarkdownRenderer` are legacy, not used for sending. `ExportRequest.Format`/`ScheduledPost.Format` are vestigial (cleanup candidate).
+- `SendRichMessageDraft` works only in **private chats** — no channel "progressive reveal".
 
-## Chat/channel membership discovery
-There is no "list my chats" Bot API call. The only way to learn the bot's channel/group memberships is listening for `my_chat_member` updates (`TelegramBotService.OnUpdateReceived`), which writes/updates `BotKnownChat` + `BotKnownChatAdmin`. `GET /api/channels/known` filters this cache by the current user's linked `TelegramUserId` — omitting that filter would leak every other user's discoverable channels, since the bot is shared across all accounts.
+## 3. Media delivery
 
-## The bot is shared — every attribution is a security boundary (T-359, 31.08.2026)
-The one bot token sits in *every* user's channels and private chats, so "which account does this update belong to" is a security question, not a convenience. Four holes the audit found and closed; keep them closed:
-- **Connecting a channel checks the CALLER, not just the bot.** `POST /api/channels` verifies the caller's linked Telegram is an admin/creator of the chat (`BotChatAccess.IsAdminOrCreator`), because the bot being an admin only means *somebody* added it. Without the caller check any account could claim any channel the bot is in. A caller with no linked Telegram cannot connect (there is no identity to check).
-- **Comment counting requires the discussion supergroup + the automatic forward.** `TelegramEngagement.ApplyCommentAsync` rejects anything not in a `Supergroup` and any reply whose target is not Telegram's own `IsAutomaticForward`. The bot sees every private message (`getUpdates`), so without this a stranger forwarding a post into their own chat with the bot could inflate an owner's count.
-- **Media/file_id resolution is owner-scoped.** `TelegramPublishTarget` runs under a platform context (tenant filter OFF) in the queue, so its Asset queries carry an explicit `a.OwnerId == request.OwnerId`. Blog-published asset guids are public; without the predicate a draft could name another account's file and mutate its `TelegramFileId` row.
-- **`refresh-known-chats` is bounded to the caller's admin chats.** It used to walk the global `BotKnownChats` table for any authenticated user — a shared-token flood lever that also latched other owners' rows to `BotCanPost=false` on a transient error.
-- Two collisions are settled: a Telegram user id can belong to **one** account (unique filtered index, checked against the unfiltered `Users` set); one channel can be claimed by two accounts (no unique constraint), which is exactly the state the caller-admin check above stops a stranger from creating unilaterally.
+- **Own media goes by `file_id`** (ADR-088/089): `SendRichMessage` is JSON-only, so a stream in Blocks → `media not found`. Each file is pre-uploaded once via `SendPhoto/Video/Audio` to the owner's private chat with the bot (self-deleting); `file_id` cached on `Asset.TelegramFileId` + `TelegramFileIdSourcePath`.
+- Fallback per file → stamped URL. Global kill-switch: `Cedar:Telegram:MediaDelivery=url` in the systemd drop-in.
+- URL media must be public (`Cedar:PublicBaseUrl`; `localhost` never works).
+- `wrong type of the web page content` = dead origin (service stopped) **or** Telegram's negative cache of an earlier failed fetch. Own `/media/` URLs get a per-send `?v=<stamp>` (`StampUrl`, ADR-091); the stored document never does. **Never stamp external URLs** — `img.youtube.com` 404s on unknown query strings.
+
+## 4. Shared bot = security boundary (T-359)
+
+One token serves every account. Keep these closed:
+- `POST /api/channels` checks the **caller** is admin/creator (`BotChatAccess.IsAdminOrCreator`); no linked Telegram → cannot connect.
+- Comments count only in the discussion `Supergroup` and only as replies to an `IsAutomaticForward` (`TelegramEngagement.ApplyCommentAsync`).
+- Asset queries in `TelegramPublishTarget` carry explicit `a.OwnerId == request.OwnerId` (queue runs with tenant filter off).
+- `refresh-known-chats` walks only the caller's admin chats.
+- Chat discovery: only via `my_chat_member` → `BotKnownChat`/`BotKnownChatAdmin`; `GET /api/channels/known` **must** filter by the caller's `TelegramUserId`.
+- One Telegram user ↔ one account (unique filtered index). One channel ↔ many accounts is allowed.
+
+## 5. Channels
+
+- Preview = send to test channel **@testingandfun**. Local render is approximate.
+- **Never post to Dev Dairy Diary without explicit permission.**

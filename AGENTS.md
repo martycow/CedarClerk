@@ -7,11 +7,10 @@ Shared root context for every AI tool working in this repo (Claude Code, Codex C
 Cedar Clerk — blog platform application for indie creators.
 A web rich-text editor whose posts are published to Telegram channels via a bot, to mirrored blog pages, and other social media. Being turned from a single-operator tool into a multi-tenant public SaaS.
 
-- **CedarClerk.Server** — ASP.NET Core (.NET 8) API + static host for the frontend + Telegram bot host
+- **CedarClerk.Server** — ASP.NET Core (.NET 10) API + static host for the frontend + Telegram bot host
 - **CedarClerk.Core** — the document format and renderers (pure C#, unit-tested)
 - **CedarClerk.Localization** — language catalogs, UI/email/public-page text, formatting and language rules; see `docs/tech/LOCALIZATION.md`
-- **MooTool** — external operations project. Its `modules/cedar` crate provides the native Rust/Ratatui `cedar` command (ADR-291). Cedar Clerk owns `cedar.json`.
-- **CedarClerk.Tests** — xUnit application tests. Operations console tests belong to MooTool.
+- **CedarClerk.Tests** — xUnit application tests.
 - **cedarclerk-web** — Angular SPA (standalone components, signals, TipTap editor)
 
 It is a **module inside the same codebase, not a fork** (ADR-101), behind `Cedar:Modules:IndieDev` — read `docs/product/INDIEDEV.md` before touching anything in that area.
@@ -23,35 +22,24 @@ Before implementation of anything, firstly read `docs/product/PRD.md` and `docs/
 ## Stack
 
 To see the product's architecture, see `docs/tech/ARCHITECTURE.md`.
-.NET 8 (APIs, EF Core + SQLite, ASP.NET Identity, Quartz.NET) + Angular 21/TipTap 3 (standalone components, signals, Vitest).
+.NET 10 (APIs, EF Core + SQLite, ASP.NET Identity, Quartz.NET) + Angular 21/TipTap 3 (standalone components, signals, Vitest).
 
 ## Key commands
 
-| Task                              | Command                                                                                                                                                                                                                                                                                                                                                                                                            |
-|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Operations console**            | `cedar` — menu; or `cedar status` / `logs` / `db` / `test` / `build` / `deploy` / `open` / `claude`. **Use this entry point to build, test and deploy.** Install it from MooTool; see `docs/for_user/operations-console.md` (ADR-291) |
-| **Everything is green?**          | `cedar test` (backend + frontend + icons + contrast + density + build; `--smoke` adds Playwright — ADR-265)                                                                                                                                                                                                                                                                                                                 |
-| **Build everything locally**      | `cedar build` (Angular + server + desktop shell; `--no-desktop`, `--desktop-only`, `--installer`, `--run`)                                                                                                                                                                                                                                                                                                         |
-| **Check it locally in a browser** | `cedar run` — builds front + back, serves `publish/` on `localhost:8080` against the dev database with the bot forced off, opens the browser; Ctrl+C stops it. `--no-build` reuses the last publish. Refuses if 8080 already answers (ADR-121)                                                                                                                                                                     |
-| **Deploy**                        | `cedar deploy` — **asks before it stops production, default no.** Refuses anything but `master`, or a dirty tree. `--preflight` runs the checks and stops, `--skip-build` continues an interrupted upload, `--rollback` puts the previous release back, `--desktop` also publishes the installer (ADR-113, ADR-116, ADR-119)                                                                                       |
-| Run server locally                | `dotnet run --project CedarClerk.Server` (port 8080)                                                                                                                                                                                                                                                                                                                                                               |
-| Run frontend locally              | `ng serve` in `cedarclerk-web/` (proxies `/api` → 8080)                                                                                                                                                                                                                                                                                                                                                            |
-| Open the product                  | `cedar open` (production) / `open desktop` / `open blog` / `open local`                                                                                                                                                                                                                                                                                                                                            |
-| Run the desktop app               | `cedar open desktop`, or `cd CedarClerk.Desktop; npm start` (after a build)                                                                                                                                                                                                                                                                                                                                        |
-| Backend tests                     | `dotnet test` from repo root                                                                                                                                                                                                                                                                                                                                                                                       |
-| Frontend tests                    | `npm run test` in `cedarclerk-web/`                                                                                                                                                                                                                                                                                                                                                                                |
-| Smoke suite                       | `.\Scripts\e2e.ps1` (scratch database, no bot token); `-Serve` leaves it running                                                                                                                                                                                                                                                                                                                                   |
-| New EF migration                  | `dotnet ef migrations add <Name> --project CedarClerk.Server`                                                                                                                                                                                                                                                                                                                                                      |
+No operations console for now: the MooTool `cedar` CLI was removed (ADR-304); a cross-platform Rust/Ratatui replacement is `T-393`. Commands are bash (macOS is the primary dev machine).
 
-Use the operations console for builds, tests and deployment. Its implementation, source installer
-and Rust verification script belong to MooTool (`modules/cedar`).
+| Task | Command |
+|---|---|
+| Server, bot off | `mkdir -p CedarClerk.Server/wwwroot && ASPNETCORE_ENVIRONMENT=LocalNoBot ASPNETCORE_URLS=http://localhost:8080 Cedar__Telegram__BotToken=' ' dotnet run --project CedarClerk.Server --no-launch-profile` — see `.claude/rules/telegram-bot.md` §1 |
+| Frontend | `npm start` in `cedarclerk-web/` (proxies `/api` → 8080) |
+| Backend tests | `dotnet test` |
+| Full gate (before deploy) | `dotnet test` + in `cedarclerk-web/`: `npm test`, `npm run check:icons`, `check:contrast`, `check:density`, `npm run build` |
+| Smoke suite | `pwsh Scripts/e2e.ps1` (needs `brew install powershell`; `-Serve` keeps it running) |
+| New migration | `dotnet ef migrations add <Name> --project CedarClerk.Server` |
+| Prod logs | `ssh martycow@periwinkle.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` |
+| Deploy | Manual until `T-393`: build web → `dotnet publish -c Release -o publish` → copy `dist/…/browser` to `publish/wwwroot` → upload → stop → swap `app`/`app.prev` → start → check `/api/health`. From `master` only, clean tree. |
 
-`Scripts/e2e.ps1` owns an isolated database, server process and browser suite.
-`cedar test --smoke` runs it through the repository profile.
-
-`Scripts/server/backup.sh` is a third kind: it does not run here at all. It is the source of truth
-for the droplet's nightly backup, and the copy that runs (`~/bin/backup.sh`) is installed by hand —
-no deploy path touches it.
+`Scripts/server/backup.sh` does not run here: it is the source of the droplet's nightly backup, installed by hand as `~/bin/backup.sh`.
 
 ## Docs map
 
@@ -66,17 +54,16 @@ no deploy path touches it.
 - `docs/product/PRD.md` — shipped vs. open requirements, deferred/blocked items
 - `docs/tech/ARCHITECTURE.md` — solution layout, data model, API style, deploy pipeline
 - `docs/design/DESIGN.md` — design tokens (colors/spacing/typography), component patterns
-- `docs/DECISIONS.md` — ADR log: why things were built the way they were. Since 18.08.2026 an **index** — one file per ADR in `docs/adr/` (205 at last count)
+- `docs/DECISIONS.md` — ADR index; one file per ADR in `docs/adr/`
 - `docs/tasks/BACKLOG.md` — the only source of open, not-yet-started ideas/features/tech-debt
 - `docs/tasks/TASKS.md` — short-horizon "what's in progress now" list; its **Notes** section is also the fastest place to check current production version and active branch
-- `docs/tasks/CHANGELOG.md` — human-readable shipped history by session/date. Phase-by-phase status through Phase 13 lived in a separate ROADMAP doc, retired 24.08.2026 as a near-duplicate of this file — see `docs/archive/roadmap-phases-0-13.md` for that history
+- `docs/tasks/CHANGELOG.md` — human-readable shipped history by session/date
 - `docs/design/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
 - `docs/for_user/integrations-setup.md` — payment/translation provider setup runbook
 - `docs/INPUT_PROMPT.md` — the dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; rewritten at will) — check its mtime against the last "Input sweep" note in `docs/tasks/CHANGELOG.md`. Content may predate the code — verify against it
 - `docs/product/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
 - `docs/tech/SECURITY.md` — the threat model: assets, trust boundaries, a STRIDE table with each mitigation cited, and the gaps still open before registration opens
 - `docs/tech/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
-- `docs/design/indiedev-design-prompt.md` — the brief handed to Claude Design for the module's screens (delivered 10.08; remaining ask — screens 10–11). Since 18.08 it carries **no verbatim token copy** — paste fresh values from `styles.scss` into its marked block before each run
 
 ## Conventions
 
@@ -101,8 +88,8 @@ i18n rules.
 - **`master` — only the latest stable version.** Every commit on it is tagged with a version, and **every deploy is run from `master` and only from `master`.**
 - **`dev` — general development.**
 - **`indiedev_module`** — was branched from `dev` for the indie-gamedev work; **merged into `master` with v0.10.0 and deleted** (branch gone by 18.08.2026). The module lives in `master` behind `Cedar:Modules:IndieDev`; reversibility is the flag plus ADR-101, no longer a branch.
-- **`LIVE` marks what is in production** (12.08.2026, ADR-118). `cedar deploy` moves it onto HEAD after the health check passes, keeping the tag it replaces as `LIVE-PREV`; `--rollback` moves it back. Local only — it is never pushed (re-deleted from origin 18.08.2026 after it leaked there a second time). A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
-- **Enforced since 10.08.2026**: the deploy refuses to run from a branch other than `master`, from a detached HEAD, or with uncommitted changes, and warns when HEAD carries no tag matching `Consts.CurrentVersion`. `-Force`/`--force` overrides and says what it is overriding. The checks live in MooTool’s `modules/cedar/src/deploy.rs` and are covered by Rust tests (ADR-252).
+- **`LIVE` marks what is in production** (ADR-118). Move it onto HEAD after a successful deploy, keeping the old one as `LIVE-PREV`. Local only — it is never pushed (re-deleted from origin 18.08.2026 after it leaked there a second time). A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
+- Deploy only from `master`, clean tree, HEAD tagged with `Consts.CurrentVersion`. The CLI enforced this; until `T-393`, it is on you.
 
 ## Commits and versioning
 
@@ -127,7 +114,7 @@ Full text lives in `.claude/rules/*.md` — read the relevant one before touchin
 
 ## Verification workflow
 
-- Local: `dotnet run --project CedarClerk.Server` (port 8080) + `ng serve` in `cedarclerk-web`. Login: marty@mooexe.dev (ask for the password, do not store it)
+- Local: see Key commands. Login: marty@mooexe.dev (ask for the password, do not store it)
 - Tests: `dotnet test` from repo root
-- Prod logs: `cedar logs`, or `ssh martycow@periwinkle.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` — **no sudo needed**, the unit runs as `martycow`. Keep the `-q`: without it journalctl prints a "not seeing messages from other users" hint that reads like a refusal. **Always bound the query** — the service logs every EF statement, ~1.5M lines a day
+- Prod logs: see Key commands. **No sudo needed**, keep `-q`, **always bound the query** (`-n`/`--since`).
 - Test channel: @testingandfun ("Marty's Channel For Testing and Having Fun"). NEVER post to Dev Dairy Diary (the real channel) without explicit permission

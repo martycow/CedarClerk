@@ -1,4 +1,4 @@
-# Repo hygiene — private today, may go public
+# Repo hygiene
 
 The repo is private right now, but treat that as a schedule, not a shield: write as if a stranger
 could open the file next commit, and there's nothing to unwind later.

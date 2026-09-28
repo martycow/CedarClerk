@@ -12,7 +12,7 @@ Decisions — ADR-104 (Electron on top of our own server) and **ADR-117 (one dat
 Reason for existing — the Asset Manager: describing the contents of a game project folder (`MyGame/Assets` on the developer's disk) can only be done by a process running on that same machine (ADR-107).
 
 > **Built and verified 10.08.2026** — shell, free port, exit without orphans.
-> **Self-update 11.08.2026 (ADR-116)** — `cedar deploy --desktop`, the installed copy updates itself.
+> **Self-update 11.08.2026 (ADR-116)** — the installed copy updates itself.
 > **Became a cloud client on 12.08.2026 (ADR-117)** — there is no longer a local database.
 > **`T-121` remains open on one point**: the built installer has never once been installed on a clean machine.
 
@@ -51,7 +51,7 @@ Neither the server code nor the frontend is forked (ADR-101). The Angular build 
 | `CedarClerk.Desktop/package.json`, `electron-builder.yml` | Electron + the installer build |
 | `CedarClerk.Server/Modules/Agent/` | The agent proper: endpoints, the walker, grants, the scan service |
 
-Building the desktop app is `cedar build`: `npm run build` (Angular) → `dotnet publish -r win-x64` → `electron-builder`. `cedar deploy --desktop` invokes the same steps and publishes the result to the server (ADR-116); without the flag, deploy does not touch the desktop app at all.
+Building the desktop app: `npm run build` (Angular) → `dotnet publish -r win-x64` → `electron-builder`. The desktop publish step runs the same build and publishes the result to the server (ADR-116); without the flag, deploy does not touch the desktop app at all.
 
 ## The Agent
 
@@ -184,7 +184,7 @@ cedar open desktop             launch what's already built (or the installed cop
 
 `BuildPipeline` synchronizes the version in `package.json` with `Consts.CurrentVersion`. `CedarClerk.Desktop/server/` is the build output (~70 MB self-contained runtime), not tracked by git.
 
-Build/test/deploy operations use MooTool’s `cedar` command and the repository’s `cedar.json` profile (ADR-291). Install the command from MooTool before building a fresh clone. See [operations-console.md](../for_user/operations-console.md).
+Build steps: `npm run build` (web) → `dotnet publish CedarClerk.Server -c Release -r win-x64 --self-contained -o CedarClerk.Desktop/server` → `npm ci && npm run dist` in `CedarClerk.Desktop`. Windows-only for now (NSIS); a macOS target is part of `T-393`/future work.
 
 ## How an update arrives (ADR-116)
 

@@ -50,7 +50,7 @@ The Free plan language restriction remains a plan rule in Core and its frontend 
 2. For an application interface key, update both `Web/en.ts` and `Web/ru.ts`.
 3. For a language, update `languages.json` and the catalogs that support that surface.
 4. For a new application interface dictionary, add its loader in `Web/dictionaries.ts`.
-5. Run `cedar test`. Use `cedar test --smoke` when browser behavior changes.
+5. Run the full gate (`AGENTS.md` §Key commands); add the smoke suite when browser behavior changes.
 
 `LocalizationOwnershipTests` guards assembly ownership, reader catalog coverage and email culture isolation.
 Frontend resource tests guard the shared catalog against missing dictionary loaders.

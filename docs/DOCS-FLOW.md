@@ -40,7 +40,6 @@ flowchart TB
         SEC["docs/tech/SECURITY.md<br/>threat model: assets, boundaries,<br/>STRIDE table, gaps"]
         DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
         UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
-        UIAUDIT["docs/design/UI-AUDIT-2026-09-05.md<br/>layout findings and verification coverage"]
         STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
         RESEARCH["docs/knowledge_base/RESEARCH-2026-09.md<br/>API research: IndieDB, LinkedIn,<br/>IGDB, Telegram comments, events"]
         BIZ["docs/product/BUSINESS.md<br/>money: gates, metrics, rituals"]
@@ -57,10 +56,6 @@ flowchart TB
     subgraph MOD["Indie-gamedev module — Phase 13"]
         INDIE["docs/product/INDIEDEV.md<br/><b>module scope</b><br/>MUST / MIGHT, data model"]
         DESKTOP["docs/tech/DESKTOP.md<br/>how the desktop build works"]
-        DPROMPT["docs/design/indiedev-design-prompt.md<br/>brief for Claude Design"]
-        UIV2["docs/design/UI-V2-PLAN.md<br/>plan for the port to Cedar Bench"]
-        RPROMPT["docs/design/bench-responsive-prompt.md<br/>brief for Claude Design:<br/>Cedar Bench narrow screens"]
-        BPROMPT["docs/design/bench-board-prompt.md<br/>brief for Claude Design:<br/>fourth screen — task board"]
         PAPER["docs/design/paper-first/BRIEF.md<br/>Paper first: the direction after Cedar Bench<br/>+ docs/design/paper-first/CONTRACT.md<br/>the frozen build contract (ADR-239)"]
     end
 
@@ -99,17 +94,7 @@ flowchart TB
 
     DECISIONS -->|"ADR-101…107<br/>module decisions"| INDIE
     INDIE -->|"rows T-120…T-137"| BACKLOG
-    UIV2 ==>|"every decision —<br/>an ADR first"| DECISIONS
-    UIV2 -->|"rows T-205…T-235"| BACKLOG
     INDIE --> DESKTOP
-    DESIGN -->|"token rules; values —<br/>from styles.scss before each run"| DPROMPT
-    INDIE -->|"which screens are needed"| DPROMPT
-    UIV2 -->|"what the kits don't answer:<br/>chrome at narrow widths"| RPROMPT
-    DESIGN -->|"the same token rules;<br/>values — before each run"| RPROMPT
-    RPROMPT -->|"when the screens arrive —<br/>rows T-236…T-237"| BACKLOG
-    UIV2 -->|"what the kits don't answer:<br/>no task board in the set"| BPROMPT
-    DESIGN -->|"the same token rules;<br/>values — before each run"| BPROMPT
-    BPROMPT -->|"when the screen arrives —<br/>row T-229"| BACKLOG
 
     classDef source fill:#5B6E46,stroke:#3E4A2F,color:#fff
     classDef plan fill:#E8E3D6,stroke:#B8B0A0,color:#26231D
@@ -120,7 +105,7 @@ flowchart TB
     class BACKLOG,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
     class PRODUCT,PRD,ARCH,QA,SEC,DESIGN,UIINV,STACK,RESEARCH,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
-    class INDIE,DESKTOP,DPROMPT,UIV2,RPROMPT,BPROMPT mod
+    class INDIE,DESKTOP mod
 ```
 
 **Edge legend** (introduced 18.08.2026 — before that the three types read the same): **solid `-->`** — flow of truth: content or a fact moves along the arrow; **thick `==>`** — a hard gate, can't be skipped (ADR first — only then code); **dotted `-.->`** — a check or reading order: nothing moves, the arrow says "look there before/after".
@@ -155,14 +140,10 @@ flowchart TB
 
 ## Indie-gamedev module (Phase 13, since 10.08.2026)
 
-Three new documents don't change the rules above — they occupy specific places within them:
+The module's documents don't change the rules above — they occupy specific places within them:
 
 - **`docs/product/INDIEDEV.md`** — the module reference: scope, data model, MUST/MIGHT. Read **before** implementing any `T-120…T-137` row, exactly like `ARCHITECTURE.md` and `PRD.md` under rule 2.
 - **`docs/tech/DESKTOP.md`** — how the desktop build works. A separate file rather than a section of `ARCHITECTURE.md`, because it describes a second runtime environment with its own risks; `ARCHITECTURE.md` links to it.
-- **`docs/design/UI-V2-PLAN.md`** — the plan for porting the frontend to the Cedar Bench design system. Lives only on the `UI_V2` branch, the source of truth for the duration of the port; as ADRs get written, each of its decisions moves into `docs/adr/`, and the document dies off. The design system itself is mirrored from Claude Design into `.design-sync/ds-v2/` — outside `docs/`, because it's a pulled-down cache, not a document.
-- **`docs/design/indiedev-design-prompt.md`** — a brief for Claude Design. A one-way consumer: tokens are copied into it verbatim from `DESIGN.md`, nothing flows back. **Which means it goes stale silently** — check it against `styles.scss` before each run whenever that file changes.
-- **`docs/design/bench-responsive-prompt.md`** — a second brief for Claude Design, per ADR-147: Cedar Bench narrow screens. The same one-way type as the brief above, and for the same reason **carries no verbatim token block** — only an "insert before each run" note pointing at `styles.scss`. It differs in subject: it doesn't ask for a set of new screens, but for how the chrome (rail, pegboard, shelves, drawer, ruler) behaves below desktop width, plus the density contract under a coarse pointer and the breakpoints themselves. Until it's answered, `T-034` can't be closed, and the port branch deliberately lives without a single width-based `@media`.
-- **`docs/design/bench-board-prompt.md`** — a third brief for Claude Design, per ADR-165: the fourth reference screen, the task board. The same one-way type, and likewise carries no verbatim token block. A separate file rather than a section in the brief above, because the subject is different: not how existing screens behave at narrow widths, but a screen that isn't in the set at all, at desktop width — running both through one pass would produce answers that couldn't be accepted or rejected separately. Until it's answered, `T-229` can't be closed, and `project-tasks` lives on workbench materials with its own earlier geometry.
 - **`docs/design/paper-first/BRIEF.md`** — the maintainer's ruling on Cedar Bench's chrome and the direction that replaces it; the eight artboards beside it (`*.dc.html`, rendered `*.png`) are the drawing. **`docs/design/paper-first/CONTRACT.md`** — the build contract frozen from that brief by ADR-239: component APIs, the global CSS vocabulary, file zones for the four build lanes, the interfaces between them, acceptance and order of battle. Both are read by every lane of the port and edited by the tech lead only; when the port lands, the contract's living parts move into `DESIGN.md` and `UI-INVENTORY.md`, and the folder stays as the record of the drawing.
 
 The rule "a task lives in exactly one place" applies here too: the MUST/MIGHT lists in `INDIEDEV.md` are the module's *composition*, while the task rows live in `BACKLOG.md`. The list in `INDIEDEV.md` isn't struck through as work proceeds — status is tracked by `docs/tasks/CHANGELOG.md`.
@@ -175,10 +156,9 @@ The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DEC
 |---|---|---|
 | **`product/`** | The highest-level product context: the product as a whole, the business model, requirements | PRODUCT, PRD, BUSINESS, METRICS, MULTITENANCY, INDIEDEV, COMPETITORS |
 | **`tasks/`** | Everything related to tasks | TASKS (short horizon), BACKLOG (board), CHANGELOG (history by date) |
-| **`design/`** | Design, UI, UX | DESIGN (tokens), UI-INVENTORY, UI-V2-PLAN, indiedev-design-prompt, bench-responsive-prompt, bench-board-prompt |
+| **`design/`** | Design, UI, UX | DESIGN (tokens), UI-INVENTORY, `paper-first/` |
 | **`tech/`** | The technical side | ARCHITECTURE, DESKTOP, QA, SECURITY |
-| **`adr/`** | Decision texts, one file per ADR (+ ownership-audit) | 205 ADRs. The index is in the root; its own folder rather than `tech/adr/`, because ADRs can be product decisions (ADR-092, ADR-101) as well as technical ones |
-| **`fleet/`** | Agent orchestration (Cowtext / FleetView) | so far only `docs/fleet/README.md` — agent definitions live in `.claude/agents/` |
+| **`adr/`** | Decision texts, one file per ADR (+ ownership-audit) | One file per ADR. The index is in the root; its own folder rather than `tech/adr/`, because ADRs can be product decisions (ADR-092, ADR-101) as well as technical ones |
 | **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026); `docs/knowledge_base/RESEARCH-2026-09.md` (API/terms research behind T-127/169/170/171, each section ending in a verdict) |
 | **`for_user/`** | All instructions, manuals and everything else that matters to the user | integrations-setup (provider runbook) |
 | **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | `incidents.md` — the index of every recorded incident: what broke, where the narrative lives, what guards it now. It is an index into living records rather than a record of a moment, so it is maintained, not frozen |
@@ -190,14 +170,13 @@ A new doc must get a node in the diagram above **in the same commit** — STACK/
 
 ## Operations console
 
-`docs/for_user/operations-console.md` documents installation, JSON program profiles, commands and use of MooTool’s external Rust console (ADR-291).
+None for now: the MooTool `cedar` console was removed (ADR-304). Its cross-platform replacement is `T-393`.
 
 ## Known weak spots
 
 - **`docs/product/PRD.md` tends to lag behind the other references more than most** — fixed on 10.08 (languages) and again on 18.08 (Phase 13 was listed "open" while MUST was closed, "six" languages while the code had nine, payments "not yet live" while Stripe had been verified with real money). Check it against the code at every large review — don't trust status claims without the code.
 - **`docs/design/UI-INVENTORY.md`** is updated by hand; since 12.08.2026 `UiInventoryDriftTests` catches coarse drift (a screen with not a single mention = a red `dotnet test`), but the guard can't check the accuracy of individual *rows*. The module's screens are entered (the last two — `projects`/`project`, 18.08.2026).
 - **The inbox is invisible in git history** — `docs/INPUT_PROMPT.md` is deliberately not committed (rule: "no need to commit it"), so the moment of a rewrite can only be recovered from mtime against the last "Input sweep" in `docs/tasks/CHANGELOG.md`. The old out-of-repo inboxes (`Input.md`, the `Gamedev_Focused_Rework.md` brief) were retired 18.08.2026 — mentions of them in history remain a record of that time.
-- ~~**`docs/design/indiedev-design-prompt.md` duplicates tokens**~~ — **fixed 18.08.2026**: the verbatim block of values was replaced with a pointer to `styles.scss` after the duplicate had drifted out of sync with the code (font roles and icon sizes shifted on 01.08, the brief was left with the old ones).
 - **The archive gets cleaned without warning** — found 24.08.2026: three files in `docs/archive/` (the DO-migration checklist, ROADMAP-phases-0-10, and the docs audit) were deleted with the commit message «Removed outdated docs», and references to them in this map and in `.claude/rules/production-environment.md` were left dangling — `DocsFlowGraphTests.Every_mapped_path_exists` caught it only now, not at deletion time, because the test wasn't run between commits. If a file under `archive/` has gone missing, check `git log --diff-filter=D -- docs/archive/` before fixing the references.
 
 ## Prod move to DigitalOcean (11.08.2026) — history with no living checklist

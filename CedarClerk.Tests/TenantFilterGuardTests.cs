@@ -43,6 +43,9 @@ public class TenantFilterGuardTests
     private static bool IsFrameworkTable(IEntityType entity) =>
         entity.ClrType.Namespace == "Microsoft.AspNetCore.Identity";
 
+    private static System.Linq.Expressions.LambdaExpression? Filter(Microsoft.EntityFrameworkCore.Metadata.IReadOnlyEntityType e) =>
+        e.GetDeclaredQueryFilters().SingleOrDefault()?.Expression;
+
     [Fact]
     public void Every_entity_with_an_OwnerId_has_a_tenant_filter()
     {
@@ -50,7 +53,7 @@ public class TenantFilterGuardTests
 
         var missing = db.Model.GetEntityTypes()
             .Where(IsOwned)
-            .Where(e => e.GetQueryFilter() is null)
+            .Where(e => Filter(e) is null)
             .Select(e => e.DisplayName())
             .OrderBy(name => name)
             .ToArray();
@@ -67,8 +70,8 @@ public class TenantFilterGuardTests
         using var db = Model(TenantProvider.For("t"));
 
         // A missing filter is the test above's finding, not this one's.
-        foreach (var entity in db.Model.GetEntityTypes().Where(IsOwned).Where(e => e.GetQueryFilter() is not null))
-            Assert.Contains("OwnerId", entity.GetQueryFilter()!.ToString());
+        foreach (var entity in db.Model.GetEntityTypes().Where(IsOwned).Where(e => Filter(e) is not null))
+            Assert.Contains("OwnerId", Filter(entity)!.ToString());
     }
 
     // The other half of the same guard: an entity with no OwnerId at all is either a deliberate
@@ -79,7 +82,7 @@ public class TenantFilterGuardTests
         using var db = Model(TenantProvider.For("t"));
 
         var unaccounted = db.Model.GetEntityTypes()
-            .Where(e => e.GetQueryFilter() is null && !IsFrameworkTable(e))
+            .Where(e => Filter(e) is null && !IsFrameworkTable(e))
             .Select(e => e.DisplayName())
             .Where(name => !Unowned.ContainsKey(name))
             .OrderBy(name => name)
@@ -96,7 +99,7 @@ public class TenantFilterGuardTests
         using var db = Model(TenantProvider.For("t"));
         var known = db.Model.GetEntityTypes().Select(e => e.DisplayName()).ToHashSet();
 
-        Assert.Empty(Unowned.Keys.Where(name => !known.Contains(name)));
+        Assert.DoesNotContain(Unowned.Keys, name => !known.Contains(name));
         Assert.DoesNotContain(Unowned, entry => string.IsNullOrWhiteSpace(entry.Value));
     }
 
@@ -108,7 +111,7 @@ public class TenantFilterGuardTests
         using var db = Model(TenantProvider.Platform());
 
         var filtered = db.Model.GetEntityTypes()
-            .Where(e => e.GetQueryFilter() is not null)
+            .Where(e => Filter(e) is not null)
             .Select(e => e.DisplayName())
             .OrderBy(name => name)
             .ToArray();

@@ -99,7 +99,7 @@ page component or `sec-*` section missing from it entirely.
    `btn-ghost`-style class, remember component CSS is view-encapsulated, so such
    a class lives in that page's own stylesheet and is not global; the remaining
    copies are `T-230`, not a pattern to extend.
-4. Both themes still read; the contrast contract test (`cedar test`) stays
+4. Both themes still read; the contrast contract test (`dotnet test` + `npm test`) stays
    green.
 5. Popover-in-modal fights fixed positioning — use the `inline` pattern
    (folder-picker's lesson) instead of nesting `app-popover` in `app-modal`.

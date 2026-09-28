@@ -3,7 +3,7 @@
 # and media (T-147). Runs from Marty's crontab at 03:30 UTC.
 #
 # This file is the source of truth; the copy that runs lives at ~/bin/backup.sh on the droplet and is
-# installed by hand — there is no deploy path for it, because `cedar deploy` replaces the app
+# installed by hand — there is no deploy path for it, because the deploy replaces the app
 # directory and nothing else. When this changes, copy it across (the checklist is in
 # docs/integrations-setup.md).
 #

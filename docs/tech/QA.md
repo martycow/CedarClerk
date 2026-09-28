@@ -19,24 +19,19 @@ works.
 
 ## What a machine already answers
 
-`cedar test` runs the `test` action of `cedar.json` — **seven steps by default, eight with
-`--smoke`** — and every step gets its own verdict; the action is `continueOnError`, so a red step
-never hides the ones after it:
+The full gate is `dotnet test` + in `cedarclerk-web/`: `npm test`, `npm run check:icons`, `check:contrast`, `check:density`, `npm run build`; smoke is `Scripts/e2e.ps1`. Every step gets its own verdict:
 
 | Step | What it proves |
 |---|---|
-| External operations module (MooTool) | Run its Rust tests and Clippy when changing the console. `cedar test --cli` validates the installed repository profile. |
 | Backend (`dotnet test`) | Endpoints, renderers, guards, and the drift guards below |
 | Frontend units (vitest) | Component and service logic in isolation |
 | Icon inventory | `icon-usage.generated.ts` matches the call sites in `src/app` |
 | Contrast contract | Every token pair clears its ratio in both themes |
 | Density contract | No control drops below its touch/size floor |
 | Angular production build (`npm run build`) | The front end compiles for production and stays under its bundle ceiling — the same step the `build` action starts with, so what the test run proves is what the deploy ships (ADR-265; `config.rs` asserts it is the last step, so it cannot silently drop) |
-| Smoke (Playwright, isolated database) — **`--smoke` only** | The critical paths end to end against a scratch `CEDAR_DATA_DIR` |
+| Smoke (Playwright, isolated database) — separate run | The critical paths end to end against a scratch `CEDAR_DATA_DIR` |
 
-`--smoke` appends the profile's `smoke` action after `test`, so a bare `cedar test` never runs it.
-Anyone who has only ever typed the bare command has a whole suite they have never triggered — run
-`cedar test --smoke` before a deploy that touches a critical path.
+Run the smoke suite before a deploy that touches a critical path.
 
 The smoke suite has two environment variables, both exported by `Scripts/e2e.ps1` from its
 `-WebPort` / `-ApiPort` parameters: `E2E_BASE_URL` (the Angular dev server; `playwright.config.ts`
@@ -54,12 +49,7 @@ The build step names no tests — its verdict is its exit code, as for every ste
 replace it: the smoke harness starts the Angular dev server, which tolerates exactly what the
 production compiler rejects.
 
-On a machine with the .NET SDK but without the ASP.NET Core 8 shared runtime — a fresh install that
-only ever pulled a newer SDK — `dotnet test` and `dotnet ef` refuse to start the .NET 8 test host and
-the design-time tooling with a "framework not found" error. Set `DOTNET_ROLL_FORWARD=Major` in the
-shell (or `$env:DOTNET_ROLL_FORWARD='Major'` in PowerShell) and both roll onto the runtime that is
-installed; nothing in the repo pins it, because the droplet runs the exact 8.0 runtime and must not
-roll anywhere.
+The projects target `net10.0` (ADR-305); a machine needs the .NET 10 SDK. Nothing sets `DOTNET_ROLL_FORWARD`.
 
 What none of it answers: how anything looks, whether a real provider accepts our payload, whether a
 flow makes sense to a person, and anything that needs a second machine, a phone, or real money.
@@ -137,7 +127,7 @@ This is the most incident-hardened surface in the project (ADR-065/066/067, afte
   roadmap. Archiving the project 404s the page.
 - **Landing and waitlist.** From an incognito visit: the EN devlog-first page (an RU browser gets RU),
   the waitlist form accepts an address and swaps to the done-line, and the row lands in
-  `WaitlistEntries` (`cedar db`).
+  `WaitlistEntries` (sqlite3 on the droplet).
 - **Blog reactions and comments**, and a semi-public post on the blog index.
 
 ## Publishing
@@ -291,7 +281,7 @@ The full risk list is `docs/tech/DESKTOP.md` §Risks. The checks that need a rea
 
 - **The installer on a clean machine.** It builds and is verified on artifacts; it has never been run
   on a machine that does not already have the project.
-- **`cedar build --installer` and `cedar deploy --desktop` end to end.** Not run since the pipeline
+- **Installer build and desktop publish end to end.** Not run since the pipeline
   moved to C#; installer build and Cloudflare distribution were verified only on the old pipeline.
 - **After ADR-117**: cloud `/projects` without the price table, a scan of a real Unity or Blender
   folder, the orientation of a real `.blend` preview, cancelling mid-preview-pass and resuming, zero
@@ -300,26 +290,21 @@ The full risk list is `docs/tech/DESKTOP.md` §Risks. The checks that need a rea
 - **The startup log says `Cedar:BotToken not set — bot is disabled`.** A desktop build that polls would
   knock production's bot off its token.
 
-## Deploy, backups and the CLI
+## Deploy and backups
 
-- **`cedar restart`** — the CLI's only destructive command, and it drops the blog together with the app
-  for a few seconds. Run it when that costs nothing, and treat it as a
-  `.claude/rules/destructive-operations.md` event.
 - **The deployed build is actually the new one.** A version-string match proves nothing when two builds
   carry the same number: check a behaviour only the new build has, and bump `Consts.CurrentVersion`
   before deploying so the cheap check works next time.
-- **`cedar backup verify` and the deploy preflight agree with the server.** The nightly copy's
-  destination and the path the tool reads (`deploy.rs`: `backups_dir` and `BACKUP_GLOB`, one spelling
-  for both readers) are one fact in two places; they have disagreed for a day before. Copies are
+- **Backup checks agree with the server.** The nightly copy's destination and the path any checker
+  reads are one fact in two places; they have disagreed for a day before. Copies are
   counted by `cedar-*.db.gz`, never by a bare glob — `backup.log` shares the directory and is written
-  after the copy. The preflight reads the newest copy's age off the droplet's own clock and prints a
-  WARNING past 36 h or with no copy at all; it never stops the deploy (ADR-265).
+  after the copy. Warn past 36 h or with no copy; never block a deploy on it (ADR-265).
 - **A restore, monthly.** Download a dated copy, gunzip it over a scratch `cedar.db`, and open the app
   against it. Restore the media half from R2 the same way. A backup nobody has restored is a hope with
   a cron entry. Cadence: `docs/product/BUSINESS.md` §5.
 - **Both healthchecks ping.** The on-droplet copy and the off-box copy have separate checks on purpose —
   sharing one would let either failure silence the other.
-- **`Scripts/server/backup.sh` reaches the droplet only by hand.** `cedar deploy` replaces the app
+- **`Scripts/server/backup.sh` reaches the droplet only by hand.** The deploy replaces the app
   directory and nothing else, so a change in the repo is not a change in production until someone
   copies it across.
 

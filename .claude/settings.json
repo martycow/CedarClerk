@@ -6,8 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh",
-            "args": ["-NoProfile", "-File", "${CLAUDE_PROJECT_DIR}/.claude/hooks/ui-inventory-reminder.ps1"],
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/.claude/hooks/ui-inventory-reminder.sh",
             "timeout": 10,
             "statusMessage": "Checking the UI inventory"
           }

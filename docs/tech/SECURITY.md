@@ -79,7 +79,7 @@ bot), `.claude/rules/renderers.md` (output escaping).
 | T24 | Tracked link `/l/{code}` used as an open redirect for phishing | Spoofing | Creation needs an account and an absolute http(s) URL; the redirect is the feature | partial (G12) |
 | T25 | Backup copy in R2 read by whoever holds the bucket key | Disclosure | Second account, `--backup-dir` against deletion; no client-side encryption. The key ring is deliberately not in the set | partial (G13) |
 | T26 | A leaked secret found in git history | Disclosure | `.gitignore`, the pre-flip scan in `repo-hygiene.md`, rotation before cleanup | held |
-| T27 | A vulnerable dependency shipped unnoticed | Tampering | No audit step, no ADR; .NET 8 leaves support in November 2026 | open (G14) |
+| T27 | A vulnerable dependency shipped unnoticed | Tampering | No audit step; runtime on .NET 10 LTS (ADR-305) | open (G14) |
 | T28 | Presence and revocation break when a second instance starts | Elevation | The hub is process-local by design; a second Kestrel needs a backplane first (ADR-218) | held (constraint) |
 | T29 | Link probe reaches an internal address | SSRF | Every hop checked and only the checked address dialled (ADR-268); board image URLs must start with `/media/` | held |
 | T30 | Admin route probed by a non-admin | Disclosure | `/api/admin` answers 404, not 403; `IsAdmin` is grant-only from `Cedar:AdminEmail` | held |
@@ -119,6 +119,6 @@ exposure once strangers can register.
 - **G11** Count team members against the project cap, or say the cap is per-invitation. #canvas P3
 - **G12** Tracked links: an interstitial or a domain allowlist, and an abuse-report path. #security P3
 - **G13** Client-side encryption for the R2 copy (`rclone crypt`), and a decided stance on the key ring. #ops #security P2
-- **G14** Dependency audit as a `cedar test` phase (`dotnet list package --vulnerable`, `npm audit`) and the .NET 9/10 move before November 2026. #techdebt P2
+- **G14** Dependency audit as a test-gate step (`dotnet list package --vulnerable`, `npm audit`) . #techdebt P2
 - **G15** EF command logging at `Information` in production fills the journal at ~1.5 M lines a day; `Warning` for `Microsoft.EntityFrameworkCore.Database.Command`. #ops P3
 - **G16** Root `SECURITY.md` with a reporting channel, on the pre-flip checklist (§5). #docs P3

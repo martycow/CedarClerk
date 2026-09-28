@@ -17,7 +17,7 @@ The internal post format is a single TipTap JSON document, stored in SQLite as `
  cedarclerk.mooexe.dev  │                                          │
   ┌───────────┐  HTTPS  │  ┌────────────────────────────────────┐  │
   │ Cloudflare├────────►│  │        Cedar Clerk Server          │  │
-  │  Tunnel   │         │  │        (ASP.NET Core, .NET 8)      │  │
+  │  Tunnel   │         │  │        (ASP.NET Core, .NET 10)     │  │
   └───────────┘         │  │                                    │  │
                         │  │  • REST API (drafts, channels,     │  │
   Telegram ◄────────────┼──┤    export, auth)                   │  │
@@ -46,14 +46,13 @@ Going the other direction — external format *into* Cedar JSON — `CedarClerk.
 
 ## Solution layout
 
-Four .NET projects target `net8.0`. The operations console is an external Rust project:
+Four .NET projects target `net10.0` (ADR-305):
 
 | Project | Purpose |
 |---|---|
 | `CedarClerk.Server` | ASP.NET Core 8: minimal-API REST endpoints, static host for the Angular SPA, Telegram bot host, Quartz.NET scheduled jobs, EF Core/SQLite data layer |
 | `CedarClerk.Core` | Document format + renderers. Zero external dependencies — pure C#, fully unit-tested |
 | `CedarClerk.Localization` | Language catalogs, errors, email/public-page text, date/time formatting, language rules and TypeScript interface dictionaries. See [Localization](LOCALIZATION.md) (ADR-292). |
-| MooTool (external) | Native Rust/Ratatui `cedar`; JSON profiles, command runner, deploy and terminal dashboard (ADR-291) |
 | `CedarClerk.Tests` | xUnit, references `Core` and `Server` |
 
 `CedarClerk.Server` subfolders (the list of *conventions*, not a census — the census is `ls`):
@@ -172,27 +171,7 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 
 See `.claude/rules/production-environment.md` for the droplet/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
-MooTool owns the Rust operations console in its `modules/cedar` crate (ADR-291).
-`cedar` is the build, test and deploy entry point. `cedar.json` contains versioned program profiles,
-explicit command/argument arrays, local serve settings and optional SSH/systemd deployment settings.
-
-- `src/config.rs` validates profiles and resolves paths. Legacy per-user JSON loads in memory without overwriting it.
-- `src/runner.rs` owns processes, bounded output, cancellation and operator confirmations.
-- `src/operations.rs` runs build/test actions, serves loopback with the Cedar Clerk bot disabled, and exposes read-only diagnostics.
-- `src/deploy.rs` checks source state and artifact provenance, packs and resumes a checksummed archive, stages required files, confirms the production swap, verifies public health/version and updates local LIVE tags.
-- `src/ui.rs` renders the Ratatui dashboard, animated cedar/aurora title, program selection, action filter, output and confirmations.
-- MooTool owns source installation, the Windows C++ toolchain helper and Rust verification. The module builds from its bundled starter profile; the target repository owns the active `cedar.json`.
-- `Scripts/e2e.ps1` owns the isolated smoke environment and remains an action in the JSON profile.
-
-Everything slow precedes downtime. A remote lock serializes the directory switch; a recovery trap
-attempts to restore the old directory if the swap fails. `app.prev` remains available for explicit
-rollback. The running version must match the artifact manifest before LIVE changes. No deploy path
-rewrites the data directory. `--desktop` publishes checksummed downloads with the manifest last.
-
-`--dry-run` launches no process, contacts no endpoint and writes no file. `--skip-build` requires
-an artifact matching the current commit and its recorded hashes. `--force` warns when overriding
-branch or clean-tree checks; it does not bypass artifact or health validation. Local builds and tests
-work on feature branches. Full configuration and command reference: `docs/for_user/operations-console.md`.
+No operations console for now (ADR-304; replacement `T-393`). The deploy shape the old console enforced still stands (ADR-113): everything slow precedes downtime; upload → stop → swap `app`/`app.prev` → start → health and version check → move `LIVE`. `app.prev` stays for rollback. No deploy path rewrites the data directory. Desktop downloads are published with the manifest last.
 
 `Migrate()` and `PRAGMA journal_mode=WAL;` run automatically on server startup (`Program.cs`), so a deploy applies pending migrations without a separate step — which is exactly why `.claude/rules/ef-migrations.md`'s "migrate immediately after any entity change" rule matters.
 
@@ -204,13 +183,12 @@ The reason it exists is the asset index (ADR-107) — only a process on the deve
 
 `CEDAR_DATA_DIR` is no longer part of this story — the desktop stores nothing. It still decides where the droplet keeps SQLite and media (`/home/martycow/cedarclerk/data`). One server change came out of ADR-104 and stayed: the listening address used to be a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` could not override it, and `Cedar:Urls` now exists for the agent's free port.
 
-**Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads `https://cedarclerk.mooexe.dev/downloads/latest.yml`, which `DownloadEndpoints` serves as plain static files out of `CEDAR_DATA_DIR/downloads`. There is no update service and no third-party account — the whole protocol is a manifest, an installer and a blockmap in one folder, put there by `cedar deploy --desktop`.
+**Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads `https://cedarclerk.mooexe.dev/downloads/latest.yml`, which `DownloadEndpoints` serves as plain static files out of `CEDAR_DATA_DIR/downloads`. There is no update service and no third-party account — the whole protocol is a manifest, an installer and a blockmap in one folder, put there by the desktop publish step.
 
 ## Local development
 
-- **See the whole thing as it will ship: `cedar run`** (ADR-121) — builds front and back, serves the real `publish/` artifact on `localhost:8080` against the dev database with the bot forced off, opens the browser; `--no-build` reuses the last publish
-- Server alone: `dotnet run --project CedarClerk.Server` (port 8080, bot disabled without a token — see `.claude/rules/telegram-bot.md`)
+- Server: see `AGENTS.md` §Key commands (bot forced off — `.claude/rules/telegram-bot.md` §1)
 - Frontend alone: `ng serve` in `cedarclerk-web/` (proxies `/api` → `http://localhost:8080` via `proxy.conf.json`)
-- Tests: `cedar test` (Rust console tests, backend, frontend units, icons, contrast, density and the production `ng build` — ADR-265; `--smoke` adds Playwright) — xUnit in `CedarClerk.Tests`; plain `dotnet test` runs only the .NET solution
+- Tests: `dotnet test` + in `cedarclerk-web/`: `npm test`, `npm run check:icons`, `check:contrast`, `check:density`, `npm run build` (ADR-265); smoke: `Scripts/e2e.ps1`
 - Frontend tests alone: `npm run test` in `cedarclerk-web/` (Vitest-backed via `@angular/build:unit-test`, not Karma)
 - EF migrations: `dotnet ef migrations add <Name> --project CedarClerk.Server`

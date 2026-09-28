@@ -26,7 +26,7 @@ closed.
 |---|---|---|---|
 | 1 | Terms and Privacy have no placeholders | `/terms`, `/privacy` — not a single `[BRACKETS]` | ✅ 13.08.2026 (`T-052`) |
 | 2 | Lawyer has read both documents | — | ❌ not done, the only remaining legal item |
-| 3 | Nightly database backup | `cedar backup verify` → green | ✅ (`T-071`) |
+| 3 | Nightly database backup | newest `data/backups/cedar-*.db.gz` < 36 h + healthchecks green | ✅ (`T-071`) |
 | 4 | Off-droplet copy | `~/bin/rclone size r2:cedar-backup` responds | ⏳ `T-147`, waiting on R2 keys |
 | 5 | External monitoring + alerts | UptimeRobot, three monitors green | ✅ 13.08.2026, status page at `stats.uptimerobot.com/jKcnizZ9vU` (a custom domain there is paid) |
 | 6 | Restore verified | deploy yesterday's dump into an empty database locally and open it | ❌ **never done** — `T-149` |
@@ -139,8 +139,8 @@ nice and decide nothing while there are fewer than ten paying users.
 ## 5. Rituals
 
 **Weekly** (fifteen minutes):
-- `cedar status` — disk, memory, version, backup age;
-- `cedar backup verify` — the copy is fresh, the schedule is in place;
+- `/api/health` + `df -h`/`free -m` over ssh — version, disk, memory;
+- `ls -lt data/backups | head` — the copy is fresh;
 - UptimeRobot — were there any outages, and why;
 - Stripe — did renewals go through, are there any stuck payments;
 - error log: `ssh … "journalctl -q -u cedarclerk -n 200 --no-pager | grep -i error"`.

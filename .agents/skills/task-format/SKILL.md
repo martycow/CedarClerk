@@ -13,8 +13,7 @@ files, searched in this directory order (first hit per name wins):
 
 In Cedar Clerk two of the four convention files exist, both in **`docs/tasks/`**:
 `TASKS.md` and `BACKLOG.md` — no `SPRINT.md`, and `ROADMAP.md` was retired
-24.08.2026 (it had drifted into a near-duplicate of `docs/tasks/CHANGELOG.md`; its
-history is archived at `docs/archive/roadmap-phases-0-13.md`). Never recreate a
+(a near-duplicate of `docs/tasks/CHANGELOG.md`). Never recreate a
 convention file in the root: the root copy would shadow the real file for the
 board. Cedar Clerk's own board conventions stay binding when reformatting: `T-xxx`
 ids are stable and never reused, BACKLOG holds open items only, done rows are

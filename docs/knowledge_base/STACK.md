@@ -14,20 +14,19 @@ bills**, because the bill knows the truth and the document only remembers the mo
 
 ---
 
-## 1. Backend (.NET 8)
+## 1. Backend (.NET 10)
 
 | Package | Version | Why |
 |---|---|---|
-| `Microsoft.EntityFrameworkCore.Sqlite` | 8.0.* | The whole database. SQLite is a deliberate choice — one machine, one file, `sqlite3 .backup` as the backup |
-| `Microsoft.AspNetCore.Identity.EntityFrameworkCore` | 8.0.* | Accounts, cookies, password hashing |
-| `Microsoft.EntityFrameworkCore.Design` | 8.0.* | Migrations (`dotnet ef`) |
+| `Microsoft.EntityFrameworkCore.Sqlite` | 10.0.* | The whole database. SQLite is a deliberate choice — one machine, one file, `sqlite3 .backup` as the backup |
+| `Microsoft.AspNetCore.Identity.EntityFrameworkCore` | 10.0.* | Accounts, cookies, password hashing |
+| `Microsoft.EntityFrameworkCore.Design` | 10.0.* | Migrations (`dotnet ef`) |
 | `Telegram.Bot` | 22.10.2 | The bot and publishing: Bot API 10.2, the Blocks mechanism |
 | `Quartz` + `Quartz.Extensions.Hosting` | 3.18.2 | Scheduled publishing, background jobs |
 | `SixLabors.ImageSharp` | 3.1.12 | Image compression, previews, watermarking |
 | `Anthropic` | 12.35.1 | Auto-translation and AI editing (default model `claude-haiku-4-5`). OpenAI/DeepL are implemented in code as alternative providers, not configured in production |
 | `ClosedXML` | 0.105.0 | The dialogue tool's xlsx translation sheet — export and import (ADR-230) |
-| Rust / `ratatui` / `crossterm` | Cargo.lock | Native `cedar` operations console; `clap` parses commands, `serde_json` loads program profiles, `reqwest` checks health and `sha2` verifies transfers |
-| `xunit` + `Microsoft.NET.Test.Sdk` | 2.5.3 / 17.8.0 | ~935 tests as of 18.08.2026 — `cedar test` always has the exact count, not this file |
+| `xunit` + `Microsoft.NET.Test.Sdk` | 2.5.3 / 17.8.0 | ~935 tests as of 18.08.2026 — `dotnet test` has the exact count |
 
 **What's deliberately not in the stack**: an ORM on top of EF, Redis, a message queue, Docker (for now —
 `T-151`), a service mesh, and everything else usually added "for future growth." While the app lives on
@@ -93,6 +92,5 @@ revisit the pricing (`T-152`).
 - **Media on the droplet's disk** — this is what will hit the ceiling first. The quotas have been trimmed
   down to honest numbers (Pro 1 GB / Pro Plus 3 GB, ADR-129), but the disk stops being the ceiling only
   once media moves to object storage — step 2 of `T-172`, a blocker for registration.
-- **.NET 8 (runtime 8.0.29 on the droplet) goes out of support in November 2026** — `T-072`; the
-  deadline moved with the app from the Pi and hasn't gone anywhere.
-- **Manual deploy** — `cedar deploy` from a laptop. There's no CI; only Marty can build and roll it out.
+- **.NET 10 LTS** (ADR-305) — supported until November 2028. The droplet needs the 10 runtime before the first net10 deploy.
+- **Manual deploy** — from a laptop (no CLI until `T-393`). There's no CI; only Marty can build and roll it out.

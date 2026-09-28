@@ -424,7 +424,7 @@ sidebar is outside the page and the page never reads its width.
 
 Every lane, before it reports done:
 
-1. `cedar test` green — backend `dotnet test`, frontend `vitest`, `npm run check:icons`,
+1. Full test gate green — backend `dotnet test`, frontend `vitest`, `npm run check:icons`,
    `npm run check:contrast` (ends `0 failing pair(s)`), `npm run check:density` (nine rules, none
    `FAIL`). The four guards inside it: `UiInventoryDriftTests`, `ErrorMessageLocalizationTests`,
    `SchemaDriftGuardTests`, `DocsFlowGraphTests`.
@@ -466,14 +466,14 @@ Every lane, before it reports done:
 - **Stage B** — `ui-shell` ‖ `server-preview`. The shell lane lands the shell, §B vocabulary, the
   restyled bench components, the account menu, the console overlay, the four icons, and keeps
   `RailActionsService`/`RulerService` alive but unrendered so every page still compiles. The server
-  lane lands the three endpoints and their tests. Both end with `cedar test` green on their own
+  lane lands the three endpoints and their tests. Both end with the full test gate green on their own
   files.
 - **Stage C** — `ui-editor` ‖ `ui-pages-a` ‖ `ui-pages-b`, each branched from the shell lane's
   result. Every page migrates D1/D2 (and the editor D3/D4). No lane touches another's zone; a
   vocabulary gap is reported to the tech lead, not patched into a component stylesheet.
 - **Stage C close** — `ui-shell`, one commit: delete the two services, the dead tokens, the dead
-  bench components and their contrast pairs; `CHROME_PARTS` to its final census; `cedar test` green.
-- **Stage D** — tester: the full `cedar test --smoke` run, the ten-screenshot walk of
+  bench components and their contrast pairs; `CHROME_PARTS` to its final census; full test gate green.
+- **Stage D** — tester: the full test gate plus the smoke suite, the ten-screenshot walk of
   `docs/screenshots/` repeated on the new shell at 1440×900 in both themes, and the checklist of
   §E on every lane's diff.
 - **Stage E** — project-manager: `docs/tasks/CHANGELOG.md`, the `T-365…T-368` rows on the board,

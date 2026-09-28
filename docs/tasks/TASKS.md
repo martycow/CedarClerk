@@ -64,7 +64,7 @@ surface.
 
 Code is written and covered by tests, but never checked by hand or on a device. The UI V2 row below
 stays Marty's after the fidelity pass: the audit looked through a capture script, not a person, and
-its before/after shots live in the session scratchpad only — untracked, so `cedar run` is the way to
+its before/after shots live in the session scratchpad only — untracked, so a local run is the way to
 see them.
 
 - [ ] UI V2 ported screens by eye — **this is now most of the app and none of it has been opened.** Stage 5's fourteen: the three hub-like screens (an empty planner, a deckled "No sprint" pile, a released build against an unreleased one, a project with a cover and one without); the four stats-like boards (a kind at zero losing its badge, an inspector shelf standing where a modal used to cover the list, the drafts Folders shelf and its withdrawal in tree view, the admin journal as log lines); the two writer-like ones (the manager's inspector on a selection and on the document, the per-post growth chart's three series and its leaf legend, the glossary inspector with and without a term); the task board's ruler readout and its clearing on leave; and the four doors — login, register, terms, privacy — in both themes. Then Stage 4's three, which were already unopened. Stats: no source selected, one source versus several, a dried leaf, the table view, and the axis shortening when a young channel is ticked. The hub: no projects, no documents, no sprint, no tasks, an archived project. The writer: the strip at one row, at two, and with the captions dropped; the inspector on a selection and on the document; the outline against a long document, both directions of the selection sync. Their verification-map marks are reset for this reason #design P1
@@ -90,7 +90,7 @@ see them.
   do: the account is his. Until then nothing is being measured, which is the honest state and not a
   defect. `/privacy` already names PostHog — it is dated 1 September 2026 and goes to the lawyer with
   the rest of the text under the `BUSINESS.md` §2 gate.
-- Production: `cedar status` reports the running version. Local `LIVE` identifies the verified deployment and `LIVE-PREV` its rollback target; neither tag is pushed.
+- Production: `/api/health` reports the running version. Local `LIVE` identifies the verified deployment and `LIVE-PREV` its rollback target; neither tag is pushed.
 - **The version string can no longer tell two builds apart**: the deploy before this one also called itself 0.20.0, so the health check's version match proved nothing. What proved the swap was `GET /api/teams` answering 401 instead of 404. Bumped to 0.20.1 on 01.09.2026 for exactly this reason; the rule stands for every deploy after it.
 - Sprint v0.2.0 is **closed on master (01.09.2026)**: T-331/T-337/T-338/T-350/T-353/T-358/T-359/T-361
   are done, and T-358 closed T-301/T-302/T-304 with them (CHANGELOG 01.09, ADR-234/235). Three
@@ -103,5 +103,5 @@ see them.
   only. **Committed to master as `3b93004`, not deployed.**
   `Consts.CurrentVersion` was bumped to **0.20.1** with it, so the health check can tell this build
   from the one on the droplet — which the previous pair of deploys could not do.
-- Release branch: `master`, 0.23.6 — workshop chrome and language recovery (ADR-301/302/303). `cedar status` reports production; `LIVE` identifies the verified deployment.
+- Release branch: `master`, 0.23.6 — workshop chrome and language recovery (ADR-301/302/303). `/api/health` reports production; `LIVE` identifies the verified deployment.
 - The `indiedev_module` branch is merged and deleted; the module lives in master behind `Cedar:Modules:IndieDev` (reversibility: ADR-101). `dev` is a stale pointer behind master with no commits of its own.
