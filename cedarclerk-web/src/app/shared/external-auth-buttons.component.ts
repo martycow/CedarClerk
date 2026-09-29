@@ -10,11 +10,16 @@ import { BrandIconComponent } from './brand-icon.component';
     selector: 'app-external-auth-buttons',
     imports: [ButtonComponent, BrandIconComponent],
     template: `
-        @if (google() || telegramBotId()) {
+        @if (google() || discord() || telegramBotId()) {
             <div class="providers">
                 @if (google()) {
                     <app-button variant="paper" [disabled]="busy()" (clicked)="signInWithGoogle()">
                         <img src="/assets/auth/google-g.png" alt="" width="20" height="20" />{{ t().externalAuth.google }}
+                    </app-button>
+                }
+                @if (discord()) {
+                    <app-button variant="paper" [disabled]="busy()" (clicked)="signInWithDiscord()">
+                        <app-brand-icon name="discord" [size]="20" />{{ t().externalAuth.discord }}
                     </app-button>
                 }
                 @if (telegramBotId()) {
@@ -49,12 +54,15 @@ export class ExternalAuthButtonsComponent {
     protected readonly loading = signal(false);
     protected readonly busy = signal(false);
     protected readonly google = this.version.googleAuth;
+    protected readonly discord = this.version.discordAuth;
     protected readonly telegramBotId = this.version.telegramBotId;
     private ready = false;
 
     constructor() {
         effect(() => { if (this.telegramBotId()) void this.prepareTelegram(); });
     }
+
+    protected signInWithDiscord(): void { this.external.startDiscord(this.returnUrl()); }
 
     protected signInWithGoogle(): void { this.external.startGoogle(this.returnUrl()); }
 

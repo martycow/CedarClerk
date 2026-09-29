@@ -4,6 +4,10 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Belarusian = new Dictionary<string, string>
     {
+        [nameof(ProjectRequired)] = "Выберыце актыўны праект для дакумента.",
+        [nameof(AccountVerificationFailed)] = "Праверце бягучы пароль і пошту ўліковага запісу.",
+        [nameof(AccountBillingMustClose)] = "Завяршыце рэгулярныя плацяжы перад выдаленнем уліковага запісу. Пры неабходнасці звярніцеся ў падтрымку.",
+        [nameof(PasswordChangeFailed)] = "Не ўдалося змяніць пароль. Праверце бягучы пароль і патрабаванні да новага.",
         [nameof(PasswordRecoveryUnavailable)] = "Аднаўленне пароля часова недаступнае. Паспрабуйце пазней.",
         [nameof(PasswordResetInvalid)] = "Спасылка несапраўдная або пратэрмінаваная, ці пароль не адпавядае патрабаванням. Запытайце новую спасылку і паспрабуйце зноў.",
         [nameof(DraftNotFound)] = "Чарнавік не знойдзены.",

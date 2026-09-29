@@ -4,6 +4,10 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Georgian = new Dictionary<string, string>
     {
+        [nameof(ProjectRequired)] = "აირჩიეთ აქტიური პროექტი ამ დოკუმენტისთვის.",
+        [nameof(AccountVerificationFailed)] = "შეამოწმეთ მიმდინარე პაროლი და ანგარიშის ელფოსტა.",
+        [nameof(AccountBillingMustClose)] = "ანგარიშის წაშლამდე შეწყვიტეთ განმეორებადი გადახდები. საჭიროების შემთხვევაში დაუკავშირდით მხარდაჭერას.",
+        [nameof(PasswordChangeFailed)] = "პაროლი ვერ შეიცვალა. შეამოწმეთ მიმდინარე პაროლი და ახალი პაროლის მოთხოვნები.",
         [nameof(PasswordRecoveryUnavailable)] = "პაროლის აღდგენა დროებით მიუწვდომელია. სცადეთ მოგვიანებით.",
         [nameof(PasswordResetInvalid)] = "ბმული არასწორია ან ვადაგასულია, ან პაროლი მოთხოვნებს არ აკმაყოფილებს. მოითხოვეთ ახალი ბმული და სცადეთ ხელახლა.",
         [nameof(DraftNotFound)] = "მონახაზი ვერ მოიძებნა.",

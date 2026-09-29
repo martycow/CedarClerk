@@ -315,8 +315,8 @@ export class DraftsService {
         return firstValueFrom(this.http.get<DraftFull>(`/api/drafts/${id}`)); 
     }
 
-    create(title: string, cedarJson: string) {
-        return firstValueFrom(this.http.post<{ id: string }>('/api/drafts', { title, cedarJson }));
+    create(title: string, cedarJson: string, projectId?: string | null) {
+        return firstValueFrom(this.http.post<{ id: string }>('/api/drafts', { title, cedarJson, projectId }));
     }
 
     // Returns the server's own updatedAt: the caller compares it against translation timestamps,

@@ -1,7 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { Params, RouterLink } from '@angular/router';
 import { indexTabBadgeLabel } from '../bench/chrome/index-tabs.component';
+import { VersionService } from '../core/version.service';
 import { AccountMenuComponent } from '../shared/account-menu.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { IconComponent } from '../shared/icon.component';
@@ -49,8 +50,9 @@ export interface SidebarUser {
         <div class="side-head">
             <div class="side-brand" role="img" [attr.aria-label]="brandLabel() || null">
                 <app-cedar-logo [size]="20" />
-                @if (mode() === 'full') { <span class="side-wordmark">{{ brand() }}</span> }
+                @if (mode() === 'full') { <span class="side-wordmark">{{ brand() }}@if (version.version(); as value) { <small class="side-version">v{{ value }}</small> }</span> }
             </div>
+            @if (toggleLabel()) { <button type="button" class="side-toggle" [attr.aria-label]="toggleLabel()" [attr.aria-expanded]="mode() === 'full'" (click)="toggled.emit()"><app-icon [name]="mode() === 'full' ? 'caret-left' : 'caret-right'" size="sm" /></button> }
         </div>
 
         @if (project(); as project) {
@@ -110,6 +112,9 @@ export interface SidebarUser {
             font-family: var(--font-sans);
         }
 
+        .side-version { display: block; font-size: var(--fs-meta); color: var(--t2); font-weight: 400; margin-top: var(--space-1); }
+        .side-group + .side-group { border-top: 1px solid var(--border); padding-top: var(--space-3); }
+
         .side-head {
             display: flex;
             align-items: center;
@@ -119,6 +124,7 @@ export interface SidebarUser {
             padding: 0 var(--space-2) 0 var(--space-4);
         }
 
+        .side-toggle { display: grid; place-items: center; min-width: var(--hit-chrome); min-height: var(--hit-chrome); border: 0; background: transparent; color: var(--text); cursor: pointer; }
         .side-brand {
             display: flex;
             align-items: center;
@@ -268,6 +274,7 @@ export interface SidebarUser {
     `],
 })
 export class SidebarComponent {
+    protected readonly version = inject(VersionService);
     readonly mode = input<'full' | 'rail'>('full');
     readonly groups = input<readonly NavGroup[]>([]);
     readonly activeId = input('');
@@ -282,6 +289,8 @@ export class SidebarComponent {
     readonly allProjectsLabel = input('');
     readonly alertsTitle = input('');
     readonly picked = output<string>();
+    readonly toggleLabel = input('');
+    readonly toggled = output<void>();
 
     countOf(item: NavItem): string {
         return indexTabBadgeLabel(item.count);

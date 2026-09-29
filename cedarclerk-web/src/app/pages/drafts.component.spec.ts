@@ -203,25 +203,16 @@ describe('drafts page', () => {
         [...el().querySelectorAll('.drafts-table .drafts-row:not(.drafts-row-head)')] as HTMLElement[];
     const describeButton = (index: number) =>
         rows()[index].querySelector('.row-actions .mini') as HTMLButtonElement;
-    const specRows = () =>
-        [...(panel(t.inspector.title)?.querySelectorAll('app-spec-row') ?? [])]
-            .map(r => [r.querySelector('.label')!.textContent!.trim(),
-                       r.querySelector('.value')!.textContent!.replace(/\s+/g, ' ').trim()]);
-
-    it('the describe control fills the shelf, and the shelf is exclusive with the folder filter', () => {
+    it('the describe control sends document properties to the shared inspector', () => {
         expect(panel(t.folders.title)).toBeDefined();
-        expect(panel(t.inspector.title)).toBeUndefined();
-
         describeButton(0).click();
         fixture.detectChanges();
-
-        // Exclusive (ADR-167): the picked document replaces the folder filter, never joins it.
-        expect(panel(t.inspector.title)).toBeDefined();
+        const context = TestBed.inject(WorkspaceContextService);
+        expect(panel(t.inspector.title)).toBeUndefined();
         expect(panel(t.folders.title)).toBeUndefined();
-        expect(panel(t.inspector.title)!.querySelector('.insp-name')!.textContent!.trim()).toBe('alpha');
-        expect(specRows()).toContainEqual([t.inspector.folder, 'Devlogs']);
-        expect(specRows()).toContainEqual([t.inspector.series, 'Season one']);
-        expect(specRows()).toContainEqual([t.inspector.tags, '#devlog#art']);
+        expect(context.open()?.title).toBe('alpha');
+        expect(context.properties()).toContainEqual({ label: t.inspector.folder, value: 'Devlogs' });
+        expect(context.properties()).toContainEqual({ label: t.inspector.series, value: 'Season one' });
     });
 
     it('the control toggles, and the draft destination remains a native link', () => {
@@ -241,7 +232,7 @@ describe('drafts page', () => {
     it('a picked draft that leaves the filtered list stops being described', () => {
         describeButton(0).click();
         fixture.detectChanges();
-        expect(panel(t.inspector.title)).toBeDefined();
+        expect(TestBed.inject(WorkspaceContextService).open()?.id).toBe('alpha');
 
         tiles(t.stateStrip)[5].click(); // Archived — alpha is not in it
         fixture.detectChanges();

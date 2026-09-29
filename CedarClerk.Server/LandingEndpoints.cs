@@ -164,7 +164,7 @@ public static class LandingEndpoints
 
     /// <summary>The wordmark's conifer, the one drawing on this page that is not a Phosphor glyph.</summary>
     private static string Mark(int size) =>
-        $"""<img src="/favicon.png" width="{size}" height="{size}" alt="" style="display:block;flex:none;object-fit:contain">""";
+        $"""<img src="/assets/brand/cedar-clerk-mark.svg" width="{size}" height="{size}" alt="" style="display:block;flex:none;object-fit:contain">""";
 
     // A plain (non-interpolated) raw string: CSS is mostly braces, and in an interpolated raw
     // string every one of them would have to be doubled. Same Replace-a-placeholder shape as
@@ -553,15 +553,74 @@ public static class LandingEndpoints
                    not as a hand — there is no stack for it to be part of. */
                 .paper { transform: none; }
             }
+            .network-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); width: 100%; }
+            .network-mark { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); }
+            .network { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); background: var(--sheet); color: var(--text); border-radius: var(--radius-sm); }
+            .plaque { background: var(--surface); border: 1px solid var(--border); box-shadow: none; }
+            .plaque-title, .flow { color: var(--text); text-shadow: none; }
+            .features { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+            .feature { display: block; background: var(--sheet); border: 1px solid var(--border); border-radius: var(--radius-md); }
+            .feature summary { cursor: pointer; list-style: none; min-height: 56px; }
+            .feature summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+            .feature-head b { flex: 1; }
+            .feature-head svg { flex: none; width: 32px; height: 32px; }
+            .feature-detail { padding-top: var(--space-3); }
+            .feature-detail img { display: block; width: 100%; height: auto; margin-top: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+            .feature:hover { border-color: var(--accent); }
+            .plan.bright { border: 2px solid var(--accent); box-shadow: var(--shadow-paper); transform: none; }
+            .plan-comparison { overflow-x: auto; margin-top: var(--space-6); }
+            .plan-comparison table { width: 100%; border-collapse: collapse; background: var(--sheet); }
+            .plan-comparison caption { text-align: left; font-weight: 600; padding: var(--space-4) 0; }
+            .plan-comparison th, .plan-comparison td { text-align: left; padding: var(--space-4); border-bottom: 1px solid var(--border); }
+            .plan-comparison :is(th, td):nth-child(3) { background: var(--asoft); }
+            .rail { background: var(--surface); color: var(--text); background-image: none; border-bottom: 1px solid var(--border); box-shadow: none; }
+            .rail-name, .rail-nav a, .lang a { color: var(--text); text-shadow: none; }
+            .rail-nav a[href^="#"]::after { content: ' ↓'; opacity: .6; }
+            .login-link { border: 1px solid var(--accent); font-weight: 700; }
+            .download-card .btn { color: var(--text); background: var(--sheet); border: 1px solid var(--border-strong); }
+            #waitlist-dialog { width: min(480px, calc(100% - 32px)); box-sizing: border-box; padding: var(--space-6); color: var(--text); background: var(--sheet); border: 1px solid var(--border); border-radius: var(--radius-md); }
+            #waitlist-dialog::backdrop { background: color-mix(in srgb, var(--text) 55%, transparent); }
+            .dialog-close { float: right; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+            .feature, .paper, .shelf-sheet, .rail { background-image: none; }
+            @media (max-width: 600px) { .features { grid-template-columns: 1fr; } .waitlist { flex-wrap: wrap; } }
             @media (prefers-reduced-motion: reduce) { .paper { transform: none; } }
+
         """;
 
     // Plain raw string with placeholders, like Css above: JS is as brace-heavy as CSS, and inside
     // an interpolated raw string every one of those braces would need escaping.
     private const string WaitlistJs = """
-        document.getElementById('waitlist-form').addEventListener('submit', async e => {
+        for (const card of document.querySelectorAll('.feature')) {
+            card.addEventListener('pointerenter', event => {
+                if (event.pointerType === 'mouse' && !card.open) { card.open = true; card.dataset.hover = 'true'; }
+            });
+            card.addEventListener('pointerleave', () => {
+                if (card.dataset.hover && !card.contains(document.activeElement)) card.open = false;
+                delete card.dataset.hover;
+            });
+            card.querySelector('summary').addEventListener('click', event => {
+                if (card.dataset.hover) { event.preventDefault(); delete card.dataset.hover; }
+            });
+        }
+        const dialog = document.getElementById('waitlist-dialog');
+        const original = document.getElementById('waitlist-form');
+        if (dialog && original) {
+            const copy = original.cloneNode(true);
+            copy.id = 'waitlist-modal-form';
+            const note = document.getElementById('waitlist-note').cloneNode(true);
+            note.id = 'waitlist-modal-note';
+            note.setAttribute('role', 'status');
+            document.getElementById('waitlist-dialog-content').append(copy, note);
+            document.querySelectorAll('[data-waitlist]').forEach(link => link.addEventListener('click', event => {
+                event.preventDefault(); dialog.showModal(); copy.querySelector('input[type=email]')?.focus();
+            }));
+        }
+        document.querySelectorAll('form.waitlist').forEach(form => form.addEventListener('submit', async e => {
             e.preventDefault();
-            const form = e.target, note = document.getElementById('waitlist-note');
+            const form = e.target, note = form.nextElementSibling;
+            const button = form.querySelector('button[type=submit]');
+            if (button.disabled) return;
+            button.disabled = true;
             const body = { email: form.email.value, website: form.website.value, language: '%%LANG%%' };
             try {
                 const res = await fetch('/api/waitlist', { method: 'POST',
@@ -575,8 +634,8 @@ public static class LandingEndpoints
                 }
             } catch {
                 note.textContent = '%%FAIL%%';
-            }
-        });
+            } finally { button.disabled = false; }
+        }));
         """;
 
     private static string WaitlistScript(bool ru) => WaitlistJs
@@ -669,6 +728,10 @@ public static class LandingEndpoints
         // order the positioning sells (ADR-135): write → reach → keep → plan.
         var features = new (string Icon, string Title, string Body)[]
         {
+            ("folder-open", LandingTexts.ProjectsTool.Pick(ru), LandingTexts.ProjectsToolBody.Pick(ru)),
+            ("book-open", LandingTexts.GlossaryTool.Pick(ru), LandingTexts.GlossaryToolBody.Pick(ru)),
+            ("images", LandingTexts.CanvasTool.Pick(ru), LandingTexts.CanvasToolBody.Pick(ru)),
+            ("layout", LandingTexts.PresetsTool.Pick(ru), LandingTexts.PresetsToolBody.Pick(ru)),
             ("pencil-simple", LandingTexts.BlockEditor(ru),
                 LandingTexts.EditorDescription(ru)),
             ("paper-plane-tilt", LandingTexts.PublishingToTelegram(ru),
@@ -738,12 +801,29 @@ public static class LandingEndpoints
 
         var check = Icons.Svg("check", 15);
 
-        var featureCards = string.Join("", features.Select(f => $"""
-            <article class="feature">
-                <span class="feature-head">{Icons.Svg(f.Icon)}<b>{E(f.Title)}</b></span>
-                <p>{E(f.Body)}</p>
-            </article>
+        string[] screens = ["project", "glossary", "canvas", "presets", "editor", "publishing", "publishing", "publishing", "editor", "posts", "tasks", "library", "builds", "calendar", "appearance", "publishing"];
+        var featureCards = string.Join("", features.Select((f, index) => $"""
+            <details class="feature">
+                <summary class="feature-head">{Icons.Svg(f.Icon, 32)}<b>{E(f.Title)}</b><span aria-hidden="true">+</span></summary>
+                <div class="feature-detail"><p>{E(f.Body)}</p>
+                    <a href="/assets/review/{screens[index]}.png">
+                        <img src="/assets/review/{screens[index]}.png" alt="{E(LandingTexts.ViewScreen.Pick(ru))}" loading="lazy" width="1057" height="891">
+                    </a>
+                </div>
+            </details>
             """));
+        var comparison = $"""
+            <div class="plan-comparison"><table>
+                <caption>{LandingTexts.ComparePlans.Pick(ru)}</caption>
+                <thead><tr><th scope="col">{LandingTexts.ComparePlans.Pick(ru)}</th>{string.Join("", plans.Select(p => $"<th scope=\"col\">{E(p.Name)}</th>"))}</tr></thead>
+                <tbody>
+                    <tr><th scope="row">{LandingTexts.ChannelsRow.Pick(ru)}</th><td>{PlanLimitations.MaxChannels(PlanTiers.Free)}</td><td>{PlanLimitations.MaxChannels(PlanTiers.Pro)}</td><td>{PlanLimitations.MaxChannels(PlanTiers.ProPlus)}</td></tr>
+                    <tr><th scope="row">{LandingTexts.StorageRow.Pick(ru)}</th><td>{Gb(PlanTiers.Free)}</td><td>{Gb(PlanTiers.Pro)}</td><td>{Gb(PlanTiers.ProPlus)}</td></tr>
+                    <tr><th scope="row">{LandingTexts.BlogCommentsReactionsRSS(ru)}</th><td>✓</td><td>✓</td><td>✓</td></tr>
+                    <tr><th scope="row">{LandingTexts.YourOwnSignatureWithLink(ru)}</th><td>—</td><td>✓</td><td>✓</td></tr>
+                </tbody>
+            </table></div>
+            """;
 
         var planCards = string.Join("", plans.Select((p, i) => $"""
             <article class="paper plan{(p.Featured ? " bright pinned" : "")}" style="--tilt:{(i - 1) * 0.5:0.#}deg">
@@ -865,17 +945,22 @@ public static class LandingEndpoints
                 <span class="rail-name">Cedar Clerk</span>
                 <span class="rail-chip">{LandingTexts.InviteOnlyBeta(ru)}</span>
                 <span class="spacer"></span>
-                <nav class="rail-nav">{string.Join("", nav)}</nav>
+                <nav class="rail-nav" aria-label="{LandingTexts.OnThisPage.Pick(ru)}">{string.Join("", nav)}</nav>
                 <!--Two links rather than a script: the page is server-rendered, and a language is a
                 different document, not a different state of this one.-->
                 <div class="lang">
                     <a href="?lang=ru"{(ru ? """ aria-current="true" """ : "")}>RU</a>
                     <a href="?lang=en"{(ru ? "" : """ aria-current="true" """)}>EN</a>
                 </div>
-                <a class="btn btn-paper btn-sm" href="/login">{LandingTexts.LogIn(ru)}</a>
-                <a class="btn btn-pine btn-sm" href="#waitlist">{LandingTexts.JoinTheWaitlist(ru)}</a>
+                <a class="btn btn-paper btn-sm login-link" href="/login">{LandingTexts.LogIn(ru)}</a>
+                <a class="btn btn-pine btn-sm" href="#waitlist" data-waitlist>{LandingTexts.JoinTheWaitlist(ru)}</a>
             </header>
 
+            <dialog id="waitlist-dialog" aria-labelledby="waitlist-dialog-title">
+                <form method="dialog"><button class="dialog-close" aria-label="{LandingTexts.CloseDialog.Pick(ru)}">×</button></form>
+                <h2 id="waitlist-dialog-title">{LandingTexts.JoinTheWaitlist(ru)}</h2>
+                <div id="waitlist-dialog-content"></div>
+            </dialog>
             <main class="wrap">
                 <section class="hero" style="padding-top:56px">
                     <div>
@@ -914,7 +999,7 @@ public static class LandingEndpoints
                             <div class="plaque-title">{LandingTexts.OnePostEveryAddress(ru)}</div>
                             <div class="flow">
                                 <span>{LandingTexts.Draft(ru)}</span><span class="arrow">&rarr;</span>
-                                <span>Telegram · X · Bluesky · LinkedIn · Discord</span><span class="arrow">&rarr;</span>
+                                <span class="network-grid"><span class="network">{Icons.Svg("paper-plane-tilt", 24)}Telegram</span><span class="network"><b class="network-mark" aria-hidden="true">B</b>Bluesky</span><span class="network"><b class="network-mark" aria-hidden="true">X</b>X</span><span class="network"><b class="network-mark" aria-hidden="true">D</b>Discord</span><span class="network"><b class="network-mark" aria-hidden="true">in</b>LinkedIn</span></span><span class="arrow">&rarr;</span>
                                 <span>{LandingTexts.Blog(ru)}</span><span class="arrow">&rarr;</span><span>RSS</span>
                             </div>
                         </div>
@@ -942,6 +1027,7 @@ public static class LandingEndpoints
                         <span class="meta">{LandingTexts.PricingHint(ru)}</span>
                     </div>
                     <div class="plans">{planCards}</div>
+                    {comparison}
                     <div class="plan-foot">{LandingTexts.TrialPrice(ru, Consts.Plans.TrialPrice)}</div>
                 </section>
                 """ : "")}
@@ -956,7 +1042,7 @@ public static class LandingEndpoints
                         <b>{LandingTexts.TheDoorsOpenByList(ru)}</b>
                         <span class="sub">{LandingTexts.InviteHint(ru)}</span>
                     </div>
-                    <a class="btn btn-pine" href="#waitlist">{LandingTexts.SaveMySeat(ru)}</a>
+                    <a class="btn btn-pine" href="#waitlist" data-waitlist>{LandingTexts.SaveMySeat(ru)}</a>
                 </div>
             </main>
 

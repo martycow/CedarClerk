@@ -34,7 +34,7 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
 - **Discovery never widens publication by inference.** An account must opt in, a Project must have a
   live Showcase, and a post must already be public. Private posts, including tenant-local
   `IsListedWhilePrivate` teasers, never enter the cross-account feed. Independent Blogs remain
-  eligible without a Project (ADR-243).
+  eligible independently of Project showcase publication (ADR-243, ADR-306).
 - **Private posts stay private on every path**: registration-form gate, revocable access, watermark
   and copy-protection on the page — and any new public surface (OG tags, media endpoints — `T-174`,
   `T-088`) must decide its private-post behaviour *before* shipping.
@@ -75,3 +75,12 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
 Resolved (16.07.2026): no formal acceptance criteria / success metrics — the phase checklists in
 `docs/tasks/CHANGELOG.md` (history through Phase 13: `docs/archive/roadmap-phases-0-13.md`) are the
 definition of done for this project.
+
+## Review workflow requirements (ADR-306)
+
+Documents have a Project home, including Personal for imports and legacy documents.
+Core organization does not depend on the IndieDev feature flag. Project scope, shared
+Properties, the owner logo, account security controls, a waitlist dialog and inline form,
+and tool/pricing comparisons form the reviewed workflow. Production Google sign-in and
+Discord credential setup still require live verification; local tests are not proof of
+provider availability.

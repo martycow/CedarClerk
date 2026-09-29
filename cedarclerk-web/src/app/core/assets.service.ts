@@ -59,10 +59,11 @@ export interface LibraryPage {
 export class AssetsService {
     private http = inject(HttpClient);
 
-    uploadWithProgress(file: File): Observable<HttpEvent<{ id: string; url: string }>> {
+    uploadWithProgress(file: File, projectId?: string | null): Observable<HttpEvent<{ id: string; url: string }>> {
         const fd = new FormData();
         fd.append('file', file);
         return this.http.post<{ id: string; url: string }>('/api/assets', fd, {
+            params: projectId ? { projectId } : {},
             reportProgress: true,
             observe: 'events',
         });
@@ -70,10 +71,10 @@ export class AssetsService {
 
     // Plain upload for callers that don't draw a progress bar (IF1's avatar picker) — the editor
     // keeps using uploadWithProgress, where a large video makes progress worth showing.
-    upload(file: File) {
+    upload(file: File, projectId?: string | null) {
         const fd = new FormData();
         fd.append('file', file);
-        return firstValueFrom(this.http.post<{ id: string; url: string }>('/api/assets', fd));
+        return firstValueFrom(this.http.post<{ id: string; url: string }>('/api/assets', fd, { params: projectId ? { projectId } : {} }));
     }
 
     listForDraft(draftId: string) {

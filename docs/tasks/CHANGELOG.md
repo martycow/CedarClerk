@@ -1,5 +1,44 @@
 ﻿# Changelog
 
+## 2026-09-28 — Review implementation, local branch (ADR-306)
+
+Implemented the v0.23.6 review on `codex/framer-review`. Framer is the primary
+interaction reference; the app uses the owner's final logo and existing design tokens.
+The toolbar has persistent project access; the sidebar has a collapse control, grouped
+navigation and version beneath the name. Posts keeps its statistics tab and feedback
+count without a duplicate Metrics entry. Documents selection opens the shared Properties
+panel and its table measures the available list width as the inspector/sidebar resize.
+At narrow widths, Properties overlays the workspace with a visible close handle.
+
+Core document creation requires an active owned project. Legacy unfiled documents and
+imports receive a per-owner Personal project without changing IDs or blog URLs. Core
+project organization works with IndieDev off. Uploads file into the selected project
+immediately. Public media access includes post covers, showcase galleries and glossary
+images actually rendered in accessible posts, with private/excluded cases tested.
+
+The hub shows project identity, document thumbnails, a scoped Documents link and labeled
+view counts. Game engine/platform settings are hidden for Blog projects. Onboarding uses
+the shared Location selector. Authentication uses a plain branded layout; Register hides
+provider buttons. Discord support uses the existing invite flow. Profile adds password
+change and confirmed account deletion with transactional database cleanup and recurring
+billing checks.
+
+Landing has 16 expandable tool cards with real local-app screenshots (T-204), a modal and
+inline waitlist form, a plan comparison, more visible Pro/login/download controls and a
+publishing-destination panel. Screenshots load lazily; the landing remains server-rendered.
+T-391 is addressed; T-390 retains the remaining non-Documents inspector work.
+
+Validation: 2,042 backend and 829 frontend tests passed; icon, contrast and density checks
+and the production build passed. Frontend tests use `NODE_OPTIONS=--no-experimental-webstorage`
+with Node 26. Browser checks covered sign-in, onboarding, hub, documents and public-page
+rendering; local HTTP checks rejected missing-project document creation and invalid-project
+uploads, and confirmed immediate project filing. Core project, access and Documents endpoints returned 200 with IndieDev disabled. Demo data lives outside the repository.
+
+Not deployed. Google production challenge redirects successfully, but the reported later
+sign-in failure remains unverified; SSH log access failed host-key verification. Discord
+needs production credentials and a full live round trip. T-003 retains these checks.
+Community, Save Project as Preset, and Skill Points remain proposals.
+
 ## 2026-09-28 — Context audit, `cedar` removed, .NET 10 (ADR-304, ADR-305)
 
 AI context audit for the move to macOS. `telegram-bot.md` rewritten for Bot API 10.3 with current code paths; `renderers.md` lists every renderer; `production-environment.md` cut to the facts. The MooTool `cedar` console and `cedar.json` are removed (ADR-304); its cross-platform replacement is `T-393`. Deleted the fleet README, the Cedar Bench briefs, the UI V2 plan and `design-qa.md`; `UI-AUDIT-2026-09-05.md` moved to `archive/`. The `ultracode` skill is removed (no agent fleet exists). The UI-inventory hook is now bash.

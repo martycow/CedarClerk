@@ -286,7 +286,20 @@ export const en = {
         privacy: 'Privacy policy',
     },
     // T-003 — the provider row on both doors, and the screen that finishes a new account.
+    accountSecurity: {
+        failed: 'Could not complete the account action.',
+        title: 'Account security',
+        currentPassword: 'Current password',
+        newPassword: 'New password',
+        changePassword: 'Change password',
+        changed: 'Password changed.',
+        deleteAccount: 'Delete account',
+        deleteWarning: 'This permanently deletes your documents, projects, and media. Enter your account email and current password to confirm.',
+        email: 'Account email',
+        providerHint: 'If you sign in through a provider, set a password through password recovery first.',
+    },
     externalAuth: {
+        discord: 'Continue with Discord',
         widgetFailed: 'Telegram could not load. Try again.',
         or: 'or',
         emailAlternative: 'or use your email',
@@ -1456,7 +1469,7 @@ export const en = {
             markTemplate: 'Mark as template',
             unmarkTemplate: 'Unmark as template',
             evergreen: 'Evergreen recycling…',
-            describe: 'Describe on the shelf',
+            describe: 'Show in Properties',
             stopDescribing: 'Stop describing',
         },
         // T-256 — the read-only shelf beside the list. Every fact it states is already on the

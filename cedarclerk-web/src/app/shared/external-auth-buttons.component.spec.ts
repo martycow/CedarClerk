@@ -13,7 +13,7 @@ describe('External sign-in buttons', () => {
         TestBed.configureTestingModule({ providers: [
             { provide: ExternalAuthService, useValue: external },
             { provide: TelegramLinkService, useValue: telegram },
-            { provide: VersionService, useValue: { googleAuth: signal(true), telegramBotId: signal(123) } },
+            { provide: VersionService, useValue: { googleAuth: signal(true), discordAuth: signal(false), telegramBotId: signal(123) } },
         ] });
         const fixture = TestBed.createComponent(ExternalAuthButtonsComponent);
         fixture.detectChanges();

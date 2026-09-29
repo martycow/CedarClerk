@@ -7,14 +7,12 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { AuthLayoutComponent } from '../shared/auth-layout.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
-import { ExternalAuthButtonsComponent } from '../shared/external-auth-buttons.component';
 
 @Component({
     selector: 'app-register',
     imports: [
         RouterLink, AuthLayoutComponent,
         ButtonComponent, InputComponent,
-        ExternalAuthButtonsComponent,
     ],
     templateUrl: 'register.component.html',
     styleUrls: ['auth-form.css']

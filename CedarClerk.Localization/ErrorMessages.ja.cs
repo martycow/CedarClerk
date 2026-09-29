@@ -4,6 +4,10 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Japanese = new Dictionary<string, string>
     {
+        [nameof(ProjectRequired)] = "この文書の有効なプロジェクトを選択してください。",
+        [nameof(AccountVerificationFailed)] = "現在のパスワードとアカウントのメールを確認してください。",
+        [nameof(AccountBillingMustClose)] = "アカウント削除前に継続課金を終了してください。必要に応じてサポートにお問い合わせください。",
+        [nameof(PasswordChangeFailed)] = "パスワードを変更できませんでした。現在のパスワードと新しいパスワードの要件を確認してください。",
         [nameof(PasswordRecoveryUnavailable)] = "現在、パスワードの再設定は利用できません。しばらくしてからもう一度お試しください。",
         [nameof(PasswordResetInvalid)] = "リンクが無効または期限切れか、パスワードが要件を満たしていません。新しいリンクをリクエストして、もう一度お試しください。",
         [nameof(DraftNotFound)] = "下書きが見つかりません。",

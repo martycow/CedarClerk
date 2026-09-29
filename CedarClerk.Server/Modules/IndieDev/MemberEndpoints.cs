@@ -24,6 +24,25 @@ public static class ProjectMemberEndpoints
 
     private const int EmailMaxLength = 200;
 
+    public static void MapProjectAccessEndpoint(this WebApplication app)
+    {
+        // T-301 — what THIS caller is to this project, in one word. The shell draws a wall of
+        // tools for whatever project is open, and until it could ask this it drew the owner's wall
+        // for everyone: a member saw seven hooks and every one of them answered 404. Deliberately
+        // its own tiny route rather than a field on GET /api/projects/{id}, which is owner-only and
+        // 404s for the very callers that need the answer.
+        app.MapGet("/api/projects/{projectId:guid}/access", async (Guid projectId, ClaimsPrincipal user,
+            IServiceScopeFactory scopes, CancellationToken ct) =>
+        {
+            var uid = CanvasEndpoints.UserId(user);
+            var access = await ProjectAccessResolver.ResolveAsync(scopes, projectId, uid, ct);
+            return access is null
+                ? Results.NotFound()
+                : Results.Ok(new { role = access.WireRole, canWrite = access.CanWrite, access.Archived });
+        }).RequireAuthorization();
+
+    }
+
     public static void MapProjectMemberEndpoints(this WebApplication app)
     {
         var members = app.MapGroup("/api/projects/{projectId:guid}/members").RequireAuthorization();
@@ -187,21 +206,6 @@ public static class ProjectMemberEndpoints
 
             return Results.NoContent();
         });
-
-        // T-301 — what THIS caller is to this project, in one word. The shell draws a wall of
-        // tools for whatever project is open, and until it could ask this it drew the owner's wall
-        // for everyone: a member saw seven hooks and every one of them answered 404. Deliberately
-        // its own tiny route rather than a field on GET /api/projects/{id}, which is owner-only and
-        // 404s for the very callers that need the answer.
-        app.MapGet("/api/projects/{projectId:guid}/access", async (Guid projectId, ClaimsPrincipal user,
-            IServiceScopeFactory scopes, CancellationToken ct) =>
-        {
-            var uid = CanvasEndpoints.UserId(user);
-            var access = await ProjectAccessResolver.ResolveAsync(scopes, projectId, uid, ct);
-            return access is null
-                ? Results.NotFound()
-                : Results.Ok(new { role = access.WireRole, canWrite = access.CanWrite, access.Archived });
-        }).RequireAuthorization();
 
         var invites = app.MapGroup("/api/project-invites").RequireAuthorization();
 

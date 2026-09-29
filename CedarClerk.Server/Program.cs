@@ -90,6 +90,7 @@ builder.Services.AddDataProtection()
     .SetApplicationName(Consts.DataProtectionApplicationName);
 
 var authentication = builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme);
+authentication.AddDiscord(builder.Configuration);
 authentication.AddIdentityCookies();
 
 // T-003 / ADR-237 — registered only when both halves are configured, so an install without Google
@@ -326,6 +327,7 @@ app.MapWhen(TenantRouting.IsTenantRequest,
 
 app.MapAuthEndpoints();
 app.MapPasswordRecoveryEndpoints();
+app.MapAccountSecurityEndpoints();
 app.MapExternalAuthEndpoints();
 app.MapWaitlistEndpoint();
 app.MapDiscoveryEndpoint();
@@ -364,12 +366,11 @@ app.MapGet("/preview/{token}", (HttpContext ctx) => BlogEndpoints.HandleDraftPre
 // An endpoint route, so it wins over the SPA fallback below; an unknown code is a plain 404.
 app.MapGet("/l/{code}", (HttpContext ctx) => TrackedLinkEndpoints.HandleRedirectAsync(ctx));
 
-// Indie-gamedev module (Phase 13, ADR-101). A module is endpoints and screens behind a flag — its
-// entities live in the same context either way, so turning this off hides the feature without
-// touching the schema. `/api/me` reports the same flag so the client hides its menu entries too.
+// Project ownership is core; game-specific tools remain behind the IndieDev flag.
+app.MapIndieDevEndpoints();
+app.MapProjectAccessEndpoint();
 if (ProjectEndpoints.IsEnabled(app.Configuration))
 {
-    app.MapIndieDevEndpoints();
     app.MapAssetIndexEndpoints();
     app.MapTaskEndpoints();
     app.MapSprintEndpoints();
@@ -393,6 +394,7 @@ using (var scope = app.Services.CreatePlatformScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
     dbContext.Database.Migrate();
+    await DocumentProjects.BackfillAsync(dbContext);
 
     // Enable Write-Ahead Logging for better concurrency
     dbContext.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
@@ -448,8 +450,9 @@ app.MapGet("/api/health", () => Results.Ok(new
     // Provider availability is public because the sign-in pages have no authenticated session.
     externalAuth = new
     {
-        google = !string.IsNullOrEmpty(app.Configuration[Consts.ExternalAuth.GoogleClientIdCfg])
-                 && !string.IsNullOrEmpty(app.Configuration[Consts.ExternalAuth.GoogleClientSecretCfg]),
+        discord = DiscordAuthentication.IsConfigured(app.Configuration),
+        google = !string.IsNullOrWhiteSpace(app.Configuration[Consts.ExternalAuth.GoogleClientIdCfg])
+                 && !string.IsNullOrWhiteSpace(app.Configuration[Consts.ExternalAuth.GoogleClientSecretCfg]),
         telegramBotId = app.Services.GetRequiredService<TelegramBotService>() is { IsRunning: true } authBot
             ? (long?)authBot.Me.Id
             : null,

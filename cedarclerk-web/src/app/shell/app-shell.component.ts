@@ -15,6 +15,7 @@ import { DebugConsoleComponent } from '../shared/debug-console.component';
 import { FeedbackPanelComponent } from '../shared/feedback-panel.component';
 import { SearchOverlayComponent } from '../shared/search-overlay.component';
 import { InspectorRailComponent } from './inspector-rail.component';
+import { ProjectSwitcherComponent } from './project-switcher.component';
 import { MenuBarComponent } from './menu-bar.component';
 import { NavGroup, NavItem, SidebarComponent, SidebarProject, SidebarUser } from './sidebar.component';
 
@@ -62,7 +63,7 @@ function matches(path: string, pattern: string): boolean {
     imports: [
         RouterOutlet, SidebarComponent, FeedbackPanelComponent,
         SearchOverlayComponent, DebugConsoleComponent,
-        MenuBarComponent, InspectorRailComponent, CommandPaletteComponent,
+        MenuBarComponent, InspectorRailComponent, CommandPaletteComponent, ProjectSwitcherComponent,
     ],
     host: {
         'data-surface': 'paper',
@@ -70,9 +71,12 @@ function matches(path: string, pattern: string): boolean {
     },
     template: `
         <div class="shell" [class.is-rail]="mode() === 'rail'">
-            <app-menu-bar />
+            <app-menu-bar>
+                <app-project-switcher [project]="project()" [projects]="switcher()" variant="brand"
+                    [hint]="t().shell.switchProject" [fallbackName]="t().shell.allProjects" />
+            </app-menu-bar>
             <div class="row">
-                <app-sidebar [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
+                <app-sidebar [toggleLabel]="t().shell.commands.toggleSidebar" (toggled)="toggleSidebar()" [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
                              [project]="project()" [projects]="switcher()" [projectHint]="t().shell.switchProject"
                              [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
                              [brand]="t().shell.brand" [brandLabel]="t().shell.logoLabel"
@@ -104,6 +108,7 @@ function matches(path: string, pattern: string): boolean {
         }
 
         .row {
+            position: relative;
             display: flex;
             flex: 1;
             align-items: stretch;
@@ -150,6 +155,7 @@ export class AppShellComponent implements OnDestroy {
     private readonly path = computed(() => this.url().split('?')[0].split('#')[0]);
 
     private readonly phoneViewport = signal(window.innerWidth <= 640);
+    toggleSidebar() { this.setPref({ sidebarMode: this.appearance.prefs().sidebarMode === 'rail' ? 'full' : 'rail' }); }
     readonly mode = computed(() => this.phoneViewport() ? 'rail' : this.appearance.prefs().sidebarMode);
 
     /** Resolved once per shell; the switcher lists them and the counts are read off them. */
@@ -163,7 +169,7 @@ export class AppShellComponent implements OnDestroy {
 
     protected readonly projectId = computed(() => {
         const seg = this.path().split('/').filter(Boolean);
-        return seg[0] === 'projects' && seg[1] ? seg[1] : '';
+        return seg[0] === 'projects' && seg[1] ? seg[1] : new URLSearchParams(this.url().split('?')[1] ?? '').get('project') ?? '';
     });
 
     /** The project the session is in: the URL's when it names one, the remembered one otherwise. */
@@ -197,11 +203,10 @@ export class AppShellComponent implements OnDestroy {
     });
 
     private readonly projectOpen = computed(() =>
-        this.auth.indieDev() && !!this.openProjectId() && !this.onHub());
+        !!this.openProjectId() && !this.onHub());
 
     /** The switcher card: the open project, or the hub itself while none is open (module on). */
     protected readonly project = computed<SidebarProject | null>(() => {
-        if (!this.auth.indieDev()) return null;
         if (!this.projectOpen()) return { id: '', name: this.t().shell.allProjects, kind: '', link: '/projects' };
         const id = this.openProjectId();
         const summary = this.openSummary();
@@ -212,7 +217,6 @@ export class AppShellComponent implements OnDestroy {
     });
 
     protected readonly switcher = computed<readonly SidebarProject[]>(() => {
-        if (!this.auth.indieDev()) return [];
         const child = this.projectChild();
         const onWorkspaceAction = this.onHub() || this.path().replace(/\/+$/, '') === '/teams';
         const items: SidebarProject[] = this.summaries().map(p => ({
@@ -241,11 +245,8 @@ export class AppShellComponent implements OnDestroy {
         const write: NavItem[] = [], plan: NavItem[] = [], ship: NavItem[] = [];
         const count = (n: number | undefined) => (n && n > 0 ? n : undefined);
         const calendar: NavItem = { id: 'calendar', label: t.calendar, icon: 'calendar-blank', link: '/calendar' };
-        const posts: NavItem = { id: 'posts', label: t.posts, icon: 'paper-plane-tilt', link: '/posts' };
-        const metrics: NavItem = {
-            id: 'metrics', label: t.metrics, icon: 'chart-bar', link: '/posts', queryParams: { tab: 'stats' },
-            count: count(this.alerts()), countTitle: this.t().editor.newBadge,
-        };
+        const posts: NavItem = { id: 'posts', label: t.posts, icon: 'paper-plane-tilt', link: '/posts',
+            count: count(this.alerts()), countTitle: this.t().editor.newBadge };
         // An own project is one the account's own list holds; the access answer only ever
         // narrows that (a member), so a project still in flight draws its owner's wall rather
         // than nothing — an empty sidebar was the bug this replaces.
@@ -259,16 +260,16 @@ export class AppShellComponent implements OnDestroy {
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts' });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: '/library' });
             plan.push(calendar);
-            ship.push(posts, metrics);
+            ship.push(posts);
         } else if (!own && role !== null) {
             write.push({ id: 'canvas', label: t.canvas, icon: 'squares-four', link: ['/projects', open, 'canvas'] });
             plan.push(calendar);
-            ship.push(posts, metrics);
+            ship.push(posts);
         } else if (!own) {
             plan.push(calendar);
-            ship.push(posts, metrics);
+            ship.push(posts);
         } else {
-            write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: ['/projects', open], count: count(summary?.documentCount) });
+            write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts', queryParams: { project: open }, count: count(summary?.documentCount) });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: ['/projects', open, 'assets'], count: count(summary?.assetCount) });
             write.push({ id: 'canvas', label: t.canvas, icon: 'squares-four', link: ['/projects', open, 'canvas'] });
             write.push({ id: 'dialogues', label: t.dialogues, icon: 'tree-structure', link: ['/projects', open, 'dialogues'] });
@@ -277,7 +278,7 @@ export class AppShellComponent implements OnDestroy {
             plan.push({ id: 'planner', label: t.planner, icon: 'flag', link: ['/projects', open, 'planner'] });
             plan.push(calendar);
             ship.push({ id: 'builds', label: t.builds, icon: 'cube', link: ['/projects', open, 'builds'] });
-            ship.push(posts, metrics);
+            ship.push(posts);
         }
         return [
             { id: 'write', label: t.groupWrite, items: write },
@@ -289,7 +290,6 @@ export class AppShellComponent implements OnDestroy {
 
     protected readonly activeId = computed(() => {
         const id = NAV_PREFIXES.find(([, pattern]) => matches(this.path(), pattern))?.[0] ?? '';
-        if (id === 'posts' && /[?&]tab=stats(&|$)/.test(this.url())) return 'metrics';
         return id;
     });
 
@@ -395,7 +395,7 @@ export class AppShellComponent implements OnDestroy {
         });
 
         effect(() => {
-            if (!this.auth.indieDev() || this.namesRequested) return;
+            if (this.namesRequested) return;
             this.namesRequested = true;
             this.projects.list(true)
                 .then(list => {
@@ -409,6 +409,10 @@ export class AppShellComponent implements OnDestroy {
         // One writer for the session's project, and this is it: the resolved route. The project
         // list can predate a newly created row, so an unknown route id gets one fresh lookup.
         effect(() => {
+            if (this.onHub()) {
+                untracked(() => this.current.forget());
+                return;
+            }
             const id = this.projectId();
             const name = this.summaries().find(p => p.id === id)?.name;
             if (!id) return;

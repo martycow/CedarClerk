@@ -71,6 +71,7 @@ export class ProjectsComponent {
 
     readonly projectTypes = PROJECT_TYPES;
     readonly typeIcons = PROJECT_TYPE_ICONS;
+    typeIcon(type: ProjectType) { return this.typeIcons[type]; }
     readonly docIcons = DOCUMENT_TYPE_ICONS;
     readonly initials = projectInitials;
 

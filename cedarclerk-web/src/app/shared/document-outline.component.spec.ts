@@ -21,6 +21,7 @@ describe('DocumentOutlineComponent', () => {
 
     function create(entries: OutlineEntry[] = buildOutline(DOC), active = -1) {
         TestBed.inject(LocaleService).uiLang.set('en');
+        TestBed.inject(LocaleService).pseudo.set(false);
         const fixture = TestBed.createComponent(DocumentOutlineComponent);
         fixture.componentRef.setInput('entries', entries);
         fixture.componentRef.setInput('active', active);

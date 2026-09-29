@@ -14,7 +14,7 @@ import { IconComponent } from './icon.component';
         <span class="loc">
             <!--Committed on change (blur/Enter), not per keystroke: the editor row saves straight
             to the server and a location is typed once, not streamed.-->
-            <input class="loc-input" type="text" maxlength="120"
+            <input [id]="inputId()" [attr.aria-label]="placeholder() || t().location.placeholder" class="loc-input" type="text" maxlength="120"
                    [placeholder]="placeholder() || t().location.placeholder"
                    [ngModel]="value()" (change)="valueChange.emit($any($event.target).value ?? '')">
             @if (profileChip(); as home) {
@@ -62,6 +62,7 @@ import { IconComponent } from './icon.component';
     `],
 })
 export class LocationInputComponent {
+    readonly inputId = input('');
     private readonly auth = inject(AuthService);
     protected readonly t = inject(LocaleService).t;
 

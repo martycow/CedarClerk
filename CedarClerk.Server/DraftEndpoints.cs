@@ -25,7 +25,7 @@ public static class DraftEndpoints
     // ExpectedUpdatedAt/ConfirmShrink are the two save guards (T-018.1/T-018.3) and both are
     // optional: a client that sends neither behaves exactly as before, which keeps the Posts
     // manager's rename-PUT and the import paths working unchanged.
-    public record SaveDraftRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false);
+    public record SaveDraftRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false, Guid? ProjectId = null);
     public record SaveTranslationRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false);
     public record ChangePrimaryLanguageRequest(string Language);
     public record UpdateTagsRequest(string Tags);
@@ -682,6 +682,7 @@ public static class DraftEndpoints
                     Title = TemplateLibrary.Name(entry, language),
                     CedarJson = TemplateLibrary.Body(entry, language),
                     PrimaryLanguage = language,
+                    ProjectId = await DocumentProjects.PersonalAsync(db, uid),
                 };
                 db.Drafts.Add(draft);
                 await db.SaveChangesAsync();
@@ -703,7 +704,7 @@ public static class DraftEndpoints
                     DocumentType = source.DocumentType,
                     Tags = source.Tags,
                     FolderId = source.FolderId,
-                    ProjectId = source.ProjectId,
+                    ProjectId = source.ProjectId ?? await DocumentProjects.PersonalAsync(db, uid),
                 };
                 db.Drafts.Add(copy);
                 await db.SaveChangesAsync();
@@ -1345,7 +1346,9 @@ public static class DraftEndpoints
             ProductAnalytics analytics) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var draft = new Draft { Title = req.Title, CedarJson = req.CedarJson, OwnerId = uid };
+            if (req.ProjectId is not { } projectId || !await db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == uid && p.ArchivedAt == null))
+                return Results.BadRequest(new { error = ErrorMessages.ProjectRequired });
+            var draft = new Draft { Title = req.Title, CedarJson = req.CedarJson, OwnerId = uid, ProjectId = projectId };
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, req.Title, req.CedarJson);
             await db.SaveChangesAsync();
@@ -1770,7 +1773,7 @@ public static class DraftEndpoints
             }
 
             var rewrittenJson = CedarPackage.RewriteMediaPaths(pkg.DocumentJson, pathRewrites);
-            var draft = new Draft { Title = pkg.Title, CedarJson = rewrittenJson, OwnerId = uid };
+            var draft = new Draft { Title = pkg.Title, CedarJson = rewrittenJson, OwnerId = uid, ProjectId = await DocumentProjects.PersonalAsync(db, uid) };
             db.Drafts.Add(draft);
             await db.SaveChangesAsync();
             await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
@@ -1934,7 +1937,7 @@ public static class DraftEndpoints
 
             var rewrittenJson = CedarPackage.RewriteMediaPaths(docJson, pathRewrites);
             var title = titleFromHeading ?? Path.GetFileNameWithoutExtension(mdEntry.Name);
-            var draft = new Draft { Title = title, CedarJson = rewrittenJson, OwnerId = ownerId };
+            var draft = new Draft { Title = title, CedarJson = rewrittenJson, OwnerId = ownerId, ProjectId = await DocumentProjects.PersonalAsync(db, ownerId) };
             db.Drafts.Add(draft);
             await db.SaveChangesAsync();
             await GlossaryUsage.SyncForDraftAsync(db, ownerId, draft.Id);

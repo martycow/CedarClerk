@@ -310,11 +310,18 @@ import { IconComponent } from '../shared/icon.component';
         .foot { margin: 0; }
         .link { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-meta); }
 
-        /* Below a tablet the rail would leave the page nothing, and a handle that toggles an
-           invisible panel is worse than no handle — the whole thing withdraws. */
         @media (max-width: 1100px) {
-            :host { display: none; }
+            :host.is-open {
+                position: absolute;
+                inset: 0 0 0 auto;
+                z-index: 30;
+                box-shadow: var(--shadow-paper);
+            }
+            .handle { width: var(--hit-surface, 44px); }
+            .grip { display: none; }
+            .rail { width: min(var(--inspector-w, 320px), calc(100vw - var(--hit-surface, 44px))); }
         }
+
     `],
 })
 export class InspectorRailComponent {

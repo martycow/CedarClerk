@@ -4,6 +4,10 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> French = new Dictionary<string, string>
     {
+        [nameof(ProjectRequired)] = "Choisissez un projet actif pour ce document.",
+        [nameof(AccountVerificationFailed)] = "Vérifiez votre mot de passe actuel et votre adresse e-mail.",
+        [nameof(AccountBillingMustClose)] = "Réglez les paiements récurrents avant de supprimer le compte. Contactez le support si nécessaire.",
+        [nameof(PasswordChangeFailed)] = "Impossible de modifier le mot de passe. Vérifiez le mot de passe actuel et les exigences du nouveau mot de passe.",
         [nameof(PasswordRecoveryUnavailable)] = "La récupération du mot de passe est temporairement indisponible. Réessayez plus tard.",
         [nameof(PasswordResetInvalid)] = "Le lien est invalide ou expiré, ou le mot de passe ne respecte pas les exigences. Demandez un nouveau lien et réessayez.",
         [nameof(DraftNotFound)] = "Brouillon introuvable.",

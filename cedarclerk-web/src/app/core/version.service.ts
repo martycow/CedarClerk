@@ -22,6 +22,7 @@ export class VersionService {
     // T-003 — which sign-in buttons the two doors may draw. Read from the same call for the same
     // reason as openRegistration: /login and /register run before there is a session to ask with.
     readonly googleAuth = signal(false);
+    readonly discordAuth = signal(false);
     readonly telegramBotId = signal<number | null>(null);
     readonly telegramBot = signal<string | null>(null);
 
@@ -31,6 +32,7 @@ export class VersionService {
                 this.version.set(r.version);
                 this.openRegistration.set(r.openRegistration ?? false);
                 this.googleAuth.set(r.externalAuth?.google ?? false);
+                this.discordAuth.set(r.externalAuth?.discord ?? false);
                 this.telegramBotId.set(r.externalAuth?.telegramBotId ?? null);
                 this.telegramBot.set(r.externalAuth?.telegramBot ?? null);
             })
@@ -41,5 +43,5 @@ export class VersionService {
 interface HealthResponse {
     version: string;
     openRegistration?: boolean;
-    externalAuth?: { google?: boolean; telegramBot?: string | null; telegramBotId?: number | null } | null;
+    externalAuth?: { discord?: boolean; google?: boolean; telegramBot?: string | null; telegramBotId?: number | null } | null;
 }

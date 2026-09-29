@@ -49,7 +49,8 @@ public static class ExternalAuthEndpoints
 
         group.MapGet("/{provider}", (string provider, string? returnUrl, HttpContext ctx, IConfiguration cfg) =>
         {
-            var scheme = GoogleScheme(provider, cfg);
+            var scheme = string.Equals(provider, DiscordAuthentication.Scheme, StringComparison.OrdinalIgnoreCase)
+                && DiscordAuthentication.IsConfigured(cfg) ? DiscordAuthentication.Scheme : GoogleScheme(provider, cfg);
             if (scheme is null)
                 return Results.Json(new { error = ErrorMessages.ExternalProviderNotConfigured },
                     statusCode: StatusCodes.Status501NotImplemented);

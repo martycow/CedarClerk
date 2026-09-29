@@ -26,7 +26,7 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
         '(document:keydown)': 'onDocumentKeydown($event)',
     },
     template: `
-        <div class="bar" role="menubar" [attr.aria-label]="labels().label">
+        <div class="bar"><ng-content /><div class="menus" role="menubar" [attr.aria-label]="labels().label">
             @for (group of groups(); track group.id) {
                 <div class="menu" [class.is-open]="openGroup() === group.id">
                     <button type="button" class="top" role="menuitem"
@@ -65,7 +65,7 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
                     }
                 </div>
             }
-        </div>
+        </div></div>
     `,
     styles: [`
         :host { display: block; }
@@ -74,13 +74,14 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
             display: flex;
             align-items: stretch;
             gap: 2px;
-            height: 28px;
+            min-height: var(--hit-touch);
             padding: 0 var(--space-1);
-            background: var(--surface);
+            background: var(--alt);
             color: var(--text);
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border-strong);
         }
 
+        .menus { display: flex; align-items: stretch; }
         .menu { position: relative; display: flex; }
 
         .top {
@@ -93,7 +94,7 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
             background: transparent;
             color: inherit;
             font: inherit;
-            font-size: var(--text-chrome-sm, var(--fs-11));
+            font-size: var(--fs-ui);
             cursor: pointer;
         }
 

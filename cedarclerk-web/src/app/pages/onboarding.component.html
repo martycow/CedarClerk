@@ -19,10 +19,8 @@
                    [placeholder]="t().onboarding.profileUrlPlaceholder" autocomplete="url"
                    [value]="profileUrl" (valueChange)="profileUrl = $any($event) ?? ''"
                    (keyup.enter)="submit()" />
-        <app-input inputId="cc-onb-location" [label]="t().onboarding.location"
-                   [placeholder]="t().onboarding.locationPlaceholder" autocomplete="off"
-                   [value]="location" (valueChange)="location = $any($event) ?? ''"
-                   (keyup.enter)="submit()" />
+        <label for="onboarding-location">{{ t().onboarding.location }}</label>
+        <app-location-input inputId="onboarding-location" [value]="location" [placeholder]="t().onboarding.locationPlaceholder" (valueChange)="location = $event" />
 
         @if (auth.blogUrl(); as blog) {
         <div class="blog-address">

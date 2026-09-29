@@ -28,6 +28,10 @@ export class ExternalAuthService {
     private locale = inject(LocaleService);
 
     /** Leaves the app. Nothing after this line runs. */
+    startDiscord(returnUrl: string): void {
+        location.href = `/api/auth/external/discord?returnUrl=${encodeURIComponent(returnUrl)}`;
+    }
+
     startGoogle(returnUrl: string): void {
         const query = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : '';
         location.href = `/api/auth/external/google${query}`;

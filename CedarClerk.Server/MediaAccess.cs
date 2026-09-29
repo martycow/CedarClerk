@@ -95,9 +95,7 @@ public sealed class MediaOwnerIndex(IServiceScopeFactory scopes, TenantOwnerCach
 /// Which of an owner's files a stranger may read, derived from the posts that reference them: a
 /// file inherits the audience of the documents it is published in. Referenced by a public post it
 /// is public; referenced only by private ones it is theirs, and opens to whoever may open one of
-/// them. A file no published post claims — a library upload, a project cover, a document still
-/// being written — is not gated, which is what the editor, the showcase pages and a first send to
-/// Telegram all read.
+/// them. Unpublished files remain owner-only unless a public profile or showcase references them.
 ///
 /// Computed for the whole account in one pass rather than per file: a blog page asks about every
 /// image on it at once, and a per-file question would be a scan of the account's documents each
@@ -164,7 +162,7 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
         // index and its files fell through to "nothing claims this".
         var posts = await db.Drafts.AsNoTracking()
             .Where(d => d.OwnerId == ownerId && (d.IsBlogPublished || d.IsPrivate))
-            .Select(d => new { d.Id, d.IsPrivate, d.LastTelegramChatId, d.CedarJson })
+            .Select(d => new { d.Id, d.IsPrivate, d.LastTelegramChatId, d.CedarJson, d.CoverImagePath, d.PrimaryLanguage, d.ProjectId })
             .ToListAsync(ct);
 
         // A post already sent to a channel counts as public whatever its blog page says: channel
@@ -174,33 +172,55 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
         var open = new HashSet<Guid>();
         var gated = new Dictionary<Guid, HashSet<Guid>>();
 
-        void Fold(Guid draftId, string cedarJson)
+        void Include(Guid draftId, string? path)
+        {
+            if (path is null) return;
+            var name = path.StartsWith("/media/", StringComparison.Ordinal) ? path[7..] : path;
+            if (!MediaFileNames.TryParse(name, out var reference)) return;
+            if (!gates[draftId]) open.Add(reference.Id);
+            else if (gated.TryGetValue(reference.Id, out var drafts)) drafts.Add(draftId);
+            else gated[reference.Id] = [draftId];
+        }
+
+        var glossary = await db.GlossaryTerms.AsNoTracking().Where(t => t.OwnerId == ownerId).ToListAsync(ct);
+        var exclusions = await db.DraftGlossaryExclusions.AsNoTracking()
+            .Where(x => x.OwnerId == ownerId).ToListAsync(ct);
+
+        void Fold(Guid draftId, string cedarJson, string language, Guid? projectId)
         {
             foreach (var name in CedarPackage.FindReferencedMediaPathsSafe(cedarJson))
-            {
-                if (!MediaFileNames.TryParse(name, out var reference)) continue;
+                Include(draftId, name);
 
-                // Keyed by the asset, not by the file: a Telegram-safe derivative is the same
-                // picture and must not be the way around its post's gate.
-                if (!gates[draftId]) open.Add(reference.Id);
-                else if (gated.TryGetValue(reference.Id, out var drafts)) drafts.Add(draftId);
-                else gated[reference.Id] = [draftId];
-            }
+            var excluded = exclusions.Where(x => x.DraftId == draftId && x.Language == language)
+                .Select(x => x.GlossaryTermId).ToHashSet();
+            var terms = GlossaryEndpoints.Entries(glossary.Where(t => t.Language == language &&
+                (t.ProjectId == null || t.ProjectId == projectId) && !excluded.Contains(t.Id)));
+            if (!terms.Any(t => t.ImageUrl is not null)) return;
+            string html;
+            try { html = CedarToBlogHtmlRenderer.Render(cedarJson, "", language, terms); }
+            catch (System.Text.Json.JsonException) { return; }
+            foreach (var term in terms.Where(t => t.ImageUrl is not null))
+                if (html.Contains("data-img=\"" + System.Net.WebUtility.HtmlEncode(term.ImageUrl) + "\"", StringComparison.Ordinal))
+                    Include(draftId, term.ImageUrl);
         }
 
         foreach (var post in posts)
-            Fold(post.Id, post.CedarJson);
+        {
+            Include(post.Id, post.CoverImagePath);
+            Fold(post.Id, post.CedarJson, post.PrimaryLanguage, post.ProjectId);
+        }
 
         // A translated page is the same post for a different reader and may carry media the
         // primary language does not.
         var ids = posts.Select(p => p.Id).ToList();
         var translations = await db.DraftTranslations.AsNoTracking()
             .Where(t => ids.Contains(t.DraftId))
-            .Select(t => new { t.DraftId, t.CedarJson })
+            .Select(t => new { t.DraftId, t.CedarJson, t.Language })
             .ToListAsync(ct);
         foreach (var translation in translations)
             if (gates.ContainsKey(translation.DraftId))
-                Fold(translation.DraftId, translation.CedarJson);
+                Fold(translation.DraftId, translation.CedarJson, translation.Language,
+                    posts.First(p => p.Id == translation.DraftId).ProjectId);
 
         foreach (var id in open) gated.Remove(id);
 
@@ -221,9 +241,9 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
         var avatar = await db.Users.AsNoTracking().Where(u => u.Id == ownerId)
             .Select(u => u.AvatarUrl).FirstOrDefaultAsync(ct);
 
-        var covers = await db.Projects.AsNoTracking()
-            .Where(p => p.OwnerId == ownerId && p.ShowcaseSlug != null && p.CoverUrl != null)
-            .Select(p => p.CoverUrl!)
+        var projects = await db.Projects.AsNoTracking()
+            .Where(p => p.OwnerId == ownerId && p.ShowcaseSlug != null)
+            .Select(p => new { p.CoverUrl, p.ShowcaseGallery })
             .ToListAsync(ct);
 
         // A channel's picture sits in the blog header beside the author's.
@@ -232,7 +252,8 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
             .Select(c => c.AvatarPath!)
             .ToListAsync(ct);
 
-        var names = covers;
+        var names = projects.SelectMany(p => ShowcaseGallery.Parse(p.ShowcaseGallery)
+            .Concat(p.CoverUrl is null ? [] : new[] { p.CoverUrl })).ToList();
         names.AddRange(channels);
         if (avatar is not null) names.Add(avatar);
         return names.Select(n => n.StartsWith(MediaAccessExtensions.Prefix + "/", StringComparison.Ordinal)

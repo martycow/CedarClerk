@@ -32,7 +32,7 @@ public static class AssetEndpoints
 
     public static void MapAssetEndpoints(this WebApplication app)
     {
-        app.MapPost("/api/assets", async (IFormFile file, ClaimsPrincipal user, CedarDbContext db, MediaPaths media, ILogger<Asset> logger) =>
+        app.MapPost("/api/assets", async (IFormFile file, Guid? projectId, ClaimsPrincipal user, CedarDbContext db, MediaPaths media, ILogger<Asset> logger) =>
             {
                 if (!Allowed.TryGetValue(file.ContentType, out var allowed))
                     return Results.BadRequest(new { error = ErrorMessages.UnsupportedFileType(file.ContentType) });
@@ -42,6 +42,8 @@ public static class AssetEndpoints
                     return Results.BadRequest(new { error = ErrorMessages.FileTooLarge(maxBytes / (1024 * 1024)) });
 
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+                if (projectId is not null && !await db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == uid && p.ArchivedAt == null))
+                    return Results.NotFound();
                 var tier = await SubscriptionPlan.EffectiveTierAsync(db, uid);
                 var usedBytes = await db.Assets.Where(a => a.OwnerId == uid).SumAsync(a => a.SizeBytes);
 
@@ -64,6 +66,7 @@ public static class AssetEndpoints
                     ContentType = file.ContentType,
                     SizeBytes = bytes.Length,
                     OwnerId = uid,
+                    ProjectId = projectId,
                 };
                 asset.LocalPath = $"asset_{asset.Id}{ext}";
                 await File.WriteAllBytesAsync(Path.Combine(media.Dir, asset.LocalPath), bytes);

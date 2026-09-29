@@ -16,6 +16,8 @@ public static class AccountDeletion
         var files = await db.Assets.Where(a => a.OwnerId == ownerId)
             .Select(a => a.LocalPath).ToListAsync();
 
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
         // Delete rows before files so a partial failure cannot remove a live account's media.
         await db.ChannelPosts.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.ChannelStatSnapshots.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
@@ -56,6 +58,8 @@ public static class AccountDeletion
         await db.ProjectMembers.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         // Memberships in other owners' projects must also lose access.
         await db.ProjectMembers.Where(x => x.MemberUserId == ownerId).ExecuteDeleteAsync();
+        await db.TeamMembers.Where(x => x.OwnerId == ownerId || x.MemberUserId == ownerId).ExecuteDeleteAsync();
+        await db.Teams.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Assets.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Folders.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
         await db.Series.Where(x => x.OwnerId == ownerId).ExecuteDeleteAsync();
@@ -67,6 +71,7 @@ public static class AccountDeletion
 
         db.Users.Remove(user);
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         // Invalidate the subdomain before file cleanup, which can fail independently.
         if (user.TenantUsername is { } name) hosts.Forget(name);

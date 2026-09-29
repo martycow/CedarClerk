@@ -522,3 +522,6 @@
 @media (max-width: 640px) {
     .choice-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.project-type-symbol { display: grid; place-items: center; width: 100%; min-height: 100px; background: var(--asoft); color: var(--accent); }
+.project-type-symbol app-icon { transform: scale(2); }

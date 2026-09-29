@@ -84,6 +84,15 @@
                     </div>
                 </div>
 
+                <fieldset class="field-group">
+                    <legend>{{ t().accountSecurity.title }}</legend>
+                    <app-input inputId="account-current-password" type="password" autocomplete="current-password" [label]="t().accountSecurity.currentPassword" [(ngModel)]="currentPassword" />
+                    <app-input inputId="account-new-password" type="password" autocomplete="new-password" [label]="t().accountSecurity.newPassword" [(ngModel)]="newPassword" />
+                    <app-button variant="paper" [disabled]="securityBusy() || !currentPassword || !newPassword" (clicked)="changePassword()">{{ t().accountSecurity.changePassword }}</app-button>
+                    <p class="hint">{{ t().accountSecurity.providerHint }} <a href="/forgot-password">{{ t().passwordRecovery.forgot }}</a></p>
+                    <app-button variant="danger" (clicked)="deleteAccountOpen.set(true)">{{ t().accountSecurity.deleteAccount }}</app-button>
+                    @if (securityNote()) { <p role="status">{{ securityNote() }}</p> }
+                </fieldset>
                 <!--T-344 — who the author is lives here; Header slots below keeps only which
                 values a post's subtitle shows. These three used to sit among the slots.-->
                 <div class="field-group">
@@ -967,3 +976,15 @@
     </div>
     </div>
 </div>
+
+@if (deleteAccountOpen()) {
+    <app-modal (closed)="deleteAccountOpen.set(false)">
+        <span modal-title>{{ t().accountSecurity.deleteAccount }}</span>
+        <p>{{ t().accountSecurity.deleteWarning }}</p>
+        <app-input inputId="account-delete-email" type="email" [label]="t().accountSecurity.email" [(ngModel)]="deleteEmail" />
+        <app-input inputId="account-delete-password" type="password" autocomplete="current-password" [label]="t().accountSecurity.currentPassword" [(ngModel)]="currentPassword" />
+        @if (securityNote()) { <p role="alert">{{ securityNote() }}</p> }
+        <app-button modal-actions variant="paper" [disabled]="securityBusy()" (clicked)="deleteAccountOpen.set(false)">{{ t().common.cancel }}</app-button>
+        <app-button modal-actions variant="danger" [disabled]="securityBusy() || !currentPassword || deleteEmail !== auth.userEmail()" (clicked)="deleteAccount()">{{ t().accountSecurity.deleteAccount }}</app-button>
+    </app-modal>
+}

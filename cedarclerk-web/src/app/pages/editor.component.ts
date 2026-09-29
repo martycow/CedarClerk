@@ -3482,7 +3482,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
             const isPrivate = opts?.isPrivate ?? false;
             const folderId = opts?.folderId ?? null;
 
-            const created = await this.draftsApi.create(title, cedarJson);
+            const created = await this.draftsApi.create(title, cedarJson, this.currentProject.id());
             // Same follow-up-call shape as tags: create first, then apply the extras the
             // create endpoint doesn't take.
             if (tags.length) await this.draftsApi.updateTags(created.id, tags.join(','));
@@ -3503,7 +3503,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 blogSlug: null, isBlogPublished: false, blogPublishedAt: null,
                 languages, tags: tags.join(','),
                 isArchived: false, lastTelegramMessageId: null, lastTelegramUsername: null,
-                staleLanguages: [], scheduled: null, folderId, seriesId: null, projectId: null, parentDraftId: null, siblingOrder: 0,
+                staleLanguages: [], scheduled: null, folderId, seriesId: null, projectId: this.currentProject.id(), parentDraftId: null, siblingOrder: 0,
                 isPrivate, isTemplate: false, disableCopy: false,
                 disableReactions: false, disableComments: false, documentType: 'post',
                 viewCount: 0, reactionCount: 0, newViewCount: 0, newReactionCount: 0,
@@ -4797,7 +4797,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         const id = ++this.uploadSeq;
         this.uploads.update(list => [...list, { id, name: file.name, progress: 0 }]);
         return new Promise(resolve => {
-            this.assets.uploadWithProgress(file).subscribe({
+            this.assets.uploadWithProgress(file, this.currentMeta()?.projectId).subscribe({
                 next: event => {
                     if (event.type === HttpEventType.UploadProgress && event.total) {
                         const progress = Math.round((event.loaded / event.total) * 100);

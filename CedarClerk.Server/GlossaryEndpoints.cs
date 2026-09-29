@@ -416,10 +416,12 @@ public static class GlossaryEndpoints
         var rows = await db.GlossaryTerms
             .Where(t => t.OwnerId == ownerId && t.Language == language
                         && (t.ProjectId == null || t.ProjectId == projectId) && !excluded.Contains(t.Id))
-            .Select(t => new { t.Term, t.Description, t.Aliases, t.ImageUrl, t.IsCaseSensitive, t.ProjectId })
             .ToListAsync();
 
-        return rows
+        return Entries(rows);
+    }
+
+    internal static IReadOnlyList<GlossaryEntry> Entries(IEnumerable<GlossaryTerm> rows) => rows
             // Project terms first, so DistinctBy below keeps them over a global term of the same
             // name. Comparison is case-insensitive because the scanner matches that way too.
             .OrderByDescending(r => r.ProjectId.HasValue)
@@ -431,7 +433,6 @@ public static class GlossaryEndpoints
                 r.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                 r.IsCaseSensitive))
             .ToList();
-    }
 
     private static bool ContainsWholeWord(string text, string candidate, bool caseSensitive)
     {

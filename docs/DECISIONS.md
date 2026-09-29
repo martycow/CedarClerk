@@ -303,3 +303,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-303 — Empty language versions need a full translation](adr/ADR-303.md)
 - [ADR-304 — Remove the MooTool `cedar` console](adr/ADR-304.md)
 - [ADR-305 — Move to .NET 10 LTS](adr/ADR-305.md)
+
+- [ADR-306 — Project-centered workflows and the Framer reference](adr/ADR-306.md)

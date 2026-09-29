@@ -21,6 +21,14 @@ describe('AssetsService.meta', () => {
 
     afterEach(() => http.verify());
 
+    it('files uploads into the selected project at upload time', async () => {
+        const answer = api.upload(new File(['image'], 'cover.png', { type: 'image/png' }), 'project-a');
+        const request = http.expectOne(r => r.url === '/api/assets');
+        expect(request.request.params.get('projectId')).toBe('project-a');
+        request.flush({ id: 'a1', url: '/media/cover.png' });
+        await answer;
+    });
+
     it('asks by id when the node carries one', async () => {
         const answer = api.meta({ id: 'a1', path: '2026/08/fog.png' });
         const req = http.expectOne(r => r.url === '/api/assets/meta');

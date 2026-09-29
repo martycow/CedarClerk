@@ -9,20 +9,20 @@ guard: none
 
 The single entry point for turning Cedar Clerk into an indie game developer's toolkit. The original source of the idea is the out-of-repo brief `Gamedev_Focused_Rework.md`. Decisions — `docs/DECISIONS.md`, ADR-101…107. Desktop architecture — `docs/tech/DESKTOP.md`. Phase 13 work order — archived in `docs/archive/roadmap-phases-0-13.md`.
 
-The `indiedev_module` branch (created from `dev`) **has been merged into `master` with v0.10.0 and deleted**. The reversibility that the brief demanded of the branch now lives in the `Cedar:Modules:IndieDev` flag (ADR-101): turning it off returns today's application in full. **The module's MUST list was closed on 11.08.2026** — status is recorded in `docs/archive/roadmap-phases-0-13.md` (Phase 13); the open remainder (MIGHT + `T-127`) lives on the board.
+The `indiedev_module` branch (created from `dev`) **has been merged into `master` with v0.10.0 and deleted**. The reversibility that the brief demanded of the branch now lives in the `Cedar:Modules:IndieDev` flag (ADR-101): turning it off keeps core project/document organization and publishing available. **The module's MUST list was closed on 11.08.2026** — status is recorded in `docs/archive/roadmap-phases-0-13.md` (Phase 13); the open remainder (MIGHT + `T-127`) lives on the board.
 
 ## What changes
 
 Cedar Clerk stops being "a post editor that publishes to several networks" and becomes a platform where **a post is one type of document**, and documents live inside a **project** (in Marty's terms — a game). Around the documents appear things that are not posts at all: tasks, sprints, an asset index, reference boards, writer and game-designer assistants.
 
-Nothing existing is replaced in the process. The module **adds** — the editor, `/drafts`, `/posts`, `/settings` keep working as they worked, and turning off the `Cedar:Modules:IndieDev` flag returns today's application in full.
+Nothing existing is replaced in the process. The module **adds** — the editor, `/drafts`, `/posts`, `/settings` keep working as they worked, and turning off the `Cedar:Modules:IndieDev` flag keeps core project/document organization and publishing available.
 
 ## Positioning
 
 Since ADR-243, this is Cedar Clerk's deepest craft-specific module inside a broader platform for
 independent makers. Projects and Devlogs participate in Discovery, but a personal Blog remains a
-complete first-class path without this module. The flag still removes only the project toolkit; it
-does not remove publishing or the shared Blog discovery lens.
+complete first-class path without this module. The flag removes game-specific tools. Core project organization, document ownership,
+publishing and the Blog discovery lens remain available (ADR-306).
 
 This is also the answer to `Q-1` in `docs/tasks/BACKLOG.md`, which had stood open since 30.07.2026: back then four focuses were named (bloggers, photographers/videomakers, writer assistance, indie gamedev assistance) and the wording of the fifth was lost. The brief picks one — **indie game developer** — and picks it for an honest reason: it is Marty himself, i.e. the only audience whose needs are checked here not by guesswork but by his own work.
 

@@ -661,6 +661,56 @@ public class MediaOwnershipTests : IDisposable
     }
 
 
+    [Theory]
+    [InlineData(false, 200)]
+    [InlineData(true, 404)]
+    public async Task A_cover_inherits_its_posts_audience(bool isPrivate, int status)
+    {
+        var cover = Guid.NewGuid();
+        Seed(cover, OwnerB);
+        db.Drafts.Add(new Draft { OwnerId = OwnerB, Title = "Cover", BlogSlug = "cover",
+            IsBlogPublished = true, IsPrivate = isPrivate, CoverImagePath = $"/media/asset_{cover}.jpg" });
+        db.SaveChanges();
+        var ctx = await GetAsync($"/media/asset_{cover}.jpg", null);
+        Assert.Equal(status, ctx.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(true, 200)]
+    [InlineData(false, 404)]
+    public async Task Gallery_images_require_a_public_showcase(bool published, int status)
+    {
+        var picture = Guid.NewGuid();
+        Seed(picture, OwnerB);
+        db.Projects.Add(new Project { OwnerId = OwnerB, Name = "Gallery",
+            ShowcaseSlug = published ? "gallery" : null, ShowcaseGallery = $"/media/asset_{picture}.jpg" });
+        db.SaveChanges();
+        var ctx = await GetAsync($"/media/asset_{picture}.jpg", null);
+        Assert.Equal(status, ctx.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false, false, 200)]
+    [InlineData(true, false, 404)]
+    [InlineData(false, true, 404)]
+    public async Task Glossary_images_follow_the_rendered_posts_audience(bool isPrivate, bool excluded, int status)
+    {
+        var picture = Guid.NewGuid();
+        Seed(picture, OwnerB);
+        var term = new GlossaryTerm { OwnerId = OwnerB, Term = "Cedar", Language = "en",
+            ImageUrl = $"/media/asset_{picture}.jpg" };
+        var post = new Draft { OwnerId = OwnerB, Title = "Glossary", BlogSlug = "glossary",
+            IsBlogPublished = true, IsPrivate = isPrivate, PrimaryLanguage = "en",
+            CedarJson = """{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Cedar"}]}]}""" };
+        db.GlossaryTerms.Add(term);
+        db.Drafts.Add(post);
+        if (excluded) db.DraftGlossaryExclusions.Add(new DraftGlossaryExclusion {
+            OwnerId = OwnerB, DraftId = post.Id, GlossaryTermId = term.Id, Language = "en" });
+        db.SaveChanges();
+        var ctx = await GetAsync($"/media/asset_{picture}.jpg", null);
+        Assert.Equal(status, ctx.Response.StatusCode);
+    }
+
     // Telegram's fetcher is anonymous and pulls a file while the post is still a draft, so nothing
     // published claims it yet. The send hands it a signed key instead of leaving every unclaimed
     // file readable, which is what T-285 was.

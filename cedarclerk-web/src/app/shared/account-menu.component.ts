@@ -6,7 +6,6 @@ import { CreditBalanceService } from '../core/credit-balance.service';
 import { FeedbackFormService } from '../core/feedback-form.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
-import { VersionService } from '../core/version.service';
 import { IconComponent } from './icon.component';
 import { PopoverComponent } from './popover.component';
 
@@ -68,12 +67,6 @@ import { PopoverComponent } from './popover.component';
                     <li><a class="account-item" routerLink="/admin">
                         <app-icon name="shield-check" size="sm" />{{ t().shell.admin }}
                     </a></li>
-                    <li><a class="account-item" routerLink="/dev/styleguide">
-                        <app-icon name="palette" size="sm" />{{ t().shell.styleguide }}
-                    </a></li>
-                    <li><a class="account-item" routerLink="/dev/icons">
-                        <app-icon name="squares-four" size="sm" />{{ t().shell.icons }}
-                    </a></li>
                     <li><button type="button" class="account-item is-quiet" (click)="toggleConsole()">
                         <app-icon name="terminal-window" size="sm" />{{ t().shell.debugConsole }}
                         <kbd class="account-kbd">Ctrl+\`</kbd>
@@ -83,7 +76,6 @@ import { PopoverComponent } from './popover.component';
                     <li class="account-sep" role="separator"></li>
                     <li><a class="account-item is-quiet" href="/welcome">
                         <app-icon name="tree-evergreen" size="sm" />{{ t().shell.aboutLanding }}
-                        @if (versionLabel(); as v) { <span class="account-version" [title]="t().shell.version(v)">{{ v }}</span> }
                     </a></li>
                     <li><button type="button" class="account-item is-danger" (click)="logout()">
                         <app-icon name="sign-out" size="sm" />{{ t().editor.logout }}
@@ -102,18 +94,12 @@ export class AccountMenuComponent {
     protected readonly auth = inject(AuthService);
     protected readonly t = inject(LocaleService).t;
     private readonly feedbackForm = inject(FeedbackFormService);
-    private readonly version = inject(VersionService);
     private readonly creditBalance = inject(CreditBalanceService);
     private readonly overlays = inject(OverlayCoordinatorService);
 
     protected readonly userName = computed(() => {
         const email = this.auth.userEmail() ?? '';
         return this.auth.authorDisplayName() || email.split('@')[0];
-    });
-
-    protected readonly versionLabel = computed(() => {
-        const value = this.version.version();
-        return value ? `v${value}` : '';
     });
 
     protected readonly credits = computed<number | null>(() => {

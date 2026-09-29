@@ -184,6 +184,8 @@ export class ProjectComponent {
     });
 
     /** What "Continue writing" opens: the document touched last. */
+    blogViews = computed(() => this.documents().reduce((sum, doc) => sum + (doc.viewCount ?? 0), 0));
+
     resumeDoc = computed<ProjectDocument | null>(() => this.documents()[0] ?? null);
 
     /** The one task the side column shows — the server already sorted them by urgency. */

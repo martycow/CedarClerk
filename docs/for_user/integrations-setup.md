@@ -479,3 +479,13 @@ LinkedIn отказывают (условия API §3.1 п. 26). Бесплат�
 
 Пока домен не направлен на нас, строка в проекте ничего не ломает: она просто ни на что не отвечает.
 Порядок «сначала DNS, потом поле» тоже рабочий, важно лишь, чтобы в итоге были обе половины.
+
+## Discord sign-in
+
+Set `Cedar:Auth:Discord:ClientId` and `Cedar:Auth:Discord:ClientSecret` in the server's
+secret configuration. Register `https://cedarclerk.app/signin-discord` as the OAuth
+redirect for the production hostname (use the actual hostname for another deployment).
+The provider requests `identify` and `email`; the returned address must be verified.
+The button appears on Login only when both values are configured. Existing invitation
+rules still apply to new accounts. Verify a full sign-in and return URL after setup.
+Reference: https://docs.discord.com/developers/topics/oauth2

@@ -1,3 +1,4 @@
+import { LocationInputComponent } from '../shared/location-input.component';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
@@ -14,7 +15,7 @@ import { InputComponent } from '../bench/forms/input.component';
 // auth.guard.ts routes every account without a display name to this door.
 @Component({
     selector: 'app-onboarding',
-    imports: [
+    imports: [LocationInputComponent,
         CedarLogoComponent, LangSwitchComponent,
         ButtonComponent, InputComponent, IconComponent,
     ],

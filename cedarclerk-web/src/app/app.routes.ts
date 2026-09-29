@@ -117,12 +117,12 @@ export const routes: Routes = [
             {
                 path: 'projects',
                 loadComponent: () => import('./pages/projects.component').then(m => m.ProjectsComponent),
-                canActivate: [indieDevGuard],
+                canActivate: [authGuard],
             },
             {
                 path: 'projects/:id',
                 loadComponent: () => import('./pages/project.component').then(m => m.ProjectComponent),
-                canActivate: [indieDevGuard],
+                canActivate: [authGuard],
             },
             {
                 path: 'projects/:id/assets',

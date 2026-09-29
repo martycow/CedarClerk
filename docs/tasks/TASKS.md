@@ -13,6 +13,8 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [x] T-394 Implement the v0.23.6 review locally — ADR-306; media access and upload filing, project-owned documents, shared Properties, toolbar/sidebar/hub, landing disclosures and account security. Branch `codex/framer-review`; not deployed. Google live failure diagnosis and Discord production setup remain on T-003. #ui #projects #auth P1
+
 - [ ] Workshop chrome (ADR-301) — menu bar, command registry, `Ctrl+Shift+P` palette, shell-level inspector rail and the `/ai` operations log, on `claude/app-chrome`, **not merged, not deployed**. Front-end only: no entity, no migration, no endpoint; opened in a browser twice (see §Live verification for what those passes still did not cover). `T-386` is done: five screens publish their open object and its protected fields, and the editor and glossary register their real AI runs. Still open under it — no screen has multi-select, so a batch is unreachable (`T-389`); the rail and the page-local inspectors now print the same rows (`T-390`); the rail's width pushes the drafts table's Title column off screen (`T-391`); and the log still needs a durable home (`T-385`). The eye-check is its row under §Live verification #ui #ai P1
 
 - [ ] Authentication provider setup (ADR-296) — consolidated in release 0.23.1: branded forms, Google route fix and password recovery. Remaining: configure both Google credentials and `https://cedarclerk.app/signin-google`, bind `cedar_clerk_bot` to `cedarclerk.app` in BotFather, and verify real provider sign-in and recovery email delivery. #auth #operations P1
@@ -78,11 +80,8 @@ see them.
   `AddDraftLastTelegramSentAt`. Verified by tests only — the smoke suite's cold run (60 passed, 18
   audit skips) and the login spec's ten-times repeat (40/40) were green on the branch; the eye-checks
   are the sweep row under §Live verification.
-- **T-003 (sign in with Google/Telegram) is built but not configured**: same shape as the analytics
-  row below — nothing is registered without credentials, and both doors draw no provider button at
-  all, so production looks unchanged until Marty creates the Google OAuth client and runs
-  `@BotFather /setdomain`. Apple and Discord stay on T-003; Apple's four costs are written on that
-  row now rather than discovered later.
+- **T-003 live verification remains open.** Google is configured on production and its initial redirect succeeds; the reported later failure needs a full round trip or accessible logs. Discord is implemented but needs credentials and provider setup. Apple remains unimplemented.
+
 - **T-153 (analytics) is built but not configured**: the code is on master and off by default —
   without `Cedar:Analytics:Enabled` and a project key the provider is never registered, no banner is
   shown and `/api/health` carries no `analytics` section. Turning it on is three lines in the systemd

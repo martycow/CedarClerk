@@ -283,7 +283,7 @@ export class MediaLibraryComponent implements OnDestroy {
         this.uploading.set(true);
         this.uploadError.set(null);
         try {
-            for (const file of files) await this.api.upload(file);
+            for (const file of files) await this.api.upload(file, this.pinnedProject() ?? (this.bucket() === 'none' ? null : this.bucket()));
             this.skip.set(0);
             await this.reload();
         } catch (e) {

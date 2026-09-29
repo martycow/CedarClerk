@@ -309,6 +309,13 @@ public static class ProjectEndpoints
                 .Select(g => new { ProjectId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.ProjectId, g => g.Count);
 
+            var uploads = await db.Assets.Where(a => a.OwnerId == uid && a.ProjectId != null)
+                .GroupBy(a => a.ProjectId)
+                .Select(g => new { ProjectId = g.Key!.Value, Count = g.Count() })
+                .ToListAsync();
+            foreach (var uploaded in uploads)
+                assetCounts[uploaded.ProjectId] = assetCounts.GetValueOrDefault(uploaded.ProjectId) + uploaded.Count;
+
             var builds = await BuildSummariesAsync(db, uid);
             var lastPublished = await LastPublishedAsync(db, uid);
             var modules = await ModulesAsync(db, uid, projects.Select(p => p.Id));
@@ -351,7 +358,7 @@ public static class ProjectEndpoints
             var documents = await db.Drafts
                 .Where(d => d.ProjectId == id && d.OwnerId == uid)
                 .OrderByDescending(d => d.UpdatedAt)
-                .Select(d => new { d.Id, d.Title, d.DocumentType, d.UpdatedAt, d.IsArchived, d.IsBlogPublished })
+                .Select(d => new { d.Id, d.Title, d.DocumentType, d.UpdatedAt, d.IsArchived, d.IsBlogPublished, d.CoverImagePath, d.ViewCount })
                 .ToListAsync();
 
             // T-123 — the dashboard's right rail. Five tasks, sorted by urgency in one place so the
@@ -767,10 +774,16 @@ public static class ProjectEndpoints
             var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
             if (project is null) return Results.NotFound();
 
-            // Documents survive the project and are simply unfiled — they are the user's writing,
-            // and deleting a container is not a request to delete what was in it.
+            if (id == DocumentProjects.PersonalId(uid)) return LastDocumentRefusal();
+            await using var deletion = await db.Database.BeginTransactionAsync();
+            var personalId = await DocumentProjects.PersonalAsync(db, uid);
+            await db.SaveChangesAsync();
             await db.Drafts.Where(d => d.ProjectId == id && d.OwnerId == uid)
-                .ExecuteUpdateAsync(s => s.SetProperty(d => d.ProjectId, d => null));
+                .ExecuteUpdateAsync(s => s.SetProperty(d => d.ProjectId, personalId));
+            await db.Assets.Where(a => a.ProjectId == id && a.OwnerId == uid)
+                .ExecuteUpdateAsync(s => s.SetProperty(a => a.ProjectId, personalId));
+            await db.GlossaryTerms.Where(t => t.ProjectId == id && t.OwnerId == uid)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.ProjectId, personalId));
 
             // Everything that only means anything *inside* this project does go, though. None of
             // these three has a navigation property, so EF cascades none of them, and each was
@@ -794,6 +807,7 @@ public static class ProjectEndpoints
 
             db.Projects.Remove(project);
             await db.SaveChangesAsync();
+            await deletion.CommitAsync();
             return Results.NoContent();
         });
 
@@ -876,7 +890,8 @@ public static class ProjectEndpoints
             if (await IsLastDocumentOfProjectAsync(db, draftId, id, uid))
                 return LastDocumentRefusal();
 
-            draft.ProjectId = null;
+            if (id == DocumentProjects.PersonalId(uid)) return LastDocumentRefusal();
+            draft.ProjectId = await DocumentProjects.PersonalAsync(db, uid);
             await db.SaveChangesAsync();
             return Results.NoContent();
         });

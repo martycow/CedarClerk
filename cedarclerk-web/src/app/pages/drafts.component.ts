@@ -1,4 +1,6 @@
-import { Component, OnDestroy, OnInit, effect, inject, signal, viewChild } from '@angular/core';
+import { ProjectsService, ProjectSummary } from '../core/projects.service';
+import { CurrentProjectService } from '../core/current-project.service';
+import { Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import {
     CdkDrag, CdkDragDrop, CdkDragHandle, CdkDragMove, CdkDragPlaceholder, CdkDropList,
 } from '@angular/cdk/drag-drop';
@@ -32,11 +34,11 @@ import { LeafTagComponent } from '../bench/display/leaf-tag.component';
 import { PaperCardComponent } from '../bench/display/paper-card.component';
 import { InputComponent } from '../bench/forms/input.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
-import { SpecRowComponent } from '../bench/worktop/spec-row.component';
 import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { SortHeaderComponent } from '../bench/worktop/sort-header.component';
 import { ariaSort } from '../core/collection-query';
+import { AppearanceService } from '../core/appearance.service';
 import { WorkspaceContextService, WorkspaceProperty, draftWorkspaceObject } from '../core/workspace-context.service';
 
 type FilterKey = 'all' | 'draft' | 'scheduled' | 'published' | 'attention' | 'archived' | 'template';
@@ -179,7 +181,7 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, NgTemplateOutlet, ModalComponent, PopoverComponent,
         FolderPickerComponent, TagPickerComponent, SeriesPickerComponent, IndexTabsComponent,
-        SpecRowComponent, InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
+        InputComponent, ButtonComponent, LeafTagComponent, PaperCardComponent,
         PageHeaderComponent, EmptyStateComponent, RouterLink,
         SortHeaderComponent, CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder,
     ],
@@ -195,10 +197,21 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     private seriesApi = inject(SeriesService);
     private router = inject(Router);
     private readonly workspace = inject(WorkspaceContextService);
+    private readonly appearance = inject(AppearanceService);
 
     // ADR-301 clause 4 — T-386. One row is selectable here, so the scope is that row or nothing;
     // the rail's Properties tab reads what the list already holds, with no request of its own.
+    readonly documentList = viewChild<ElementRef<HTMLElement>>('documentList');
+
     constructor() {
+        effect(onCleanup => {
+            const list = this.documentList()?.nativeElement;
+            if (!list || typeof ResizeObserver === 'undefined') return;
+            const observer = new ResizeObserver(() => this.onResize());
+            observer.observe(list);
+            onCleanup(() => observer.disconnect());
+        });
+        effect(() => { this.appearance.prefs(); this.onResize(); });
         effect(() => {
             const draft = this.selectedDraft();
             const c = this.t().shell.context;
@@ -213,6 +226,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
                 { label: c.translations, value: draft.languages.join(', ') || c.none },
                 { label: c.status, value: this.status(draft).label },
                 { label: c.tags, value: draft.tags || c.none },
+                { label: this.t().drafts.inspector.folder, value: this.folderName(draft.folderId) },
+                { label: this.t().drafts.inspector.series, value: this.seriesName(draft.seriesId) },
+                { label: this.t().drafts.inspector.created, value: formatInZone(draft.createdAt) },
+                { label: this.t().drafts.inspector.updated, value: formatInZone(draft.updatedAt) },
                 { label: c.blogAddress, value: draft.blogSlug || c.none, protected: true },
                 { label: c.identifier, value: draft.id, protected: true },
             ];
@@ -226,6 +243,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
 
     loading = signal(true);
     drafts = signal<DraftMeta[]>([]);
+    readonly scopedDrafts = computed(() => {
+        const project = this.currentProject.id();
+        return project ? this.drafts().filter(d => d.projectId === project) : this.drafts();
+    });
     search = '';
     filter = signal<FilterKey>('all');
     view = signal<'table' | 'grid' | 'tree'>('table');
@@ -245,9 +266,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     tight = signal(window.innerWidth <= TIGHT_MAX_WIDTH);
     phone = signal(window.innerWidth <= PHONE_MAX_WIDTH);
     private readonly onResize = () => {
-        this.compact.set(window.innerWidth <= COMPACT_MAX_WIDTH);
-        this.tight.set(window.innerWidth <= TIGHT_MAX_WIDTH);
-        this.phone.set(window.innerWidth <= PHONE_MAX_WIDTH);
+        const width = this.documentList()?.nativeElement.clientWidth || window.innerWidth - (this.appearance.prefs().inspectorOpen ? this.appearance.prefs().inspectorWidth : 0);
+        this.compact.set(width <= COMPACT_MAX_WIDTH);
+        this.tight.set(width <= TIGHT_MAX_WIDTH);
+        this.phone.set(width <= PHONE_MAX_WIDTH);
     };
 
     // Folders (Phase "Cedar Clerk 0.9.0" idea #19, see the ADR following ADR-038,
@@ -302,7 +324,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     }
 
     filterCount(key: FilterKey): number {
-        return this.drafts().filter(d => matchesFilter(d, key)).length;
+        return this.scopedDrafts().filter(d => matchesFilter(d, key)).length;
     }
 
     readonly filterKeys: FilterKey[] = ['all', 'draft', 'scheduled', 'published', 'attention', 'archived', 'template'];
@@ -326,7 +348,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         const t = this.t().drafts;
         const attention = this.filterCount('attention');
         return [
-            { text: t.postsCount(this.drafts().length) },
+            { text: t.postsCount(this.scopedDrafts().length) },
             { text: t.meta.published(this.filterCount('published')) },
             ...(this.filterCount('scheduled') ? [{ text: t.meta.scheduled(this.filterCount('scheduled')) }] : []),
             ...(attention ? [{ text: t.meta.attention(attention), tag: true, tone: 'warn' as const }] : []),
@@ -342,7 +364,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
 
     /** The shelf's "No folder" tally. The server counts folders, not the absence of one. */
     unfiledCount(): number {
-        return this.drafts().filter(d => d.folderId === null).length;
+        return this.scopedDrafts().filter(d => d.folderId === null).length;
     }
 
     filteredDrafts(): DraftMeta[] {
@@ -350,7 +372,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         const folder = this.selectedFolder();
         const dir = this.sortDir() === 'asc' ? 1 : -1;
         const key = this.sortKey();
-        return this.drafts()
+        return this.scopedDrafts()
             .filter(d => matchesFilter(d, this.filter()))
             .filter(d => folder === 'all' || (folder === 'none' ? d.folderId === null : d.folderId === folder))
             .filter(d => !q || d.title.toLowerCase().includes(q) || d.tags.toLowerCase().includes(q))
@@ -483,6 +505,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     }
 
     toggleSelected(d: DraftMeta, ev: Event) {
+        this.appearance.preview({ inspectorOpen: true, inspectorTab: 'properties' });
         ev.stopPropagation();
         this.selectedId.update(id => id === d.id ? null : d.id);
     }
@@ -729,6 +752,10 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     // here, on /drafts; navigation to the editor only fires once the draft actually exists
     // (Marty, 28.07.2026) — same shape as onImportCedarChosen below, which already worked this way.
     readonly draftTitleMax = DRAFT_TITLE_MAX;
+    private readonly projectsApi = inject(ProjectsService);
+    private readonly currentProject = inject(CurrentProjectService);
+    readonly creationProjects = signal<ProjectSummary[]>([]);
+    readonly creationProjectId = signal('');
     newDraftOpen = signal(false);
     newDraftTitle = '';
     /** Every content language the account may write in; the dialog offers all of them. */
@@ -760,6 +787,11 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         this.newDraftFolderId.set(null);
         this.newDraftSeriesId.set(null);
         this.newDraftError.set(null);
+        this.creationProjectId.set(this.currentProject.id());
+        void this.projectsApi.list().then(projects => {
+            this.creationProjects.set(projects);
+            if (!this.creationProjectId() && projects.length === 1) this.creationProjectId.set(projects[0].id);
+        }).catch(e => this.newDraftError.set(httpErrorMessage(e, this.t().drafts.errors.create)));
         this.newDraftOpen.set(true);
     }
 
@@ -800,7 +832,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
 
     async confirmNewDraft() {
         const languages = this.newDraftLanguages();
-        if (this.creatingDraft() || !this.newDraftTitleValid() || !languages.length) return;
+        if (this.creatingDraft() || !this.newDraftTitleValid() || !languages.length || !this.creationProjectId()) return;
         const title = this.newDraftTitle.trim();
         const tagList = this.newDraftTagList().map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
         const tags = tagList.join(',');
@@ -816,7 +848,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         this.creatingDraft.set(true);
         this.newDraftError.set(null);
         try {
-            const created = await this.draftsApi.create(title, EMPTY_DOC);
+            const created = await this.draftsApi.create(title, EMPTY_DOC, this.creationProjectId());
             // Same follow-up-call shape as tags on the main list row: create first, then apply
             // the extras the create endpoint doesn't take.
             if (tags) await this.draftsApi.updateTags(created.id, tags);

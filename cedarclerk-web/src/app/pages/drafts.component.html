@@ -66,8 +66,8 @@ never on a component — several of the components below also appear on comforta
         <input #markdownInput type="file" accept=".zip" hidden (change)="onImportMarkdownChosen($event)">
     </div>
 
-    <div class="drafts-grid" [class.no-shelf]="view() === 'tree'">
-        <section class="card doc-list" role="region" [attr.aria-label]="t().drafts.title">
+    <div class="drafts-grid" [class.no-shelf]="view() === 'tree' || !!selectedDraft()">
+        <section #documentList class="card doc-list" role="region" [attr.aria-label]="t().drafts.title">
             <!--ADR-128: the tree shows structure — a status/folder filter that hides a parent would
             take its visible subtree with it, so both filters step aside in tree view.-->
             <div class="doc-head">
@@ -386,84 +386,7 @@ never on a component — several of the components below also appear on comforta
         <!--T-256 — the third column is exclusive (ADR-167, ADR-238 clause 7): the picked
         document's facts, or the folder filter, never both. Tree view keeps neither: it shows
         structure, and both filters already stand aside there.-->
-        @if (view() !== 'tree') {
-        @if (selectedDraft(); as d) {
-        <section class="card aside inspector" role="region" [attr.aria-label]="t().drafts.inspector.title">
-            <div class="aside-head">
-                <span class="label">{{ t().drafts.inspector.title }}</span>
-                <span class="aside-count">{{ t().drafts.inspector.scope }}</span>
-                <span class="view-spacer"></span>
-                <app-button variant="rail" size="sm" [title]="t().common.close" (clicked)="selectedId.set(null)">
-                    <app-icon name="x" size="xs"></app-icon>
-                </app-button>
-            </div>
-            <div class="aside-body">
-            <p class="insp-name">
-                @if (d.isPrivate) { <app-icon name="lock" size="xs" class="private-lock" [attr.title]="t().drafts.privatePost"></app-icon> }
-                {{ d.title || t().drafts.untitled }}
-            </p>
-
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.state">
-                <span class="tag" [class.danger]="status(d).tone === 'danger'" [class.ok]="status(d).tone === 'ok'" [class.muted]="status(d).tone === 'default'">
-                    {{ status(d).label }}
-                </span>
-                @if (status(d).detail) {
-                <span class="insp-detail" [title]="status(d).detail">{{ status(d).detail }}</span>
-                }
-            </app-spec-row>
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.type"
-                          [value]="t().projects.docTypes[d.documentType]?.name ?? d.documentType"></app-spec-row>
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.languages">
-                @for (code of allLanguages(d); track code) {
-                <span class="draft-lang-badge" [class.is-stale]="d.staleLanguages.includes(code)"
-                      [title]="d.staleLanguages.includes(code) ? t().drafts.status.translationBehind(code.toUpperCase()) : ''">
-                    {{ code.toUpperCase() }}
-                </span>
-                }
-            </app-spec-row>
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.visibility"
-                          [value]="d.isPrivate ? t().drafts.inspector.private : t().drafts.inspector.public"></app-spec-row>
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.folder"
-                          [value]="folderName(d.folderId)"></app-spec-row>
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.series"
-                          [value]="seriesName(d.seriesId)"></app-spec-row>
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.tags">
-                @for (tag of tagList(d); track tag) { <span class="tag-chip-ro">#{{ tag }}</span> }
-                @if (!tagList(d).length) { <span class="insp-none">{{ t().drafts.inspector.none }}</span> }
-            </app-spec-row>
-
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.activity">
-                @if (hasActivity(d)) {
-                <span class="activity-metric" [title]="t().drafts.activity.views">
-                    <app-icon name="eye" size="xs"></app-icon>{{ d.viewCount }}
-                    @if (d.newViewCount) { <span class="activity-delta">+{{ d.newViewCount }}</span> }
-                </span>
-                <span class="activity-metric" [title]="t().drafts.activity.reactions">
-                    <app-icon name="heart" size="xs"></app-icon>{{ d.reactionCount }}
-                    @if (d.newReactionCount) { <span class="activity-delta">+{{ d.newReactionCount }}</span> }
-                </span>
-                } @else {
-                <span class="insp-none">{{ t().drafts.inspector.neverPublished }}</span>
-                }
-            </app-spec-row>
-            @if (d.blogPublishedAt) {
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.blogPublished"
-                          [value]="d.blogPublishedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
-            }
-
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.parent"
-                          [value]="parentTitle(d)"></app-spec-row>
-            @if (childCount(d)) {
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.children"
-                          value="{{ childCount(d) }}"></app-spec-row>
-            }
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.updated"
-                          [value]="d.updatedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
-            <app-spec-row scope="selection" [label]="t().drafts.inspector.created"
-                          [value]="d.createdAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
-            </div>
-        </section>
-        } @else {
+        @if (view() !== 'tree' && !selectedDraft()) {
         <!--FI3.3: filtering only. Creating, renaming and deleting a folder live in the shared
         picker on every row, so it is no longer something only this page can do — and the same
         markup isn't maintained in two places.-->
@@ -493,7 +416,6 @@ never on a component — several of the components below also appear on comforta
             </nav>
         </section>
         }
-        }
     </div>
     }
 
@@ -504,6 +426,12 @@ never on a component — several of the components below also appear on comforta
         <app-icon modal-icon name="plus" weight="bold" size="sm"></app-icon>
         <span modal-title>{{ t().editor.newDraft.title }}</span>
 
+        <label class="tb-caption" for="new-document-project">{{ t().shell.switchProject }}</label>
+        <select id="new-document-project" class="chat-input" [ngModel]="creationProjectId()" (ngModelChange)="creationProjectId.set($event)">
+            <option value="" disabled>{{ t().shell.switchProject }}</option>
+            @for (project of creationProjects(); track project.id) { <option [value]="project.id">{{ project.name }}</option> }
+        </select>
+        @if (!creationProjects().length) { <a routerLink="/projects">{{ t().projects.newProject }}</a> }
         <input class="chat-input" [(ngModel)]="newDraftTitle" [placeholder]="t().editor.newDraft.titlePlaceholder"
                    [maxlength]="draftTitleMax" (keyup.enter)="confirmNewDraft()">
             @if (newDraftTitle.trim().length === 0) {
@@ -560,7 +488,7 @@ never on a component — several of the components below also appear on comforta
 
         <app-button modal-actions variant="paper" (clicked)="closeNewDraftDialog()">{{ t().common.cancel }}</app-button>
         <app-button modal-actions variant="pine"
-                    [disabled]="creatingDraft() || !newDraftTitleValid() || !newDraftLanguages().length"
+                    [disabled]="creatingDraft() || !newDraftTitleValid() || !newDraftLanguages().length || !creationProjectId()"
                     (clicked)="confirmNewDraft()">
             {{ creatingDraft() ? t().common.loading : t().drafts.newDraft }}
         </app-button>

@@ -19,6 +19,11 @@ namespace CedarClerk.Localization;
 /// </summary>
 public static partial class ErrorMessages
 {
+    public static string ProjectRequired => T("Choose an active project for this document.");
+    public static string AccountVerificationFailed => T("Check your current password and account email.");
+    public static string AccountBillingMustClose => T("Resolve recurring billing before deleting your account. Contact support if needed.");
+    public static string PasswordChangeFailed => T("The password could not be changed. Check the current password and new password requirements.");
+
     public static string PasswordRecoveryUnavailable => T("Password recovery is temporarily unavailable. Please try again later.");
     public static string PasswordResetInvalid => T("The link is invalid or expired, or the password does not meet the requirements. Request a new link and try again.");
     public static string DraftNotFound => T("Draft not found.");

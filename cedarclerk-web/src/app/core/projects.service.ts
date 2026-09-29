@@ -106,6 +106,8 @@ export interface ProjectSummary {
 }
 
 export interface ProjectDocument {
+    coverImagePath?: string | null;
+    viewCount?: number;
     id: string;
     title: string;
     documentType: DocumentType;

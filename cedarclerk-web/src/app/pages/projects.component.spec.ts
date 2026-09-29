@@ -123,7 +123,7 @@ describe('project index', () => {
         fixture.detectChanges();
         const types = [...el().querySelectorAll('.type-name')].map(x => x.textContent?.trim());
         expect(types).toEqual(['Empty', 'Blog', 'Game', 'Product', 'Work', 'Vault']);
-        expect(el().querySelectorAll('.type-card .cover-art').length).toBe(6);
+        expect(el().querySelectorAll('.type-card .project-type-symbol app-icon').length).toBe(6);
         expect(el().querySelector('.type-card:last-child .type-starter')?.textContent)
             .toContain(t.create.startsWith(t.projectTypes.vault.starter));
         expect(el().querySelector('.type-card.selected .type-name')?.textContent?.trim()).toBe('Empty');

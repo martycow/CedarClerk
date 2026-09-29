@@ -4,6 +4,10 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Spanish = new Dictionary<string, string>
     {
+        [nameof(ProjectRequired)] = "Elige un proyecto activo para este documento.",
+        [nameof(AccountVerificationFailed)] = "Comprueba tu contraseña actual y el correo de tu cuenta.",
+        [nameof(AccountBillingMustClose)] = "Resuelve los pagos recurrentes antes de eliminar la cuenta. Contacta con soporte si es necesario.",
+        [nameof(PasswordChangeFailed)] = "No se pudo cambiar la contraseña. Comprueba la contraseña actual y los requisitos de la nueva.",
         [nameof(PasswordRecoveryUnavailable)] = "La recuperación de contraseña no está disponible temporalmente. Inténtalo más tarde.",
         [nameof(PasswordResetInvalid)] = "El enlace no es válido o ha caducado, o la contraseña no cumple los requisitos. Solicita un nuevo enlace e inténtalo de nuevo.",
         [nameof(DraftNotFound)] = "Borrador no encontrado.",

@@ -60,7 +60,7 @@ Four .NET projects target `net10.0` (ADR-305):
 - `Bot/` — `TelegramBotService`, `BotChatAccess` (pure permission logic), `BotKnownChatSync`, Quartz job classes
 - `Data/` — `CedarDbContext`, `Entities.cs` (all core entities in one flat file) + `Entities.IndieDev.cs` (module entities, per ADR-101's file rule)
 - `Migrations/` — EF Core migrations
-- `Modules/` — feature modules behind config flags: `IndieDev/` (projects, tasks, sprints, builds, asset index, reference boards and their hub) and `Agent/` (the desktop's filesystem agent, ADR-117)
+- `Modules/` — feature modules behind config flags: `IndieDev/` (core project organization plus flagged tasks, sprints, builds, asset index and reference boards) and `Agent/` (the desktop's filesystem agent, ADR-117)
 - `Publishing/` — `IPublishTarget` (ADR-078) + the network implementations (`TelegramPublishTarget`, `XPublishTarget`, `BlueskyPublishTarget`) + `PublishTargetSecrets` (per-tenant credential encryption)
 - `Translation/` — `ITranslationProvider` + Anthropic/OpenAI/DeepL implementations for auto-translate
 - `Email/` — outbound mail (Resend)
@@ -68,7 +68,7 @@ Four .NET projects target `net10.0` (ADR-305):
 
 `cedarclerk-web/src/app/`:
 - `core/` — one Angular service per feature area (thin RxJS→Promise), the `i18n/locale.service.ts` adapter, and the guards (`auth`, `guest`, `admin`, `indiedev`). Dictionaries and localization utilities live in `CedarClerk.Localization/Web`, imported through `@localization/*`.
-- `pages/` — route components; `editor` is the largest surface by far. `comments` and `stats` exist as components but their routes redirect into the Posts Manager (`/posts`) where they are tabs. The IndieDev screens (`projects`, `project`, `project-tasks/planner/assets/builds`, `project-canvas`/`canvas-board`) also live here behind `indieDevGuard` — the `modules/<name>/` folder convention from ADR-101 was **not** adopted on the frontend
+- `pages/` — route components; `editor` is the largest surface by far. `comments` and `stats` exist as components but their routes redirect into the Posts Manager (`/posts`) where they are tabs. Core `projects` and `project` screens use `authGuard`; the remaining IndieDev screens (`project-tasks/planner/assets/builds`, `project-canvas`/`canvas-board`) use `indieDevGuard` — the `modules/<name>/` folder convention from ADR-101 was **not** adopted on the frontend
 - `shared/` — ~15 genuinely reusable components now, including a real `app-modal`, `app-icon` (Phosphor, generated), `page-header`, `account-menu`, pickers and the appearance panel — `docs/design/UI-INVENTORY.md` §Shared lists them
 - `tiptap-extensions/` — custom TipTap nodes/marks whose HTML output is the shared contract with the backend renderers (e.g. `spoiler-mark.ts` ↔ `<tg-spoiler>` in the Telegram renderers)
 
@@ -192,3 +192,19 @@ The reason it exists is the asset index (ADR-107) — only a process on the deve
 - Tests: `dotnet test` + in `cedarclerk-web/`: `npm test`, `npm run check:icons`, `check:contrast`, `check:density`, `npm run build` (ADR-265); smoke: `Scripts/e2e.ps1`
 - Frontend tests alone: `npm run test` in `cedarclerk-web/` (Vitest-backed via `@angular/build:unit-test`, not Karma)
 - EF migrations: `dotnet ef migrations add <Name> --project CedarClerk.Server`
+
+## Project ownership (ADR-306)
+
+Core project CRUD, document types and access checks are available with IndieDev off.
+Game-specific endpoints remain flagged. New documents require an active owned project.
+Imports and legacy null-project documents resolve to a deterministic per-owner Personal
+project; startup backfill preserves IDs, content and public URLs. `Draft.ProjectId`
+remains nullable for schema compatibility, not as a supported creation choice.
+Uploads can pass an owned project ID before autosave. Media visibility includes actual
+public post covers, showcase galleries and rendered glossary illustrations; excluded,
+private-only and unpublished references do not become public.
+
+Discord OAuth joins the existing external-cookie/invite flow through `/signin-discord`.
+Self-service password change uses Identity. Account deletion verifies email/password,
+checks recurring Stripe billing, deletes owned database rows in a transaction, then
+invalidates tenant lookup and cleans up media.

@@ -17,6 +17,11 @@
 
         @if (actionError(); as err) { <p class="load-error">{{ err }}</p> }
 
+        <section class="project-identity">
+            @if (p.coverUrl) { <img [src]="p.coverUrl" alt="" width="72" height="72" /> }
+            <div><span class="label">{{ t().projects.projectTypes[p.createdFromPreset].name }}</span><h2>{{ p.name }}</h2><p>{{ p.description }}</p></div>
+            <app-button variant="pine" [link]="['/drafts']" [queryParams]="{ project: p.id }"><app-icon name="file-text" size="sm" />{{ t().shell.context.documents }}</app-button>
+        </section>
         <div class="hub-grid">
             <section class="hub-main">
                 <!--ADR-160 — the hub's job is to get you back to work in one click; the list below
@@ -24,7 +29,8 @@
                 @if (resumeDoc(); as doc) {
                     <div class="card resume">
                         <span class="resume-thumb" aria-hidden="true">
-                            <app-icon [name]="docIcons[doc.documentType]" size="lg" />
+                            @if (doc.coverImagePath) { <img [src]="doc.coverImagePath!.startsWith('/media/') ? doc.coverImagePath : '/media/' + doc.coverImagePath" alt="" /> }
+                            @else { <app-icon [name]="docIcons[doc.documentType]" size="lg" /> }
                         </span>
                         <span class="resume-text">
                             <span class="label">{{ t().projects.hub.continueWriting }}</span>
@@ -75,6 +81,7 @@
                                 <span class="t doc-title">{{ doc.title }}</span>
                                 <span class="m">{{ t().projects.docTypes[doc.documentType].name }}</span>
                                 <span class="doc-end">
+                                    @if (doc.isBlogPublished) { <span class="m" [title]="t().shell.context.views"><app-icon name="eye" size="xs" /> {{ doc.viewCount ?? 0 }}</span> }
                                     <span class="m">{{ doc.updatedAt | zonedDate:'d MMM, HH:mm' }}</span>
                                     <span class="tag" [class.ok]="docTone(doc) === 'ok'" [class.muted]="docTone(doc) === 'muted'">
                                         {{ documentState(doc) }}
@@ -182,7 +189,7 @@
 
                 <!--The kit's channel group needs a project-to-channel table the schema does not
                 have, so the Telegram row lists the account's channels (ADR-239 clause 12).-->
-                <div class="card side-card">
+                <div class="card side-card destinations">
                     <span class="label">{{ t().projects.hub.whereItGoes }}</span>
                     <div class="kv">
                         <b>{{ t().projects.hub.blog }}</b>
@@ -194,6 +201,7 @@
                             <span class="kv-none">{{ t().projects.hub.noBlog }}</span>
                         }
 
+                        <b>{{ t().projects.hub.blog }} · {{ t().shell.context.views }}</b><span>{{ blogViews() }}</span>
                         <b>{{ t().projects.hub.telegram }}</b>
                         @if (channels().length) {
                             <span class="kv-list">
@@ -211,6 +219,8 @@
                             <span class="kv-none">{{ t().projects.hub.noChannel }}</span>
                         }
 
+                        <b>{{ t().projects.hub.telegram }} · {{ t().shell.context.views }}</b>
+                        <span [title]="t().stats.sources.notTrackedWhy">{{ t().stats.sources.notTracked }}</span>
                         <b>{{ t().projects.hub.publicPage }}</b>
                         @if (showcaseUrl(); as url) {
                             <a class="kv-link" [href]="url" target="_blank" rel="noopener">
@@ -311,6 +321,8 @@
         <textarea id="edit-description" class="text-input" rows="3" maxlength="2000"
                   [ngModel]="editDescription()" (ngModelChange)="editDescription.set($event)"></textarea>
 
+        <p class="field-label">{{ t().presets.project.typeLabel }}: {{ t().projects.projectTypes[project()!.createdFromPreset].name }}</p>
+        @if (project()?.createdFromPreset === 'fullgame') {
         <!--T-247 — the toolchain and where it ships, from the same closed lists the server keeps.
         The hero draws them as "Unity · Windows, Switch"; the press kit's free-text engine on the
         showcase screen is a different field for a different page and is not synced.-->
@@ -327,6 +339,8 @@
                 }
             </div>
         </fieldset>
+
+        }
 
         <div class="cover-field">
             <span class="field-label">{{ t().projects.edit.logoLabel }}</span>

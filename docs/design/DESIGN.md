@@ -312,3 +312,12 @@ Global (not component-scoped, since TipTap content is rendered via `innerHTML` i
 - The blog's server-rendered surfaces get their tokens generated from `styles.scss` (ADR-090), but the renderer still carries a handful of its own hex values.
 
 > ~~TODO (Marty): target design-system tool?~~ — **answered by practice, 08–18.08.2026**: Claude Design is the active pipeline for new work, delivered as handoff packages (`docs/design_handoff_indiedev_core_loop/` for the module screens; Cedar Bench, mirrored at `.design-sync/ds-v2/`, for the app's one look), while **`styles.scss` stays the canonical source of token values** — packages copy from it, never the reverse.
+
+## Framer reference (ADR-306)
+
+Framer is the primary UI/UX reference for hierarchy, project switching, grouped tools,
+contextual properties and public-page disclosures. Cedar Clerk retains its own final
+logo, palette, density tokens and publishing vocabulary. The toolbar owns persistent
+project access; document-list selection uses the shared Properties panel. Authentication
+uses a plain branded background. Landing tool screenshots are real app captures, loaded
+lazily inside disclosures.

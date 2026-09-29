@@ -1,3 +1,6 @@
+import { ModalComponent } from '../shared/modal.component';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { ConfirmationService } from '../core/confirmation.service';
 import { Component, DestroyRef, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -53,7 +56,7 @@ function availableTimeZones(): string[] {
 
 @Component({
     selector: 'app-settings',
-    imports: [
+    imports: [ModalComponent,
         IconComponent, FormsModule, ZonedDatePipe, BrandIconComponent,
         ButtonComponent, InputComponent, SelectComponent, TextareaComponent, CheckboxComponent,
         IndexTabsComponent, LeafTagComponent,
@@ -64,6 +67,34 @@ function availableTimeZones(): string[] {
     styleUrls: ['settings.component.css']
 })
 export class SettingsComponent implements OnInit, OnDestroy {
+    private readonly securityHttp = inject(HttpClient);
+    readonly securityBusy = signal(false);
+    readonly securityNote = signal('');
+    readonly deleteAccountOpen = signal(false);
+    currentPassword = '';
+    newPassword = '';
+    deleteEmail = '';
+    async changePassword() {
+        if (this.securityBusy()) return;
+        this.securityBusy.set(true);
+        this.securityNote.set('');
+        try {
+            await firstValueFrom(this.securityHttp.post('/api/auth/change-password', { currentPassword: this.currentPassword, newPassword: this.newPassword }));
+            this.currentPassword = this.newPassword = '';
+            this.securityNote.set(this.t().accountSecurity.changed);
+        } catch (e) { this.securityNote.set(httpErrorMessage(e, this.t().accountSecurity.failed)); }
+        finally { this.securityBusy.set(false); }
+    }
+    async deleteAccount() {
+        if (this.securityBusy()) return;
+        this.securityBusy.set(true);
+        this.securityNote.set('');
+        try {
+            await firstValueFrom(this.securityHttp.post('/api/auth/delete-account', { email: this.deleteEmail, currentPassword: this.currentPassword }));
+            location.assign('/login');
+        } catch (e) { this.securityNote.set(httpErrorMessage(e, this.t().accountSecurity.failed)); }
+        finally { this.securityBusy.set(false); }
+    }
     private readonly confirmation = inject(ConfirmationService);
     auth = inject(AuthService);
     locale = inject(LocaleService);

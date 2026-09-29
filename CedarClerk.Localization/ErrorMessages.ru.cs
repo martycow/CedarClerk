@@ -4,6 +4,10 @@ public static partial class ErrorMessages
 {
     private static readonly IReadOnlyDictionary<string, string> Russian = new Dictionary<string, string>
     {
+        [nameof(ProjectRequired)] = "Выберите активный проект для документа.",
+        [nameof(AccountVerificationFailed)] = "Проверьте текущий пароль и адрес почты аккаунта.",
+        [nameof(AccountBillingMustClose)] = "Перед удалением аккаунта завершите регулярные платежи. При необходимости обратитесь в поддержку.",
+        [nameof(PasswordChangeFailed)] = "Не удалось изменить пароль. Проверьте текущий пароль и требования к новому паролю.",
         [nameof(PasswordRecoveryUnavailable)] = "Восстановление пароля временно недоступно. Попробуйте позже.",
         [nameof(PasswordResetInvalid)] = "Ссылка недействительна или устарела, либо пароль не соответствует требованиям. Запросите новую ссылку и попробуйте снова.",
         [nameof(DraftNotFound)] = "Черновик не найден.",

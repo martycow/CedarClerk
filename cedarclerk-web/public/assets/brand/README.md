@@ -5,3 +5,5 @@ Adobe Illustrator exported the outlined artwork in the supplied `Improved_2026-0
 The file is copied without changes. It retains the source silhouette, lettering and pine/coral palette.
 Authentication pages use `cedar-clerk-horizontal.svg`, the approved horizontal export,
 inside the shared authentication layout. The primary artwork remains available as a brand asset.
+
+`cedar-clerk-mark.svg` and `cedar-clerk-mark-dark.svg` use the owner's final safe mark from the light and reversed brand exports. They are used by the app chrome and authentication layout.
