@@ -3,9 +3,18 @@ import { en } from '@localization/en';
 import { LocaleService } from './locale.service';
 
 describe('LocaleService', () => {
+    let originalLanguage: string | null;
     beforeEach(() => {
+        originalLanguage = document.documentElement.getAttribute('lang');
         localStorage.removeItem('cedar-ui-lang');
         localStorage.removeItem('cedar-pseudo');
+    });
+
+    afterEach(() => {
+        localStorage.removeItem('cedar-ui-lang');
+        localStorage.removeItem('cedar-pseudo');
+        if (originalLanguage === null) document.documentElement.removeAttribute('lang');
+        else document.documentElement.setAttribute('lang', originalLanguage);
     });
 
     it('starts with English in memory and resolves ready() at once', async () => {

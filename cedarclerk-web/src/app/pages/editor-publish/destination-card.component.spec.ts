@@ -22,7 +22,9 @@ class Host {
 
 describe('DestinationCardComponent', () => {
     function mount() {
-        TestBed.inject(LocaleService).uiLang.set('en');
+        const locale = TestBed.inject(LocaleService);
+        locale.uiLang.set('en');
+        locale.pseudo.set(false);
         const fixture = TestBed.createComponent(Host);
         fixture.detectChanges();
         return { fixture, host: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };

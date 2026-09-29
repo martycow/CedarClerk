@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## 2026-09-29 — Locale test isolation
+
+LocaleService tests clear persisted language/pseudo-locale settings after each test
+and restore the document language. Destination-card tests explicitly select normal
+English. This prevents pseudo-localized labels leaking into exact-text assertions.
+Validation: all 827 frontend tests across 92 files pass with the Node 26 workaround.
+
+
 ## 2026-09-29 — Deployment version diagnostics
 
 Compare production with local LIVE before building or uploading. Version mismatch
