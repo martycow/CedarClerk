@@ -7,7 +7,7 @@ DigitalOcean droplet since 11.08.2026. Anything in CHANGELOG/ADRs about "the Pi"
 | | |
 |---|---|
 | Droplet | `cedarclerk-periwinkle`, fra1, 1 vCPU / 2 GB RAM / 48 GB, Ubuntu 24.04 x86_64. **No swap** — OOM kills the service |
-| SSH | `martycow@periwinkle.mooexe.dev` (165.227.155.148), key-based. DNS record must stay **DNS only** in Cloudflare. `deploy.mooexe.dev` and `raspberrypi.local` are dead |
+| SSH | `martycow@periwinkle.mooexe.dev` (165.227.155.148), key-based. DNS record must stay **DNS only** in Cloudflare. |
 | .NET | ASP.NET Core runtime in `~/.dotnet`, no SDK. The app targets **net10.0** (ADR-305); the droplet had 8.0.29 — install the 10 runtime (`dotnet-install.sh --runtime aspnetcore --channel 10.0 --install-dir ~/.dotnet`, no sudo) **before the next deploy** |
 | Build | Framework-dependent, no RID — portable IL, builds on any OS |
 | Timezone | **UTC** — cron, logs, "tonight" in scheduled posts |
