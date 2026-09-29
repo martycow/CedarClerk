@@ -307,3 +307,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-306 — Project-centered workflows and the Framer reference](adr/ADR-306.md)
 
 - [ADR-307 — Separate identity from project selection](adr/ADR-307.md)
+
+- [ADR-308 — Bash release deployment](adr/ADR-308.md)

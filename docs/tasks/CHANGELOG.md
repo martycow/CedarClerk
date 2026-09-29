@@ -1,5 +1,20 @@
 ﻿# Changelog
 
+## 2026-09-29 — Bash deployment runbook (ADR-308)
+
+Added `docs/for_user/deploy.sh` and adjacent Russian instructions. The local gate
+requires clean tagged master, builds/tests both application layers, packages tracked
+server source for Linux and uploads a checksummed archive. A locked detached worker
+backs up SQLite while stopped, preserves prior releases, checks local/public health
+and release identity, and restores the previous application on failure. Database
+restoration remains manual. LIVE tags move only after verified success.
+
+Validation: Bash syntax, help and dirty-tree refusal; isolated worker scenarios cover
+success with database backup, checksum failure, unsafe archive refusal and application
+rollback after failed smoke verification, LIVE version mismatch and failed database
+backup recovery. All six passed. No production deployment performed.
+
+
 ## 2026-09-28 — Top bar identity (ADR-307)
 
 The top bar presents the logo, Cedar Clerk name with the version beneath, then the

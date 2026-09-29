@@ -171,7 +171,7 @@ A zip container (chosen 08.07.2026 over base64-in-JSON, which would have cost +3
 
 See `.claude/rules/production-environment.md` for the droplet/Cloudflare/systemd specifics this architecture assumes, and `.claude/rules/ef-migrations.md` / `.claude/rules/renderers.md` for the invariants that guard it.
 
-No operations console for now (ADR-304; replacement `T-393`). The deploy shape the old console enforced still stands (ADR-113): everything slow precedes downtime; upload → stop → swap `app`/`app.prev` → start → health and version check → move `LIVE`. `app.prev` stays for rollback. No deploy path rewrites the data directory. Desktop downloads are published with the manifest last.
+No operations console for now (ADR-304; replacement `T-393`). The Bash deployment entry point is `docs/for_user/deploy.sh` (ADR-308); the adjacent `deploy.md` documents prerequisites and recovery. The deploy shape the old console enforced still stands (ADR-113): everything slow precedes downtime; upload → stop → swap `app`/`app.prev` → start → health and version check → move `LIVE`. `app.prev` stays for rollback. No deploy path rewrites the data directory. Desktop downloads are published with the manifest last.
 
 `Migrate()` and `PRAGMA journal_mode=WAL;` run automatically on server startup (`Program.cs`), so a deploy applies pending migrations without a separate step — which is exactly why `.claude/rules/ef-migrations.md`'s "migrate immediately after any entity change" rule matters.
 
