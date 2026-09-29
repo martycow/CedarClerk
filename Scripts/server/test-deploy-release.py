@@ -117,6 +117,7 @@ class DeployTests(unittest.TestCase):
 
     def test_wrong_live_version_never_stops_service(self):
         home, _, stage, result = self.scenario(wrong_live=True)
+        self.assertIn('expected 0.22.0, server reports 0.23.6', result.stderr)
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((home/'actions').exists())
         self.assertEqual((stage/'result').read_text().strip(), 'failed-before-stop')

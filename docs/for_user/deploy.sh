@@ -36,6 +36,8 @@ if [[ $mode == deploy ]]; then
     live=$(git rev-parse 'refs/tags/LIVE^{commit}') || fail 'Set LIVE to the verified production commit first.'
     old_version=$(git show "$live:CedarClerk.Core/Consts.cs" | python3 -c 'import sys,re; print(re.search(r"CurrentVersion\s*=\s*\"([0-9]+\.[0-9]+\.[0-9]+)\"",sys.stdin.read()).group(1))')
     [[ $old_version != "$version" ]] || fail 'Bump the release version before deploying another build.'
+    actual_version=$(ssh "${ssh_args[@]}" "$host" 'curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8080/api/health' | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
+    [[ $actual_version == "$old_version" ]] || fail "LIVE identifies $old_version, but production reports $actual_version. Point LIVE at the verified production commit before deploying."
     ssh "${ssh_args[@]}" "$host" 'bash -s' <<'REMOTE'
 set -euo pipefail
 for tool in bash rsync tar sha256sum python3 sqlite3 curl flock nohup; do command -v "$tool" >/dev/null; done

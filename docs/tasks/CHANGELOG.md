@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## 2026-09-29 — Deployment version diagnostics
+
+Compare production with local LIVE before building or uploading. Version mismatch
+errors name both values; the server repeats the check before stopping. The worker
+regression verifies the diagnostic. Six deployment-worker tests pass. No release
+or LIVE tag was changed during diagnosis.
+
+
 ## 2026-09-29 — Bash deployment runbook (ADR-308)
 
 Added `docs/for_user/deploy.sh` and adjacent Russian instructions. The local gate

@@ -16,7 +16,7 @@ complete=false
 health() {
     local url=$1 expected=$2
     curl --location --fail --silent --show-error --max-time 5 "$url" | python3 -c \
-        'import json,sys; assert json.load(sys.stdin)["version"] == sys.argv[1]' "$expected"
+        'import json,sys; actual=json.load(sys.stdin).get("version"); expected=sys.argv[1]; sys.exit(0 if actual == expected else f"Version mismatch: expected {expected}, server reports {actual}. Verify the local LIVE tag before deploying.")' "$expected"
 }
 wait_local() {
     local expected=$1 deadline=$((SECONDS + 120))
