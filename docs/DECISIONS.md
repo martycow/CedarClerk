@@ -305,3 +305,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-305 — Move to .NET 10 LTS](adr/ADR-305.md)
 
 - [ADR-306 — Project-centered workflows and the Framer reference](adr/ADR-306.md)
+
+- [ADR-307 — Separate identity from project selection](adr/ADR-307.md)

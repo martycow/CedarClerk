@@ -85,41 +85,6 @@ describe('SidebarComponent', () => {
         expect(h.items().find(a => a.textContent?.includes('Metrics'))!.getAttribute('href')).toBe('/posts?tab=stats');
     });
 
-    it('draws the card as a link to the hub until there is something to switch to', () => {
-        const h = mount();
-        const card = h.el.querySelector('app-project-switcher .side-project') as HTMLAnchorElement;
-        expect(card.tagName).toBe('A');
-        expect(card.getAttribute('href')).toBe('/projects');
-        expect(card.querySelector('.side-project-name')!.textContent!.trim()).toBe('Cedar Quest');
-        expect(card.querySelector('.side-project-kind')!.textContent!.trim()).toBe('Game · 2 projects');
-        expect(card.querySelector('.side-project-tile')!.textContent!.trim()).toBe('CQ');
-    });
-
-    it('opens the switcher panel, closes it on Escape and hands focus back', () => {
-        const h = mount();
-        h.host.projects.set([
-            { id: 'p1', name: 'Cedar Quest', kind: '', link: ['/projects', 'p1'] },
-            { id: '', name: 'All projects', kind: '', link: '/projects' },
-        ]);
-        h.fixture.detectChanges();
-        const button = h.el.querySelector('app-project-switcher .side-project') as HTMLButtonElement;
-        const panel = () => h.el.querySelector('.side-project-panel') as HTMLElement;
-        expect(button.getAttribute('aria-expanded')).toBe('false');
-        expect(panel().hasAttribute('hidden')).toBe(true);
-
-        button.focus();
-        button.click();
-        h.fixture.detectChanges();
-        expect(button.getAttribute('aria-expanded')).toBe('true');
-        expect(panel().hasAttribute('hidden')).toBe(false);
-        expect(panel().querySelector('.side-project-item.is-on')!.textContent!.trim()).toBe('Cedar Quest');
-
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-        h.fixture.detectChanges();
-        expect(panel().hasAttribute('hidden')).toBe(true);
-        expect(document.activeElement).toBe(button);
-    });
-
     it('shows the bell dot only while something is unread', () => {
         const h = mount();
         expect(h.el.querySelector('.side-dot')).toBeNull();
@@ -134,8 +99,7 @@ describe('SidebarComponent', () => {
         h.host.mode.set('rail');
         h.fixture.detectChanges();
         expect(h.el.querySelector('app-sidebar')!.classList).toContain('is-rail');
-        expect(h.el.querySelector('app-project-switcher.is-compact')).toBeTruthy();
-        expect((h.el.querySelector('app-project-switcher .side-project') as HTMLElement).getAttribute('aria-label')).toBe('Cedar Quest');
+        expect(h.el.querySelector('app-project-switcher')).toBeNull();
         expect(h.el.querySelector('.side-label')).toBeNull();
         expect(h.el.querySelector('.side-count')).toBeNull();
         expect(h.el.querySelector('.side-wordmark')).toBeNull();

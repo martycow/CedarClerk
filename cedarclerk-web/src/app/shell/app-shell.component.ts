@@ -1,3 +1,5 @@
+import { VersionService } from '../core/version.service';
+import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
@@ -61,7 +63,7 @@ function matches(path: string, pattern: string): boolean {
     selector: 'app-shell',
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
-        RouterOutlet, SidebarComponent, FeedbackPanelComponent,
+        RouterOutlet, SidebarComponent, FeedbackPanelComponent, CedarLogoComponent,
         SearchOverlayComponent, DebugConsoleComponent,
         MenuBarComponent, InspectorRailComponent, CommandPaletteComponent, ProjectSwitcherComponent,
     ],
@@ -72,7 +74,13 @@ function matches(path: string, pattern: string): boolean {
     template: `
         <div class="shell" [class.is-rail]="mode() === 'rail'">
             <app-menu-bar>
-                <app-project-switcher [project]="project()" [projects]="switcher()" variant="brand"
+                <div class="app-brand">
+                    <app-cedar-logo [size]="28" />
+                    <span class="app-name">{{ t().shell.brand }}
+                        @if (version.version(); as value) { <small class="app-version">v{{ value }}</small> }
+                    </span>
+                </div>
+                <app-project-switcher [project]="project()" [projects]="switcher()" variant="inline"
                     [hint]="t().shell.switchProject" [fallbackName]="t().shell.allProjects" />
             </app-menu-bar>
             <div class="row">
@@ -95,6 +103,10 @@ function matches(path: string, pattern: string): boolean {
     `,
     styles: [`
         :host { display: block; }
+        .app-brand { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-3); flex: none; }
+        .app-name { display: flex; flex-direction: column; font-family: var(--font-sans); font-size: var(--text-chrome); font-weight: 700; white-space: nowrap; }
+        .app-version { font-size: var(--text-chrome-sm); color: var(--t2); font-weight: 400; }
+
 
         /* The shell owns the viewport, so the page never sizes itself from it (ADR-239 clause 7).
            ADR-301 clause 1 puts the menu row above it — the one thing ADR-239 said would never be
@@ -133,6 +145,7 @@ function matches(path: string, pattern: string): boolean {
     `],
 })
 export class AppShellComponent implements OnDestroy {
+    protected readonly version = inject(VersionService);
     private readonly router = inject(Router);
     private readonly projects = inject(ProjectsService);
     private readonly current = inject(CurrentProjectService);

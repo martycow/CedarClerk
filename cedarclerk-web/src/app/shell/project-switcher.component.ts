@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, computed, in
 import { RouterLink } from '@angular/router';
 import { avatarFill } from '../core/avatar-color.util';
 import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
 
@@ -22,7 +21,7 @@ export interface SidebarProject {
 @Component({
     selector: 'app-project-switcher',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [NgTemplateOutlet, RouterLink, IconComponent, CedarLogoComponent],
+    imports: [NgTemplateOutlet, RouterLink, IconComponent],
     host: {
         'data-surface': 'paper',
         '[class.is-inline]': "variant() === 'inline'",
@@ -56,8 +55,7 @@ export interface SidebarProject {
         }
 
         <ng-template #face>
-            @if (variant() === 'brand') { <app-cedar-logo [size]="28" /> }
-            @else if (variant() !== 'inline') {
+            @if (variant() !== 'inline') {
                 @if (project()?.id) {
                     <span class="side-project-tile" [style.background]="fill()">{{ initials() }}</span>
                 } @else {
@@ -194,7 +192,7 @@ export class ProjectSwitcherComponent implements OnDestroy {
     readonly project = input<SidebarProject | null>(null);
     readonly projects = input<readonly SidebarProject[]>([]);
     readonly hint = input('');
-    readonly variant = input<'card' | 'inline' | 'compact' | 'brand'>('card');
+    readonly variant = input<'card' | 'inline' | 'compact'>('card');
     readonly fallbackName = input('');
     readonly fallbackLink = input<string | readonly unknown[]>('/projects');
 

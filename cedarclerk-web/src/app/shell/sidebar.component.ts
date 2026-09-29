@@ -1,13 +1,11 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { Params, RouterLink } from '@angular/router';
 import { indexTabBadgeLabel } from '../bench/chrome/index-tabs.component';
-import { VersionService } from '../core/version.service';
 import { AccountMenuComponent } from '../shared/account-menu.component';
-import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
-import { ProjectSwitcherComponent, SidebarProject } from './project-switcher.component';
+import { SidebarProject } from './project-switcher.component';
 
 export type { SidebarProject } from './project-switcher.component';
 
@@ -41,25 +39,15 @@ export interface SidebarUser {
 @Component({
     selector: 'app-sidebar',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [NgTemplateOutlet, RouterLink, IconComponent, CedarLogoComponent, AccountMenuComponent, ProjectSwitcherComponent],
+    imports: [NgTemplateOutlet, RouterLink, IconComponent, AccountMenuComponent],
     host: {
         'data-surface': 'paper',
         '[class.is-rail]': "mode() === 'rail'",
     },
     template: `
         <div class="side-head">
-            <div class="side-brand" role="img" [attr.aria-label]="brandLabel() || null">
-                <app-cedar-logo [size]="20" />
-                @if (mode() === 'full') { <span class="side-wordmark">{{ brand() }}@if (version.version(); as value) { <small class="side-version">v{{ value }}</small> }</span> }
-            </div>
             @if (toggleLabel()) { <button type="button" class="side-toggle" [attr.aria-label]="toggleLabel()" [attr.aria-expanded]="mode() === 'full'" (click)="toggled.emit()"><app-icon [name]="mode() === 'full' ? 'caret-left' : 'caret-right'" size="sm" /></button> }
         </div>
-
-        @if (project(); as project) {
-            <app-project-switcher class="side-switcher" [project]="project" [projects]="projects()"
-                                  [hint]="projectHint()" [fallbackName]="allProjectsLabel()"
-                                  [variant]="mode() === 'full' ? 'card' : 'compact'" />
-        }
 
         <nav class="side-nav" [attr.aria-label]="navLabel() || null">
             @for (group of groups(); track group.id) {
@@ -112,7 +100,6 @@ export interface SidebarUser {
             font-family: var(--font-sans);
         }
 
-        .side-version { display: block; font-size: var(--fs-meta); color: var(--t2); font-weight: 400; margin-top: var(--space-1); }
         .side-group + .side-group { border-top: 1px solid var(--border); padding-top: var(--space-3); }
 
         .side-head {
@@ -120,34 +107,14 @@ export interface SidebarUser {
             align-items: center;
             flex: none;
             box-sizing: border-box;
-            height: var(--topbar-h);
+            min-height: var(--hit-touch);
+            justify-content: flex-end;
             padding: 0 var(--space-2) 0 var(--space-4);
         }
 
         .side-toggle { display: grid; place-items: center; min-width: var(--hit-chrome); min-height: var(--hit-chrome); border: 0; background: transparent; color: var(--text); cursor: pointer; }
-        .side-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-            min-width: 0;
-            border-radius: var(--radius-sm);
-            color: var(--accent);
-            text-decoration: none;
-        }
 
-        .side-wordmark {
-            font-family: var(--font-display);
-            font-size: var(--fs-18);
-            font-weight: 700;
-            color: var(--text);
-            white-space: nowrap;
-        }
 
-        .side-switcher {
-            flex: none;
-            margin: 0 var(--space-3) var(--space-4);
-        }
 
         .side-nav {
             display: flex;
@@ -247,8 +214,6 @@ export interface SidebarUser {
 
         :host(.is-rail) { width: var(--sidebar-rail-w); }
         :host(.is-rail) .side-head { justify-content: center; gap: var(--space-1); padding: 0 var(--space-2); }
-        :host(.is-rail) .side-brand { justify-content: center; flex: none; padding: 0; }
-        :host(.is-rail) .side-switcher { width: 72px; margin: 0 auto var(--space-3); }
         :host(.is-rail) .side-nav { align-items: center; padding: var(--space-3) 0; }
         :host(.is-rail) .side-group { align-items: center; gap: var(--space-1); }
         :host(.is-rail) .side-group + .side-group { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); }
@@ -274,7 +239,6 @@ export interface SidebarUser {
     `],
 })
 export class SidebarComponent {
-    protected readonly version = inject(VersionService);
     readonly mode = input<'full' | 'rail'>('full');
     readonly groups = input<readonly NavGroup[]>([]);
     readonly activeId = input('');

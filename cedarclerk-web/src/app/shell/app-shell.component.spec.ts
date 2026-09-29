@@ -148,13 +148,13 @@ describe('app shell', () => {
         await go('/projects');
         expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Glossary', 'Presets', 'AI operations']);
         expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship', 'Library']);
-        const card = el().querySelector('app-sidebar app-project-switcher .side-project') as HTMLButtonElement;
+        const card = el().querySelector('app-menu-bar app-project-switcher .side-project') as HTMLButtonElement;
         expect(card.tagName).toBe('BUTTON');
         expect(card.querySelector('.side-project-name')!.textContent!.trim()).toBe('All projects');
-        expect(card.querySelector('.side-project-tile.is-hub app-icon')).toBeTruthy();
+        expect(card.querySelector('app-cedar-logo')).toBeNull();
         card.click();
         fixture.detectChanges();
-        expect([...el().querySelectorAll('app-sidebar .side-project-item')].map(menuText))
+        expect([...el().querySelectorAll('app-menu-bar .side-project-item')].map(menuText))
             .toEqual(['All projects', 'Manage teams']);
         expect(el().querySelector('.side-project-item.is-on')?.textContent).toContain('All projects');
     });
@@ -164,7 +164,7 @@ describe('app shell', () => {
         fixture.detectChanges();
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }]);
 
-        const entries = [...el().querySelectorAll('app-sidebar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
+        const entries = [...el().querySelectorAll('app-menu-bar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
         expect(entries.map(menuText)).toEqual(['Cedar Quest', 'All projects', 'Manage teams']);
         expect(entries.map(entry => entry.getAttribute('href'))).toEqual(['/projects/p1', '/projects', '/teams']);
     });
@@ -245,7 +245,9 @@ describe('app shell', () => {
         expect(count('Documents')).toBe('23');
         expect(count('Assets')).toBe('77');
         expect(count('Tasks')).toBeUndefined();
-        expect(el().querySelector('app-sidebar app-project-switcher .side-project-kind')!.textContent!.trim()).toBe('Blog · 1 project');
+        expect(el().querySelector('app-sidebar app-project-switcher')).toBeNull();
+        expect(el().querySelector('app-project-switcher app-cedar-logo')).toBeNull();
+        expect(el().querySelector('app-menu-bar .app-brand app-cedar-logo')).not.toBeNull();
     });
 
     // ADR-186 — which project is open is session state, so it survives leaving the project's own
@@ -257,23 +259,23 @@ describe('app shell', () => {
 
         await go('/drafts');
         expect(items().find(a => a.textContent?.includes('Tasks'))!.getAttribute('href')).toBe('/projects/p1/tasks');
-        expect(el().querySelector('app-sidebar app-project-switcher .side-project-name')!.textContent!.trim()).toBe('Cedar Quest');
+        expect(el().querySelector('app-menu-bar app-project-switcher .side-project-name')!.textContent!.trim()).toBe('Cedar Quest');
     });
 
     it('keeps workspace doors in the switcher before and after projects load', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/projects/p1');
-        const card = el().querySelector('app-sidebar app-project-switcher .side-project') as HTMLButtonElement;
+        const card = el().querySelector('app-menu-bar app-project-switcher .side-project') as HTMLButtonElement;
         expect(card.tagName).toBe('BUTTON');
         expect(card.querySelector('.side-project-name')!.textContent!.trim()).toBe('…');
-        expect([...el().querySelectorAll('app-sidebar app-project-switcher .side-project-item')].map(menuText))
+        expect([...el().querySelectorAll('app-menu-bar app-project-switcher .side-project-item')].map(menuText))
             .toEqual(['All projects', 'Manage teams']);
 
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
         expect(card.tagName).toBe('BUTTON');
         expect(card.getAttribute('aria-haspopup')).toBe('true');
 
-        const entries = [...el().querySelectorAll('app-sidebar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
+        const entries = [...el().querySelectorAll('app-menu-bar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
         expect(entries.map(menuText)).toEqual(['Cedar Quest', 'Second', 'All projects', 'Manage teams']);
         expect(entries.map(a => a.getAttribute('href'))).toEqual(['/projects/p1', '/projects/p2', '/projects', '/teams']);
     });
@@ -295,7 +297,7 @@ describe('app shell', () => {
         await fixture.whenStable();
         fixture.detectChanges();
 
-        expect(el().querySelector('app-sidebar app-project-switcher .side-project-name')!.textContent!.trim())
+        expect(el().querySelector('app-menu-bar app-project-switcher .side-project-name')!.textContent!.trim())
             .toBe('New project');
     });
 
@@ -303,10 +305,10 @@ describe('app shell', () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/projects/p1');
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
-        const card = el().querySelector('app-sidebar app-project-switcher .side-project') as HTMLButtonElement;
+        const card = el().querySelector('app-menu-bar app-project-switcher .side-project') as HTMLButtonElement;
         card.click();
         fixture.detectChanges();
-        const entry = el().querySelector('app-sidebar app-project-switcher .side-project-item') as HTMLAnchorElement;
+        const entry = el().querySelector('app-menu-bar app-project-switcher .side-project-item') as HTMLAnchorElement;
         entry.focus();
         expect(card.getAttribute('aria-expanded')).toBe('true');
 
@@ -322,7 +324,7 @@ describe('app shell', () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await go('/projects/p1/assets');
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
-        const entries = () => [...el().querySelectorAll('app-sidebar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
+        const entries = () => [...el().querySelectorAll('app-menu-bar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
         expect(entries().map(a => a.getAttribute('href')))
             .toEqual(['/projects/p1/assets', '/projects/p2/assets', '/projects', '/teams']);
 
@@ -332,10 +334,10 @@ describe('app shell', () => {
     });
 
     it('keeps the brand as identity so the switcher is the only projects door', () => {
-        const brand = el().querySelector('app-sidebar .side-brand') as HTMLElement;
+        const brand = el().querySelector('app-menu-bar .app-brand') as HTMLElement;
         expect(brand.tagName).toBe('DIV');
         expect(brand.textContent).toContain('Cedar Clerk');
-        expect(el().querySelector('app-sidebar a.side-brand')).toBeNull();
+        expect(el().querySelector('app-menu-bar a.app-brand')).toBeNull();
     });
 
     it('puts Admin in the account menu and nowhere in the navigation', () => {

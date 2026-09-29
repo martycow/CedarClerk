@@ -1,5 +1,17 @@
 ﻿# Changelog
 
+## 2026-09-28 — Top bar identity (ADR-307)
+
+The top bar presents the logo, Cedar Clerk name with the version beneath, then the
+project selector. The selector contains no application logo. Removed duplicate
+branding and project selection from the sidebar; its collapse control remains.
+
+Validation: 56 shell tests, production build, icon and density checks passed.
+Browser preview confirms one selector and separate identity. The full frontend run
+also exposed intermittent pseudo-locale leakage in two destination-card assertions;
+those unrelated tests remain outside this layout change.
+
+
 ## 2026-09-28 — Review implementation, local branch (ADR-306)
 
 Implemented the v0.23.6 review on `codex/framer-review`. Framer is the primary
