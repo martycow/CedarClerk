@@ -51,6 +51,7 @@ flowchart TB
 
     subgraph USR["docs/for_user — instructions and manuals"]
         INTEG["docs/for_user/integrations-setup.md<br/>provider-key setup runbook"]
+        DEPLOY["docs/for_user/deploy.md<br/>Bash deployment, prerequisites and recovery"]
     end
 
     subgraph MOD["Indie-gamedev module — Phase 13"]
