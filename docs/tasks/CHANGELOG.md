@@ -1,5 +1,20 @@
 ﻿# Changelog
 
+## 2026-09-29 — Editable editorial landing (ADR-309)
+
+Implemented the selected centered landing with responsive navigation, product preview,
+three publishing steps, examples, compact pricing, FAQ and closing invitation.
+Admin → Landing edits bilingual section copy and FAQ with per-language defaults.
+Saved hero copy, uploads, section switches, roadmap and story remain authoritative;
+prices and quotas still come from enforced plan definitions. Added nullable editorial
+JSON storage with an additive migration. Preview links open `/welcome` for signed-in users.
+
+Validation: 2,049 backend tests and 828 frontend tests pass; frontend build, icons,
+contrast and density checks pass. Frontend tests use the Node 26 Web Storage workaround.
+Isolated local browser checks cover desktop, Russian mobile, admin save, bilingual
+persistence and waitlist submission. No production deployment.
+
+
 ## 2026-09-29 — Locale test isolation
 
 LocaleService tests clear persisted language/pseudo-locale settings after each test

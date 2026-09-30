@@ -170,426 +170,173 @@ public static class LandingEndpoints
     // string every one of them would have to be doubled. Same Replace-a-placeholder shape as
     // BlogEndpoints' shell, for the same reason.
     private const string Css = """
-            :root { color-scheme: light dark; {{LIGHT_TOKENS}} }
+            :root { color-scheme: light; {{LIGHT_TOKENS}} }
             @media (prefers-color-scheme: dark) { :root { {{DARK_TOKENS}} } }
             {{FONT_FACES}}
-
             * { box-sizing: border-box; }
-
-            /* The wall, lit from the corner — the same ground the app stands on, so the door and the
-               room behind it are made of one thing (ADR-177).
-
-               The ink here is --wood-ink and NOT --text (ADR-141). At night the wall goes dark while
-               paper stays light, so the two grounds need two inks: --text is ink on paper and is
-               invisible on wood. Everything below that sits on the wall names --wood-ink; everything
-               that sits on a sheet re-declares --text, because a ground's colour is inherited. */
-            body {
-                margin: 0;
-                background-color: var(--canvas);
-                background-image: var(--lamp), var(--surface-page);
-                background-attachment: fixed;
-                color: var(--wood-ink);
-                font-family: var(--font-sans);
-                line-height: 1.6;
-            }
-            a { color: var(--wood-ink); }
-            .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+            html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+            body { margin: 0; background: var(--sheet); color: var(--text); font: var(--fs-19)/1.5 var(--font-sans); }
+            h1, h2, h3, p, figure { margin: 0; }
+            h1, h2, h3 { font-family: var(--font-display); line-height: 1.12; font-weight: 600; }
+            h2 { font-size: clamp(var(--fs-27), 3vw, calc(var(--fs-21) * 2)); letter-spacing: -.02em; }
+            h3 { font-size: var(--fs-27); }
+            a { color: var(--accent); }
+            img { display: block; max-width: 100%; height: auto; }
+            button, input { font: inherit; }
+            button, summary { cursor: pointer; }
+            :is(a, button, input, summary):focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+            .wrap { max-width: 1280px; margin: auto; padding: 0 var(--space-5); }
             .spacer { flex: 1; }
-
-            /* ---- the rail ---------------------------------------------------------------- */
-            .rail {
-                position: sticky; top: 0; z-index: 20;
-                display: flex; align-items: center; gap: 12px;
-                height: var(--bench-rail-h); padding: 0 24px;
-                background: var(--paper-bright);
-                border-bottom: 1px solid var(--rule-ink-soft);
-                box-shadow: var(--shadow-paper-sm);
-            }
-            .rail-name {
-                font-family: var(--font-display); font-size: 18px; font-weight: 700;
-                letter-spacing: .02em; color: var(--text);
-            }
-            .rail-chip { font-family: var(--font-mono); font-size: 11px; color: var(--t3); }
-            .rail-nav { display: flex; gap: 14px; }
-            .rail-nav a { font-size: 12.5px; font-weight: 600; color: var(--t2); text-decoration: none; }
-            .rail-nav a:hover { color: var(--accent); }
-
-            .lang {
-                display: flex; gap: 4px; padding: 3px;
-                border: var(--border-paper); border-radius: var(--radius-stamp);
-                background: var(--sheet);
-            }
-            .lang a {
-                display: inline-flex; align-items: center; justify-content: center;
-                min-width: 34px; height: 24px; border: 1px solid transparent; border-radius: 3px;
-                font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .06em;
-                color: var(--t2); text-decoration: none;
-            }
-            .lang a[aria-current] {
-                border-color: var(--abord); background: var(--asoft); color: var(--accent);
-            }
-
-            /* ---- controls ---------------------------------------------------------------- */
-            .btn {
-                display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-                padding: 9px 18px; border-radius: var(--radius-plaque);
-                font-family: var(--font-sans); font-size: 14px; font-weight: 700; line-height: 1.2;
-                text-decoration: none; cursor: pointer;
-            }
-            .btn-sm { padding: 5px 13px; font-size: 13px; }
-            .btn-pine {
-                border: 1px solid var(--pine-deep); background: var(--grad-pine);
-                color: var(--text-on-pine); box-shadow: var(--shadow-pine-btn);
-                text-shadow: 0 1px 1px rgba(18, 26, 20, .45);
-            }
-            .btn-pine:hover { filter: brightness(1.07); }
-            .btn-pine:active { transform: translateY(2px); }
-            .btn-paper {
-                border: var(--border-paper); background: var(--sheet); color: var(--t2);
-                font-weight: 600; box-shadow: var(--shadow-paper-sm);
-            }
-            .btn-paper:hover { background: var(--surface); color: var(--text); }
-
-            /* ---- paper ------------------------------------------------------------------- */
-            /* Every sheet on this page is one recipe with a tilt: warm stock, paper noise, a warm
-               edge and a real drop shadow, turned a degree or two so a stack looks handled. */
-            .paper {
-                position: relative;
-                padding: 20px 22px;
-                color: var(--text);
-                background-color: var(--sheet); background-image: var(--tex-paper);
-                border: var(--border-paper); border-radius: var(--radius-paper);
-                box-shadow: var(--shadow-paper);
-                transform: rotate(var(--tilt, -.5deg));
-            }
-            .paper.bright { background-color: var(--paper-bright); }
-            .paper.pinned::before {
-                content: ""; position: absolute; top: -8px; left: 50%; translate: -50%;
-                width: 15px; height: 15px; border-radius: 50%;
-                background: var(--grad-brass); border: 1px solid var(--brass-edge);
-                box-shadow: inset 0 1px 0 var(--brass-hi), 0 2px 3px rgba(30, 18, 6, .45);
-            }
-            .paper.tight { padding: 10px; }
-            .paper img { display: block; width: 100%; height: auto; border: 1px solid var(--paper-edge); }
-            .cap { margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--t3); }
-            .paper a { color: var(--accent); }
-
-            .stamp {
-                display: inline-flex; align-items: center; padding: 2px 8px;
-                border: 1px solid currentColor; border-radius: var(--radius-stamp);
-                font-family: var(--font-display); font-size: 11px; font-weight: 700;
-                letter-spacing: .13em; text-transform: uppercase; opacity: .92;
-                color: var(--accent); background: var(--asoft); transform: rotate(-2deg);
-            }
-            .stamp.brass { color: var(--brass-ink); background: var(--brass-soft); }
-            .stamp.ink { color: var(--t2); background: transparent; }
-
-            /* The one place the hand-written face is allowed, and it lies on the wall — so it takes
-               the wall's ink, like .margin-note does in the app. */
-            .note {
-                font-family: var(--font-note); font-size: 19px; line-height: 1.35;
-                color: var(--wood-ink-soft); transform: rotate(-1deg);
-            }
-
-            /* ---- hero -------------------------------------------------------------------- */
-            .hero { display: grid; grid-template-columns: minmax(0, 1fr) 470px; gap: 44px; align-items: start; padding: 56px 0 8px; }
-            .kicker-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-            .kicker-meta { font-family: var(--font-mono); font-size: 11px; color: var(--wood-ink-soft); }
-            .hero h1 {
-                margin: 0; font-family: var(--font-display); font-size: clamp(32px, 4.4vw, 44px);
-                line-height: 1.12; font-weight: 700; letter-spacing: -.01em; text-wrap: pretty;
-                color: var(--wood-ink);
-            }
-            .hero-sub {
-                margin: 18px 0 0; max-width: 52ch;
-                font-family: var(--font-serif); font-size: var(--fs-read); line-height: var(--lh-read);
-                text-wrap: pretty; color: var(--wood-ink);
-            }
-            .wait-wrap { margin-top: 28px; max-width: 540px; scroll-margin-top: 76px; }
-            .wait-label {
-                margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: .07em;
-                text-transform: uppercase; color: var(--t2);
-            }
-            .waitlist { display: flex; gap: 10px; align-items: flex-start; }
-            .waitlist input[type="email"] {
-                flex: 1; min-width: 0; padding: 9px 13px; font: inherit; font-size: 14px;
-                color: var(--text); background: var(--paper-bright);
-                border: var(--border-paper); border-radius: var(--radius-field);
-                box-shadow: var(--shadow-field-inset);
-            }
-            .waitlist input[type="email"]:focus-visible { outline: 2px solid var(--focus-halo); outline-offset: 1px; }
-            .waitlist button { border: 1px solid var(--pine-deep); font-family: inherit; }
-            /* The honeypot: invisible to people, present to bots. display:none would be too obvious. */
-            .waitlist .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-
-            /* A bead of resin: forming while nothing has been sent, set once it has. */
-            .drop { display: flex; align-items: center; gap: 10px; margin-top: 12px; min-height: 22px;
-                    font-size: 13px; color: var(--t2); }
-            .drop::before {
-                content: ""; flex: none; width: 10px; height: 10px; rotate: 45deg;
-                border-radius: 50% 50% 50% 2px;
-                background: radial-gradient(circle at 34% 28%, var(--resin-hi), var(--resin));
-                box-shadow: 0 1px 2px rgba(58, 38, 16, .35);
-            }
-            .waitlist-done { color: var(--accent); font-weight: 600; }
-            .proof { margin-top: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--t3); }
-
-            /* ---- wood plaque ------------------------------------------------------------- */
-            .plaque {
-                margin-top: 22px; padding: 14px 16px; border: 1px solid var(--wood-edge); border-radius: 4px;
-                background-color: var(--wood); background-image: var(--tex-wood), var(--surface-rail);
-                background-size: 420px, auto; box-shadow: var(--shadow-rail);
-            }
-            .plaque-title {
-                font-family: var(--font-display); font-size: 11.5px; font-weight: 700;
-                letter-spacing: .11em; text-transform: uppercase; color: var(--rail-ink);
-                text-shadow: 0 1px 1px var(--rail-edge);
-            }
-            .flow {
-                display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px;
-                font-family: var(--font-mono); font-size: 11.5px; color: var(--rail-ink-soft);
-            }
-            .flow .arrow { color: var(--brass); }
-
-            /* ---- sections ---------------------------------------------------------------- */
-            section { padding: 64px 0 0; scroll-margin-top: 76px; }
-            /* The pencil rule under a heading is drawn on the wall, so it is the wall's rule ink and
-               not the sheet's — --rule-ink already flips with the theme for exactly this. */
-            .rule {
-                display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-                padding-bottom: 10px; margin-bottom: 26px; border-bottom: 1px dashed var(--rule-ink);
-            }
-            .rule h2 {
-                margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 700;
-                color: var(--wood-ink);
-            }
-            .rule .meta { font-family: var(--font-mono); font-size: 11px; color: var(--wood-ink-soft); }
-
-            .gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; }
-            .gallery img { height: 210px; object-fit: cover; object-position: top; }
-
-            .features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-            .feature {
-                display: flex; flex-direction: column; gap: 6px; padding: 16px 18px 18px;
-                color: var(--text);
-                background-color: var(--sheet); background-image: var(--tex-paper);
-                border: var(--border-paper); border-radius: var(--radius-paper);
-                box-shadow: var(--shadow-paper-sm);
-            }
-            .feature-head { display: flex; align-items: center; gap: 9px; color: var(--accent); }
-            .feature-head b { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); }
-            .feature p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--t2); text-wrap: pretty; }
-
-            .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start; }
-            .plan { padding: 26px 26px 24px; }
-            .plan-head { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
-            .plan-head b { font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: .02em; }
-            .plan-price { display: flex; align-items: baseline; gap: 6px; }
-            .plan-price .n { font-family: var(--font-mono); font-size: 34px; line-height: 1; letter-spacing: -.02em; }
-            .plan-price .per { font-family: var(--font-mono); font-size: 12px; color: var(--t3); }
-            .plan-for { margin-top: 6px; font-size: 14px; color: var(--t2); }
-            .plan ul {
-                display: flex; flex-direction: column; gap: 9px; margin: 18px 0 0; padding: 14px 0 0;
-                list-style: none; border-top: 1px solid var(--rule-ink-soft);
-            }
-            .plan li { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; line-height: 1.4; }
-            .plan li svg { flex: none; margin-top: 2px; color: var(--accent); }
-            .plan-foot { margin-top: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--wood-ink-soft); }
-
-            /* ---- shelf board (roadmap) --------------------------------------------------- */
-            .shelves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
-            .shelf {
-                padding: 3px; border: 1px solid var(--wood-edge); border-radius: 5px;
-                background: var(--shelf-frame); box-shadow: var(--shadow-shelf);
-            }
-            .shelf-head {
-                display: flex; align-items: baseline; gap: 8px;
-                min-height: var(--bench-panel-hd); padding: 0 8px 0 10px;
-                border-bottom: 1px solid var(--wood-edge);
-                background-color: var(--sign-tile-hi);
-                background-image: var(--tex-wood), var(--grad-sign-tile);
-                background-size: 420px, auto;
-            }
-            .shelf-head b {
-                font-family: var(--font-display); font-size: 11px; font-weight: 700;
-                letter-spacing: .11em; text-transform: uppercase; color: var(--rail-ink);
-                text-shadow: 0 1px 1px var(--rail-edge);
-            }
-            .shelf-head .n { font-family: var(--font-readout); font-size: 11px; color: var(--rail-ink); }
-            .shelf-sheet {
-                padding: 14px; background-color: var(--sheet); background-image: var(--tex-paper);
-                color: var(--text);
-            }
-            .shelf-sheet ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
-            .shelf-sheet li {
-                display: flex; align-items: flex-start; gap: 8px; padding-bottom: 9px;
-                border-bottom: 1px solid var(--rule-ink-soft); font-size: 15px; line-height: 1.45;
-            }
-            .shelf-sheet li:last-child { border-bottom: 0; padding-bottom: 0; }
-            .shelf-sheet li svg { flex: none; margin-top: 2px; }
-            .mark-done { color: var(--accent); }
-            .mark-doing { color: var(--resin); }
-            .mark-next { color: var(--t3); }
-
-            /* ---- story ------------------------------------------------------------------- */
-            .story { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: start; }
-            .timeline { position: relative; padding-left: 26px; border-left: 2px solid var(--rule-ink); }
-            .step { position: relative; margin-bottom: 26px; }
-            .step::before {
-                content: ""; position: absolute; left: -35px; top: 7px; width: 11px; height: 11px;
-                border-radius: 50%; background: var(--wood);
-                box-shadow: inset 0 1px 2px rgba(30, 16, 4, .6), 0 0 0 2.5px var(--brass), 0 0 0 3.5px var(--brass-edge);
-            }
-            .step .when {
-                font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em;
-                text-transform: uppercase; color: var(--wood-ink-soft);
-            }
-            .step b {
-                display: block; margin-top: 3px; font-family: var(--font-display); font-size: 16px;
-                color: var(--wood-ink);
-            }
-            .step p {
-                margin: 6px 0 0; max-width: 62ch; font-family: var(--font-serif);
-                font-size: 15.5px; line-height: 1.7; text-wrap: pretty; color: var(--wood-ink);
-            }
-
-            /* ---- download ---------------------------------------------------------------- */
-            .download-card { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; padding: 26px 30px; }
-            .download-card .lead { flex: 1; min-width: 240px; }
-            .download-card b { display: block; font-family: var(--font-display); font-size: 18px; font-weight: 700; }
-            .download-card p { margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: var(--t2); text-wrap: pretty; }
-            .download-meta { margin-top: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--t3); }
-
-            /* ---- close ------------------------------------------------------------------- */
-            .band {
-                display: flex; align-items: center; gap: 26px; margin: 64px 0 56px; padding: 30px 34px;
-                border: 1px solid var(--wood-edge); border-radius: 5px;
-                background-color: var(--wood); background-image: var(--tex-wood), var(--surface-rail);
-                background-size: 420px, auto; box-shadow: var(--shadow-rail);
-            }
-            .band b {
-                display: block; font-family: var(--font-display); font-size: 20px; font-weight: 700;
-                color: var(--rail-ink); text-shadow: 0 1px 1px var(--rail-edge);
-            }
-            .band span.sub { display: block; margin-top: 5px; font-size: 13px; color: var(--rail-ink-soft); }
-
-            /* ADR-243 — a live sample of the public commons, not a screenshot of one. */
-            .discover-preview {
-                display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.5fr);
-                gap: 34px; margin-top: 62px; padding: 34px;
-                color: var(--text-on-pine); background: var(--pine-deep);
-                border: 1px solid var(--pine-deep); border-radius: var(--radius-paper);
-                box-shadow: var(--shadow-paper);
-            }
-            .discover-copy h2 { margin: 10px 0 8px; font: 700 30px/1.08 var(--font-display); }
-            .discover-copy p { margin: 0 0 20px; color: color-mix(in srgb, var(--text-on-pine) 76%, transparent); }
-            .discover-copy .stamp { color: var(--brass); background: transparent; }
-            .discover-copy .btn { width: fit-content; border-color: var(--brass-edge); }
-            .discover-minis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-            .discover-mini {
-                display: grid; grid-template-columns: 98px minmax(0, 1fr); gap: 12px;
-                min-height: 92px; padding: 8px; color: var(--text-on-pine); text-decoration: none;
-                background: rgb(255 255 255 / .055); border: 1px solid rgb(255 255 255 / .13);
-                border-radius: var(--radius-paper);
-            }
-            .discover-mini img { width: 98px; height: 76px; object-fit: cover; border-radius: 2px; }
-            .discover-mini span { align-self: center; min-width: 0; }
-            .discover-mini small, .discover-mini em, .discover-mini b { display: block; }
-            .discover-mini small { color: var(--brass); font: 9px var(--font-mono); text-transform: uppercase; }
-            .discover-mini b { margin: 4px 0; font: 700 14px/1.15 var(--font-display); }
-            .discover-mini em { color: color-mix(in srgb, var(--text-on-pine) 62%, transparent); font: 10px var(--font-mono); }
-            .discover-empty { grid-template-columns: 1fr auto; align-items: center; }
-
-            .ruler {
-                display: flex; align-items: center; gap: 16px; min-height: 30px; padding: 0 24px;
-                border-top: 1px solid var(--rail-edge);
-                background-color: var(--rail-lo);
-                background-image: var(--tex-wood), var(--surface-rail);
-                background-size: 420px, auto;
-                font-family: var(--font-readout); font-size: 11px; color: var(--rail-ink);
-                text-shadow: 0 1px 1px var(--rail-edge); overflow: hidden; white-space: nowrap;
-            }
-            .ruler .label {
-                font-family: var(--font-sans); font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-            }
-            .ruler a { color: var(--rail-ink-soft); }
-
-            /* T-153 — the consent gate. Fixed and low-left so it never covers the waitlist form,
-               which is the one thing on this page a visitor came to use. */
-            .consent {
-                position: fixed; z-index: 60; left: 16px; bottom: 16px;
-                width: min(28rem, calc(100vw - 32px)); padding: 16px;
-                border: 1px solid var(--paper-edge); border-radius: 3px;
-                background-color: var(--sheet); background-image: var(--tex-paper);
-                box-shadow: 0 6px 18px rgb(0 0 0 / .22);
-                font-size: 14px; line-height: 1.6;
-            }
-            .consent[hidden] { display: none; }
-            .consent h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 18px; }
-            .consent p { margin: 0 0 8px; }
-            .consent-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-
-            /* ---- narrow ------------------------------------------------------------------ */
-            @media (max-width: 1000px) {
-                .hero, .story { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-                .gallery, .features, .plans, .shelves { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-                .discover-preview { grid-template-columns: 1fr; }
-            }
-            @media (max-width: 720px) {
-                .rail { height: auto; min-height: var(--bench-rail-h); flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
-                .rail-name { white-space: nowrap; }
-                .rail-chip { margin-left: auto; }
-                .rail > .spacer { flex: 0 0 100%; }
-                .rail > .lang, .rail > .btn { flex-shrink: 0; }
-                .rail > .btn { min-height: 34px; }
-                .rail-nav { display: none; }
-                .hero { padding-top: 36px; }
-                section { padding-top: 44px; }
-                .gallery, .features, .plans, .shelves { grid-template-columns: minmax(0, 1fr); }
-                .band { flex-direction: column; align-items: flex-start; gap: 16px; }
-                .discover-minis { grid-template-columns: 1fr; }
-                .discover-preview { padding: 24px; }
-                /* Off the tilt at phone width: a rotated sheet in a single column reads as a bug,
-                   not as a hand — there is no stack for it to be part of. */
-                .paper { transform: none; }
-            }
-            .network-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); width: 100%; }
-            .network-mark { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-sans); }
-            .network { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); background: var(--sheet); color: var(--text); border-radius: var(--radius-sm); }
-            .plaque { background: var(--surface); border: 1px solid var(--border); box-shadow: none; }
-            .plaque-title, .flow { color: var(--text); text-shadow: none; }
-            .features { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-            .feature { display: block; background: var(--sheet); border: 1px solid var(--border); border-radius: var(--radius-md); }
-            .feature summary { cursor: pointer; list-style: none; min-height: 56px; }
-            .feature summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+            .rail { display: flex; align-items: center; gap: var(--space-4); min-height: 78px; padding: var(--space-3) var(--space-6); border-bottom: 1px solid var(--border); background: var(--sheet); }
+            .brand { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text); text-decoration: none; flex-shrink: 0; }
+            .rail-name { font: 600 var(--fs-27) var(--font-display); white-space: nowrap; }
+            .rail-chip { font-size: var(--fs-13); color: var(--t2); }
+            .rail-nav { display: flex; gap: var(--space-5); }
+            .rail-nav a { font-size: var(--fs-16); text-decoration: none; color: var(--text); }
+            .rail-nav a:hover { text-decoration: underline; }
+            .lang { display: flex; gap: var(--space-1); }
+            .lang a { padding: var(--space-2); font-size: var(--fs-13); text-decoration: none; color: var(--text); border-radius: var(--radius-sm); }
+            .lang [aria-current] { background: var(--asoft); font-weight: 700; }
+            .btn { display: inline-flex; justify-content: center; align-items: center; gap: var(--space-2); min-height: 48px; padding: var(--space-3) var(--space-5); border: 1px solid var(--accent); border-radius: var(--radius-md); font: 600 var(--fs-17)/1.2 var(--font-sans); text-decoration: none; cursor: pointer; }
+            .btn-sm { min-height: 44px; padding: var(--space-2) var(--space-4); font-size: var(--fs-15); }
+            .btn-pine { background: var(--accent); color: var(--text-on-pine); }
+            .btn-pine:hover { background: var(--pine-deep); }
+            .btn-paper { color: var(--text); background: var(--sheet); border-color: var(--border-strong); }
+            .btn[disabled] { opacity: .6; cursor: wait; }
+            .mobile-menu { display: none; }
+            .hero { padding: 70px 0 var(--space-8); text-align: center; }
+            .kicker-row { margin-bottom: var(--space-4); }
+            .stamp { font: 600 var(--fs-13) var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+            h1 { font-size: clamp(var(--fs-34), 5.3vw, calc(var(--fs-34) * 2.2)); letter-spacing: -.045em; line-height: 1.04; max-width: 1100px; margin: auto; overflow-wrap: anywhere; }
+            .hero-sub { max-width: 760px; margin: var(--space-5) auto var(--space-6); font-size: var(--fs-27); line-height: 1.4; color: var(--t2); }
+            .wait-wrap { max-width: 660px; margin: auto; }
+            .waitlist { display: flex; gap: var(--space-3); }
+            .waitlist input[type=email] { width: 100%; min-width: 0; flex: 1; padding: var(--space-3) var(--space-4); min-height: 54px; background: var(--paper-bright); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-md); }
+            .waitlist input::placeholder { color: var(--t2); }
+            .waitlist .btn { flex-shrink: 0; }
+            .hp { position: absolute; left: -10000px; width: 1px; height: 1px; }
+            .drop { margin-top: var(--space-3); font-size: var(--fs-15); color: var(--t2); }
+            .proof, .note { margin-top: var(--space-3); font: var(--fs-16)/1.5 var(--font-sans); color: var(--t2); }
+            .waitlist-done { padding: var(--space-4); background: var(--asoft); color: var(--text); border-radius: var(--radius-md); }
+            .hero-shot { max-width: 1120px; margin: var(--space-8) auto 0; background: var(--paper-bright); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-paper); }
+            .hero-shot img { width: 100%; }
+            .cap { padding: var(--space-3) var(--space-4); font-size: var(--fs-15); color: var(--t2); }
+            section { padding: var(--space-8) 0; }
+            .section-heading { text-align: center; margin-bottom: var(--space-6); }
+            .section-heading p { margin-top: var(--space-3); color: var(--t2); font-size: var(--fs-21); }
+            .workflow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); list-style: none; margin: 0; padding: 0; }
+            .workflow li { display: flex; gap: var(--space-4); }
+            .step-number { flex-shrink: 0; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--asoft); color: var(--accent); font: 600 var(--fs-27) var(--font-display); }
+            .workflow h3 { font-size: var(--fs-27); margin-bottom: var(--space-2); }
+            .workflow p { color: var(--t2); font-size: var(--fs-19); }
+            .network-strip { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: var(--space-4) var(--space-5); padding: var(--space-5) 0; margin-top: var(--space-6); border-top: 1px solid var(--border); font-size: var(--fs-16); color: var(--t2); }
+            .network-strip b { color: var(--text); }
+            .examples { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--space-8); padding: var(--space-8); background: var(--alt); border-radius: var(--radius-md); }
+            .example-copy p { margin: var(--space-5) 0; color: var(--t2); font-size: var(--fs-21); }
+            .example-copy a { font-weight: 600; text-underline-offset: 4px; }
+            .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+            .gallery figure { background: var(--paper-bright); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+            .gallery figure:only-child { grid-column: 1/-1; }
+            .gallery img { width: 100%; }
+            .gallery a { display: block; }
+            .benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); background: var(--asoft); padding: var(--space-6); margin-top: var(--space-8); border-radius: var(--radius-md); }
+            .benefit { display: flex; align-items: flex-start; gap: var(--space-4); }
+            .benefit svg { flex-shrink: 0; color: var(--accent); }
+            .benefit h3 { font-size: var(--fs-21); }
+            .benefit p { margin-top: var(--space-2); font-size: var(--fs-16); color: var(--t2); }
+            .tools { margin-top: var(--space-6); border-bottom: 1px solid var(--border); }
+            .tools>summary, .comparison-toggle>summary { font-weight: 600; padding: var(--space-4) 0; }
+            .features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-4) 0 var(--space-6); align-items: start; }
+            .feature { padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--paper-bright); }
+            .feature-head { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; list-style: none; }
             .feature-head b { flex: 1; }
-            .feature-head svg { flex: none; width: 32px; height: 32px; }
-            .feature-detail { padding-top: var(--space-3); }
-            .feature-detail img { display: block; width: 100%; height: auto; margin-top: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-            .feature:hover { border-color: var(--accent); }
-            .plan.bright { border: 2px solid var(--accent); box-shadow: var(--shadow-paper); transform: none; }
-            .plan-comparison { overflow-x: auto; margin-top: var(--space-6); }
-            .plan-comparison table { width: 100%; border-collapse: collapse; background: var(--sheet); }
-            .plan-comparison caption { text-align: left; font-weight: 600; padding: var(--space-4) 0; }
-            .plan-comparison th, .plan-comparison td { text-align: left; padding: var(--space-4); border-bottom: 1px solid var(--border); }
-            .plan-comparison :is(th, td):nth-child(3) { background: var(--asoft); }
-            .rail { background: var(--surface); color: var(--text); background-image: none; border-bottom: 1px solid var(--border); box-shadow: none; }
-            .rail-name, .rail-nav a, .lang a { color: var(--text); text-shadow: none; }
-            .rail-nav a[href^="#"]::after { content: ' ↓'; opacity: .6; }
-            .login-link { border: 1px solid var(--accent); font-weight: 700; }
-            .download-card .btn { color: var(--text); background: var(--sheet); border: 1px solid var(--border-strong); }
-            #waitlist-dialog { width: min(480px, calc(100% - 32px)); box-sizing: border-box; padding: var(--space-6); color: var(--text); background: var(--sheet); border: 1px solid var(--border); border-radius: var(--radius-md); }
+            .feature-head svg { flex-shrink: 0; color: var(--accent); }
+            .feature-detail { padding-top: var(--space-4); font-size: var(--fs-17); }
+            .feature-detail img { margin-top: var(--space-4); width: 100%; }
+            .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); align-items: stretch; }
+            .plan { padding: var(--space-6); background: var(--paper-bright); border: 1px solid var(--border); border-radius: var(--radius-md); }
+            .plan-head b { font: 600 var(--fs-27) var(--font-display); }
+            .plan-price { display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-4) 0; }
+            .plan-price .n { font: 600 calc(var(--fs-27) * 2)/1 var(--font-display); }
+            .plan-price .per, .plan-for { color: var(--t2); font-size: var(--fs-17); }
+            .plan ul { padding: 0; margin: var(--space-5) 0 0; list-style: none; }
+            .plan li { display: flex; gap: var(--space-3); margin-top: var(--space-3); font-size: var(--fs-17); }
+            .plan li svg { color: var(--accent); flex-shrink: 0; margin-top: var(--space-1); }
+            .plan-foot { text-align: center; margin-top: var(--space-5); font-size: var(--fs-16); color: var(--t2); }
+            .plan-comparison { overflow-x: auto; color: var(--text); }
+            .plan-comparison table { width: 100%; border-collapse: collapse; background: var(--paper-bright); }
+            .plan-comparison caption { text-align: left; padding: var(--space-3) 0; }
+            .plan-comparison th, .plan-comparison td { text-align: left; padding: var(--space-4); border-bottom: 1px solid var(--border); color: var(--text); font-size: var(--fs-16); }
+            .faq h2 { margin-bottom: var(--space-5); }
+            .faq details { border-bottom: 1px solid var(--border); padding: var(--space-4) 0; }
+            .faq summary { font-weight: 600; }
+            .faq p { max-width: 75ch; color: var(--t2); margin-top: var(--space-3); }
+            .rule { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+            .meta, .when, .download-meta { color: var(--t2); font-size: var(--fs-15); }
+            .shelves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); }
+            .shelf { background: var(--paper-bright); padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-md); }
+            .shelf-head { display: flex; gap: var(--space-3); font-weight: 600; margin-bottom: var(--space-4); }
+            .shelf-sheet ul { padding: 0; list-style: none; }
+            .shelf-sheet li { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+            .mark-done, .mark-doing, .mark-next { color: var(--accent); }
+            .story { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8); }
+            .step { border-left: 2px solid var(--border); padding-left: var(--space-5); margin-bottom: var(--space-5); }
+            .step b { display: block; margin: var(--space-2) 0; font: 600 var(--fs-21) var(--font-display); }
+            .download-card { display: flex; flex-wrap: wrap; gap: var(--space-5); align-items: center; padding: var(--space-6); background: var(--alt); border-radius: var(--radius-md); }
+            .download-card .lead { flex: 1; min-width: min(280px, 100%); }
+            .download-card p { margin: var(--space-3) 0; }
+            .band { text-align: center; background: var(--pine-deep); color: var(--text-on-pine); margin-top: var(--space-8); padding: var(--space-8) var(--space-5); }
+            .band p { margin: var(--space-4) auto var(--space-5); max-width: 65ch; font-size: var(--fs-21); }
+            .band .btn { background: var(--paper-bright); color: var(--text); border-color: var(--paper-bright); }
+            .ruler { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-5); padding: var(--space-5) var(--space-6); font-size: var(--fs-15); }
+            .ruler .label { font: 600 var(--fs-21) var(--font-display); }
+            .discover-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8); margin-top: var(--space-8); padding: var(--space-6); background: var(--alt); border-radius: var(--radius-md); }
+            .discover-copy h2 { margin: var(--space-3) 0; }
+            .discover-copy p { margin-bottom: var(--space-5); color: var(--t2); }
+            .discover-minis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+            .discover-mini { display: block; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--paper-bright); padding: var(--space-3); text-decoration: none; color: var(--text); }
+            .discover-mini img { width: 100%; aspect-ratio: 1.6; object-fit: cover; border-radius: var(--radius-sm); }
+            .discover-mini :is(small, b, em) { display: block; margin-top: var(--space-2); }
+            .discover-mini b { font: 600 var(--fs-21) var(--font-display); }
+            .discover-mini :is(small, em) { font: var(--fs-13) var(--font-sans); color: var(--t2); }
+            .discover-empty { grid-template-columns: 1fr auto; align-items: center; }
+            .consent { position: fixed; z-index: 60; left: var(--space-4); bottom: var(--space-4); width: min(28rem, calc(100vw - 32px)); padding: var(--space-5); color: var(--text); background: var(--paper-bright); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-paper); font-size: var(--fs-16); }
+            .consent[hidden] { display: none; }
+            .consent h2 { font-size: var(--fs-21); margin-bottom: var(--space-3); }
+            .consent-actions { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-4); }
+            #waitlist-dialog { width: min(540px, calc(100% - 32px)); padding: var(--space-6); color: var(--text); background: var(--sheet); border: 1px solid var(--border); border-radius: var(--radius-md); }
+            #waitlist-dialog h2 { font-size: var(--fs-27); margin: var(--space-3) 0 var(--space-5); }
             #waitlist-dialog::backdrop { background: color-mix(in srgb, var(--text) 55%, transparent); }
-            .dialog-close { float: right; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-            .feature, .paper, .shelf-sheet, .rail { background-image: none; }
-            @media (max-width: 600px) { .features { grid-template-columns: 1fr; } .waitlist { flex-wrap: wrap; } }
-            @media (prefers-reduced-motion: reduce) { .paper { transform: none; } }
-
+            .dialog-close { float: right; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+            @media (max-width: 1100px) { .rail-chip { display: none; } .rail-nav { gap: var(--space-3); } .rail { gap: var(--space-3); padding-inline: var(--space-4); } .rail-name { font-size: var(--fs-21); } .examples, .discover-preview { gap: var(--space-5); } .workflow { gap: var(--space-5); } }
+            @media (max-width: 800px) {
+                .rail { flex-wrap: wrap; } .rail-nav { display: none; } .rail>.btn[data-waitlist] { display: none; }
+                .mobile-menu { display: block; position: relative; } .mobile-menu summary { padding: var(--space-2); font-size: var(--fs-16); }
+                .mobile-menu nav { position: absolute; z-index: 25; right: 0; width: 220px; padding: var(--space-4); background: var(--paper-bright); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-paper); }
+                .mobile-menu a { display: block; padding: var(--space-3); color: var(--text); }
+                .hero { padding-top: var(--space-8); } .hero-sub { font-size: var(--fs-21); }
+                .workflow { grid-template-columns: 1fr; } .examples, .story, .discover-preview { grid-template-columns: 1fr; }
+                .benefits { grid-template-columns: 1fr; } .plans { gap: var(--space-3); } .plan { padding: var(--space-4); }
+                .plan-price .n { font-size: calc(var(--fs-21) * 2); } .plan-head b { font-size: var(--fs-21); }
+            }
+            @media (max-width: 540px) {
+                .wrap { padding-inline: var(--space-4); } .rail { gap: var(--space-2); } .login-link { display: none; }
+                .rail-name { font-size: var(--fs-21); } .lang a { min-height: 44px; display: grid; place-items: center; }
+                h1 { font-size: calc(var(--fs-21) * 2); } .hero-sub { font-size: var(--fs-21); }
+                .waitlist { flex-direction: column; } .hero-shot { margin-top: var(--space-6); }
+                .examples { padding: var(--space-5); } .gallery, .plans, .shelves, .features { grid-template-columns: 1fr; }
+                .benefits { padding: var(--space-5); } .plan { padding: var(--space-5); }
+                .discover-minis { grid-template-columns: 1fr; } .discover-empty { grid-template-columns: 1fr; }
+                .ruler { gap: var(--space-4); padding: var(--space-5) var(--space-4); }
+                .plan-comparison th, .plan-comparison td { padding: var(--space-2); }
+            }
+            @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
         """;
 
     // Plain raw string with placeholders, like Css above: JS is as brace-heavy as CSS, and inside
     // an interpolated raw string every one of those braces would need escaping.
     private const string WaitlistJs = """
+        document.querySelectorAll('.mobile-menu a').forEach(link => link.addEventListener('click', () => link.closest('details').open = false));
         for (const card of document.querySelectorAll('.feature')) {
             card.addEventListener('pointerenter', event => {
                 if (event.pointerType === 'mouse' && !card.open) { card.open = true; card.dataset.hover = 'true'; }
@@ -607,6 +354,7 @@ public static class LandingEndpoints
         if (dialog && original) {
             const copy = original.cloneNode(true);
             copy.id = 'waitlist-modal-form';
+            copy.querySelector('input[type=email]').setAttribute('aria-describedby', 'waitlist-modal-note');
             const note = document.getElementById('waitlist-note').cloneNode(true);
             note.id = 'waitlist-modal-note';
             note.setAttribute('role', 'status');
@@ -627,7 +375,7 @@ public static class LandingEndpoints
                     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 if (res.ok) {
                     form.replaceWith(Object.assign(document.createElement('p'),
-                        { className: 'waitlist-done', textContent: '%%DONE%%' }));
+                        { className: 'waitlist-done', role: 'status', textContent: '%%DONE%%' }));
                     note.remove();
                 } else {
                     note.textContent = (await res.json()).error || note.textContent;
@@ -789,15 +537,12 @@ public static class LandingEndpoints
                 ]),
         };
 
+        string Copy(string key) => E(c.Copy(key, ru));
         var nav = new List<string>();
-        nav.Add($"""<a href="/discovery">Discovery</a>""");
-        if (discovery.Settings.Enabled) nav.Add($"""<a href="#discover">{LandingTexts.Community(ru)}</a>""");
-        if (c.ShowShots) nav.Add($"""<a href="#shots">{LandingTexts.Screenshots(ru)}</a>""");
-        if (c.ShowFeatures) nav.Add($"""<a href="#features">{LandingTexts.WhatItDoes(ru)}</a>""");
+        if (c.ShowFeatures) nav.Add($"""<a href="#features">{LandingTexts.HowItWorks.Pick(ru)}</a>""");
+        if (c.ShowShots || c.ShowcaseBlog is not null) nav.Add($"""<a href="#examples">{LandingTexts.Examples.Pick(ru)}</a>""");
         if (c.ShowPricing) nav.Add($"""<a href="#pricing">{LandingTexts.Pricing(ru)}</a>""");
-        if (c.ShowRoadmap && c.Roadmap.Count > 0) nav.Add("""<a href="#roadmap">Roadmap</a>""");
-        if (c.ShowStory && c.Story.Count > 0) nav.Add($"""<a href="#story">{LandingTexts.Story(ru)}</a>""");
-        if (c.ShowDownload) nav.Add($"""<a href="#download">{LandingTexts.Download(ru)}</a>""");
+        nav.Add($"""<a href="/discovery">Discovery</a>""");
 
         var check = Icons.Svg("check", 15);
 
@@ -825,31 +570,28 @@ public static class LandingEndpoints
             </table></div>
             """;
 
-        var planCards = string.Join("", plans.Select((p, i) => $"""
-            <article class="paper plan{(p.Featured ? " bright pinned" : "")}" style="--tilt:{(i - 1) * 0.5:0.#}deg">
-                <div class="plan-head">
-                    <b>{E(p.Name)}</b><span class="spacer"></span>
-                    <span class="stamp {p.Tone}">{E(p.Badge)}</span>
-                </div>
+        var planCards = string.Join("", plans.Select(p => $"""
+            <article class="plan">
+                <div class="plan-head"><b>{E(p.Name)}</b></div>
                 <div class="plan-price"><span class="n">{E(p.Price)}</span><span class="per">{E(p.Per)}</span></div>
                 <div class="plan-for">{E(p.For)}</div>
                 <ul>{string.Join("", p.Lines.Select(l => $"<li>{check}<span>{E(l)}</span></li>"))}</ul>
             </article>
             """));
 
-        var gallery = !c.ShowShots || c.Gallery.Count == 0 ? "" : $"""
-            <section id="shots">
-                <div class="rule">
-                    <h2>{LandingTexts.WhatItLooksLike(ru)}</h2>
-                    <span class="meta">{LandingTexts.RealScreenshotsNotMockups(ru)}</span>
+        var gallery = !c.ShowShots && c.ShowcaseBlog is null ? "" : $"""
+            <section id="examples" class="examples">
+                <div class="example-copy">
+                    <h2>{Copy("examplesTitle")}</h2><p>{Copy("examplesBody")}</p>
+                    {(c.ShowcaseBlog is null ? "" : $"""<a href="https://{E(c.ShowcaseBlog)}">{Copy("examplesLink")} &rarr;</a>""")}
                 </div>
-                <div class="gallery">
-                    {string.Join("", c.Gallery.Select((s, i) => $"""
-                    <figure class="paper tight" style="--tilt:{(i % 3 - 1) * 0.55:0.#}deg;margin:0">
-                        <img src="{E(LandingContent.ShotUrl(s.File))}" alt="{E(s.Caption.Pick(ru))}" loading="lazy">
+                <div id="shots" class="gallery">
+                    {(c.ShowShots ? string.Join("", (c.Gallery.Count > 0 ? c.Gallery : new[] { new LandingShot("/landing-blog.png", LandingTexts.ViewScreen) }).Select(s => $"""
+                    <figure>
+                        <a href="{E(LandingContent.ShotUrl(s.File))}"><img src="{E(LandingContent.ShotUrl(s.File))}" alt="{E(s.Caption.IsEmpty ? LandingTexts.ViewScreen.Pick(ru) : s.Caption.Pick(ru))}" loading="lazy"></a>
                         {(s.Caption.IsEmpty ? "" : $"""<figcaption class="cap">{E(s.Caption.Pick(ru))}</figcaption>""")}
                     </figure>
-                    """))}
+                    """)) : "")}
                 </div>
             </section>
             """;
@@ -891,7 +633,7 @@ public static class LandingEndpoints
                         </div>
                         """))}
                     </div>
-                    <figure class="paper tight pinned" style="--tilt:1.2deg;margin:0">
+                    <figure class="paper tight pinned" >
                         <img src="{E(LandingContent.ShotUrl(c.Hero.File))}" alt="" loading="lazy">
                     </figure>
                 </div>
@@ -904,7 +646,7 @@ public static class LandingEndpoints
                     <h2>{LandingTexts.TheDesktopApp(ru)}</h2>
                     <span class="meta">Windows</span>
                 </div>
-                <div class="paper bright download-card" style="--tilt:.4deg">
+                <div class="paper bright download-card" >
                     <div class="lead">
                         <b>{LandingTexts.TheSameBenchInItsOwnWindow(ru)}</b>
                         <p>{LandingTexts.DesktopDescription(ru)}</p>
@@ -941,8 +683,7 @@ public static class LandingEndpoints
             <body>
 
             <header class="rail">
-                {Mark(24)}
-                <span class="rail-name">Cedar Clerk</span>
+                <a class="brand" href="/welcome">{Mark(30)}<span class="rail-name">Cedar Clerk</span></a>
                 <span class="rail-chip">{LandingTexts.InviteOnlyBeta(ru)}</span>
                 <span class="spacer"></span>
                 <nav class="rail-nav" aria-label="{LandingTexts.OnThisPage.Pick(ru)}">{string.Join("", nav)}</nav>
@@ -954,6 +695,7 @@ public static class LandingEndpoints
                 </div>
                 <a class="btn btn-paper btn-sm login-link" href="/login">{LandingTexts.LogIn(ru)}</a>
                 <a class="btn btn-pine btn-sm" href="#waitlist" data-waitlist>{LandingTexts.JoinTheWaitlist(ru)}</a>
+                <details class="mobile-menu"><summary>{LandingTexts.Menu.Pick(ru)}</summary><nav aria-label="{LandingTexts.OnThisPage.Pick(ru)}">{string.Join("", nav)}<a href="#waitlist" data-waitlist>{LandingTexts.JoinTheWaitlist(ru)}</a></nav></details>
             </header>
 
             <dialog id="waitlist-dialog" aria-labelledby="waitlist-dialog-title">
@@ -962,89 +704,69 @@ public static class LandingEndpoints
                 <div id="waitlist-dialog-content"></div>
             </dialog>
             <main class="wrap">
-                <section class="hero" style="padding-top:56px">
-                    <div>
-                        <div class="kicker-row">
-                            <span class="stamp">{E(c.Kicker.Pick(ru))}</span>
-                            <span class="kicker-meta">{LandingTexts.LanguageSummary(ru, languageCount)}</span>
-                        </div>
-                        <h1>{c.HeroTitle.Pick(ru)}</h1>
-                        <p class="hero-sub">{E(description)}</p>
-
-                        <div id="waitlist" class="wait-wrap">
-                            <div class="paper bright pinned" style="--tilt:-.4deg">
-                                <div class="wait-label">{LandingTexts.EmailForAnInvite(ru)}</div>
-                                <!--ADR-135 — the primary CTA is the waitlist: while registration is
-                                invite-only, "Create an account" leads to a wall, and a wall converts nobody.-->
-                                <form class="waitlist" id="waitlist-form" autocomplete="off">
-                                    <input type="email" name="email" required maxlength="254"
-                                           placeholder="you@studio.dev" aria-label="{LandingTexts.Email(ru)}">
-                                    <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-                                    <button class="btn btn-pine" type="submit">{LandingTexts.SaveMySeat(ru)}</button>
-                                </form>
-                                <p class="drop" id="waitlist-note">{LandingTexts.WaitlistHint(ru)}</p>
-                                {(c.Proof.IsEmpty ? "" : $"""<div class="proof">{E(c.Proof.Pick(ru))}</div>""")}
-                            </div>
-                            {(c.Note.IsEmpty ? "" : $"""<div class="note" style="margin-top:14px">{E(c.Note.Pick(ru))}</div>""")}
-                        </div>
+                <section class="hero">
+                    <div class="kicker-row"><span class="stamp">{E(c.Kicker.Pick(ru))}</span></div>
+                    <h1>{E(c.HeroTitle.Pick(ru)).Replace("&lt;br&gt;", "<br>").Replace("&lt;br/&gt;", "<br>").Replace("&lt;br /&gt;", "<br>")}</h1>
+                    <p class="hero-sub">{E(description)}</p>
+                    <div id="waitlist" class="wait-wrap">
+                        <form class="waitlist" id="waitlist-form">
+                            <input type="email" name="email" required maxlength="254" autocomplete="email" placeholder="you@studio.dev" aria-label="{LandingTexts.Email(ru)}" aria-describedby="waitlist-note">
+                            <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+                            <button class="btn btn-pine" type="submit">{LandingTexts.JoinTheWaitlist(ru)}</button>
+                        </form>
+                        <p class="drop" id="waitlist-note" role="status">{LandingTexts.WaitlistHint(ru)}</p>
+                        {(c.Proof.IsEmpty ? "" : $"""<div class="proof">{E(c.Proof.Pick(ru))}</div>""")}
+                        {(c.Note.IsEmpty ? "" : $"""<div class="note">{E(c.Note.Pick(ru))}</div>""")}
                     </div>
-
-                    <div>
-                        <figure class="paper tight" style="--tilt:1deg;margin:0">
-                            <img src="{E(LandingContent.ShotUrl(c.Hero.File))}"
-                                 alt="{E(LandingTexts.PostOnCedarClerkBlog(ru))}">
-                            {(c.Hero.Caption.IsEmpty ? "" : $"""<figcaption class="cap" style="text-align:center">{E(c.Hero.Caption.Pick(ru))}</figcaption>""")}
-                        </figure>
-                        <div class="plaque">
-                            <div class="plaque-title">{LandingTexts.OnePostEveryAddress(ru)}</div>
-                            <div class="flow">
-                                <span>{LandingTexts.Draft(ru)}</span><span class="arrow">&rarr;</span>
-                                <span class="network-grid"><span class="network">{Icons.Svg("paper-plane-tilt", 24)}Telegram</span><span class="network"><b class="network-mark" aria-hidden="true">B</b>Bluesky</span><span class="network"><b class="network-mark" aria-hidden="true">X</b>X</span><span class="network"><b class="network-mark" aria-hidden="true">D</b>Discord</span><span class="network"><b class="network-mark" aria-hidden="true">in</b>LinkedIn</span></span><span class="arrow">&rarr;</span>
-                                <span>{LandingTexts.Blog(ru)}</span><span class="arrow">&rarr;</span><span>RSS</span>
-                            </div>
-                        </div>
-                    </div>
+                    {(c.ShowShots ? $"""
+                    <figure class="hero-shot">
+                        <img src="{E(LandingContent.ShotUrl(c.Hero.File))}" alt="{E(c.Hero.Caption.IsEmpty ? LandingTexts.ViewScreen.Pick(ru) : c.Hero.Caption.Pick(ru))}" fetchpriority="high">
+                        {(c.Hero.Caption.IsEmpty ? "" : $"""<figcaption class="cap">{E(c.Hero.Caption.Pick(ru))}</figcaption>""")}
+                    </figure>
+                    """ : "")}
                 </section>
-
-                {DiscoveryEndpoints.RenderLandingPreview(ru, discovery)}
-
-                {gallery}
 
                 {(c.ShowFeatures ? $"""
-                <section id="features">
-                    <div class="rule">
-                        <h2>{LandingTexts.WhatIsAlreadyOnTheBench(ru)}</h2>
-                        <span class="meta">{features.Length} {LandingTexts.Tools(ru)}</span>
-                    </div>
-                    <div class="features">{featureCards}</div>
+                <section id="features" aria-label="{Copy("workflowTitle")}">
+                    <ol class="workflow">
+                        {string.Join("", new[] { "write", "channels", "publish" }.Select((key, i) => $"""
+                        <li><span class="step-number" aria-hidden="true">{i + 1}</span><div><h3>{Copy(key + "Title")}</h3><p>{Copy(key + "Body")}</p></div></li>
+                        """))}
+                    </ol>
+                    <div class="network-strip"><b>{LandingTexts.OnePostEveryAddress(ru)}</b><span>{LandingTexts.Blog(ru)}</span>{string.Join("", PublishNetworks.All.Select(n => $"<span>{E(n)}</span>"))}<span>RSS</span></div>
                 </section>
                 """ : "")}
-
+                {gallery}
+                {DiscoveryEndpoints.RenderLandingPreview(ru, discovery)}
+                {(c.ShowFeatures ? $"""
+                <div class="benefits">
+                    <div class="benefit">{Icons.Svg("translate", 32)}<div><h3>{LandingTexts.LanguagesTitle(ru, languageCount)}</h3><p>{LandingTexts.TranslationDescription(ru)}</p></div></div>
+                    <div class="benefit">{Icons.Svg("timer", 32)}<div><h3>{LandingTexts.Scheduler(ru)}</h3><p>{LandingTexts.SchedulerDescription(ru)}</p></div></div>
+                    <div class="benefit">{Icons.Svg("download-simple", 32)}<div><h3>{LandingTexts.TheTextsStayYours(ru)}</h3><p>{LandingTexts.ExportDescription(ru)}</p></div></div>
+                </div>
+                <details class="tools"><summary>{LandingTexts.AllTools.Pick(ru)} · {features.Length}</summary><div class="features">{featureCards}</div></details>
+                """ : "")}
                 {(c.ShowPricing ? $"""
                 <section id="pricing">
-                    <div class="rule">
-                        <h2>{LandingTexts.WhatItCosts(ru)}</h2>
-                        <span class="meta">{LandingTexts.PricingHint(ru)}</span>
-                    </div>
+                    <div class="section-heading"><h2>{Copy("pricingTitle")}</h2><p>{Copy("pricingBody")}</p></div>
                     <div class="plans">{planCards}</div>
-                    {comparison}
-                    <div class="plan-foot">{LandingTexts.TrialPrice(ru, Consts.Plans.TrialPrice)}</div>
+                    <p class="plan-foot">{LandingTexts.SeparateCredits.Pick(ru)}<br>{LandingTexts.TrialPrice(ru, Consts.Plans.TrialPrice)}</p>
+                    <details class="comparison-toggle"><summary>{LandingTexts.ComparePlans.Pick(ru)}</summary>{comparison}</details>
                 </section>
                 """ : "")}
+                <section class="faq" id="faq"><h2>{Copy("faqTitle")}</h2>
+                    {string.Join("", Enumerable.Range(1, 3).Select(i => $"""<details><summary>{Copy($"faq{i}Question")}</summary><p>{Copy($"faq{i}Answer")}</p></details>"""))}
+                </section>
 
                 {roadmap}
                 {story}
                 {download}
 
-                <div class="band">
-                    {Mark(56)}
-                    <div style="flex:1;min-width:0">
-                        <b>{LandingTexts.TheDoorsOpenByList(ru)}</b>
-                        <span class="sub">{LandingTexts.InviteHint(ru)}</span>
-                    </div>
-                    <a class="btn btn-pine" href="#waitlist" data-waitlist>{LandingTexts.SaveMySeat(ru)}</a>
-                </div>
             </main>
+            <section class="band">
+                <h2>{Copy("closingTitle")}</h2><p>{Copy("closingBody")}</p>
+                <a class="btn btn-paper" href="#waitlist" data-waitlist>{LandingTexts.SaveMySeat(ru)}</a>
+            </section>
 
             <footer class="ruler">
                 <span class="label">Cedar Clerk</span>

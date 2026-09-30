@@ -13,6 +13,8 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [x] Implement the selected editorial landing with Admin-managed bilingual content — ADR-309; responsive layout, preserved uploads and switches, editable FAQ and section copy. Branch `codex/landing-admin-design`; not deployed. #ui #growth P1
+
 - [x] T-394 Implement the v0.23.6 review locally — ADR-306; media access and upload filing, project-owned documents, shared Properties, toolbar/sidebar/hub, landing disclosures and account security. Branch `codex/framer-review`; not deployed. Google live failure diagnosis and Discord production setup remain on T-003. #ui #projects #auth P1
 
 - [ ] Workshop chrome (ADR-301) — menu bar, command registry, `Ctrl+Shift+P` palette, shell-level inspector rail and the `/ai` operations log, on `claude/app-chrome`, **not merged, not deployed**. Front-end only: no entity, no migration, no endpoint; opened in a browser twice (see §Live verification for what those passes still did not cover). `T-386` is done: five screens publish their open object and its protected fields, and the editor and glossary register their real AI runs. Still open under it — no screen has multi-select, so a batch is unreachable (`T-389`); the rail and the page-local inspectors now print the same rows (`T-390`); the rail's width pushes the drafts table's Title column off screen (`T-391`); and the log still needs a durable home (`T-385`). The eye-check is its row under §Live verification #ui #ai P1

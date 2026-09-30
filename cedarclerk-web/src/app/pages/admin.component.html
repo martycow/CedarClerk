@@ -244,7 +244,7 @@ the Posts Manager and inherit its density through the cascade.-->
             <div class="landing-bar">
                 <!--A real link to the real page, in a new tab: a preview drawn inside the panel
                 would be a second renderer of the landing, and the two would disagree.-->
-                <a class="landing-preview" href="/" target="_blank" rel="noopener">{{ t().admin.landing.preview }} &rarr;</a>
+                <a class="landing-preview" href="/welcome" target="_blank" rel="noopener">{{ t().admin.landing.preview }} &rarr;</a>
                 <span class="spacer"></span>
                 @if (landingSaved()) { <span class="chip">{{ t().admin.landing.saved }}</span> }
                 <app-button variant="pine" size="sm" [disabled]="landingBusy()" (clicked)="saveLanding()">
@@ -321,6 +321,24 @@ the Posts Manager and inherit its density through the cascade.-->
                             : t().admin.landing.noConfiguredShowcase }}
                     </p>
                 </div>
+            </div>
+
+            <h2 class="label landing-section-title">{{ t().admin.landing.editorial }}</h2>
+            <p class="field-hint-inline">{{ t().admin.landing.editorialHint }}</p>
+            <div class="landing-fields">
+                @for (field of editorialFields; track field.key) {
+                <div class="lf">
+                    <label [for]="'landing-' + field.key + '-en'">{{ field.label.en }} / {{ field.label.ru }}</label>
+                    <div class="lf-pair">
+                        <label class="lf-lang" [for]="'landing-' + field.key + '-en'">EN</label>
+                        <textarea rows="2" [id]="'landing-' + field.key + '-en'" [(ngModel)]="field.en"
+                                  [attr.aria-label]="field.label.en + ' (EN)'" [placeholder]="field.defaults.en || ''" maxlength="1200"></textarea>
+                        <label class="lf-lang" [for]="'landing-' + field.key + '-ru'">RU</label>
+                        <textarea rows="2" [id]="'landing-' + field.key + '-ru'" [(ngModel)]="field.ru"
+                                  [attr.aria-label]="field.label.ru + ' (RU)'" [placeholder]="field.defaults.ru || ''" maxlength="1200"></textarea>
+                    </div>
+                </div>
+                }
             </div>
 
             <h2 class="label landing-section-title">{{ t().admin.landing.shots }}</h2>

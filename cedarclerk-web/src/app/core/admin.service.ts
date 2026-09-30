@@ -155,7 +155,15 @@ export interface LandingStoryStep {
     text: LandingTextPair;
 }
 
+export interface LandingEditorialField {
+    key: string;
+    label: LandingTextPair;
+    default: LandingTextPair;
+}
+
 export interface AdminLanding {
+    editorial?: Record<string, LandingTextPair>;
+    editorialFields?: LandingEditorialField[];
     kickerEn: string | null;
     kickerRu: string | null;
     heroTitleEn: string | null;
@@ -321,7 +329,7 @@ export class AdminService {
     // The whole page in one PUT, not a field at a time: the sections, the copy and the lists are
     // read together to draw one page, and half-saving them is how a headline ends up describing a
     // section that was switched off.
-    saveLanding(body: Omit<AdminLanding, 'defaults' | 'configuredShowcaseBlog' | 'files' | 'waitlist'>) {
+    saveLanding(body: Omit<AdminLanding, 'defaults' | 'configuredShowcaseBlog' | 'files' | 'waitlist' | 'editorialFields'>) {
         return firstValueFrom(this.http.put('/api/admin/landing', body));
     }
 

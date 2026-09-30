@@ -124,6 +124,57 @@ public class TenantRoutingTests : IDisposable
     }
 
     [Fact]
+    public async Task Landing_preserves_admin_copy_and_escapes_editorial_markup()
+    {
+        using (var db = NewDb())
+        {
+            db.LandingSettings.Add(new LandingSettings
+            {
+                HeroTitleEn = "Custom<br><script>alert(1)</script>",
+                HeroSubEn = "Saved standfirst",
+                ShotsJson = LandingContent.Serialize(new[]
+                {
+                    new LandingShot("uploaded.png", new CedarClerk.Localization.LandingText("My screenshot", null)),
+                    new LandingShot("second.png", new CedarClerk.Localization.LandingText("Second screenshot", null)),
+                }),
+                EditorialJson = LandingContent.SerializeEditorial(new()
+                {
+                    ["faq1Answer"] = new("Admin <img src=x onerror=alert(1)>", null),
+                    ["closingTitle"] = new("Saved invitation", null),
+                }),
+            });
+            db.SaveChanges();
+        }
+        var answer = await RequestAsync(AppHost, "/welcome");
+        Assert.Contains("Custom<br>&lt;script&gt;", answer.Body);
+        Assert.DoesNotContain("<script>alert(1)</script>", answer.Body);
+        Assert.Contains("Saved standfirst", answer.Body);
+        Assert.Contains("/landing-media/uploaded.png", answer.Body);
+        Assert.Contains("/landing-media/second.png", answer.Body);
+        Assert.Contains("Admin &lt;img", answer.Body);
+        Assert.Contains("Saved invitation", answer.Body);
+        Assert.Contains("$3", answer.Body);
+        Assert.Contains("100 MB", answer.Body);
+    }
+
+    [Fact]
+    public async Task Landing_switches_hide_screenshots_workflow_and_prices_without_hiding_signup()
+    {
+        using (var db = NewDb())
+        {
+            db.LandingSettings.Add(new LandingSettings { ShowShots = false, ShowFeatures = false, ShowPricing = false });
+            db.SaveChanges();
+        }
+        var answer = await RequestAsync(AppHost, "/welcome");
+        Assert.DoesNotContain("<figure class=\"hero-shot\">", answer.Body);
+        Assert.DoesNotContain("<section id=\"examples\"", answer.Body);
+        Assert.DoesNotContain("<section id=\"features\"", answer.Body);
+        Assert.DoesNotContain("<section id=\"pricing\"", answer.Body);
+        Assert.Contains("id=\"waitlist-form\"", answer.Body);
+        Assert.Contains("id=\"faq\"", answer.Body);
+    }
+
+    [Fact]
     public async Task A_resolved_subdomain_serves_its_blog_index_and_not_the_landing_page()
     {
         var answer = await RequestAsync(TenantHost, "/", resolvedTenant: true);

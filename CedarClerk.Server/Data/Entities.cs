@@ -1436,6 +1436,7 @@ public class LandingSettings
     public string? ShotsJson { get; set; }
     public string? RoadmapJson { get; set; }
     public string? StoryJson { get; set; }
+    public string? EditorialJson { get; set; }
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -321,3 +321,10 @@ logo, palette, density tokens and publishing vocabulary. The toolbar owns persis
 project access; document-list selection uses the shared Properties panel. Authentication
 uses a plain branded background. Landing tool screenshots are real app captures, loaded
 lazily inside disclosures.
+
+## Public landing
+
+ADR-309 defines the centered editorial landing: Vollkorn headings, Source Sans 3
+body text, served paper/pine tokens, responsive navigation and native disclosures.
+Admin → Landing owns bilingual copy and images; plan definitions own prices
+and quotas. Saved overrides are preserved; blank editorial fields use localized defaults.

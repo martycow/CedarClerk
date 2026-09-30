@@ -37,7 +37,8 @@ public static partial class AdminEndpoints
         bool? ShowDownload,
         List<LandingShot>? Shots,
         List<LandingRoadmapColumn>? Roadmap,
-        List<LandingStoryStep>? Story);
+        List<LandingStoryStep>? Story,
+        Dictionary<string, LandingText>? Editorial = null);
 
     private static void MapLandingAdmin(RouteGroupBuilder group)
     {
@@ -64,6 +65,8 @@ public static partial class AdminEndpoints
                 content.Shots,
                 content.Roadmap,
                 content.Story,
+                Editorial = LandingContent.ReadEditorial(row?.EditorialJson),
+                EditorialFields = LandingTexts.EditorialFields.Select(f => new { f.Key, f.Label, f.Default }),
                 // What the placeholders would say if the fields above stay empty, so the editor can
                 // show them as placeholders rather than making the admin guess what "empty" means.
                 Defaults = new
@@ -111,6 +114,8 @@ public static partial class AdminEndpoints
             row.ShotsJson = LandingContent.Serialize(req.Shots ?? []);
             row.RoadmapJson = LandingContent.Serialize(req.Roadmap ?? []);
             row.StoryJson = LandingContent.Serialize(req.Story ?? []);
+            if (req.Editorial is not null)
+                row.EditorialJson = LandingContent.SerializeEditorial(req.Editorial);
             row.UpdatedAt = DateTime.UtcNow;
 
             // The landing is the one page a stranger sees, and it is now editable from a form.

@@ -10,7 +10,7 @@ const MAIN_ORIGIN = 'http://localhost:8080';
 test('a stranger gets the landing, with prices that come from the code', async ({ page }) => {
     await page.goto(MAIN_ORIGIN + '/');
 
-    await expect(page.locator('h1')).toContainText(/Build in public|Делайте открыто/);
+    await expect(page.locator('h1')).toContainText(/One draft|Один черновик/);
     // The numbers are read from PlanLimitations/Consts.Plans — a hand-written table would drift.
     // Pinned per tier on purpose: ADR-129 cut the free quota from 200 MB to 100 MB and this line is
     // where a landing that stopped reading the code would say so.
@@ -27,12 +27,12 @@ test('the landing answers in the language the browser asks for', async ({ browse
     const ru = await browser.newContext({ locale: 'ru-RU', extraHTTPHeaders: { 'Accept-Language': 'ru-RU,ru;q=0.9' } });
     const ruPage = await ru.newPage();
     await ruPage.goto(MAIN_ORIGIN + '/');
-    await expect(ruPage.locator('h1')).toContainText('Делайте открыто');
+    await expect(ruPage.locator('h1')).toContainText('Один черновик');
 
     const en = await browser.newContext({ extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' } });
     const enPage = await en.newPage();
     await enPage.goto(MAIN_ORIGIN + '/');
-    await expect(enPage.locator('h1')).toContainText('Build in public');
+    await expect(enPage.locator('h1')).toContainText('One draft');
 });
 
 // An author who types the address wants their drafts, not a sales page.

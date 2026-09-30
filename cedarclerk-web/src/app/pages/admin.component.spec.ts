@@ -113,6 +113,14 @@ class FakeAdmin {
             total: this.paymentTotal ?? payments.length,
         };
     }
+    landingData = structuredClone(LANDING);
+    landingSave: Record<string, unknown> | null = null;
+    async landing() { return structuredClone(this.landingData); }
+    async waitlist() { return []; }
+    async saveLanding(body: Record<string, unknown>) {
+        this.landingSave = body;
+        this.landingData = { ...this.landingData, ...body } as AdminLanding;
+    }
     async usage() { return structuredClone(USAGE); }
 }
 
@@ -141,6 +149,29 @@ describe('admin panel — the per-user modal (T-257)', () => {
     });
 
     afterEach(() => vi.useRealTimers());
+
+    it('loads and saves bilingual landing copy without replacing screenshot settings', async () => {
+        const api = TestBed.inject(AdminService) as unknown as FakeAdmin;
+        api.landingData = {
+            ...structuredClone(LANDING), showShots: true,
+            shots: [{ file: 'uploaded.png', caption: { en: 'Product', ru: 'Продукт' } }],
+            editorial: { closingTitle: { en: 'Saved heading', ru: null } },
+            editorialFields: [{ key: 'closingTitle', label: { en: 'Closing', ru: 'Приглашение' },
+                default: { en: 'Default heading', ru: 'Заголовок' } }],
+        };
+        const component = fixture.componentInstance;
+        await component.loadLanding();
+        component.tab.set('landing');
+        fixture.detectChanges();
+        expect(component.editorialFields[0].en).toBe('Saved heading');
+        expect(el().querySelector('#landing-closingTitle-ru')?.getAttribute('placeholder')).toBe('Заголовок');
+        component.editorialFields[0].ru = '  Новый заголовок  ';
+        await component.saveLanding();
+        expect(api.landingSave?.['editorial']).toEqual({ closingTitle: { en: 'Saved heading', ru: 'Новый заголовок' } });
+        expect(api.landingSave?.['shots']).toEqual(api.landingData.shots);
+        expect(api.landingSave?.['showShots']).toBe(true);
+        expect(component.editorialFields[0].ru).toBe('Новый заголовок');
+    });
 
     it('the card list carries no inline form, and a card opens the account modal', () => {
         expect(cards().length).toBe(2);

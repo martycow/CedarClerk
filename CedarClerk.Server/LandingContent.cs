@@ -50,7 +50,7 @@ public sealed class LandingContent
     /// The screenshot the page falls back to when nothing has been uploaded. It ships in wwwroot,
     /// so a fresh install is never a landing page with an empty frame in the middle of it.
     /// </summary>
-    public const string FallbackShot = "/landing-blog.png";
+    public const string FallbackShot = "/assets/review/editor.png";
 
     /// <summary>
     /// The one place a stored file name becomes a URL. Uploads live in the data directory rather
@@ -76,6 +76,7 @@ public sealed class LandingContent
 
     public static LandingContent From(LandingSettings? row, string? configuredShowcase) => new()
     {
+        Editorial = ResolveEditorial(row?.EditorialJson),
         Kicker = Fill(row?.KickerEn, row?.KickerRu, LandingTexts.Kicker),
         HeroTitle = Fill(row?.HeroTitleEn, row?.HeroTitleRu, LandingTexts.HeroTitle),
         HeroSub = Fill(row?.HeroSubEn, row?.HeroSubRu, LandingTexts.HeroSub),
@@ -120,6 +121,35 @@ public sealed class LandingContent
             return [];
         }
     }
+
+    public IReadOnlyDictionary<string, LandingText> Editorial { get; private init; } = new Dictionary<string, LandingText>();
+
+    public string Copy(string key, bool ru) => Editorial[key].Pick(ru);
+
+    public static Dictionary<string, LandingText> ReadEditorial(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try { return JsonSerializer.Deserialize<Dictionary<string, LandingText>>(json, Json) ?? []; }
+        catch (JsonException) { return []; }
+    }
+
+    public static Dictionary<string, LandingText> NormalizeEditorial(Dictionary<string, LandingText> overrides) =>
+        LandingTexts.EditorialFields.ToDictionary(f => f.Key, f =>
+            overrides.TryGetValue(f.Key, out var value) && value is not null
+                ? new LandingText(Blank(value.En), Blank(value.Ru)) : LandingText.Empty);
+
+    private static Dictionary<string, LandingText> ResolveEditorial(string? json)
+    {
+        var overrides = ReadEditorial(json);
+        return LandingTexts.EditorialFields.ToDictionary(f => f.Key, f =>
+        {
+            overrides.TryGetValue(f.Key, out var value);
+            return Fill(value?.En, value?.Ru, f.Default);
+        });
+    }
+
+    public static string SerializeEditorial(Dictionary<string, LandingText> items) =>
+        JsonSerializer.Serialize(NormalizeEditorial(items), Json);
 
     public static string Serialize<T>(IEnumerable<T> items) => JsonSerializer.Serialize(items, Json);
 

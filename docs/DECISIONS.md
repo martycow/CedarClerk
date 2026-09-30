@@ -309,3 +309,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-307 — Separate identity from project selection](adr/ADR-307.md)
 
 - [ADR-308 — Bash release deployment](adr/ADR-308.md)
+
+- [ADR-309 — Editorial landing with admin-owned copy](adr/ADR-309.md)
