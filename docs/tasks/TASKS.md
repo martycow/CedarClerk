@@ -13,6 +13,8 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [x] Resolve Discovery cover filenames on the owner blog host — ADR-310; featured images, cards and landing previews share the corrected media URL. Branch `codex/discovery-cover-links`; not deployed. #ui #blog P1
+
 - [x] Implement the selected editorial landing with Admin-managed bilingual content — ADR-309; responsive layout, preserved uploads and switches, editable FAQ and section copy. Branch `codex/landing-admin-design`; not deployed. #ui #growth P1
 
 - [x] T-394 Implement the v0.23.6 review locally — ADR-306; media access and upload filing, project-owned documents, shared Properties, toolbar/sidebar/hub, landing disclosures and account security. Branch `codex/framer-review`; not deployed. Google live failure diagnosis and Discord production setup remain on T-003. #ui #projects #auth P1

@@ -15,6 +15,32 @@ public class DiscoveryTests
         })
         .Build();
 
+    [Theory]
+    [InlineData("asset_78e81059-de66-43e3-bd6f-b9038d9539c3.jpg", "https://maker.blogs.test/media/asset_78e81059-de66-43e3-bd6f-b9038d9539c3.jpg")]
+    [InlineData("/media/cover.png", "https://maker.blogs.test/media/cover.png")]
+    [InlineData("media/cover.png", "https://maker.blogs.test/media/cover.png")]
+    [InlineData("https://images.example/cover.png", "https://images.example/cover.png")]
+    [InlineData(null, "/og-default.png")]
+    public async Task Cover_urls_resolve_for_shared_snapshot_and_featured_cards(string? cover, string expected)
+    {
+        using var db = BlogTestHost.EmptyDatabase();
+        db.Users.Add(new ApplicationUser
+        {
+            Id = "owner", UserName = "owner", TenantUsername = "maker", DiscoveryOptIn = true,
+        });
+        var post = Post("owner", "Saturday", false);
+        post.Tags = "ScreenshotSaturday";
+        post.CoverImagePath = cover;
+        db.Drafts.Add(post);
+        await db.SaveChangesAsync();
+
+        var snapshot = await DiscoveryEndpoints.LoadAsync(db, Configuration());
+        Assert.Equal(expected, Assert.Single(snapshot.Blogs).ImageUrl);
+        var discovery = DiscoveryEndpoints.Render(false, snapshot, "all", null, "");
+        Assert.Contains($"src=\"{expected}\"", discovery);
+        if (cover is not null) Assert.Equal(expected, snapshot.Stage?.ImageUrl);
+    }
+
     [Fact]
     public async Task Only_opted_in_fully_public_posts_are_loaded()
     {

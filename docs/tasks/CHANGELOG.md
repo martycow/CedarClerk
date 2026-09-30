@@ -1,5 +1,16 @@
 ﻿# Changelog
 
+## 2026-09-29 — Discovery cover URLs (ADR-310)
+
+Resolved bare cover filenames on the owner's blog host under `/media/` in the
+shared Discovery snapshot. Featured images, cards and the landing preview consume
+the same resolved URL. Existing rooted and external URLs retain their behavior.
+
+Validation: all 2,054 backend tests pass, including five cover URL cases. Three
+production files from the reported page return HTTP 200 with image content types
+at their corrected URLs; the bare application-root URL returns 404. No deployment.
+
+
 ## 2026-09-29 — Editable editorial landing (ADR-309)
 
 Implemented the selected centered landing with responsive navigation, product preview,

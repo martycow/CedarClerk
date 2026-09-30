@@ -464,9 +464,13 @@ public static class DiscoveryEndpoints
     private static string? Avatar(string host, string? path) =>
         string.IsNullOrWhiteSpace(path) ? null : MediaUrl(host, path);
 
-    private static string MediaUrl(string host, string? path) => string.IsNullOrWhiteSpace(path)
-        ? "/og-default.png"
-        : path.StartsWith("/", StringComparison.Ordinal) ? $"https://{host}{path}" : path;
+    private static string MediaUrl(string host, string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "/og-default.png";
+        if (MediaFileNames.TryParse(path, out _)) path = "/media/" + path;
+        else if (path.StartsWith("media/", StringComparison.Ordinal)) path = "/" + path;
+        return path.StartsWith("/", StringComparison.Ordinal) ? $"https://{host}{path}" : path;
+    }
 
     private static string? FirstMedia(string value) => value.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
     private static bool IsFallback(string path) => path == "/og-default.png";
