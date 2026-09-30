@@ -313,3 +313,5 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-309 — Editorial landing with admin-owned copy](adr/ADR-309.md)
 
 - [ADR-310 — Resolve Discovery cover filenames on the blog host](adr/ADR-310.md)
+
+- [ADR-311 — Customizable project overview](adr/ADR-311.md)

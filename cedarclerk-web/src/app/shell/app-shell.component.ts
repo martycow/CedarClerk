@@ -83,7 +83,7 @@ function matches(path: string, pattern: string): boolean {
                 <app-project-switcher [project]="project()" [projects]="switcher()" variant="inline"
                     [hint]="t().shell.switchProject" [fallbackName]="t().shell.allProjects" />
             </app-menu-bar>
-            <div class="row">
+            <div class="workspace-row">
                 <app-sidebar [toggleLabel]="t().shell.commands.toggleSidebar" (toggled)="toggleSidebar()" [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
                              [project]="project()" [projects]="switcher()" [projectHint]="t().shell.switchProject"
                              [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
@@ -92,7 +92,7 @@ function matches(path: string, pattern: string): boolean {
                 <main class="body" data-surface="paper">
                     <router-outlet />
                 </main>
-                <app-inspector-rail />
+                <app-inspector-rail [startCollapsed]="isProjectOverview()" />
             </div>
         </div>
 
@@ -119,7 +119,7 @@ function matches(path: string, pattern: string): boolean {
             align-items: stretch;
         }
 
-        .row {
+        .workspace-row {
             position: relative;
             display: flex;
             flex: 1;
@@ -161,10 +161,12 @@ export class AppShellComponent implements OnDestroy {
 
     protected readonly search = viewChild.required(SearchOverlayComponent);
     protected readonly palette = viewChild.required(CommandPaletteComponent);
+    private readonly inspector = viewChild.required(InspectorRailComponent);
 
     private commandRelease?: CommandRelease;
 
     private readonly url = signal(this.router.url);
+    protected readonly isProjectOverview = computed(() => /^\/projects\/[^/]+\/?$/.test(this.path()));
     private readonly path = computed(() => this.url().split('?')[0].split('#')[0]);
 
     private readonly phoneViewport = signal(window.innerWidth <= 640);
@@ -343,8 +345,8 @@ export class AppShellComponent implements OnDestroy {
             },
             {
                 id: 'view.inspector', group: 'view', label: labels.toggleInspector, icon: 'list',
-                checked: () => this.appearance.prefs().inspectorOpen,
-                run: () => this.setPref({ inspectorOpen: !this.appearance.prefs().inspectorOpen }),
+                checked: () => this.inspector().open(),
+                run: () => this.inspector().toggle(),
             },
             {
                 id: 'view.theme', group: 'view', label: labels.toggleTheme, icon: 'moon',

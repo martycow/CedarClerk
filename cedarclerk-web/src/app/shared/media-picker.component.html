@@ -6,12 +6,14 @@
         <div class="picker-toolbar">
             <input class="picker-search" type="search" [ngModel]="search()" (ngModelChange)="onSearch($event)"
                    [placeholder]="t().media.searchPlaceholder" [attr.aria-label]="t().media.searchPlaceholder">
+            @if (!imagesOnly()) {
             <div class="picker-leaves" role="group" [attr.aria-label]="t().media.typeStrip">
                 <app-leaf-tag interactive [state]="type() === null ? 'active' : 'idle'" (activated)="setType(null)">{{ t().media.all }}</app-leaf-tag>
                 <app-leaf-tag interactive [state]="type() === 'image' ? 'active' : 'idle'" (activated)="setType('image')">{{ t().media.images }}</app-leaf-tag>
                 <app-leaf-tag interactive [state]="type() === 'video' ? 'active' : 'idle'" (activated)="setType('video')">{{ t().media.videos }}</app-leaf-tag>
                 <app-leaf-tag interactive [state]="type() === 'audio' ? 'active' : 'idle'" (activated)="setType('audio')">{{ t().media.audio }}</app-leaf-tag>
             </div>
+            }
         </div>
 
         @if (error(); as err) { <p class="picker-error">{{ err }}</p> }
@@ -57,7 +59,7 @@
         @if (uploading()) { <app-icon name="arrow-clockwise" size="sm" class="spin" /> }
         @else { <app-icon name="upload-simple" size="sm" /> }
         {{ t().media.uploadNew }}
-        <input type="file" accept="image/*,video/*,audio/*" multiple hidden
+        <input type="file" [attr.accept]="imagesOnly() ? 'image/*' : 'image/*,video/*,audio/*'" multiple hidden
                (change)="onUploadPicked($event)" [disabled]="uploading()">
     </label>
     <app-button modal-actions variant="paper" (clicked)="closed.emit()">{{ t().common.cancel }}</app-button>

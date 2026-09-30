@@ -6,6 +6,7 @@ import { ActivityItem, ProjectDetail, ProjectSummary, ProjectsService } from '..
 import { Channel, ChannelsService } from '../core/channels.service';
 import { en } from '@localization/en';
 import { formatInZone } from '../core/display-time';
+import { AuthService } from '../core/auth.service';
 import { AssetsService } from '../core/assets.service';
 
 const SUMMARY: ProjectSummary = {
@@ -114,14 +115,16 @@ describe('project hub', () => {
         .map(x => x.textContent?.trim());
     const docRows = () => [...el().querySelectorAll('.doc-list a.doc-row')] as HTMLAnchorElement[];
     const docTitles = () => docRows().map(r => r.querySelector('.doc-title')?.textContent?.trim());
-    const sideCards = () => [...el().querySelectorAll('.hub-side .side-card')] as HTMLElement[];
+    const sideCards = () => [...el().querySelectorAll('.planning-sprint, .planning-tasks')] as HTMLElement[];
     const kvValue = (label: string) => {
-        const cells = [...el().querySelectorAll('.kv > *')];
-        const i = cells.findIndex(c => c.tagName === 'B' && c.textContent?.trim() === label);
-        return i >= 0 ? cells[i + 1] : null;
+        const metric = [...el().querySelectorAll('.analytics-list > div')].find(c => c.querySelector('dt')?.childNodes[0]?.textContent?.trim() === label);
+        if (metric) return metric.querySelector('dd');
+        const row = [...el().querySelectorAll('.link-row')].find(c => c.querySelector('b')?.textContent?.trim() === label);
+        return row?.querySelector('a, span') ?? null;
     };
 
     async function create() {
+        localStorage.clear();
         projects = new FakeProjects();
         channels = new FakeChannels();
         TestBed.configureTestingModule({
@@ -133,6 +136,8 @@ describe('project hub', () => {
                 { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'p1' })) } },
             ],
         });
+        TestBed.inject(AuthService).indieDev.set(true);
+        TestBed.inject(AuthService).userId.set('test-account');
         fixture = TestBed.createComponent(ProjectComponent);
         fixture.detectChanges();
         // load(), loadProjects() and loadChannels() are a few awaits deep before the rows land.
@@ -151,18 +156,17 @@ describe('project hub', () => {
         expect(el().querySelector('app-page-header .page-meta .tag')?.classList.contains('ok')).toBe(true);
     });
 
-    it('offers Settings and New document as the header\'s two actions', () => {
+    it('offers customization and New document with separate project settings', () => {
         const actions = [...el().querySelectorAll('app-page-header .page-actions app-button')].map(b => b.textContent?.trim());
-        expect(actions).toEqual([t.settings, t.newDocument]);
+        expect(actions).toEqual([t.hub.customize, t.newDocument]);
+        expect(el().querySelector('.settings-link')?.getAttribute('aria-label')).toBe(t.settings);
     });
 
-    // ADR-169. Continue is a door to a document, so it carries the address a middle click can take
-    // to a new tab — and the assertion is the href rather than a spy on the router.
-    it('opens the newest document from Continue writing, as a link', () => {
-        expect(el().querySelector('.resume-t')?.textContent?.trim()).toBe('Devlog #12');
-        const open = el().querySelector('.resume app-button a') as HTMLAnchorElement;
-        expect(open.getAttribute('href')).toBe('/editor?draft=d-new');
-        expect(el().querySelector('.resume app-button button')).toBeNull();
+    it('shows the separate project banner, identity and description without a duplicate resume card', () => {
+        expect(el().querySelector('.project-banner img')?.getAttribute('src')).toBe('/images/project-banner.jpg');
+        expect(el().querySelector('.project-description')?.textContent).toBe(DETAIL.description);
+        expect(el().querySelector('.resume')).toBeNull();
+        expect(el().querySelectorAll('.overview-panel').length).toBe(5);
     });
 
     it('lists every document, newest first, each on its own address', () => {
@@ -204,7 +208,7 @@ describe('project hub', () => {
         expect(empty.querySelector('app-button')?.textContent?.trim()).toBe(t.newDocument);
     });
 
-    it('draws the sprint covering today with its progress, and one task up next', () => {
+    it('draws the sprint covering today and the server-provided upcoming tasks', () => {
         const [sprint, next] = sideCards();
         expect(sprint.textContent).toContain(t.hub.sprintLabel(4));
         expect(sprint.textContent).toContain('Autumn build');
@@ -214,7 +218,7 @@ describe('project hub', () => {
         const task = next.querySelector('a.next-task') as HTMLAnchorElement;
         expect(task.getAttribute('href')).toBe('/projects/p1/tasks?task=t1');
         expect(task.querySelector('.tag')?.textContent?.trim()).toBe('P1');
-        expect(next.querySelectorAll('a.next-task').length).toBe(1);
+        expect(next.querySelectorAll('a.next-task').length).toBe(2);
     });
 
     it('says no sprint covers today instead of drawing an empty one', () => {
@@ -230,8 +234,8 @@ describe('project hub', () => {
     it('lists where the work goes from what the page already holds', () => {
         expect(kvValue(t.hub.telegram)?.textContent).toContain('@devdairy');
         expect(kvValue(t.hub.publicPage)?.textContent).toContain(t.hub.notPublished);
-        expect(kvValue(t.assets.title)?.textContent?.trim()).toBe(t.hub.filesCount(2481));
-        expect(kvValue(t.builds.title)?.textContent?.trim()).toBe(t.hub.versionsCount(2));
+        expect(kvValue(t.assets.title)?.textContent?.trim()).toBe('2481');
+        expect(kvValue(t.builds.title)?.textContent?.trim()).toBe('2');
     });
 
     // ADR-160 rule 4. 0 would say "no versions yet", which is a different sentence.
@@ -434,4 +438,56 @@ describe('project hub', () => {
         expect(component.project()?.coverUrl).toBe('/media/project-cover.png');
         expect(component.summary()?.coverUrl).toBe('/media/project-cover.png');
     });
+    it('persists width, order, visibility and banner by account and project, with a recoverable reset', async () => {
+        const c = fixture.componentInstance;
+        c.customizing.set(true);
+        c.setPanelWidth('documents', 'full');
+        c.movePanel('journal', -1);
+        c.togglePanel('links');
+        c.pickedBanner({ localPath: 'banner.png' } as never);
+        fixture.detectChanges();
+        expect(el().querySelector('.is-hidden h2')?.textContent).toContain(t.hub.links);
+        c.customizing.set(false);
+        fixture.detectChanges();
+        expect(el().querySelector('#overview-links')).toBeNull();
+        await c.load('p1');
+        expect(c.overviewLayout().panels.find(p => p.id === 'documents')?.width).toBe('full');
+        expect(c.overviewLayout().panels.find(p => p.id === 'links')?.hidden).toBe(true);
+        expect(c.bannerUrl()).toBe('/media/banner.png');
+        TestBed.inject(AuthService).userId.set('other-account');
+        await c.load('p1');
+        expect(c.bannerUrl()).toBe('/images/project-banner.jpg');
+        TestBed.inject(AuthService).userId.set('test-account');
+        await c.load('p1');
+        c.resetLayout();
+        expect(c.overviewLayout().panels.every(p => !p.hidden)).toBe(true);
+        expect(c.bannerUrl()).toBe('/images/project-banner.jpg');
+    });
+
+    it('leaves the current layout usable and reports unavailable browser storage', () => {
+        const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+        fixture.componentInstance.setPanelWidth('documents', 'full');
+        fixture.detectChanges();
+        expect(fixture.componentInstance.overviewLayout().panels[0].width).toBe('full');
+        expect(el().querySelector('[role="alert"]')?.textContent).toContain(t.hub.layoutFailed);
+        spy.mockRestore();
+    });
+
+    it('omits planning and module links when IndieDev is disabled', () => {
+        TestBed.inject(AuthService).indieDev.set(false);
+        fixture.detectChanges();
+        expect(el().querySelector('#overview-planning')).toBeNull();
+        expect(kvValue(t.assets.title)).toBeNull();
+        expect(kvValue(t.builds.title)).toBeNull();
+        expect(el().querySelector('#overview-documents')).toBeTruthy();
+    });
+
+    it('keeps metrics in analytics and filters unsafe authored links', () => {
+        fixture.componentInstance.project.set({ ...DETAIL, showcaseLinks: 'Steam|https://store.example.com/game\\nUnsafe|javascript:alert(1)'.replace('\\n', '\n') });
+        fixture.detectChanges();
+        expect(el().querySelector('.links-list')?.textContent).not.toContain(t.hub.streakLabel);
+        expect(fixture.componentInstance.authoredLinks()).toEqual([{ label: 'Steam', href: 'https://store.example.com/game' }]);
+        expect(el().querySelector('.analytics-list')?.textContent).toContain(t.hub.publishedPosts);
+    });
+
 });

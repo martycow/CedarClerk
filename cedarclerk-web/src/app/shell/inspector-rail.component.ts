@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AiOperationsService } from '../core/ai-operations.service';
@@ -310,6 +310,11 @@ import { IconComponent } from '../shared/icon.component';
         .foot { margin: 0; }
         .link { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-meta); }
 
+        @media (max-width: 640px) {
+            :host:not(.is-open) { position: absolute; right: 0; top: 50%; z-index: 30; }
+            :host:not(.is-open) .handle { height: var(--hit-touch); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        }
+
         @media (max-width: 1100px) {
             :host.is-open {
                 position: absolute;
@@ -341,7 +346,13 @@ export class InspectorRailComponent {
 
     protected readonly task = signal('');
 
-    readonly open = computed(() => this.appearance.prefs().inspectorOpen);
+    readonly startCollapsed = input(false);
+    private readonly locallyOpen = signal(false);
+    readonly open = computed(() => this.startCollapsed() ? this.locallyOpen() : this.appearance.prefs().inspectorOpen);
+
+    constructor() {
+        effect(() => { this.startCollapsed(); this.locallyOpen.set(false); });
+    }
     protected readonly width = computed(() => this.appearance.prefs().inspectorWidth);
     /** A custom property takes no unit suffix from a binding — the unit travels in the value. */
     protected readonly widthPx = computed(() => `${this.width()}px`);
@@ -362,6 +373,7 @@ export class InspectorRailComponent {
         this.commands.all().filter(command => command.ai));
 
     toggle(): void {
+        if (this.startCollapsed()) { this.locallyOpen.update(open => !open); return; }
         this.appearance.preview({ inspectorOpen: !this.open() });
         void this.appearance.commit();
     }

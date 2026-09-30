@@ -1,3 +1,5 @@
+import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
+import { defaultOverviewLayout, moveOverviewPanel, normalizeOverviewLayout, OverviewLayout, OverviewSection, OverviewWidth } from '../core/project-overview-layout';
 import { ConfirmationService } from '../core/confirmation.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -35,7 +37,7 @@ import { LogLevel, LogLineComponent } from '../bench/worktop/log-line.component'
 import { BenchSelectOption, SelectComponent } from '../bench/forms/select.component';
 import { CheckboxComponent } from '../bench/forms/checkbox.component';
 import { PROJECT_ENGINES, PROJECT_PLATFORMS, ProjectPlatform, normalizePlatforms } from '../core/project-engines';
-import { AssetsService, LibraryAsset } from '../core/assets.service';
+import { LibraryAsset } from '../core/assets.service';
 import { Team, TeamsService } from '../core/teams.service';
 import { MediaPickerComponent } from '../shared/media-picker.component';
 
@@ -80,17 +82,12 @@ export function journalLink(href: string): { external: true; url: string } | { e
     return { external: false, path, query };
 }
 
-// T-223 (ADR-160) — the hub: one project's dashboard. Main.png (ADR-239): a header with the
-// state, kind, count and last edit; the most recent document as a "continue writing" card over a
-// scrolling document list; a right column with today's sprint, the next task and where the
-// project's work goes. Everything drawn is on ProjectDetail, the summary row, the build list and
-// the account's channels — no new endpoint (ADR-168 rule 5).
 @Component({
     selector: 'app-project',
     imports: [
         IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
         PageHeaderComponent, EmptyStateComponent, ButtonComponent, InputComponent, MediaPickerComponent,
-        LogLineComponent, SelectComponent, CheckboxComponent,
+        LogLineComponent, SelectComponent, CheckboxComponent, CdkDrag, CdkDragHandle, CdkDropList,
     ],
     templateUrl: 'project.component.html',
     styleUrls: ['project.component.css'],
@@ -99,12 +96,97 @@ export class ProjectComponent {
     private api = inject(ProjectsService);
     private presetsApi = inject(PresetsService);
     private teamsApi = inject(TeamsService);
-    private assets = inject(AssetsService);
     private channelsApi = inject(ChannelsService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private auth = inject(AuthService);
     t = inject(LocaleService).t;
+
+    readonly planningEnabled = this.auth.indieDev;
+    customizing = signal(false);
+    panelTools = signal<OverviewSection | null>(null);
+    overviewLayout = signal<OverviewLayout>(defaultOverviewLayout());
+    layoutError = signal(false);
+    bannerPickerOpen = signal(false);
+    readonly widths: readonly OverviewWidth[] = ['narrow', 'wide', 'full'];
+    readonly overviewPanels = computed(() => this.overviewLayout().panels.filter(panel =>
+        (this.planningEnabled() || panel.id !== 'planning') && (this.customizing() || !panel.hidden)));
+    readonly bannerUrl = computed(() => this.overviewLayout().bannerUrl ?? '/images/project-banner.jpg');
+    readonly publishedCount = computed(() => this.documents().filter(doc => doc.isBlogPublished && !doc.isArchived).length);
+    readonly authoredLinks = computed(() => (this.project()?.showcaseLinks ?? '').split('\n').flatMap(line => {
+        const separator = line.indexOf('|');
+        if (separator < 1) return [];
+        const label = line.slice(0, separator).trim();
+        const href = line.slice(separator + 1).trim();
+        try {
+            const url = new URL(href);
+            return label && ['https:', 'http:'].includes(url.protocol) ? [{ label, href: url.href }] : [];
+        } catch { return []; }
+    }));
+
+    private layoutKey(): string {
+        return `cedar-project-overview:${this.auth.userId() ?? 'local'}:${this.project()!.id}`;
+    }
+
+    private readLayout(): void {
+        this.customizing.set(false);
+        this.panelTools.set(null);
+        this.bannerPickerOpen.set(false);
+        this.layoutError.set(false);
+        try {
+            const stored = localStorage.getItem(this.layoutKey());
+            this.overviewLayout.set(normalizeOverviewLayout(stored ? JSON.parse(stored) : null));
+        } catch {
+            this.overviewLayout.set(defaultOverviewLayout());
+        }
+    }
+
+    private saveLayout(layout: OverviewLayout): void {
+        this.overviewLayout.set(normalizeOverviewLayout(layout));
+        try {
+            localStorage.setItem(this.layoutKey(), JSON.stringify(this.overviewLayout()));
+            this.layoutError.set(false);
+        } catch { this.layoutError.set(true); }
+    }
+
+    sectionTitle(id: OverviewSection): string {
+        const hub = this.t().projects.hub;
+        return { documents: hub.documentsPanel, analytics: hub.analytics, links: hub.links, planning: hub.planning, journal: hub.journal }[id];
+    }
+
+    dropPanel(event: CdkDragDrop<unknown>): void {
+        const visible = this.overviewPanels();
+        const source = visible[event.previousIndex];
+        const target = visible[event.currentIndex];
+        if (!source || !target) return;
+        this.saveLayout(moveOverviewPanel(this.overviewLayout(), source.id,
+            this.overviewLayout().panels.findIndex(panel => panel.id === target.id)));
+    }
+
+    movePanel(id: OverviewSection, direction: -1 | 1): void {
+        const panels = this.overviewPanels();
+        const index = panels.findIndex(panel => panel.id === id);
+        const target = panels[index + direction];
+        if (target) this.saveLayout(moveOverviewPanel(this.overviewLayout(), id,
+            this.overviewLayout().panels.findIndex(panel => panel.id === target.id)));
+    }
+
+    setPanelWidth(id: OverviewSection, width: OverviewWidth): void {
+        this.saveLayout({ ...this.overviewLayout(), panels: this.overviewLayout().panels.map(panel => panel.id === id ? { ...panel, width } : panel) });
+    }
+
+    togglePanel(id: OverviewSection): void {
+        this.saveLayout({ ...this.overviewLayout(), panels: this.overviewLayout().panels.map(panel => panel.id === id ? { ...panel, hidden: !panel.hidden } : panel) });
+    }
+
+    resetLayout(): void { this.panelTools.set(null); this.saveLayout(defaultOverviewLayout()); }
+
+    pickedBanner(asset: LibraryAsset): void {
+        this.saveLayout({ ...this.overviewLayout(), bannerUrl: `/media/${asset.localPath}` });
+        this.bannerPickerOpen.set(false);
+    }
+
+    displayUrl(url: string): string { return url.replace(/^https?:\/\//, '').replace(/\/$/, ''); }
 
     readonly docTypes = DOCUMENT_TYPES;
     readonly docIcons = DOCUMENT_TYPE_ICONS;
@@ -183,13 +265,7 @@ export class ProjectComponent {
         });
     });
 
-    /** What "Continue writing" opens: the document touched last. */
     blogViews = computed(() => this.documents().reduce((sum, doc) => sum + (doc.viewCount ?? 0), 0));
-
-    resumeDoc = computed<ProjectDocument | null>(() => this.documents()[0] ?? null);
-
-    /** The one task the side column shows — the server already sorted them by urgency. */
-    upNext = computed(() => this.project()?.upNext[0] ?? null);
 
     /** Days from today to the end of the sprint covering it, floored at zero. */
     sprintDaysLeft = computed(() => {
@@ -275,6 +351,7 @@ export class ProjectComponent {
         this.loadError.set(null);
         try {
             this.project.set(await this.api.get(id));
+            this.readLayout();
         } catch (e) {
             this.project.set(null);
             this.loadError.set(httpErrorMessage(e, this.t().projects.notFound));

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject, output, signal } from '@angular/core';
+import { Component, OnDestroy, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AssetsService, LibraryAsset, LibraryKind, LibraryPage } from '../core/assets.service';
 import { formatBytes } from '../core/asset-index.service';
@@ -25,6 +25,8 @@ export class MediaPickerComponent implements OnDestroy {
     private api = inject(AssetsService);
     t = inject(LocaleService).t;
 
+    readonly imagesOnly = input(false);
+
     picked = output<LibraryAsset>();
     closed = output<void>();
 
@@ -44,7 +46,10 @@ export class MediaPickerComponent implements OnDestroy {
     private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
-        void this.load();
+        effect(() => {
+            this.imagesOnly();
+            untracked(() => void this.load());
+        });
     }
 
     ngOnDestroy() {
@@ -57,7 +62,7 @@ export class MediaPickerComponent implements OnDestroy {
         try {
             this.page.set(await this.api.list({
                 q: this.search().trim() || undefined,
-                type: this.type(),
+                type: this.imagesOnly() ? 'image' : this.type(),
                 skip: this.skip(),
                 take: PAGE_SIZE,
             }));
@@ -76,6 +81,10 @@ export class MediaPickerComponent implements OnDestroy {
         const files = [...(input.files ?? [])];
         input.value = '';
         if (!files.length || this.uploading()) return;
+        if (this.imagesOnly() && files.some(file => !file.type.startsWith('image/'))) {
+            this.error.set(this.t().media.imageRequired);
+            return;
+        }
         this.uploading.set(true);
         this.error.set(null);
         try {

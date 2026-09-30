@@ -72,13 +72,28 @@ describe('app shell', () => {
     // is the one thing over the sidebar, and the inspector rail the one thing after the page.
     it('draws the menu row over the sidebar, the ground and the inspector rail', () => {
         expect(el().querySelector('.shell > app-menu-bar')).toBeTruthy();
-        expect(el().querySelector('.shell > .row > app-sidebar')).toBeTruthy();
-        expect(el().querySelector('.shell > .row > main.body router-outlet')).toBeTruthy();
-        expect(el().querySelector('.shell > .row > app-inspector-rail')).toBeTruthy();
+        expect(el().querySelector('.shell > .workspace-row > app-sidebar')).toBeTruthy();
+        expect(el().querySelector('.shell > .workspace-row > main.body router-outlet')).toBeTruthy();
+        expect(el().querySelector('.shell > .workspace-row > app-inspector-rail')).toBeTruthy();
         expect(el().querySelectorAll('.shell > *').length).toBe(2);
-        expect(el().querySelectorAll('.shell > .row > *').length).toBe(3);
+        expect(el().querySelectorAll('.shell > .workspace-row > *').length).toBe(3);
         expect(el().querySelector('app-debug-console')).toBeTruthy();
         expect(el().querySelector('app-command-palette')).toBeTruthy();
+    });
+
+    it('starts the project overview inspector collapsed without changing other screens', async () => {
+        const appearance = TestBed.inject(AppearanceService);
+        appearance.preview({ inspectorOpen: true });
+        await go('/projects/p1');
+        expect(el().querySelector('#cedar-inspector')).toBeNull();
+        (el().querySelector('app-inspector-rail .handle') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(el().querySelector('#cedar-inspector')).toBeTruthy();
+        expect(appearance.prefs().inspectorOpen).toBe(true);
+        await go('/drafts');
+        expect(el().querySelector('#cedar-inspector')).toBeTruthy();
+        await go('/projects/p1');
+        expect(el().querySelector('#cedar-inspector')).toBeNull();
     });
 
     it('stands every screen on paper', () => {

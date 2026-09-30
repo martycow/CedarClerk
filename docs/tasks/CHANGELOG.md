@@ -1,4 +1,21 @@
-﻿# Changelog
+# Changelog
+
+## 2026-09-30 — Customizable project overview (ADR-311)
+
+Implemented the selected modular overview: banner, logo and project description;
+separate documents, links, analytics, planning and journal panels. Each account
+can reorder, resize or hide panels and choose a library image for the banner.
+Preferences are stored per project in the current browser. Planning follows the
+IndieDev flag; analytics retain their actual project or account scope.
+
+The inspector starts collapsed on the overview. Fixed shared row spacing leaking
+into the workspace and the collapsed inspector consuming a mobile column.
+
+Validation: 2,054 backend and 837 frontend tests pass; frontend build, icons,
+contrast and density checks pass. Isolated browser checks cover drag and keyboard
+reordering, width and visibility persistence, image selection, search, document
+dialog, inspector, desktop, Russian mobile and dark theme. Visual QA is recorded
+in [project-overview-qa.md](../design/project-overview-qa.md). No deployment.
 
 ## 2026-09-29 — Discovery cover URLs (ADR-310)
 
