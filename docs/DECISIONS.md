@@ -315,3 +315,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-310 — Resolve Discovery cover filenames on the blog host](adr/ADR-310.md)
 
 - [ADR-311 — Customizable project overview](adr/ADR-311.md)
+- [ADR-312 — Build the desktop shell on each supported host](adr/ADR-312.md)

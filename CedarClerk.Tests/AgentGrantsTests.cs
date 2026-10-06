@@ -105,4 +105,43 @@ public class AgentGrantsTests
         Assert.False(grants.Allows("\0invalid"));
         Assert.False(grants.Allows(""));
     }
+
+    [Fact]
+    public void A_link_below_a_granted_root_cannot_read_another_folder()
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        var parent = Path.Combine(Path.GetTempPath(), "cedar-grant-links-" + Guid.NewGuid());
+        var root = Path.Combine(parent, "chosen");
+        var outside = Path.Combine(parent, "outside");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(outside);
+        try
+        {
+            File.WriteAllText(Path.Combine(outside, "private.png"), "test");
+            Directory.CreateSymbolicLink(Path.Combine(root, "linked-folder"), outside);
+            File.CreateSymbolicLink(Path.Combine(root, "linked-file.png"), Path.Combine(outside, "private.png"));
+
+            var grants = new AgentGrants();
+            grants.Grant(root);
+
+            Assert.False(grants.Allows(Path.Combine(root, "linked-folder", "private.png")));
+            Assert.False(grants.Allows(Path.Combine(root, "linked-file.png")));
+            Assert.True(grants.Allows(Path.Combine(root, "ordinary.png")));
+        }
+        finally
+        {
+            Directory.Delete(parent, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Linux_grants_do_not_include_a_differently_cased_sibling()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+
+        var grants = new AgentGrants();
+        grants.Grant(Temp("Art"));
+        Assert.False(grants.Allows(Path.Combine(Temp("art"), "private.png")));
+    }
 }

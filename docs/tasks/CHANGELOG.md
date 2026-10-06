@@ -28,6 +28,22 @@ production files from the reported page return HTTP 200 with image content types
 at their corrected URLs; the bare application-root URL returns 404. No deployment.
 
 
+## 2026-10-06 — macOS desktop build and cross-platform guide (ADR-312)
+
+Added one desktop build command for Windows x64, macOS arm64/x64 and Linux x64/arm64.
+It publishes the local agent for the host runtime, synchronizes the shell version and
+packages NSIS, DMG plus ZIP, or AppImage. The Mac app opens the canonical
+`cedarclerk.app` origin so its guarded filesystem bridge is available. Closing its
+window leaves the agent running until the app quits. Agent grants use host path case
+rules and reject links below a selected root; scans skip linked files.
+
+The Apple Silicon DMG was built and mounted on macOS 27.0.1. The packaged app opened
+the login screen, exposed the bridge, answered a machine IPC call, reopened after its
+window closed with the same agent, and left no agent after Quit. All 2,052 backend
+tests passed. Windows and Linux packages have build instructions but were not run on
+those hosts. The Mac package is unsigned and for local testing; no installer or
+manifest was published to the server.
+
 ## 2026-09-29 — Editable editorial landing (ADR-309)
 
 Implemented the selected centered landing with responsive navigation, product preview,

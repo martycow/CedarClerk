@@ -15,7 +15,10 @@ namespace CedarClerk.Server.Modules.Agent;
 /// </summary>
 public class AgentGrants
 {
-    private readonly ConcurrentDictionary<string, byte> _roots = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly StringComparison PathComparison = OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+    private readonly ConcurrentDictionary<string, byte> _roots = new(OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
     public void Grant(string root) => _roots[Normalize(root)] = 0;
 
@@ -30,14 +33,31 @@ public class AgentGrants
         if (Resolve(path) is not { } full) return false;
         foreach (var root in _roots.Keys)
         {
-            if (string.Equals(full, root, StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(full, root, PathComparison)) return true;
             var prefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
-            if (full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+            if (full.StartsWith(prefix, PathComparison) && !HasLinkBelowRoot(root, full)) return true;
         }
         return false;
     }
 
     private static string Normalize(string path) => Resolve(path) ?? path;
+
+    private static bool HasLinkBelowRoot(string root, string full)
+    {
+        var current = root;
+        foreach (var segment in Path.GetRelativePath(root, full).Split(Path.DirectorySeparatorChar))
+        {
+            current = Path.Combine(current, segment);
+            try
+            {
+                if (File.GetAttributes(current).HasFlag(FileAttributes.ReparsePoint)) return true;
+            }
+            catch (FileNotFoundException) { break; }
+            catch (DirectoryNotFoundException) { break; }
+            catch (Exception) { return true; }
+        }
+        return false;
+    }
 
     private static string? Resolve(string path)
     {

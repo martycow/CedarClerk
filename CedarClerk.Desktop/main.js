@@ -1,6 +1,6 @@
 // Cedar Clerk desktop shell (ADR-104, reshaped by ADR-117). Full rationale: docs/tech/DESKTOP.md.
 //
-// What this is: a window onto cedarclerk.mooexe.dev, plus a local process that can read this machine's
+// What this is: a window onto cedarclerk.app, plus a local process that can read this machine's
 // disk. There is exactly one database and it is in the cloud — the shell keeps no data of its own.
 //
 // Why it exists at all: the asset index describes a folder on this machine (ADR-107), and only a
@@ -45,7 +45,7 @@ const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 // The one installation this shell is a window onto. A constant rather than configuration: it decides
 // where the data is, where identity comes from AND which origin gets the filesystem bridge, and a
 // value that decides all three has no business being editable by whatever last wrote a config file.
-const UPSTREAM = 'https://cedarclerk.mooexe.dev';
+const UPSTREAM = 'https://cedarclerk.app';
 // Never "/". The landing page answers that path for anyone without a session cookie, and a desktop app
 // opening on a pricing table was the first thing Marty saw on the first real launch (10.08.2026).
 // Any other path falls through to the SPA, whose own guard sends a signed-out visitor to /login.
@@ -319,7 +319,7 @@ function logUpdate(message) {
 }
 
 /**
- * Self-update (ADR-116). `electron-updater` reads https://cedarclerk.mooexe.dev/downloads/latest.yml,
+ * Self-update (ADR-116). `electron-updater` reads https://cedarclerk.app/downloads/latest*.yml,
  * compares versions, downloads the installer named there and verifies its sha512 — the whole
  * protocol is that file, and the server side of it is plain static hosting.
  *
@@ -556,7 +556,8 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-    stopAgent();
+    // On macOS the Dock keeps the app alive after its window closes. Keep the agent alongside it,
+    // so reopening the window does not leave the filesystem bridge pointing at a stopped process.
     if (process.platform !== 'darwin') app.quit();
 });
 

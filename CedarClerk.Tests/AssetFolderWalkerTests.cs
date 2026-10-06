@@ -107,6 +107,28 @@ public class AssetFolderWalkerTests : IDisposable
     }
 
     [Fact]
+    public void A_file_link_to_another_folder_is_not_indexed()
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        var outside = Path.Combine(Path.GetTempPath(), "cedar-walk-outside-" + Guid.NewGuid());
+        Directory.CreateDirectory(outside);
+        try
+        {
+            var privateFile = Path.Combine(outside, "private.png");
+            File.WriteAllText(privateFile, "private");
+            Write("ordinary.png");
+            File.CreateSymbolicLink(Path.Combine(_root, "linked.png"), privateFile);
+
+            Assert.Equal(["ordinary.png"], Walk(out _));
+        }
+        finally
+        {
+            Directory.Delete(outside, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Describe_reads_the_size_the_modification_time_and_the_header()
     {
         // A real 2×3 PNG with correct chunk CRCs. It has to be genuinely valid, not merely
