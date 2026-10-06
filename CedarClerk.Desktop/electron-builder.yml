@@ -1,5 +1,5 @@
-# Packaging for the desktop shell (T-121, ADR-104). Run through `npm run dist`, which
-# publishes the server into ./server/ first — electron-builder only wraps what is already there.
+# Packaging for the desktop shell (ADR-104/312). Run through `npm run build:desktop`, which
+# publishes the agent into ./server/ first — electron-builder only wraps what is already there.
 appId: dev.mooexe.cedarclerk
 productName: Cedar Clerk
 copyright: Marty (martycow)
@@ -26,7 +26,7 @@ extraResources:
 # manifest, and without a manifest nothing updates.
 publish:
   provider: generic
-  url: https://cedarclerk.mooexe.dev/downloads
+  url: https://cedarclerk.app/downloads
   # Cloudflare does not answer multi-range requests, and a differential download that asks for one
   # gets a full body back — slower than not trying. Sequential single ranges work.
   useMultipleRangeRequest: false
@@ -46,5 +46,16 @@ nsis:
   # A per-user install writes nothing to Program Files, so no elevation prompt.
   artifactName: CedarClerk-Setup-${version}.${ext}
 
-# macOS and Linux targets are omitted on purpose: nobody has a machine to verify them on, and an
-# untested installer is worse than an absent one.
+mac:
+  target:
+    - dmg
+    - zip
+  icon: build/icon.png
+  artifactName: CedarClerk-${version}-mac-${arch}.${ext}
+
+linux:
+  target:
+    - AppImage
+  icon: build/icon.png
+  category: Office
+  artifactName: CedarClerk-${version}-linux-${arch}.${ext}

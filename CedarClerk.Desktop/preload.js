@@ -3,7 +3,7 @@
 // ## Why this file now has a gate in it
 //
 // It used to be unconditional, and that was fine: the window loaded 127.0.0.1, so "the page" and "our
-// server" were the same thing. Since ADR-117 the window loads cedarclerk.mooexe.dev — a remote origin —
+// server" were the same thing. Since ADR-117 the window loads cedarclerk.app — a remote origin —
 // and the SPA it serves renders TipTap documents and pasted HTML. So the bridge is exposed only when
 // the page really is the upstream, and the main process checks the same thing again on every call
 // (see `guard` in main.js). Two checks rather than one because this one runs *inside* the renderer and
@@ -19,7 +19,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // duplicate is one string, sitting next to the file it is duplicated from, and if the two ever
 // disagree the bridge simply does not appear: it fails closed, which is the direction a mistake here
 // should fail. The authoritative check is `guard()` in main.js, which cannot be reached from the page.
-const UPSTREAM_ORIGIN = 'https://cedarclerk.mooexe.dev';
+const UPSTREAM_ORIGIN = 'https://cedarclerk.app';
 
 function isUpstream() {
     try {

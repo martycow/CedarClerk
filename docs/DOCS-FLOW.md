@@ -52,6 +52,7 @@ flowchart TB
     subgraph USR["docs/for_user — instructions and manuals"]
         INTEG["docs/for_user/integrations-setup.md<br/>provider-key setup runbook"]
         DEPLOY["docs/for_user/deploy.md<br/>Bash deployment, prerequisites and recovery"]
+        DESKTOPBUILD["docs/for_user/desktop-build.md<br/>Windows, macOS and Linux builds"]
     end
 
     subgraph MOD["Indie-gamedev module — Phase 13"]
@@ -96,6 +97,7 @@ flowchart TB
     DECISIONS -->|"ADR-101…107<br/>module decisions"| INDIE
     INDIE -->|"rows T-120…T-137"| BACKLOG
     INDIE --> DESKTOP
+    DESKTOP --> DESKTOPBUILD
 
     classDef source fill:#5B6E46,stroke:#3E4A2F,color:#fff
     classDef plan fill:#E8E3D6,stroke:#B8B0A0,color:#26231D
@@ -105,7 +107,7 @@ flowchart TB
     class OWNER,INPUTP,CODE source
     class BACKLOG,TASKS,CHANGELOG plan
     class DECISIONS,RULES,PRODENV,CLAUDE why
-    class PRODUCT,PRD,ARCH,QA,SEC,DESIGN,UIINV,STACK,RESEARCH,BIZ,COMPET,METRICS,MULTI,INTEG,LEGAL ref
+    class PRODUCT,PRD,ARCH,QA,SEC,DESIGN,UIINV,STACK,RESEARCH,BIZ,COMPET,METRICS,MULTI,INTEG,DESKTOPBUILD,LEGAL ref
     class INDIE,DESKTOP mod
 ```
 
@@ -161,7 +163,7 @@ The `docs/` root holds only high-level material: `DOCS-FLOW.md` (this map), `DEC
 | **`tech/`** | The technical side | ARCHITECTURE, DESKTOP, QA, SECURITY |
 | **`adr/`** | Decision texts, one file per ADR (+ ownership-audit) | One file per ADR. The index is in the root; its own folder rather than `tech/adr/`, because ADRs can be product decisions (ADR-092, ADR-101) as well as technical ones |
 | **`knowledge_base/`** | Knowledge base: terminology, technologies and stack, localization tables, lists of shipped features | STACK; `docs/knowledge_base/TERMINOLOGY.md` (project terminology dictionary, extracted from the code on 18.08.2026); `docs/knowledge_base/RESEARCH-2026-09.md` (API/terms research behind T-127/169/170/171, each section ending in a verdict) |
-| **`for_user/`** | All instructions, manuals and everything else that matters to the user | integrations-setup (provider runbook) |
+| **`for_user/`** | All instructions, manuals and everything else that matters to the user | integrations-setup, deployment, desktop builds |
 | **`archive/`** | Archive of old .md files — lives in the repo, **text isn't edited** (a record of a moment), periodically cleared out wholesale (24.08.2026: the DO-migration log, ROADMAP phases 0–10 and the docs audit — deleted as having served their purpose) | `incidents.md` — the index of every recorded incident: what broke, where the narrative lives, what guards it now. It is an index into living records rather than a record of a moment, so it is maintained, not frozen |
 | **`misc/`** | Everything else | the folder will appear with the first file that doesn't fit anywhere above |
 

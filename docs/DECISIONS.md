@@ -311,3 +311,4 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-308 — Bash release deployment](adr/ADR-308.md)
 
 - [ADR-309 — Editorial landing with admin-owned copy](adr/ADR-309.md)
+- [ADR-312 — Build the desktop shell on each supported host](adr/ADR-312.md)

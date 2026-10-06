@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-10-06
 source_of_truth_for: system layout — layers, data, API, deploy
 guard: none
 ---
@@ -14,7 +14,7 @@ The internal post format is a single TipTap JSON document, stored in SQLite as `
 ```
                         ┌──────────────────────────────────────────┐
                         │   DigitalOcean droplet (Ubuntu 24.04)    │
- cedarclerk.mooexe.dev  │                                          │
+ cedarclerk.app         │                                          │
   ┌───────────┐  HTTPS  │  ┌────────────────────────────────────┐  │
   │ Cloudflare├────────►│  │        Cedar Clerk Server          │  │
   │  Tunnel   │         │  │        (ASP.NET Core, .NET 10)     │  │
@@ -177,13 +177,13 @@ No operations console for now (ADR-304; replacement `T-393`). The Bash deploymen
 
 ## Desktop distribution (ADR-104/116/117)
 
-A window onto this installation plus a process that can read one machine's disk — not a second application and, since ADR-117, not a second database either. The Electron shell loads `https://cedarclerk.mooexe.dev/projects` and starts the published `CedarClerk.Server` with `Cedar:Agent:Enabled`, which strips it to `/agent/*`: walk a folder, stat a file, render a thumbnail. Neither the server nor the frontend is forked.
+A window onto this installation plus a process that can read one machine's disk — not a second application and, since ADR-117, not a second database either. The Electron shell loads `https://cedarclerk.app/projects` and starts the published `CedarClerk.Server` with `Cedar:Agent:Enabled`, which strips it to `/agent/*`: walk a folder, stat a file, render a thumbnail. Neither the server nor the frontend is forked.
 
 The reason it exists is the asset index (ADR-107) — only a process on the developer's own machine can walk a game project's folder. **The division of labour is the whole design: the agent reads the disk, the page uploads what it found.** The page already holds a session cookie, so the agent needs no credentials and the shell does no authentication; the work also ends up inside an ordinary screen with a progress bar rather than in an unobservable background process. Mechanics, the two locks on the agent, and the file-versus-fingerprint distinction: `docs/tech/DESKTOP.md`.
 
 `CEDAR_DATA_DIR` is no longer part of this story — the desktop stores nothing. It still decides where the droplet keeps SQLite and media (`/home/martycow/cedarclerk/data`). One server change came out of ADR-104 and stayed: the listening address used to be a literal in `app.Run(Consts.URLs.Localhost)`, so `ASPNETCORE_URLS` could not override it, and `Cedar:Urls` now exists for the agent's free port.
 
-**Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads `https://cedarclerk.mooexe.dev/downloads/latest.yml`, which `DownloadEndpoints` serves as plain static files out of `CEDAR_DATA_DIR/downloads`. There is no update service and no third-party account — the whole protocol is a manifest, an installer and a blockmap in one folder, put there by the desktop publish step.
+**Updates come from our own server** (ADR-116): `electron-updater`'s generic provider reads a platform manifest under `https://cedarclerk.app/downloads/` (`latest.yml` on Windows, `latest-mac.yml` on macOS, `latest-linux.yml` on Linux). `DownloadEndpoints` serves these as static files out of `CEDAR_DATA_DIR/downloads` when published. There is no update service or third-party account. The Mac and Linux packages have not been published there.
 
 ## Local development
 

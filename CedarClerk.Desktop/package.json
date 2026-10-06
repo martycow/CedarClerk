@@ -1,11 +1,13 @@
 {
   "name": "cedarclerk-desktop",
-  "version": "0.21.0",
+  "productName": "Cedar Clerk",
+  "version": "0.24.1",
   "description": "Cedar Clerk desktop shell — Electron over the existing ASP.NET Core server (ADR-104)",
   "main": "main.js",
   "private": true,
   "scripts": {
     "start": "node start.js",
+    "build:desktop": "node build.mjs",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --publish never"
   },

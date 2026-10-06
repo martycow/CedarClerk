@@ -49,6 +49,8 @@ public static class DownloadEndpoints
         var contentTypes = new FileExtensionContentTypeProvider();
         contentTypes.Mappings[".yml"] = "text/yaml";
         contentTypes.Mappings[".blockmap"] = "application/octet-stream";
+        contentTypes.Mappings[".dmg"] = "application/x-apple-diskimage";
+        contentTypes.Mappings[".AppImage"] = "application/octet-stream";
 
         app.UseWhen(ctx => !Tenancy.TenantRouting.IsTenantRequest(ctx), downloads =>
             downloads.UseStaticFiles(new StaticFileOptions
@@ -58,12 +60,12 @@ public static class DownloadEndpoints
             ContentTypeProvider = contentTypes,
             OnPrepareResponse = ctx =>
             {
-                // The manifest is the only file whose content changes under a fixed name, so it is
-                // the only one that must not be cached — a cached copy at the edge means an update
+                // Each platform manifest changes under a fixed name. A cached copy at the edge means an update
                 // that was published hours ago is still invisible. Installers carry their version
                 // in the file name and can be cached as hard as anything hashed.
                 ctx.Context.Response.Headers.CacheControl =
-                    ctx.File.Name.Equals(Manifest, StringComparison.OrdinalIgnoreCase)
+                    ctx.File.Name.StartsWith("latest", StringComparison.OrdinalIgnoreCase)
+                    && ctx.File.Name.EndsWith(".yml", StringComparison.OrdinalIgnoreCase)
                         ? "no-cache, must-revalidate"
                         : "public, max-age=604800";
             }

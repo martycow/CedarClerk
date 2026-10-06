@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-10-06
 source_of_truth_for: desktop build layout and the filesystem agent
 guard: none
 ---
@@ -21,7 +21,7 @@ Reason for existing — the Asset Manager: describing the contents of a game pro
 ```
 ┌────────────────────── Electron ───────────────────────┐
 │  main                                                  │
-│   ├─ CedarClerk.Server.exe with Cedar:Agent:Enabled    │──► folder traversal,
+│   ├─ CedarClerk.Server[.exe] with Cedar:Agent:Enabled  │──► folder traversal,
 │   │     127.0.0.1:<free port>                          │    file stat,
 │   │     Bearer token per launch + granted roots        │    JPEG generation
 │   ├─ machine.json     { id, name }                     │
@@ -33,7 +33,7 @@ Reason for existing — the Asset Manager: describing the contents of a game pro
 └────────────────────────────────────────────────────────┘
                              │ HTTPS, ordinary cookie session
                              ▼
-        cedarclerk.mooexe.dev — the ONE database
+        cedarclerk.app — the ONE database
         AssetEntry: path + metadata + preview in thumbs/
         asset bytes — never
 ```
@@ -51,7 +51,7 @@ Neither the server code nor the frontend is forked (ADR-101). The Angular build 
 | `CedarClerk.Desktop/package.json`, `electron-builder.yml` | Electron + the installer build |
 | `CedarClerk.Server/Modules/Agent/` | The agent proper: endpoints, the walker, grants, the scan service |
 
-Building the desktop app: `npm run build` (Angular) → `dotnet publish -r win-x64` → `electron-builder`. The desktop publish step runs the same build and publishes the result to the server (ADR-116); without the flag, deploy does not touch the desktop app at all.
+Building the desktop app: `npm ci` then `npm run build:desktop` in `CedarClerk.Desktop`. The build publishes the agent for the host runtime and packages it with Electron (ADR-312). The Angular application is already served by production. See `docs/for_user/desktop-build.md` for host prerequisites and verification.
 
 ## The Agent
 
@@ -85,7 +85,7 @@ The agent has no CORS at all: its only client is the Electron main process.
 
 ## Data
 
-**The desktop app has none.** There is one database, in the cloud; `%APPDATA%\CedarClerk` holds only `machine.json`, `granted-folders.json`, and `update.log`.
+**The desktop app has none.** There is one database, in the cloud. The local app data directory holds only `machine.json`, `granted-folders.json`, and `update.log`.
 
 This has a consequence that previously had to be worried about separately: **there is nothing to back up for the desktop app** (`T-137` closed as moot, not as done). But another cost appears, and it's named directly in ADR-117: **the desktop app does not work at all without a network.** The thirty-day cookie saves you from logging in again, but not from a missing network.
 
@@ -137,7 +137,7 @@ Nine functions, and **none of them writes, deletes, or executes anything**: `mac
 
 ### The boundary ADR-117 moved
 
-Previously the window loaded `127.0.0.1`, meaning "the page" and "our server" were the same thing. Now the window loads `cedarclerk.mooexe.dev` — a **remote origin** — and the SPA renders TipTap documents and pasted HTML. So: **XSS on the domain turns into reading the chosen folder.** This is an accepted risk, not a solved problem.
+Previously the window loaded `127.0.0.1`, meaning "the page" and "our server" were the same thing. Now the window loads `cedarclerk.app` — a **remote origin** — and the SPA renders TipTap documents and pasted HTML. So: **XSS on the domain turns into reading the chosen folder.** This is an accepted risk, not a solved problem.
 
 What narrows it:
 
@@ -174,51 +174,25 @@ Gone: `CEDAR_DATA_DIR` (no database), `Cedar__AssetIndex__Enabled` (no server-si
 
 ## Build and run
 
-```
-cedar build                    Angular + server + desktop
-cedar build --desktop-only     rebuild only the shell
-cedar build --installer        plus CedarClerk-Setup-<version>.exe
-cedar build --run              build and launch immediately
-cedar open desktop             launch what's already built (or the installed copy)
-```
+`npm ci` and `npm run build:desktop` in `CedarClerk.Desktop` produce the host's package. `build.mjs` reads `Consts.CurrentVersion`, synchronizes the desktop npm metadata, publishes the agent self-contained for `win-x64`, `osx-arm64`/`osx-x64`, or `linux-x64`/`linux-arm64`, then invokes electron-builder. Windows produces NSIS, macOS DMG and ZIP, Linux AppImage. `CedarClerk.Desktop/server/` and `dist/` are ignored outputs. The cross-platform build guide is `docs/for_user/desktop-build.md`.
 
-`BuildPipeline` synchronizes the version in `package.json` with `Consts.CurrentVersion`. `CedarClerk.Desktop/server/` is the build output (~70 MB self-contained runtime), not tracked by git.
-
-Build steps: `npm run build` (web) → `dotnet publish CedarClerk.Server -c Release -r win-x64 --self-contained -o CedarClerk.Desktop/server` → `npm ci && npm run dist` in `CedarClerk.Desktop`. Windows-only for now (NSIS); a macOS target is part of `T-393`/future work.
+On macOS, closing the last window leaves the app and agent running; quitting stops the agent. Local Mac builds disable automatic certificate discovery so an unrelated Apple Development identity is not used. A distributable Mac build explicitly requires Developer ID signing and notarization.
 
 ## How an update arrives (ADR-116)
 
-```
-cedar deploy --desktop
-   │
-   ├─ ordinary site deploy (build → archive → swap → health) — the site is already live
-   ├─ build the shell + electron-builder  →  CedarClerk-Setup-<version>.exe (~119 MB)
-   └─ upload to  ~/cedarclerk/data/downloads/
-         ├─ .exe and .blockmap  →  sha256 check  →  mv into place
-         └─ latest.yml          →  written last
-                    │
-                    ▼  https://cedarclerk.mooexe.dev/downloads/latest.yml
-        installed copy: checks on launch and every 4 hours,
-        downloads in the background, installs when the window closes
-```
+The build emits a package and an `electron-updater` manifest: `latest.yml` for Windows, `latest-mac.yml` for macOS, or `latest-linux.yml` for Linux. Publishing is a separate, deliberate operation; the current Bash site deploy does not publish desktop packages. The package, its blockmap and its manifest belong under the server's persistent `downloads/` data directory, not the replaceable application directory. Write the manifest last so an incomplete upload never becomes the advertised update.
 
-**The deploy order is mandatory the other way too: the ordinary deploy first, then `-Desktop`.** Production must gain the import endpoints before a copy exists that writes to them.
-
-Three things, each non-obvious for its own reason:
-
-- **`latest.yml` is written last.** It's the only file the installed copy reads. Until it exists, clients see the previous version — an unfinished publish is invisible, not broken.
-- **The files live in `data/`, not in `app/`.** `app/` is wiped wholesale by the deploy on every release.
-- **The site's version and the installer's version diverge, and that's normal.** The permanent link is `https://cedarclerk.mooexe.dev/downloads/latest`.
+The installed copy checks at launch and every four hours. A site's version and an installer's version may differ because the site deploys independently. The existing `/downloads/latest` convenience route reads only the Windows manifest. Mac and Linux packages and manifests have not been published there.
 
 **The agent is killed before installation.** NSIS overwrites `resources/server/CedarClerk.Server.exe`, which at that moment is running as a child process; a locked file would abort the install partway through. That's why `stopAgent()` is synchronous (`spawnSync`) and is called before `quitAndInstall()`.
 
-**And it removes the `exit` handler before that.** `taskkill /f` returns exit code 1 to the killed process, and the `exit` handler was set up to show "server crashed unexpectedly" via a modal `showErrorBox`. This wasn't visible before updates existed: every other stop happened after the window closed, which is what the handler was checking for. Installing an update stops the process while the window is still alive — and the modal popped up mid-exit, blocking the main process. Caught by Marty on the first real update, 11.08.2026. Rule: **a stop we asked for ourselves cannot be treated as a crash.**
+**A requested stop is not a crash.** The updater removes the agent's `exit` handler before stopping it, so the restart does not show a false failure dialog.
 
 **The update is applied by the version being replaced.** The old code performs the install, so any fix to the update path only takes effect the time after next. The only workaround is installing the new version by hand via the installer.
 
-**What happened is written to `%APPDATA%\CedarClerk\update.log`.** A packaged app has no console, and an update ends in the process exiting.
+**What happened is written to the app data directory's `CedarClerk/update.log`.** A packaged app has no console, and an update ends in the process exiting.
 
-**Code signing is still absent** (`T-145`), and for updates this matters more than for a first install: without a certificate, `electron-updater` skips signature verification and relies on the sha512 in the manifest, fetched over the same HTTPS. Trust in an update = trust in `cedarclerk.mooexe.dev`. **ADR-117 raised the stakes on this line**: the same domain now also serves as the bridge to the disk.
+**Code signing is still absent for a public release** (`T-145`). Local Mac builds are unsigned, and auto-update on macOS requires a signed app. Windows `electron-updater` without a certificate relies on the sha512 in the manifest, fetched over the same HTTPS. Trust in an update = trust in `cedarclerk.app`. **ADR-117 raised the stakes on this line**: the same domain now also serves as the bridge to the disk.
 
 In development (`npm start`) updates are disabled: there's no `app-update.yml` next to the unpacked shell.
 
@@ -242,7 +216,7 @@ TypeError: Cannot read properties of undefined (reading 'handle')
 | Folder outside the grant | A path request above the root → 403 |
 | "All previews" on a large folder is slow and heavy | Resumable pass, cancel button, a counter with megabytes, a `thumbs/` ceiling with a clear rejection |
 | Port taken by another process | OS-assigned free port (`:0`); verified with `dotnet run` already running on 8080 |
-| Agent survives the window closing | Kill the process tree on `window-all-closed` and `before-quit`; verified via Task Manager |
+| Agent outlives the app | Stop it on `before-quit` and process exit. On macOS, closing a window keeps both the app and agent alive until the app quits |
 | An exe from a different build sitting nearby | Compare `/agent/health` version against the shell version |
 | Antimalware Service slows down an unsigned exe | Measure cold start on Marty's machine |
 | Distribution size (~119 MB installer, see diagram above) | The cost of the ADR-104 decision; accepted, not fought |
@@ -253,6 +227,6 @@ TypeError: Cannot read properties of undefined (reading 'handle')
 
 - **Installation on a clean machine** — `T-121`: the installer builds and is verified against build artifacts, but has never once run where there's neither `%APPDATA%\CedarClerk` nor a dev environment.
 - **iPad** — `T-011` in `docs/tasks/BACKLOG.md`. Electron doesn't go there.
-- **macOS/Linux builds** — technically `electron-builder` can do it, but there's no one and nothing to test them on.
-- **Code signing and notarization** — `T-145`: money and accounts, not engineering.
+- **Linux and Windows builds from the new entry point** — the instructions and targets exist, but need execution on those hosts.
+- **Code signing and notarization** — `T-145`: the local Mac package is unsigned; distribution needs a Developer ID identity and notarization credentials.
 - **Offline mode** — deliberately absent (ADR-117). If it's ever needed, it's a synchronization problem again, the one ADR-105 rightly walked away from.

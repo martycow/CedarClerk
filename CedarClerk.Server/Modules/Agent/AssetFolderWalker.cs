@@ -95,8 +95,15 @@ public static class AssetFolderWalker
             }
 
             foreach (var file in files)
-                if (AssetKinds.ShouldIndex(file))
-                    yield return file;
+            {
+                // A file link can point outside the folder the human selected.
+                try
+                {
+                    if (File.GetAttributes(file).HasFlag(FileAttributes.ReparsePoint)) continue;
+                }
+                catch (Exception) { onUnreadable(); continue; }
+                if (AssetKinds.ShouldIndex(file)) yield return file;
+            }
         }
     }
 
