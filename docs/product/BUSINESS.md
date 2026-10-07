@@ -27,9 +27,9 @@ closed.
 | 1 | Terms and Privacy have no placeholders | `/terms`, `/privacy` — not a single `[BRACKETS]` | ✅ 13.08.2026 (`T-052`) |
 | 2 | Lawyer has read both documents | — | ❌ not done, the only remaining legal item |
 | 3 | Nightly database backup | newest `data/backups/cedar-*.db.gz` < 36 h + healthchecks green | ✅ (`T-071`) |
-| 4 | Off-droplet copy | `~/bin/rclone size r2:cedar-backup` responds | ⏳ `T-147`, waiting on R2 keys |
+| 4 | Off-droplet copy | `~/bin/rclone size r2:cedar-backup` responds | ✅ `T-147`, daily to R2 |
 | 5 | External monitoring + alerts | UptimeRobot, three monitors green | ✅ 13.08.2026, status page at `stats.uptimerobot.com/jKcnizZ9vU` (a custom domain there is paid) |
-| 6 | Restore verified | deploy yesterday's dump into an empty database locally and open it | ❌ **never done** — `T-149` |
+| 6 | Restore verified | deploy yesterday's dump into an empty database locally and open it | ✅ `T-149`, repeat monthly (§5) |
 | 7 | Payment keys live on prod | a test purchase with your own card, money arrived | ✅ **Stripe verified with real money** (first real payment on 26.07.2026; checked off on 13.08 — payments go through and land on Marty's bank account). The credits wallet goes through the same flows. PayPal and Telegram Stars have not been verified with real money |
 | 8 | Subscription taxes configured | Stripe Tax enabled, jurisdictions registered | ❌ Marty's decision, see §2 |
 | 9 | Support address works | mail to `cedarworks@mooexe.dev` arrives and gets read | ⏳ to verify |
@@ -81,7 +81,7 @@ Fixed costs (check against the actual bills, not from memory):
 |---|---|---|
 | Droplet `cedarclerk-periwinkle` | 1 vCPU / 2 GB | DigitalOcean dashboard |
 | Weekly droplet images | ~20% of the droplet price | same place |
-| Cloudflare R2 | $0 up to 10 GB — **not enabled yet**, the upload is waiting on keys (`T-147`) | Cloudflare dashboard |
+| Cloudflare R2 | $0 up to 10 GB — off-box backup target (`T-147`) | Cloudflare dashboard |
 | Domain `mooexe.dev` | once a year | registrar |
 | Stripe/PayPal fees | ~2.9% + $0.30 per payment | Stripe dashboard |
 | Anthropic (AI features, paid in credits) | **variable** | console.anthropic.com |

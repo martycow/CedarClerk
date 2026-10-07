@@ -1,18 +1,18 @@
 ---
 owner: marty
-last_verified: 2026-09-02
+last_verified: 2026-10-07
 source_of_truth_for: what the product is, who it's for, pricing snapshot
 guard: none
 ---
 
 # Product
 
-> **Turning point, 02.09.2026 — Cedar Clerk is a platform for independent makers.** Projects,
+> **Cedar Clerk is a platform for independent makers.** Projects,
 > Devlogs and personal Blogs are three first-class ways to publish work; Discovery gives people who
 > opt in a shared place to be found. "Maker" is deliberately broad: games, apps, tools, comics,
 > illustration, film, animation, music, audio and hardware all fit.
 >
-> The 10.08 indie-game-developer turn remains a shipped specialist module, not the platform's outer
+> The indie-game-developer module is a shipped specialist module, not the platform's outer
 > boundary. It adds Projects, document types, tasks, sprints, builds, the asset index and desktop
 > tooling behind `Cedar:Modules:IndieDev` (ADR-101); it does not make a Project mandatory for a Blog.
 

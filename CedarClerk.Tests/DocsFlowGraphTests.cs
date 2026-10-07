@@ -9,7 +9,7 @@ namespace CedarClerk.Tests;
 // still *accurate*, only that it is not missing entirely.
 public class DocsFlowGraphTests
 {
-    private const string Fix = "add the node/row to docs/DOCS-FLOW.md in the same commit (§Размещение)";
+    private const string Fix = "add the node/row to docs/DOCS-FLOW.md in the same commit (§File placement)";
 
     private static DirectoryInfo RepoRoot()
     {
@@ -32,8 +32,9 @@ public class DocsFlowGraphTests
 
         var missing = Directory.GetFiles(Path.Combine(root.FullName, "docs"), "*.md", SearchOption.AllDirectories)
             .Select(p => Path.GetRelativePath(root.FullName, p).Replace('\\', '/'))
-            // adr/ and archive/ are append-only record sets, mapped as folders, not per file.
-            .Where(rel => !rel.StartsWith("docs/adr/") && !rel.StartsWith("docs/archive/"))
+            // adr/, archive/, briefs/ and reviews/ are append-only record sets, mapped as folders, not per file.
+            .Where(rel => !rel.StartsWith("docs/adr/") && !rel.StartsWith("docs/archive/")
+                && !rel.StartsWith("docs/briefs/") && !rel.StartsWith("docs/reviews/"))
             // The map does not map itself; INPUT_PROMPT.md is Marty's gitignored inbox — present on
             // his machine, absent on a fresh clone, so enumerating it would make the test
             // machine-dependent (its mention in the map is asserted by the path-exists test's input).
@@ -55,6 +56,8 @@ public class DocsFlowGraphTests
             .Distinct()
             // Gitignored by Marty's ruling — legitimately absent on a fresh clone.
             .Where(rel => rel != "docs/INPUT_PROMPT.md")
+            // Name patterns (BR-xxx, REV-xxx_name, ADR-xxx), not files.
+            .Where(rel => !rel.Contains("xxx", StringComparison.OrdinalIgnoreCase))
             .Where(rel => !File.Exists(Path.Combine(root.FullName, rel.Replace('/', Path.DirectorySeparatorChar))))
             .OrderBy(rel => rel)
             .ToArray();

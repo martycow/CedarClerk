@@ -7,9 +7,9 @@ guard: none
 
 # Module for indie gamedev
 
-The single entry point for turning Cedar Clerk into an indie game developer's toolkit. The original source of the idea is the out-of-repo brief `Gamedev_Focused_Rework.md`. Decisions — `docs/DECISIONS.md`, ADR-101…107. Desktop architecture — `docs/tech/DESKTOP.md`. Phase 13 work order — archived in `docs/archive/roadmap-phases-0-13.md`.
+The single entry point for turning Cedar Clerk into an indie game developer's toolkit. The original source of the idea is the out-of-repo brief `Gamedev_Focused_Rework.md`. Decisions — `docs/DECISIONS.md`, ADR-101…107. Desktop architecture — `docs/tech/DESKTOP.md`.
 
-The `indiedev_module` branch (created from `dev`) **has been merged into `master` with v0.10.0 and deleted**. The reversibility that the brief demanded of the branch now lives in the `Cedar:Modules:IndieDev` flag (ADR-101): turning it off keeps core project/document organization and publishing available. **The module's MUST list was closed on 11.08.2026** — status is recorded in `docs/archive/roadmap-phases-0-13.md` (Phase 13); the open remainder (MIGHT + `T-127`) lives on the board.
+The module lives in `master` behind the `Cedar:Modules:IndieDev` flag (ADR-101): turning it off keeps core project/document organization and publishing available. The MUST list is complete; the open remainder (MIGHT + `T-127`) lives on the board.
 
 ## What changes
 
@@ -187,9 +187,9 @@ Verified: `dotnet test` **752/752**, frontend 11/11, contrast clean, smoke **53/
 
 **This closes the MUST list for phase 13.**
 
-## MUST — v1 module composition. **Fully completed 10–11.08.2026**
+## MUST — v1 module composition. Complete
 
-Order — the owner's priority from 10.08.2026, adjusted by one dependency: the desktop was moved up to second place, because the Asset Manager without it degenerates into the same file upload that already exists (ADR-107). The table is the *composition*; status is recorded in `docs/archive/roadmap-phases-0-13.md` (per the DOCS-FLOW rule); all seven rows there are closed.
+Order — the owner's priority from 10.08.2026, adjusted by one dependency: the desktop was moved up to second place, because the Asset Manager without it degenerates into the same file upload that already exists (ADR-107). The table is the *composition*; status is recorded in `docs/tasks/CHANGELOG.md`; all seven rows are closed.
 
 | # | What | Why here |
 |---|---|---|

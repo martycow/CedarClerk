@@ -1,14 +1,13 @@
 ---
 owner: marty
-last_verified: 2026-08-18
+last_verified: 2026-10-07
 source_of_truth_for: the stack, dependency versions and costs
 guard: none
 ---
 
 # Stack and Costs
 
-Everything Cedar Clerk is built from, and what it costs. Checked against the project files on 13.08.2026,
-re-checked on 18.08.2026 (R2 rows, social networks, .NET EOL).
+Everything Cedar Clerk is built from, and what it costs. Checked against the project files; version numbers come from `*.csproj` and `package.json`.
 Versions come from `*.csproj` and `package.json`; **the amounts are estimates — verify against the actual
 bills**, because the bill knows the truth and the document only remembers the moment it was written.
 
@@ -21,12 +20,15 @@ bills**, because the bill knows the truth and the document only remembers the mo
 | `Microsoft.EntityFrameworkCore.Sqlite` | 10.0.* | The whole database. SQLite is a deliberate choice — one machine, one file, `sqlite3 .backup` as the backup |
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` | 10.0.* | Accounts, cookies, password hashing |
 | `Microsoft.EntityFrameworkCore.Design` | 10.0.* | Migrations (`dotnet ef`) |
-| `Telegram.Bot` | 22.10.2 | The bot and publishing: Bot API 10.2, the Blocks mechanism |
+| `Telegram.Bot` | 22.10.3 | The bot and publishing: Bot API 10.3, the Blocks mechanism |
 | `Quartz` + `Quartz.Extensions.Hosting` | 3.18.2 | Scheduled publishing, background jobs |
 | `SixLabors.ImageSharp` | 3.1.12 | Image compression, previews, watermarking |
 | `Anthropic` | 12.35.1 | Auto-translation and AI editing (default model `claude-haiku-4-5`). OpenAI/DeepL are implemented in code as alternative providers, not configured in production |
 | `ClosedXML` | 0.105.0 | The dialogue tool's xlsx translation sheet — export and import (ADR-230) |
-| `xunit` + `Microsoft.NET.Test.Sdk` | 2.5.3 / 17.8.0 | ~935 tests as of 18.08.2026 — `dotnet test` has the exact count |
+| `PostHog.AspNetCore` | 2.9.4 | Opt-in product analytics, off by default (`T-153`) |
+| `Microsoft.AspNetCore.Authentication.Google` | 10.0.* | Google sign-in |
+| `SixLabors.ImageSharp.Drawing` | 2.1.7 | Watermark drawing |
+| `xunit` + `Microsoft.NET.Test.Sdk` | 2.5.3 / 17.8.0 | Backend tests — `dotnet test` has the count |
 
 **What's deliberately not in the stack**: an ORM on top of EF, Redis, a message queue, Docker (for now —
 `T-151`), a service mesh, and everything else usually added "for future growth." While the app lives on
@@ -36,7 +38,7 @@ one machine, each of those would add a failure mode rather than resilience.
 
 Angular 21 (standalone components, signals), TipTap 3 as the editor — `starter-kit` plus extensions
 for images, tables, formulas, checklists and alignment. Plus `@angular/cdk` (drag-drop in toolbar settings),
-`katex` (formulas), `@phosphor-icons/core` (icons), `emoji-picker-element` + `emoji-picker-element-data` (the full emoji set, lazy and self-hosted, ADR-314), `country-flag-emoji-polyfill` (flag glyphs on Windows, app only), `rxjs`. Tests via Vitest, 18 of them.
+`katex` (formulas), `@phosphor-icons/core` (icons), `rxjs`. Tests via Vitest.
 
 ## 3. Desktop
 
@@ -48,7 +50,7 @@ onto production plus a filesystem agent; it has no database of its own.
 | Service | Role | What happens if it goes down |
 |---|---|---|
 | **DigitalOcean** | droplet `cedarclerk-periwinkle` (1 vCPU / 2 GB / 48 GB, fra1) | everything is down |
-| **Cloudflare** | DNS, tunnel (the only outside entry point), R2 for off-site backup (code is ready, **not enabled** — `T-147`) | the site is unreachable; SSH still works by IP |
+| **Cloudflare** | DNS, tunnel (the only outside entry point), R2 for the off-box backup (`T-147`) | the site is unreachable; SSH still works by IP |
 | **Telegram** | publishing to channels, login, Stars payments | posts stop going out, the blog still works |
 | **X (Twitter)** | cross-posting and threads (`XPublishTarget`, `api.x.com`; a post costs the author 1 credit, the app has its own pay-per-use balance) | X publishes fall into the queue with a clear error, everything else works |
 | **Bluesky** | cross-posting and threads (`BlueskyPublishTarget`, `bsky.social`, app password) | same, for Bluesky |
@@ -68,7 +70,7 @@ Fixed monthly costs, at public prices as of 13.08.2026 — **verify against the 
 | Droplet, 1 vCPU / 2 GB / 48 GB | ~$12/mo | fra1, the cheapest tier this runs on |
 | Weekly droplet images | ~20% of the droplet's price | enabled by Marty on 11.08.2026 |
 | Cloudflare (DNS + tunnel) | $0 | free plan |
-| Cloudflare R2 | $0 | up to 10 GB free; **nothing is being uploaded yet** — the upload is waiting on keys (`T-147`), would take up ~1.2 GB |
+| Cloudflare R2 | $0 | up to 10 GB free; holds the nightly DB copy and the media mirror |
 | Domain `mooexe.dev` | ~$15/yr | |
 | healthchecks.io | $0 | free tier |
 | UptimeRobot | $0 | **a custom domain for the status page is paid**, so the link points at `stats.uptimerobot.com` |
