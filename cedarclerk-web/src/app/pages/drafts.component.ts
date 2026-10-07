@@ -8,12 +8,12 @@ import { formatInZone } from '../core/display-time';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription, TimeoutError } from 'rxjs';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
-    DraftsService, DraftMeta, DRAFT_TITLE_MAX, EMPTY_DOC,
+    DraftsService, DraftMeta, DRAFT_TITLE_MAX, EMPTY_DOC, isPublishedAnywhere,
     CLOUDFLARE_UPLOAD_LIMIT_BYTES,
 } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
@@ -155,7 +155,7 @@ function computeStatus(d: DraftMeta, t: Dict): DraftStatus {
     if (d.staleLanguages.length > 0) {
         return { label: s.translationIncomplete, tone: 'default', detail: s.translationBehind(d.staleLanguages.map(l => l.toUpperCase()).join(', ')) };
     }
-    if (d.isBlogPublished || d.lastTelegramMessageId) {
+    if (isPublishedAnywhere(d)) {
         const where = [d.isBlogPublished ? s.blog : null, d.lastTelegramMessageId ? s.telegram : null].filter(Boolean).join(' · ');
         return { label: s.published, tone: 'ok', detail: where };
     }
@@ -167,9 +167,9 @@ function matchesFilter(d: DraftMeta, key: FilterKey): boolean {
         // NF1 — a template is never a "real" draft/scheduled/published/attention/archived row;
         // it only ever shows under its own tab, so it doesn't double-count elsewhere.
         case 'template': return d.isTemplate;
-        case 'draft': return !d.isTemplate && !d.isArchived && !d.scheduled && !d.isBlogPublished && !d.lastTelegramMessageId;
+        case 'draft': return !d.isTemplate && !d.isArchived && !d.scheduled && !isPublishedAnywhere(d);
         case 'scheduled': return !d.isTemplate && !d.isArchived && d.scheduled?.status === 'Pending';
-        case 'published': return !d.isTemplate && !d.isArchived && (d.isBlogPublished || !!d.lastTelegramMessageId) && d.scheduled?.status !== 'Failed';
+        case 'published': return !d.isTemplate && !d.isArchived && isPublishedAnywhere(d) && d.scheduled?.status !== 'Failed';
         case 'attention': return !d.isTemplate && !d.isArchived && (d.scheduled?.status === 'Failed' || d.staleLanguages.length > 0);
         case 'archived': return !d.isTemplate && d.isArchived;
         default: return !d.isTemplate && !d.isArchived;
@@ -196,6 +196,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     private foldersApi = inject(FoldersService);
     private seriesApi = inject(SeriesService);
     private router = inject(Router);
+    private readonly route = inject(ActivatedRoute);
     private readonly workspace = inject(WorkspaceContextService);
     private readonly appearance = inject(AppearanceService);
 
@@ -306,9 +307,20 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         } finally {
             this.loading.set(false);
         }
+        // File → New document arrives as /drafts?new=1 (#1). It used to open the bare /editor,
+        // which shows the most recently edited document — not a new one. Subscribing (rather than
+        // reading the snapshot once) also covers the command being run while already on /drafts.
+        this.newQuerySub = this.route.queryParamMap.subscribe(q => {
+            if (q.get('new') !== '1') return;
+            void this.router.navigate([], { relativeTo: this.route, queryParams: { new: null }, queryParamsHandling: 'merge', replaceUrl: true });
+            this.openNewDraftDialog();
+        });
     }
 
+    private newQuerySub?: Subscription;
+
     ngOnDestroy() {
+        this.newQuerySub?.unsubscribe();
         this.importMarkdownSub?.unsubscribe();
         window.removeEventListener('resize', this.onResize);
         this.workspace.clear();

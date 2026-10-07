@@ -289,6 +289,23 @@ Accent-filled = primary action, outlined ghost = secondary — that's the conven
 
 Channel colors are a separate hardcoded array in `editor.component.ts`, not tokenized: `['#C98A3B', '#5B6E46', '#3E7A4E', '#B4452C', '#6EB2F0', '#8A6FBF']`.
 
+## Telegram preview palette (ADR-313)
+
+The phone in the editor's Preview tab is the one place the app paints something that is not its own: Telegram's chat, in Telegram's colours, because a post has to be judged on the background readers will see. The values are CSS variables scoped to `app-preview-phone` and switched by its `data-tg-theme` (`light` / `dark`, driven by the Preview toolbar's theme toggle); they are not part of the token set above and are not used anywhere else.
+
+| Variable | Light | Night | Used for |
+|---|---|---|---|
+| `--tg-bg` | `#dfe7ec` | `#0e1621` | the chat behind the bubbles |
+| `--tg-head` | `#ffffff` | `#17212b` | the channel header and the day chip |
+| `--tg-bubble` | `#ffffff` | `#182533` | the message bubble |
+| `--tg-text` / `--tg-text-2` | `#11171c` / `#4a5b68` | `#f5f5f5` / `#b6c3cf` | body text, quotes and captions |
+| `--tg-meta` | `#5f7283` | `#8ea1b2` | counts, handle, markers |
+| `--tg-accent` | `#2481cc` | `#6ab3f3` | links, buttons, checked boxes, the "Show more" fold |
+| `--tg-button-bg` | `#dbe9f5` | `#1f3347` | the CTA buttons under the last message |
+| `--tg-tile` | `#e9eff3` | `#101b27` | the plate behind an image |
+
+A new colour for the preview goes into this table first. The phone's own chrome (the bezel) still uses `--text` and `--border`.
+
 ## Confirmation and empty surfaces (ADR-289)
 
 Destructive actions use `ConfirmationService` or an existing dedicated confirmation modal.

@@ -82,6 +82,30 @@ public class PreviewEndpointTests
         }
     }
 
+    // ADR-313 / #3 — the send path sends one message unless the author chose a thread.
+    [Fact]
+    public async Task Telegram_preview_is_one_message_unless_the_thread_flag_is_on()
+    {
+        var (db, connection) = Build();
+        using (connection)
+        {
+            var paragraph = $$"""{"type":"paragraph","content":[{"type":"text","text":"{{new string('x', 2000)}}"}]}""";
+            var draft = Seed(db);
+            draft.CedarJson = $$"""{"type":"doc","content":[{{paragraph}},{{paragraph}}]}""";
+            db.SaveChanges();
+
+            var single = Assert.IsType<Ok<TelegramPreview>>(
+                await PreviewEndpoints.TelegramAsync(db, "owner-1", draft.Id, null, Telegram)).Value!;
+            var threaded = Assert.IsType<Ok<TelegramPreview>>(
+                await PreviewEndpoints.TelegramAsync(db, "owner-1", draft.Id, null, Telegram, thread: true)).Value!;
+
+            Assert.Equal(1, single.MessageCount);
+            Assert.Equal(Consts.Telegram.MaxPostChars, single.MaxCharactersPerMessage);
+            Assert.Equal(2, threaded.MessageCount);
+            Assert.Equal(Consts.Telegram.ThreadPartChars, threaded.MaxCharactersPerMessage);
+        }
+    }
+
     [Fact]
     public async Task Telegram_preview_resolves_a_translation_when_asked()
     {

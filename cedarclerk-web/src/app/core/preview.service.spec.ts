@@ -34,6 +34,21 @@ describe('PreviewService', () => {
         expect(await answer).toEqual(PREVIEW);
     });
 
+    // ADR-313 — the Preview tab asks for one message unless the author chose a thread.
+    it('asks for one message by default and for the thread parts when the author chose a thread', async () => {
+        const single = api.telegram('d1', 'en');
+        const first = http.expectOne(r => r.url === '/api/drafts/d1/preview/telegram');
+        expect(first.request.params.get('thread')).toBe('false');
+        first.flush(PREVIEW);
+        await single;
+
+        const threaded = api.telegram('d1', 'en', true);
+        const second = http.expectOne(r => r.url === '/api/drafts/d1/preview/telegram');
+        expect(second.request.params.get('thread')).toBe('true');
+        second.flush(PREVIEW);
+        await threaded;
+    });
+
     it('builds the blog page address with and without a theme', () => {
         expect(api.blogUrl('d1', 'ru', null)).toBe('/api/drafts/d1/preview/blog?lang=ru');
         expect(api.blogUrl('d1', 'ru', 'dark')).toBe('/api/drafts/d1/preview/blog?lang=ru&theme=dark');

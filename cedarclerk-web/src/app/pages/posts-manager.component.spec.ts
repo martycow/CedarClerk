@@ -199,6 +199,14 @@ describe('posts manager', () => {
 
     // The strip is a tablist, and the tally it carries is the badge rules' own: nothing at zero,
     // and the count when there is one.
+    // #1 — Documents counted a Telegram-only post as published and Posts called it a draft.
+    it('treats a post sent only to Telegram as live, like the Documents screen does', () => {
+        const telegramOnly = draft('tg', { lastTelegramMessageId: 7, lastTelegramUsername: 'chan' });
+        expect(page().publishState(telegramOnly)).toBe('live');
+        expect(page().publishState(draft('never'))).toBe('draft');
+        expect(page().publishState(draft('old', { isArchived: true, lastTelegramMessageId: 7 }))).toBe('archived');
+    });
+
     it('draws the sections as tabs and badges the feedback tally on Posts', async () => {
         expect(tiles().map(x => x.firstChild?.textContent?.trim()))
             .toEqual([t.tabs.posts, t.tabs.stats, t.tabs.forms]);

@@ -316,3 +316,6 @@ Consequential technical/product decisions already made and visible in the codeba
 
 - [ADR-311 — Customizable project overview](adr/ADR-311.md)
 - [ADR-312 — Build the desktop shell on each supported host](adr/ADR-312.md)
+- [ADR-313 — The Telegram preview shows what the send path sends: one message unless the author chose a thread (07.10.2026)](adr/ADR-313.md)
+- [ADR-314 — The emoji modal keeps its Favorites and adds the full Unicode set, self-hosted (07.10.2026)](adr/ADR-314.md)
+- [ADR-315 — "Send preview to me" replaces the test-channel send (07.10.2026)](adr/ADR-315.md)

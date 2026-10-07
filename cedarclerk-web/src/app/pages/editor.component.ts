@@ -13,6 +13,7 @@ import { EditorState, NodeSelection, PluginKey, TextSelection } from '@tiptap/pm
 import Suggestion from '@tiptap/suggestion';
 import { Node as PMNode, Slice } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
+import { CedarLink } from '../tiptap-extensions/cedar-link';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
@@ -76,6 +77,7 @@ import { PopoverComponent } from '../shared/popover.component';
 import { ModalComponent } from '../shared/modal.component';
 import { AppearanceService, SHEET_WIDTH_PX, TYPEFACE_STACK, MAX_TABLE_SIZE } from '../core/appearance.service';
 import { EMOJI_GROUPS, EmojiGroup, searchEmoji } from '../core/emoji';
+import { EmojiPickerComponent } from '../shared/emoji-picker.component';
 import { TagUsageService } from '../core/tag-usage.service';
 import { TagPickerComponent } from '../shared/tag-picker.component';
 import { FolderPickerComponent } from '../shared/folder-picker.component';
@@ -251,7 +253,7 @@ function readDetailsPreference(): boolean {
 
 @Component({
     selector: 'app-editor',
-    imports: [IconComponent, BrandIconComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
+    imports: [IconComponent, BrandIconComponent, EmojiPickerComponent, FormsModule, ZonedDatePipe, NgTemplateOutlet, RouterLink, PopoverComponent, ModalComponent, TagPickerComponent, FolderPickerComponent, SeriesPickerComponent, MediaPickerComponent, FormRefComponent, GlossaryTermFormComponent,
         WorktopComponent, ShelfPanelComponent, SpecRowComponent, LeafTagComponent, StampBadgeComponent,
         DocumentOutlineComponent, PlanLockComponent, LocationInputComponent, LanguageMenuComponent,
         DocumentFrameComponent, EditorPreviewComponent, PublishMatrixComponent, PreviewChecksComponent,
@@ -399,20 +401,21 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         };
     });
 
-    /** The one channel a test send may go to (`.claude/rules/telegram-bot.md`); absent = no button. */
-    readonly testChannel = computed(() => this.channels().find(c => c.username?.toLowerCase() === 'testingandfun') ?? null);
-
-    async sendTest() {
+    /**
+     * ADR-315 — sends the post, rendered as Telegram would receive it, to the author's own chat with
+     * the bot. Replaces the @testingandfun test send: that went through the real export, so it also
+     * stamped the draft as published. This records nothing.
+     */
+    async sendPreviewToMe() {
         const id = this.currentId();
-        const channel = this.testChannel();
-        if (!id || !channel || this.testSendBusy()) return;
+        if (!id || this.testSendBusy()) return;
         this.testSendBusy.set(true);
         try {
             if (this.saveState() !== 'saved') await this.save();
-            await this.posts.export(id, String(channel.telegramChatId), this.format, this.lang(), this.compressionLevel);
-            this.showAiToast(this.t().editor.frame.testSent);
+            await this.posts.previewToMe(id, this.lang());
+            this.showAiToast(this.t().editor.frame.previewSent);
         } catch (e) {
-            this.showAiToast(httpErrorMessage(e, this.t().editor.frame.testFailed));
+            this.showAiToast(httpErrorMessage(e, this.t().editor.frame.previewFailed));
         } finally {
             this.testSendBusy.set(false);
         }
@@ -1858,6 +1861,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     scheduleResult = signal('');
 
     emojiQuery = signal('');
+    /** ADR-314 — false: the hand-picked Favorites grid; true: the full Unicode picker. */
+    emojiAll = signal(false);
 
     /** The set the modal draws: every group, or what the query leaves of them. */
     emojiGroups(): EmojiGroup[] {
@@ -1866,6 +1871,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
     openEmojiModal() {
         this.emojiQuery.set('');
+        this.emojiAll.set(false);
         this.emojiOpen.set(true);
     }
 
@@ -1890,7 +1896,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
     insertError = signal('');
 
     // Emoji/datetime moved from app-popover to app-modal (Marty, 28.07.2026) — the emoji panel's
-    // 120-emoji grid genuinely scrolls internally (.emoji-popover, max-height:320px), and
+    // hand-picked emoji grid genuinely scrolls internally (.emoji-popover, max-height:320px), and
     // PopoverComponent closes on ANY document-level scroll event (it can't distinguish the panel's
     // own scroll from the page's), so scrolling the panel closed it instead — same root cause
     // ADR-057 already fixed for the Appearance panel. Datetime moved alongside it for consistency,
@@ -2507,7 +2513,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
                 },
             },
             extensions: [
-                StarterKit,
+                // Link is configured separately (CedarLink): the bundled one extends as you type (#2).
+                StarterKit.configure({ link: false }),
+                CedarLink,
                 ImageNode,
                 VideoNode,
                 AudioNode,

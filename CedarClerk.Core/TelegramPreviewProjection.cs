@@ -3,7 +3,12 @@ namespace CedarClerk.Core;
 /// <param name="Kind">One of <see cref="TelegramPreviewProjection.Kinds"/>.</param>
 /// <param name="Text">Plain text by <see cref="TelegramThreadSplitter.PlainText"/>'s rules; empty for media.</param>
 /// <param name="Urls">Media only: one entry for photo/video/audio, one per image for slideshow/collage.</param>
-public sealed record TelegramPreviewBlock(string Kind, string Text, IReadOnlyList<string> Urls, string? Caption);
+/// <param name="Items">Lists only: the items with their marker, so the phone draws bullets, numbers or checkboxes (ADR-313).</param>
+public sealed record TelegramPreviewBlock(string Kind, string Text, IReadOnlyList<string> Urls, string? Caption,
+    IReadOnlyList<TelegramPreviewListItem>? Items = null);
+
+/// <param name="Order">The ordinal for a numbered list; null for a bullet or a checkbox.</param>
+public sealed record TelegramPreviewListItem(string Text, int? Order, bool HasCheckbox, bool IsChecked);
 
 public sealed record TelegramPreviewMessage(
     int Index,
@@ -16,6 +21,10 @@ public sealed record TelegramPreviewMessage(
 public sealed record TelegramPreviewButton(string Text, string Url);
 
 /// <param name="Buttons">The CTA row Telegram attaches to the last message.</param>
+/// <param name="FoldAfterCharacters">
+/// Past this many characters the Telegram client hides a channel post behind "Show more"
+/// (ADR-086). The phone draws a marker there inside the message; it is not a message boundary.
+/// </param>
 public sealed record TelegramPreview(
     string Language,
     int MessageCount,
@@ -23,7 +32,8 @@ public sealed record TelegramPreview(
     int MaxCharactersPerMessage,
     int MaxMediaPerMessage,
     IReadOnlyList<TelegramPreviewMessage> Messages,
-    IReadOnlyList<TelegramPreviewButton> Buttons);
+    IReadOnlyList<TelegramPreviewButton> Buttons,
+    int FoldAfterCharacters = Consts.Telegram.ThreadPartChars);
 
 // ADR-239 clause 10 — what Telegram would receive, as plain text over the same parts the send path
 // computes, so the phone the editor draws cannot drift from the wire. Nothing here sends.
@@ -52,7 +62,8 @@ public static class TelegramPreviewProjection
         string language,
         IReadOnlyList<ThreadPart> parts,
         IReadOnlyList<(string Text, string Url)> buttons,
-        PublishCapabilities capabilities)
+        PublishCapabilities capabilities,
+        bool thread = false)
     {
         var messages = parts
             .Select((p, i) => new TelegramPreviewMessage(
@@ -68,7 +79,11 @@ public static class TelegramPreviewProjection
             language,
             messages.Count,
             messages.Sum(m => m.Characters),
-            capabilities.ThreadPartCharacters ?? capabilities.MaxCharacters ?? Consts.Telegram.ThreadPartChars,
+            // ADR-313 — one message is counted against the message limit; only a thread is counted
+            // against the per-part budget.
+            thread
+                ? capabilities.ThreadPartCharacters ?? capabilities.MaxCharacters ?? Consts.Telegram.ThreadPartChars
+                : capabilities.MaxCharacters ?? Consts.Telegram.MaxPostChars,
             Math.Max(1, capabilities.MaxMediaItems),
             messages,
             buttons.Select(b => new TelegramPreviewButton(b.Text, b.Url)).ToList());
@@ -78,7 +93,13 @@ public static class TelegramPreviewProjection
     {
         RichParagraphBlock p => Text(Kinds.Paragraph, PlainText(p.Text)),
         RichHeadingBlock h => Text(Kinds.Heading, PlainText(h.Text)),
-        RichListBlock l => Text(Kinds.List, Lines(l.Items.Select(i => Lines(i.Blocks.Select(InnerText))))),
+        RichListBlock l => new TelegramPreviewBlock(
+            Kinds.List,
+            Lines(l.Items.Select(i => Lines(i.Blocks.Select(InnerText)))),
+            [],
+            null,
+            l.Items.Select(i => new TelegramPreviewListItem(
+                Lines(i.Blocks.Select(InnerText)), i.OrderValue, i.HasCheckbox, i.IsChecked)).ToList()),
         RichCodeBlock c => Text(Kinds.Code, c.Code),
         RichQuoteBlock q => Text(Kinds.Quote, Lines(q.Blocks.Select(InnerText))),
         RichExpandableQuoteBlock eq => Text(Kinds.Quote, Lines(eq.Blocks.Select(InnerText))),

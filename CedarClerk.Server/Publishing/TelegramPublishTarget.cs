@@ -205,6 +205,41 @@ public class TelegramPublishTarget(
         return (new TelegramContent(new InputRichMessage { Blocks = wireBlocks }, draft, channel, isLastPart), null);
     }
 
+    /// <summary>
+    /// ADR-315 — the post as a channel would receive it, sent to one private chat (the author's own
+    /// with the bot) and nowhere else. The same <see cref="BuildContentAsync"/> as a real send, so the
+    /// preview cannot drift from the post; unlike <see cref="PublishAsync"/> it records nothing:
+    /// no <c>LastTelegram*</c> on the draft, no <c>ChannelPost</c>, no pin, no revision.
+    /// </summary>
+    public async Task<PublishOutcome> SendPreviewAsync(PublishRequest request, long telegramUserId, CancellationToken ct = default)
+    {
+        if (!bot.IsRunning)
+            return PublishOutcome.Fail(ErrorMessages.BotNotRunning, StatusCodes.Status503ServiceUnavailable);
+
+        var (built, failure) = await BuildContentAsync(request, ct);
+        if (built is null) return failure!;
+
+        try
+        {
+            var msg = await bot.Client.SendRichMessage(new ChatId(telegramUserId), built.Message, cancellationToken: ct);
+            return PublishOutcome.Ok(new PublishReceipt(msg.MessageId.ToString(System.Globalization.CultureInfo.InvariantCulture), null));
+        }
+        catch (Telegram.Bot.Exceptions.ApiRequestException ex)
+        {
+            logger.LogWarning(ex, "Telegram rejected the preview of draft {DraftId} (code {ErrorCode})", request.DraftId, ex.ErrorCode);
+            // 403 (blocked) and 400 "chat not found" are what a user who never pressed Start gets.
+            if (ex.ErrorCode is 403 || (ex.ErrorCode is 400 && ex.Message.Contains("chat not found", StringComparison.OrdinalIgnoreCase)))
+                return PublishOutcome.Fail(ErrorMessages.PreviewBotNotStarted, StatusCodes.Status409Conflict);
+            var status = ex.ErrorCode is 400 ? 400 : StatusCodes.Status502BadGateway;
+            return PublishOutcome.Fail($"Telegram rejected the preview: {ex.Message} (code {ex.ErrorCode})", status);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Unexpected failure sending the preview of draft {DraftId}", request.DraftId);
+            return PublishOutcome.Fail($"Preview failed: {ex.GetType().Name}: {ex.Message}", StatusCodes.Status500InternalServerError);
+        }
+    }
+
     public async Task<PublishOutcome> PublishAsync(PublishRequest request, CancellationToken ct = default)
     {
         if (!bot.IsRunning)

@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { AuthService } from '../core/auth.service';
 import {
-    DraftsService, DraftMeta, PostRegistration,
+    DraftsService, DraftMeta, PostRegistration, isPublishedAnywhere,
     RegistrationForm, RegistrationQuestion, RegistrationQuestionType, parseRegistrationForm,
 } from '../core/drafts.service';
 import {
@@ -609,7 +609,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     // confusion this replaces.
     publishState(d: DraftMeta): 'archived' | 'live' | 'scheduled' | 'draft' {
         if (d.isArchived) return 'archived';
-        if (d.isBlogPublished) return 'live';
+        if (isPublishedAnywhere(d)) return 'live';
         return this.hasPendingSchedule(d.id) ? 'scheduled' : 'draft';
     }
 
@@ -1548,7 +1548,7 @@ export class PostsManagerComponent implements OnInit, OnDestroy {
     }
 
     publishedCount(): number {
-        return this.postPool().filter(d => d.isBlogPublished).length;
+        return this.postPool().filter(d => isPublishedAnywhere(d)).length;
     }
 
     privateCount(): number {

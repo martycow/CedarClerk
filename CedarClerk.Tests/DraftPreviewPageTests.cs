@@ -118,4 +118,16 @@ public class DraftPreviewPageTests
 
         Assert.Equal(StatusCodes.Status200OK, ctx.Response.StatusCode);
     }
+
+    // #6 — the page is shown in a sandboxed srcdoc frame, where "/rss.xml" and "/" resolve against
+    // the app's host and load the SPA shell (scripts blocked) into the frame: a blank white page.
+    [Fact]
+    public void The_preview_header_carries_no_link_that_would_navigate_the_frame_away()
+    {
+        var page = BlogEndpoints.RenderDraftPreviewPage("en", Doc, "Working title", theme: null);
+
+        Assert.DoesNotContain("<a class=\"tg-open-btn rss-btn\"", page);
+        Assert.DoesNotContain("<a class=\"site-identity\"", page);
+        Assert.Contains("<div class=\"site-identity\">", page);
+    }
 }

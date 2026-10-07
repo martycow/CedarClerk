@@ -121,6 +121,8 @@ public static partial class ErrorMessages
         [nameof(DraftIsEmpty)] = "El borrador está vacío.",
         [nameof(ThreadPartGone)] = "El documento cambió mientras se publicaba el hilo — esta parte ya no existe. Publica de nuevo.",
         [nameof(BotNotRunning)] = "El bot de Telegram no está en ejecución.",
+        [nameof(PreviewNeedsTelegram)] = "Vincula tu cuenta de Telegram en Ajustes para enviarte vistas previas.",
+        [nameof(PreviewBotNotStarted)] = "Abre el bot de Cedar Clerk en Telegram, pulsa Iniciar y vuelve a enviar la vista previa.",
         [nameof(CreditAmountOutOfRange)] = "Indica un paquete o un número de créditos entre {0} y {1}.",
         [nameof(PublishWontFit)] = "Esta publicación no cabe en los límites de {0} — corrige lo indicado e inténtalo de nuevo.",
         [nameof(XReconnect)] = "La conexión con X ya no es válida — vuelve a conectar la cuenta en los ajustes de publicación.",

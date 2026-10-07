@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { DraftsPageComponent, TreeRow, treeDropTarget } from './drafts.component';
 import { DraftMeta, DraftsService, FolderMeta, SeriesMeta } from '../core/drafts.service';
 import { FoldersService } from '../core/folders.service';
@@ -110,6 +110,20 @@ describe('drafts page', () => {
     }
 
     beforeEach(create);
+
+    // #1 — File → New document goes to /drafts?new=1 and must end on the creation dialog, not on
+    // the most recently edited document.
+    it('opens the New Document dialog for ?new=1 and drops the param', async () => {
+        const router = TestBed.inject(Router);
+        expect(fixture.componentInstance.newDraftOpen()).toBe(false);
+
+        await router.navigate([], { queryParams: { new: '1' } });
+        await settle(fixture);
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance.newDraftOpen()).toBe(true);
+        expect(router.url).not.toContain('new=1');
+    });
 
     it('draws the state filter as index tabs whose badges drop at zero', () => {
         expect(tileText(t.stateStrip)).toEqual([

@@ -123,7 +123,8 @@ const MOBILE_WIDTH_PX = 390;
                             </app-empty-state>
                         } @else {
                             <app-preview-phone [preview]="telegram()" [channelTitle]="channelTitle()"
-                                               [channelHandle]="channelHandle()" [wide]="device() === 'desktop'" />
+                                               [channelHandle]="channelHandle()" [wide]="device() === 'desktop'"
+                                               [theme]="theme()" />
                         }
                     }
                     @default {
@@ -282,6 +283,11 @@ export class EditorPreviewComponent implements OnDestroy {
     readonly initialLang = input('');
     /** Bumped by the editor after a save, so the render follows the stored document. */
     readonly savedVersion = input(0);
+    /**
+     * The Export modal's "Publish as a thread" (ADR-313). Off — the send path's default — the
+     * Telegram phone shows the whole post as one message; on, it shows the parts the send makes.
+     */
+    readonly thread = input(false);
     /** "View all details" — the Publish tab, where the whole review lives. */
     readonly details = output<void>();
     /** A check's fix that is the editor's own action (the inspector's Type row), by check id. */
@@ -400,11 +406,12 @@ export class EditorPreviewComponent implements OnDestroy {
             const lang = this.lang();
             const theme = this.theme();
             const destination = this.destination();
+            const thread = this.thread();
             this.savedVersion();
             this.reloadTick();
             if (!lang) return;
             untracked(() => {
-                void this.loadRender(id, lang, theme, destination);
+                void this.loadRender(id, lang, theme, destination, thread);
                 void this.loadChecks(id, lang, destination);
             });
         });
@@ -454,7 +461,7 @@ export class EditorPreviewComponent implements OnDestroy {
         }
     }
 
-    private async loadRender(id: string, lang: string, theme: PreviewTheme, destination: PreviewDestination) {
+    private async loadRender(id: string, lang: string, theme: PreviewTheme, destination: PreviewDestination, thread: boolean) {
         const request = ++this.renderRequest;
         this.renderLoading.set(true);
         this.renderError.set(false);
@@ -466,7 +473,7 @@ export class EditorPreviewComponent implements OnDestroy {
                 // sanitizer's bypass hands over markup, not trust.
                 this.blogHtml.set(this.sanitizer.bypassSecurityTrustHtml(html));
             } else if (destination === 'telegram') {
-                const preview = await this.previewApi.telegram(id, lang);
+                const preview = await this.previewApi.telegram(id, lang, thread);
                 if (request !== this.renderRequest) return;
                 this.telegram.set(preview);
             } else {

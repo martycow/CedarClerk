@@ -121,6 +121,8 @@ public static partial class ErrorMessages
         [nameof(DraftIsEmpty)] = "Чарнавік пусты.",
         [nameof(ThreadPartGone)] = "Дакумент змяніўся падчас публікацыі трэда — гэтай часткі больш няма. Апублікуйце нанова.",
         [nameof(BotNotRunning)] = "Telegram-бот не запушчаны.",
+        [nameof(PreviewNeedsTelegram)] = "Прывяжыце акаунт Telegram у наладах, каб адпраўляць прэв'ю сабе.",
+        [nameof(PreviewBotNotStarted)] = "Адкрыйце бота Cedar Clerk у Telegram, націсніце «Старт» і адпраўце прэв'ю яшчэ раз.",
         [nameof(CreditAmountOutOfRange)] = "Пазначце пакет або колькасць крэдытаў ад {0} да {1}.",
         [nameof(PublishWontFit)] = "Гэты пост не ўкладаецца ў абмежаванні сеткі {0} — выпраўце пералічанае і паспрабуйце зноў.",
         [nameof(XReconnect)] = "Падключэнне X больш не дзейнічае — перападключыце акаўнт у наладах публікацыі.",

@@ -121,6 +121,8 @@ public static partial class ErrorMessages
         [nameof(DraftIsEmpty)] = "მონახაზი ცარიელია.",
         [nameof(ThreadPartGone)] = "თრედის გამოქვეყნებისას დოკუმენტი შეიცვალა — ეს ნაწილი აღარ არსებობს. გამოაქვეყნეთ ხელახლა.",
         [nameof(BotNotRunning)] = "Telegram-ბოტი გაშვებული არ არის.",
+        [nameof(PreviewNeedsTelegram)] = "პარამეტრებში დააკავშირეთ Telegram-ის ანგარიში, რომ წინასწარი ხედი საკუთარ თავს გაუგზავნოთ.",
+        [nameof(PreviewBotNotStarted)] = "გახსენით Cedar Clerk-ის ბოტი Telegram-ში, დააჭირეთ „დაწყებას“ და ხელახლა გაგზავნეთ წინასწარი ხედი.",
         [nameof(CreditAmountOutOfRange)] = "მიუთითეთ პაკეტი ან კრედიტების რაოდენობა {0}-დან {1}-მდე.",
         [nameof(PublishWontFit)] = "ეს პოსტი {0}-ის ლიმიტებში არ ეტევა — გაასწორეთ ჩამოთვლილი და სცადეთ ხელახლა.",
         [nameof(XReconnect)] = "X-თან კავშირი აღარ მოქმედებს — ხელახლა დააკავშირეთ ანგარიში გამოქვეყნების პარამეტრებში.",

@@ -93,6 +93,20 @@ public static class TelegramThreadSplitter
         return parts;
     }
 
+    /// <summary>
+    /// The whole document as the single part the send path produces when the author has not chosen
+    /// a thread (ADR-313). Counts are the same <see cref="Characters"/> / <see cref="MediaCount"/>
+    /// the split uses, so the preview's numbers do not depend on which of the two it shows.
+    /// </summary>
+    public static IReadOnlyList<ThreadPart> Whole(IReadOnlyList<CedarRichBlock> blocks)
+    {
+        if (blocks.Count == 0) return new List<ThreadPart>();
+        return new List<ThreadPart>
+        {
+            new(blocks.ToList(), blocks.Sum(Characters), blocks.Sum(MediaCount), Label(blocks[0]), ThreadCutReason.End),
+        };
+    }
+
     /// <summary>Characters a block contributes — what the network counts, not what it renders.</summary>
     public static int Characters(CedarRichBlock block) => block switch
     {

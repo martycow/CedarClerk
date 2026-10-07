@@ -36,7 +36,7 @@ one machine, each of those would add a failure mode rather than resilience.
 
 Angular 21 (standalone components, signals), TipTap 3 as the editor — `starter-kit` plus extensions
 for images, tables, formulas, checklists and alignment. Plus `@angular/cdk` (drag-drop in toolbar settings),
-`katex` (formulas), `@phosphor-icons/core` (icons), `rxjs`. Tests via Vitest, 18 of them.
+`katex` (formulas), `@phosphor-icons/core` (icons), `emoji-picker-element` + `emoji-picker-element-data` (the full emoji set, lazy and self-hosted, ADR-314), `country-flag-emoji-polyfill` (flag glyphs on Windows, app only), `rxjs`. Tests via Vitest, 18 of them.
 
 ## 3. Desktop
 

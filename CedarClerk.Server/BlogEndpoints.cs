@@ -1143,7 +1143,13 @@ public static partial class BlogEndpoints
         links.Add(new BlogAuthorLink(label, uri.AbsoluteUri));
     }
 
-    private static string RenderHeader(BlogHeaderInfo header, string lang)
+    /// <param name="preview">
+    /// True for the draft preview page, which is rendered into a sandboxed <c>srcdoc</c> frame
+    /// (and the public preview-token page). There a relative link resolves against the app's host,
+    /// not the blog's, so <c>/rss.xml</c> and <c>/</c> would load the SPA shell into the frame and
+    /// leave it blank (#6). The preview therefore shows no feed button and a non-link identity.
+    /// </param>
+    private static string RenderHeader(BlogHeaderInfo header, string lang, bool preview = false)
     {
         var channel = header.Channel;
         string identity;
@@ -1194,19 +1200,23 @@ public static partial class BlogEndpoints
         // The feed already existed (ADR-024) and was reachable only by the <link rel="alternate">
         // in <head> — i.e. by a reader that already knew to look. A visible button is the whole
         // difference between "there is a feed" and "you can subscribe".
-        const string rssButton = """
+        const string liveRssButton = """
             <a class="tg-open-btn rss-btn" href="/rss.xml" title="RSS feed" aria-label="RSS">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="6.2" cy="17.8" r="2.2"></circle><path d="M4 10.2v3.1a6.7 6.7 0 0 1 6.7 6.7h3.1A9.8 9.8 0 0 0 4 10.2Z"></path><path d="M4 4v3.1A12.9 12.9 0 0 1 16.9 20H20A16 16 0 0 0 4 4Z"></path></svg>
             <span class="tg-open-label">RSS</span>
             </a>
             """;
+        var rssButton = preview ? "" : liveRssButton;
 
         var authorLinks = AuthorLinksHtml(header.AuthorLinks, lang);
         var reading = ReadingMenuHtml(lang);
+        var identityLink = preview
+            ? $"<div class=\"site-identity\">{identity}</div>"
+            : $"<a class=\"site-identity\" href=\"/{(lang == Languages.Russian ? "?lang=ru" : "")}\">{identity}</a>";
 
         return $"""
             <div class="site-header"><div class="site-header-inner">
-            <a class="site-identity" href="/{(lang == Languages.Russian ? "?lang=ru" : "")}">{identity}</a>
+            {identityLink}
             <div class="spacer"></div>
             {authorLinks}
             {rssButton}

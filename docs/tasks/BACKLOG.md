@@ -194,6 +194,8 @@ and the realtime path has only ever run on one machine with two browser contexts
 - [ ] T-136 Split `Draft`'s publishing fields into their own table — the accepted price of ADR-102. With `DocumentType`, `Draft` has ~35 columns, and `BlogSlug`, `IsBlogPublished`, `WatermarkText`, `LastTelegram*`, `DisableCopy` mean nothing for a `design` document — they silently sit as nulls. Splitting into `Draft` + `DraftPublishing` fixes that at the cost of a join on every document read, so it is not done now. Revisit when document types visibly outnumber posts #techdebt #phase13 P3
 - [ ] T-146 Vestigial `ApplicationUser.RemoteUserId` column — left over from ADR-108 after ADR-117: the `UpstreamAuth` code is fully deleted, the column deliberately untouched. Dropping a column in SQLite = rebuilding `AspNetUsers`, and Identity touches that table on EVERY authorized request (the `no such column` incident in `.claude/rules/ef-migrations.md`). Zero win against nonzero risk on a live database — remove only together with the next migration-chain collapse, when tables get rebuilt anyway #techdebt P3
 
+- [ ] T-395 Blog flag emoji on Windows Chrome/Edge — the editor picker applies the flags polyfill (ADR-314) but the public blog does not, so a reader there sees letters #blog #emoji P3
+
 ## Deferred (a deliberate "not now")
 
 | What | Why |

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-07 — Issues #1–#8 (ADR-313, ADR-314, ADR-315)
+
+Eight reports from one tester, fixed on `fix/issues-1-8`:
+
+- **#1** File → New post (the menu and the palette) now opens the new-draft dialog on `/drafts` instead of landing there silently. A Telegram-only post counts as published in the Posts Manager.
+- **#2** Text typed after a link no longer becomes part of the link (`CedarLink`, non-inclusive); autolink stays.
+- **#3, #5, #7** The Telegram preview shows what the send path sends (ADR-313): one message unless the author chose a thread, a drawn "Show more" fold, Telegram's own light/dark palette following the theme toggle, photos at natural aspect ratio, real bullets, numbers and checkboxes.
+- **#4** "Send preview to me" replaces the test-channel button (ADR-315); it sends to the author's own chat with the bot and records nothing. Telegram has no bot scheduling API, so the queue stays ours.
+- **#6** The blog preview header has no RSS link and no navigating identity link, so the sandboxed frame can no longer be blanked.
+- **#8** The emoji modal keeps its Favorites and adds the full Unicode set behind "All emoji", lazy and self-hosted (ADR-314). Flag glyphs on Windows come from a polyfill in the app only; the blog is not covered (T-395).
+
+Validation: front-end specs for every touched area pass here. **The C# changes and C# tests could not be built or run in this environment (no .NET SDK reachable); run `dotnet test` before merging.** Not committed, not deployed.
+
 ## 2026-09-30 — Customizable project overview (ADR-311)
 
 Implemented the selected modular overview: banner, logo and project description;

@@ -80,6 +80,11 @@ export class PostsService {
         return firstValueFrom(this.http.post<TelegramSyncResult>(`/api/posts/${draftId}/telegram-sync`, { language }));
     }
 
+    /** ADR-315 — the post rendered for Telegram, sent to the author's own chat with the bot; records nothing. */
+    previewToMe(draftId: string, language?: string) {
+        return firstValueFrom(this.http.post<{ messageId: number | null }>(`/api/posts/${draftId}/preview-to-me`, { language }));
+    }
+
     export(draftId: string, chatId: string, format: PostFormat, language: PostLanguage, compressionLevel: CompressionLevel = 'standard',
            confirmedFingerprint?: string) {
         return firstValueFrom(this.http.post<{ messageId: number; chatId: string }>(

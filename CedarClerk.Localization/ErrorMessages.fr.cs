@@ -121,6 +121,8 @@ public static partial class ErrorMessages
         [nameof(DraftIsEmpty)] = "Le brouillon est vide.",
         [nameof(ThreadPartGone)] = "Le document a changé pendant la publication du fil — cette partie n'existe plus. Publiez à nouveau.",
         [nameof(BotNotRunning)] = "Le bot Telegram n'est pas lancé.",
+        [nameof(PreviewNeedsTelegram)] = "Associez votre compte Telegram dans les paramètres pour vous envoyer des aperçus.",
+        [nameof(PreviewBotNotStarted)] = "Ouvrez le bot Cedar Clerk dans Telegram, appuyez sur Démarrer, puis renvoyez l'aperçu.",
         [nameof(CreditAmountOutOfRange)] = "Indiquez un pack ou un nombre de crédits entre {0} et {1}.",
         [nameof(PublishWontFit)] = "Cette publication dépasse les limites de {0} — corrigez les points listés et réessayez.",
         [nameof(XReconnect)] = "La connexion à X n'est plus valide — reconnectez le compte dans les paramètres de publication.",

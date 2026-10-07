@@ -258,26 +258,35 @@
         <app-icon modal-icon name="smiley" size="sm"></app-icon>
         <span modal-title>{{ t().editor.tb.emoji }}</span>
 
-        <input class="emoji-search" type="search" [ngModel]="emojiQuery()"
-               (ngModelChange)="emojiQuery.set($event)"
-               [placeholder]="t().editor.emoji['search']" [attr.aria-label]="t().editor.emoji['search']">
+        <!--ADR-314: the hand-picked grid is the "Favorites" view and stays the default; "All emoji"
+        swaps it for the full Unicode picker, loaded on first use.-->
+        @if (emojiAll()) {
+        <app-emoji-picker (picked)="insertEmoji($event)"></app-emoji-picker>
+        } @else {
+            <input class="emoji-search" type="search" [ngModel]="emojiQuery()"
+                   (ngModelChange)="emojiQuery.set($event)"
+                   [placeholder]="t().editor.emoji['search']" [attr.aria-label]="t().editor.emoji['search']">
 
-        <div class="emoji-popover">
-            @for (g of emojiGroups(); track g.key) {
-            <span class="emoji-caption">{{ t().editor.emoji[g.key] }}</span>
-            <div class="emoji-grid" [class.emoji-grid-wide]="g.wide">
-                @for (e of g.emoji; track e.ch) {
-                <button class="emoji-btn" [class.has-label]="!!e.label" (click)="insertEmoji(e.ch)"
-                        [title]="e.en">
-                    <span class="emoji-glyph">{{ e.ch }}</span>
-                    @if (e.label) { <span class="emoji-label">{{ e.label }}</span> }
-                </button>
+            <div class="emoji-popover">
+                @for (g of emojiGroups(); track g.key) {
+                <span class="emoji-caption">{{ t().editor.emoji[g.key] }}</span>
+                <div class="emoji-grid" [class.emoji-grid-wide]="g.wide">
+                    @for (e of g.emoji; track e.ch) {
+                    <button class="emoji-btn" [class.has-label]="!!e.label" (click)="insertEmoji(e.ch)"
+                            [title]="e.en">
+                        <span class="emoji-glyph">{{ e.ch }}</span>
+                        @if (e.label) { <span class="emoji-label">{{ e.label }}</span> }
+                    </button>
+                    }
+                </div>
+                } @empty {
+                <p class="field-hint-inline">{{ t().editor.emoji['noMatches'] }}</p>
                 }
             </div>
-            } @empty {
-            <p class="field-hint-inline">{{ t().editor.emoji['noMatches'] }}</p>
-            }
-        </div>
+        }
+        <button type="button" class="emoji-all-toggle" (click)="emojiAll.set(!emojiAll())">
+            {{ emojiAll() ? t().editor.emoji['favorites'] : t().editor.emoji['all'] }}
+        </button>
     </app-modal>
     }
 
@@ -515,13 +524,13 @@
                     </button>
                 }
                 @case ('preview') {
-                    <!--A test send goes to the test channel only, and only when it is connected
-                    (.claude/rules/telegram-bot.md); with no such channel there is no button.-->
-                    @if (testChannel(); as channel) {
-                        <button type="button" class="btn" (click)="sendTest()" [disabled]="testSendBusy()">
+                    <!--ADR-315: the preview goes to the author's own chat with the bot, never to a
+                    channel; without a linked Telegram account there is nothing to send to.-->
+                    @if (auth.telegramLinked()) {
+                        <button type="button" class="btn" (click)="sendPreviewToMe()" [disabled]="testSendBusy()">
                             @if (testSendBusy()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                             @else { <app-brand-icon name="telegram" [size]="14"></app-brand-icon> }
-                            {{ t().editor.frame.sendTest(channel.username!) }}
+                            {{ t().editor.frame.sendToMe }}
                         </button>
                     }
                     <button type="button" class="btn primary" (click)="setTab('publish')">
@@ -543,7 +552,7 @@
         <div body class="preview-slot" [class.is-hidden]="tab() !== 'preview'"
              id="frame-panel-preview" role="tabpanel" aria-labelledby="frame-tab-preview">
             @if (tab() === 'preview' && previewFacts(); as facts) {
-                <app-editor-preview [facts]="facts" [channels]="channels()" [initialLang]="lang()"
+                <app-editor-preview [facts]="facts" [channels]="channels()" [initialLang]="lang()" [thread]="splitIntoThread()"
                                     [savedVersion]="savedVersion()" (details)="setTab('publish')" (fix)="fixCheck($event)" />
             }
         </div>

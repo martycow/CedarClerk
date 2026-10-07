@@ -121,6 +121,8 @@ public static partial class ErrorMessages
         [nameof(DraftIsEmpty)] = "下書きが空です。",
         [nameof(ThreadPartGone)] = "スレッドの公開中にドキュメントが変更され、この部分はもう存在しません。もう一度公開してください。",
         [nameof(BotNotRunning)] = "Telegramボットが動作していません。",
+        [nameof(PreviewNeedsTelegram)] = "設定でTelegramアカウントを連携すると、自分にプレビューを送信できます。",
+        [nameof(PreviewBotNotStarted)] = "TelegramでCedar Clerkのボットを開き、「開始」を押してから、もう一度プレビューを送信してください。",
         [nameof(CreditAmountOutOfRange)] = "パックを指定するか、{0}〜{1}の範囲でクレジット数を指定してください。",
         [nameof(PublishWontFit)] = "この投稿は{0}の制限に収まりません。指摘された箇所を直して、もう一度お試しください。",
         [nameof(XReconnect)] = "Xとの接続が無効になりました。公開設定でアカウントを再接続してください。",

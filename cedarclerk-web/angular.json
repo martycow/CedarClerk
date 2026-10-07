@@ -53,6 +53,21 @@
                 "glob": "caveat-@(latin|cyrillic)-500-normal.woff2",
                 "input": "node_modules/@fontsource/caveat/files",
                 "output": "assets/fonts"
+              },
+              {
+                "glob": "TwemojiCountryFlags.woff2",
+                "input": "node_modules/country-flag-emoji-polyfill/dist",
+                "output": "assets/fonts"
+              },
+              {
+                "glob": "data.json",
+                "input": "node_modules/emoji-picker-element-data/en/emojibase",
+                "output": "assets/emoji/en"
+              },
+              {
+                "glob": "data.json",
+                "input": "node_modules/emoji-picker-element-data/ru/cldr-native",
+                "output": "assets/emoji/ru"
               }
             ],
             "styles": [

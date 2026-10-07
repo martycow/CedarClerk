@@ -17,6 +17,7 @@ public static class PostEndpoints
     public record ValidateRequest(Guid DraftId, string Network, string? Language = null);
     public record UpdatePreviewRequest(Guid DraftId, string Kind, string? ChatId = null, string? Language = null);
     public record TelegramSyncRequest(string? Language = null);
+    public record PreviewToMeRequest(string? Language = null);
 
     public sealed record TelegramSyncResult(int? MessageId, string? Url, DateTime? SyncedAt, bool Unchanged, string? Error, int StatusCode)
     {
@@ -202,6 +203,58 @@ public static class PostEndpoints
     }
 
     /// <summary>
+    /// ADR-315 — sends the draft, rendered as a Telegram post, to its author's own private chat with
+    /// the bot. Not a publication: nothing about the draft, its channels or its history changes.
+    /// </summary>
+    public static async Task<PublishResult> SendPreviewToOwnerAsync(
+        Guid draftId,
+        string ownerId,
+        string? language,
+        CedarDbContext db,
+        IEnumerable<IPublishTarget> targets,
+        CancellationToken ct = default)
+    {
+        var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == ownerId, ct);
+        if (draft is null)
+            return new PublishResult(null, ErrorMessages.DraftNotFound, StatusCodes.Status404NotFound);
+
+        var telegramUserId = await db.Users.Where(u => u.Id == ownerId).Select(u => u.TelegramUserId).FirstOrDefaultAsync(ct);
+        if (telegramUserId is not { } tgId)
+            return new PublishResult(null, ErrorMessages.PreviewNeedsTelegram, StatusCodes.Status409Conflict);
+
+        language ??= draft.PrimaryLanguage;
+        var document = await DraftRevisionService.ResolveAsync(db, draft, language, ct);
+        if (document is null)
+            return new PublishResult(null, ErrorMessages.NoVersionInLanguage(language), StatusCodes.Status404NotFound);
+        var (title, cedarJson) = document.Value;
+
+        var telegram = targets.OfType<TelegramPublishTarget>().FirstOrDefault();
+        if (telegram is null)
+            return new PublishResult(null, $"No publisher is configured for {PublishNetworks.Telegram}", StatusCodes.Status501NotImplemented);
+
+        var authorText = await db.DraftTargetTexts
+            .Where(t => t.DraftId == draftId && t.Network == PublishNetworks.Telegram && t.Language == language)
+            .Select(t => t.Text)
+            .FirstOrDefaultAsync(ct);
+
+        // A target that exists only for this call: never added to the context, so nothing is saved.
+        var outcome = await telegram.SendPreviewAsync(new PublishRequest
+        {
+            DraftId = draftId,
+            OwnerId = ownerId,
+            Language = language,
+            Title = title,
+            CedarJson = cedarJson,
+            Target = new PublishTarget { OwnerId = ownerId, Network = PublishNetworks.Telegram, RemoteId = tgId.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+            AuthorText = authorText,
+        }, tgId, ct);
+
+        return outcome.Success
+            ? new PublishResult(int.TryParse(outcome.Receipt!.RemoteId, out var id) ? id : null, null)
+            : new PublishResult(null, outcome.Error, outcome.StatusCode);
+    }
+
+    /// <summary>
     /// T-180 — edits the last single-message Telegram send of a draft in place. Publish means a new
     /// message; sync means the one already in the channel says what the document says now. The
     /// edit itself is injected so the checks around it can be proved without a Bot API.
@@ -281,6 +334,15 @@ public static class PostEndpoints
         // answered from the revision log rather than from whatever the client thinks it knows,
         // because the client's own signal (a public post URL) is absent for channels with no
         // @username — an ordinary private-channel setup that silently skipped the guard entirely.
+        app.MapPost("/api/posts/{id:guid}/preview-to-me", async (Guid id, PreviewToMeRequest? req, ClaimsPrincipal user, CedarDbContext db, IEnumerable<IPublishTarget> targets, CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var result = await SendPreviewToOwnerAsync(id, uid, req?.Language, db, targets, ct);
+            return result.Error is null
+                ? Results.Ok(new { messageId = result.MessageId })
+                : Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
+        }).RequireAuthorization();
+
         app.MapPost("/api/posts/update-preview", async (UpdatePreviewRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;

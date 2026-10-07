@@ -1599,6 +1599,9 @@ export const en = {
             flagSequences: 'Flag sequences',
             search: 'Search emoji',
             noMatches: 'Nothing matches',
+            all: 'All emoji',
+            favorites: 'Favorites',
+            loadFailed: 'The emoji set could not be loaded',
         } as Record<string, string>,
         account: 'Account',
         newBadge: 'New comments and reactions',
@@ -2145,9 +2148,9 @@ export const en = {
             publishTo: (n: number) => `Publish to ${n} ${n === 1 ? 'destination' : 'destinations'}`,
             linkCopied: 'Preview link copied',
             linkFailed: 'Could not create the preview link.',
-            sendTest: (channel: string) => `Send test to @${channel}`,
-            testSent: 'Test sent',
-            testFailed: 'The test send failed.',
+            sendToMe: 'Send preview to me',
+            previewSent: 'Preview sent to your Telegram',
+            previewFailed: 'The preview could not be sent.',
             documents: (n: number) => `${n} ${n === 1 ? 'document' : 'documents'}`,
         },
         // The Preview tab: readiness on the left, the render in the middle, the checks on the right.
@@ -2189,6 +2192,10 @@ export const en = {
                 message: (i: number, n: number) => `Message ${i} of ${n}`,
                 empty: 'Nothing to send — the document is empty.',
                 cut: { heading: 'cut at a heading', size: 'cut by size', media: 'cut at media', end: 'end of post' },
+                // ADR-313 — Telegram's client folds a long channel post behind "Show more"; one message, not two.
+                showMore: 'Show more',
+                foldsAfter: (n: number) => `Telegram folds after ${n.toLocaleString('en')}`,
+                moreImages: (n: number) => `+${n}`,
             },
             checks: {
                 title: (destination: string) => `Checks · ${destination}`,

@@ -8,12 +8,22 @@ export type TelegramPreviewKind =
     | 'paragraph' | 'heading' | 'list' | 'code' | 'quote' | 'divider' | 'table' | 'math' | 'details' | 'footer'
     | 'photo' | 'video' | 'audio' | 'slideshow' | 'collage';
 
+/** One list item with its marker — the order for a numbered list, the checkbox state for a task list (ADR-313). */
+export interface TelegramPreviewListItem {
+    text: string;
+    order: number | null;
+    hasCheckbox: boolean;
+    isChecked: boolean;
+}
+
 export interface TelegramPreviewBlock {
     kind: TelegramPreviewKind;
     text: string;
     /** Media only: one entry for photo/video/audio, one per image for slideshow/collage. Relative `/media/…`. */
     urls: string[];
     caption: string | null;
+    /** Lists only; absent or null on every other block. */
+    items?: TelegramPreviewListItem[] | null;
 }
 
 export interface TelegramPreviewMessage {
@@ -37,6 +47,8 @@ export interface TelegramPreview {
     messages: TelegramPreviewMessage[];
     /** The CTA row Telegram attaches to the last message. */
     buttons: TelegramPreviewButton[];
+    /** Past this many characters the client hides a post behind "Show more" (ADR-086, ADR-313). */
+    foldAfterCharacters?: number;
 }
 
 export type MicroNetwork = 'x' | 'bluesky' | 'discord' | 'linkedin';
@@ -74,8 +86,9 @@ export const MEDIA_KINDS: ReadonlySet<TelegramPreviewKind> = new Set(['photo', '
 export class PreviewService {
     private http = inject(HttpClient);
 
-    telegram(draftId: string, lang: string) {
-        const params = new HttpParams().set('lang', lang);
+    /** `thread` mirrors the Export modal's "Publish as a thread": off, the whole post is one message (ADR-313). */
+    telegram(draftId: string, lang: string, thread = false) {
+        const params = new HttpParams().set('lang', lang).set('thread', thread);
         return firstValueFrom(this.http.get<TelegramPreview>(`/api/drafts/${draftId}/preview/telegram`, { params }));
     }
 

@@ -321,7 +321,7 @@ export class AppShellComponent implements OnDestroy {
         const go = (path: string, queryParams?: Record<string, string>) =>
             () => void this.router.navigate([path], queryParams ? { queryParams } : {});
         const commands: AppCommand[] = [
-            { id: 'file.new', group: 'file', label: labels.newDocument, icon: 'plus', run: go('/editor') },
+            { id: 'file.new', group: 'file', label: labels.newDocument, icon: 'plus', run: go('/drafts', { new: '1' }) },
             { id: 'file.documents', group: 'file', label: labels.openDocuments, icon: 'file-text', run: go('/drafts') },
             { id: 'file.library', group: 'file', label: labels.library, icon: 'images', run: go('/library') },
             {

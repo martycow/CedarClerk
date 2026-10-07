@@ -407,3 +407,15 @@
    them without either inserting characters or fighting the browser's own whitespace handling.
    DB2: the actual rule moved to styles.scss (global) — this component's emulated encapsulation
    meant it never matched ProseMirror's runtime-rendered paragraphs, so the button did nothing. */
+
+/* ADR-314 — switches the emoji modal between the Favorites grid and the full picker. */
+.emoji-all-toggle {
+    margin-top: var(--space-2);
+    background: none;
+    border: none;
+    padding: var(--space-1) 0;
+    color: var(--pine);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+}

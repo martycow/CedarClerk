@@ -121,6 +121,8 @@ public static partial class ErrorMessages
         [nameof(DraftIsEmpty)] = "Der Entwurf ist leer.",
         [nameof(ThreadPartGone)] = "Das Dokument hat sich während der Veröffentlichung des Threads geändert — diesen Teil gibt es nicht mehr. Veröffentlichen Sie erneut.",
         [nameof(BotNotRunning)] = "Der Telegram-Bot läuft nicht.",
+        [nameof(PreviewNeedsTelegram)] = "Verknüpfen Sie in den Einstellungen Ihr Telegram-Konto, um Vorschauen an sich selbst zu senden.",
+        [nameof(PreviewBotNotStarted)] = "Öffnen Sie den Cedar-Clerk-Bot in Telegram, tippen Sie auf Start und senden Sie die Vorschau erneut.",
         [nameof(CreditAmountOutOfRange)] = "Nennen Sie ein Paket oder eine Anzahl Credits zwischen {0} und {1}.",
         [nameof(PublishWontFit)] = "Dieser Beitrag passt nicht in die Grenzen von {0} — beheben Sie die aufgeführten Punkte und versuchen Sie es erneut.",
         [nameof(XReconnect)] = "Die X-Verbindung ist nicht mehr gültig — verbinden Sie das Konto in den Veröffentlichungseinstellungen neu.",

@@ -13,6 +13,8 @@ Current status: this file's §Notes below; open tasks: the board in `docs/tasks/
 
 ## Now
 
+- [ ] Issues #1–#8 (ADR-313/314/315) — implemented on `fix/issues-1-8`, **not committed, not deployed**; the C# side needs `dotnet test` (it could not run where this was written). Then check on a real phone: the preview vs. the sent post, the emoji picker on Windows, "Send preview to me" with a fresh account that never pressed Start.
+
 - [x] Resolve Discovery cover filenames on the owner blog host — ADR-310; featured images, cards and landing previews share the corrected media URL. Branch `codex/discovery-cover-links`; not deployed. #ui #blog P1
 
 - [x] Implement the selected editorial landing with Admin-managed bilingual content — ADR-309; responsive layout, preserved uploads and switches, editable FAQ and section copy. Branch `codex/landing-admin-design`; not deployed. #ui #growth P1

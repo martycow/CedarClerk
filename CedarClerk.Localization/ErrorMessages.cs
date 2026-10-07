@@ -148,6 +148,10 @@ public static partial class ErrorMessages
     public static string ThreadPartGone => T("The document changed while the thread was being published — this part no longer exists. Publish again.");
 
     public static string BotNotRunning => T("Telegram bot is not running.");
+    /// <summary>ADR-315 — "Send preview to me" needs the author's own Telegram user id.</summary>
+    public static string PreviewNeedsTelegram => T("Link your Telegram account in Settings to send previews to yourself.");
+    /// <summary>ADR-315 — Telegram refuses a bot's first message to a user who never pressed Start.</summary>
+    public static string PreviewBotNotStarted => T("Open the Cedar Clerk bot in Telegram, press Start, then send the preview again.");
     public static string TelegramNotSentYet => T("This post has not been sent to Telegram yet — there is nothing to sync.");
     public static string TelegramThreadNotSyncable => T("The last send was a thread — syncing threads is not supported yet. Publish again.");
     public static string TelegramPostGone(string reason) => T("The Telegram post can no longer be edited: {0}", [reason]);

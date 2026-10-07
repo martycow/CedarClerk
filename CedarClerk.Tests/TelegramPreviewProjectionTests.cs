@@ -37,12 +37,24 @@ public class TelegramPreviewProjectionTests
     private static string BulletList(params string[] items) =>
         $$"""{"type":"bulletList","content":[{{string.Join(",", items.Select(ListItem))}}]}""";
 
+    private static string OrderedList(params string[] items) =>
+        $$"""{"type":"orderedList","content":[{{string.Join(",", items.Select(ListItem))}}]}""";
+
+    private static string TaskItem(string text, bool done) =>
+        $$"""{"type":"taskItem","attrs":{"checked":{{(done ? "true" : "false")}}},"content":[{{Paragraph(text)}}]}""";
+
+    private static string TaskList(params string[] items) =>
+        $$"""{"type":"taskList","content":[{{string.Join(",", items)}}]}""";
+
+    // Most tests here are about how a thread is cut, so the helper threads unless told otherwise;
+    // `thread: false` is the send path's default and what the Preview tab shows (ADR-313).
     private static TelegramPreview Project(string cedarJson, IReadOnlyList<(string Text, string Url)>? buttons = null,
-        PublishCapabilities? capabilities = null)
+        PublishCapabilities? capabilities = null, bool thread = true)
     {
         var caps = capabilities ?? Telegram;
-        var parts = TelegramThreadSplitter.Split(CedarToTelegramBlocksRenderer.Render(cedarJson), caps);
-        return TelegramPreviewProjection.Project("ru", parts, buttons ?? [], caps);
+        var blocks = CedarToTelegramBlocksRenderer.Render(cedarJson);
+        var parts = thread ? TelegramThreadSplitter.Split(blocks, caps) : TelegramThreadSplitter.Whole(blocks.ToList());
+        return TelegramPreviewProjection.Project("ru", parts, buttons ?? [], caps, thread);
     }
 
     [Fact]
@@ -177,5 +189,132 @@ public class TelegramPreviewProjectionTests
         Assert.Equal(0, preview.MessageCount);
         Assert.Empty(preview.Messages);
         Assert.Equal(0, preview.Characters);
+    }
+
+    // ADR-313 / #3 — without a thread the send path sends one message, so the preview shows one.
+    [Fact]
+    public void Without_a_thread_a_long_document_is_still_one_message_counted_against_the_message_limit()
+    {
+        var text = new string('x', 2000);
+        var preview = Project(Doc(Paragraph(text), Paragraph(text)), thread: false);
+
+        var message = Assert.Single(preview.Messages);
+        Assert.Equal(1, preview.MessageCount);
+        Assert.Equal(4000, message.Characters);
+        Assert.Equal(2, message.Blocks.Count);
+        Assert.Equal(ThreadCutReason.End, message.CutReason);
+        Assert.Equal(Consts.Telegram.MaxPostChars, preview.MaxCharactersPerMessage);
+        Assert.Equal(Consts.Telegram.ThreadPartChars, preview.FoldAfterCharacters);
+    }
+
+    [Fact]
+    public void Without_a_thread_more_media_than_one_part_takes_stays_in_the_one_message()
+    {
+        var preview = Project(Doc(Enumerable.Range(0, 12).Select(i => Image($"/media/{i}.jpg")).ToArray()), thread: false);
+
+        var message = Assert.Single(preview.Messages);
+        Assert.Equal(12, message.MediaCount);
+    }
+
+    [Fact]
+    public void A_thread_is_still_counted_against_the_part_budget()
+    {
+        var preview = Project(Doc(Paragraph(new string('x', 2000)), Paragraph(new string('y', 2000))), thread: true);
+
+        Assert.Equal(2, preview.MessageCount);
+        Assert.Equal(Consts.Telegram.ThreadPartChars, preview.MaxCharactersPerMessage);
+    }
+
+    [Fact]
+    public void Whole_of_nothing_is_no_messages()
+    {
+        Assert.Empty(TelegramThreadSplitter.Whole([]));
+        Assert.Equal(0, Project(Doc(), thread: false).MessageCount);
+    }
+
+    // #7 — a list reaches the phone with its markers, not as unmarked lines.
+    [Fact]
+    public void A_bullet_list_carries_its_items_without_ordinals_or_checkboxes()
+    {
+        var block = Assert.Single(Project(Doc(BulletList("один", "два")), thread: false).Messages[0].Blocks);
+
+        Assert.Equal("list", block.Kind);
+        Assert.Collection(block.Items!,
+            i => { Assert.Equal("один", i.Text); Assert.Null(i.Order); Assert.False(i.HasCheckbox); },
+            i => { Assert.Equal("два", i.Text); Assert.Null(i.Order); Assert.False(i.HasCheckbox); });
+    }
+
+    [Fact]
+    public void An_ordered_list_carries_its_ordinals()
+    {
+        var block = Assert.Single(Project(Doc(OrderedList("a", "b", "c")), thread: false).Messages[0].Blocks);
+
+        Assert.Equal([1, 2, 3], block.Items!.Select(i => i.Order));
+    }
+
+    [Fact]
+    public void A_task_list_carries_its_checkbox_state()
+    {
+        var block = Assert.Single(Project(Doc(TaskList(TaskItem("сделано", true), TaskItem("нет", false))), thread: false).Messages[0].Blocks);
+
+        Assert.Collection(block.Items!,
+            i => { Assert.True(i.HasCheckbox); Assert.True(i.IsChecked); Assert.Equal("сделано", i.Text); },
+            i => { Assert.True(i.HasCheckbox); Assert.False(i.IsChecked); });
+    }
+
+    [Fact]
+    public void Blocks_that_are_not_lists_carry_no_items()
+    {
+        var block = Assert.Single(Project(Doc(Paragraph("текст")), thread: false).Messages[0].Blocks);
+
+        Assert.Null(block.Items);
+    }
+
+    // ADR-313 — the kitchen-sink post: one document with every block the preview has to draw. A block
+    // type the projection drops, or a list that loses its marker, fails here instead of in front of a
+    // reader. The marks (bold, italic, link) are flattened by design (ADR-239 clause 10) — the text
+    // must survive that.
+    [Fact]
+    public void A_post_with_every_block_loses_none_of_them_and_keeps_its_text()
+    {
+        const string marked = """
+            {"type":"paragraph","content":[
+              {"type":"text","text":"жирный ","marks":[{"type":"bold"}]},
+              {"type":"text","text":"курсив ","marks":[{"type":"italic"}]},
+              {"type":"text","text":"ссылка","marks":[{"type":"link","attrs":{"href":"https://example.com"}}]}]}
+            """;
+        const string quote = """{"type":"blockquote","content":[{"type":"paragraph","content":[{"type":"text","text":"цитата"}]}]}""";
+        const string code = """{"type":"codeBlock","content":[{"type":"text","text":"var x = 1;"}]}""";
+        const string rule = """{"type":"horizontalRule"}""";
+        const string video = """{"type":"video","attrs":{"src":"/media/v.mp4"}}""";
+        const string audio = """{"type":"audio","attrs":{"src":"/media/a.mp3"}}""";
+
+        var cedarJson = Doc(
+            Heading("Глава"), marked, BulletList("раз", "два"), OrderedList("первый", "второй"),
+            TaskList(TaskItem("готово", true), TaskItem("нет", false)),
+            quote, code, rule,
+            Image("/media/p.jpg", "подпись"), Carousel("/media/1.jpg", "/media/2.jpg", "/media/3.jpg", "/media/4.jpg", "/media/5.jpg", "/media/6.jpg"),
+            video, audio);
+
+        var rendered = CedarToTelegramBlocksRenderer.Render(cedarJson);
+        var preview = Project(cedarJson, thread: false);
+
+        var blocks = Assert.Single(preview.Messages).Blocks;
+        // Nothing is dropped on the way from the renderer to the phone.
+        Assert.Equal(rendered.Count, blocks.Count);
+        Assert.Equal(
+            ["heading", "paragraph", "list", "list", "list", "quote", "code", "divider", "photo", "slideshow", "video", "audio"],
+            blocks.Select(b => b.Kind));
+        Assert.Contains("жирный курсив ссылка", blocks[1].Text);
+        Assert.Equal(6, blocks.Single(b => b.Kind == "slideshow").Urls.Count);
+
+        // The three lists keep their three kinds of marker.
+        var lists = blocks.Where(b => b.Kind == "list").ToList();
+        Assert.All(lists, l => Assert.NotEmpty(l.Items!));
+        Assert.Null(lists[0].Items![0].Order);
+        Assert.False(lists[0].Items![0].HasCheckbox);
+        Assert.Equal(1, lists[1].Items![0].Order);
+        Assert.True(lists[2].Items![0].HasCheckbox);
+        Assert.True(lists[2].Items![0].IsChecked);
     }
 }

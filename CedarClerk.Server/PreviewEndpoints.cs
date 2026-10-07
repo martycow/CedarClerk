@@ -16,12 +16,12 @@ public static class PreviewEndpoints
     {
         var group = app.MapGroup("/api/drafts").RequireAuthorization();
 
-        group.MapGet("/{id:guid}/preview/telegram", async (Guid id, string? lang, ClaimsPrincipal user,
+        group.MapGet("/{id:guid}/preview/telegram", async (Guid id, string? lang, bool? thread, ClaimsPrincipal user,
             CedarDbContext db, IEnumerable<IPublishTarget> targets, CancellationToken ct) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var capabilities = targets.First(t => t.Network == PublishNetworks.Telegram).Capabilities;
-            return await TelegramAsync(db, uid, id, lang, capabilities, ct);
+            return await TelegramAsync(db, uid, id, lang, capabilities, thread ?? false, ct);
         });
 
         group.MapGet("/{id:guid}/preview/micro", async (Guid id, string network, string? lang, ClaimsPrincipal user,
@@ -43,8 +43,10 @@ public static class PreviewEndpoints
 
     // Media URLs stay relative (/media/…): the phone is drawn on the app host, where the editor's
     // cookie already reaches them, and the base URL takes no part in the split or the counts.
+    // ADR-313 — one message unless the author chose a thread, because that is what the send path
+    // does: SplitIntoThread is false by default and parts exist only when it is on.
     public static async Task<IResult> TelegramAsync(CedarDbContext db, string uid, Guid id, string? lang,
-        PublishCapabilities capabilities, CancellationToken ct = default)
+        PublishCapabilities capabilities, bool thread = false, CancellationToken ct = default)
     {
         var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == id && d.OwnerId == uid, ct);
         if (draft is null) return Results.NotFound(new { error = ErrorMessages.DraftNotFound });
@@ -54,9 +56,11 @@ public static class PreviewEndpoints
         if (document is null) return Results.NotFound(new { error = ErrorMessages.NoVersionInLanguage(language) });
 
         var blocks = CedarToTelegramBlocksRenderer.Render(document.Value.CedarJson);
-        var parts = TelegramThreadSplitter.Split(blocks, capabilities);
+        var parts = thread
+            ? TelegramThreadSplitter.Split(blocks, capabilities)
+            : TelegramThreadSplitter.Whole(blocks.ToList());
         var buttons = TelegramPublishTarget.ParseCtaButtons(draft.CtaButtonsJson);
-        return Results.Ok(TelegramPreviewProjection.Project(language, parts, buttons, capabilities));
+        return Results.Ok(TelegramPreviewProjection.Project(language, parts, buttons, capabilities, thread));
     }
 
     // The author's own text (ADR-077) and the blog link (ADR-094) come from the same rows the

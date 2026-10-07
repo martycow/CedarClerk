@@ -87,6 +87,15 @@ export interface RevisionDiffLine {
     text: string;
 }
 
+/**
+ * One answer to "has this document gone out anywhere?" for every screen that shows a status.
+ * Documents and Posts each used to work it out alone, and Posts only looked at the blog, so a
+ * post sent only to Telegram read "Published" in one place and "Draft" in the other (#1).
+ */
+export function isPublishedAnywhere(d: Pick<DraftMeta, 'isBlogPublished' | 'lastTelegramMessageId'>): boolean {
+    return d.isBlogPublished || !!d.lastTelegramMessageId;
+}
+
 export interface DraftMeta {
     id: string;
     title: string;
