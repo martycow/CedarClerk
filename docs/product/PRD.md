@@ -1,17 +1,13 @@
 ---
 owner: marty
-last_verified: 2026-09-02
+last_verified: 2026-10-07
 source_of_truth_for: requirement invariants, non-requirements, blocked items
 guard: none
 ---
 
 # Product Requirements
 
-A thin requirements skeleton, slimmed on 18.08.2026 after the docs audit: this file
-had the project's worst drift record (statuses corrected 10.08 and again 18.08), because it
-duplicated shipped-feature enumerations that `docs/tasks/CHANGELOG.md` already tracks. What remains here is
-what no other file holds: **requirement-level invariants** (what must stay true, not what was
-built when), the explicit non-requirements, and the blocked items. For "what shipped and when" read
+A thin requirements skeleton. It holds what no other file does: **requirement-level invariants** (what must stay true, not what was built when), the explicit non-requirements, and the blocked items. It carries no shipped-feature lists, because those drift. For "what shipped and when" read
 `docs/tasks/CHANGELOG.md`; for "what the product is" read `docs/product/PRODUCT.md`; for the indie module
 `docs/product/INDIEDEV.md`; for hard invariants that have bitten before, `.claude/rules/*.md`.
 
@@ -25,6 +21,7 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
 - **A draft is never silently lost.** Autosave with guards: the server refuses a save that wipes the
   text, conflicts 409 on concurrent edits, revisions are kept and restorable, and a restore is
   itself undoable (ADR-065/066/067 — the most incident-hardened code in the project).
+- **Collaboration is membership-scoped.** A team or a shared project grants what its membership names and nothing else; a shared board is readable by its people through the media gate (ADR-217/218/219, ADR-234/235).
 - **Multilingual is first-class.** Nine content languages, primary language chosen per draft; every
   reader-facing surface follows the language (blog `?lang=`, per-language channels, forms,
   signatures, cross-links). Translations are assistable by AI but never silently overwrite manual
@@ -63,18 +60,12 @@ built when), the explicit non-requirements, and the blocked items. For "what shi
 - General "redesign" as a monolithic item — refused; concrete pains only (ADR-070 precedent)
 - Text alignment in the editor — needs evaluation against Telegram HTML limits first
 - PayPal recurring billing — deliberately not built (ADR-013)
-- Multi-user projects / collaboration — `Assignee` stays a free string; nobody asked yet
 
 ## Blocked (infrastructure prerequisite, not simply deferred)
 
-- **Real Telegram reaction counts** via `message_reaction_count` in the bot's `allowed_updates` —
-  the one slice of Channel Analysis still unbuilt; everything else arrived piecewise (growth charts
-  ADR-025, per-post daily snapshots since 01.08 — no earlier data exists, `T-105` — poll
-  percentages ADR-055, geo rollups ADR-097).
+- **Telegram views.** The Bot API reports none for a channel post (ADR-205); reactions and comments are counted, views are withdrawn for a Telegram source.
 
-Resolved (16.07.2026): no formal acceptance criteria / success metrics — the phase checklists in
-`docs/tasks/CHANGELOG.md` (history through Phase 13: `docs/archive/roadmap-phases-0-13.md`) are the
-definition of done for this project.
+There are no formal acceptance criteria or success metrics. The entries in `docs/tasks/CHANGELOG.md` and the checks in `docs/tech/QA.md` are the definition of done.
 
 ## Review workflow requirements (ADR-306)
 

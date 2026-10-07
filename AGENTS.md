@@ -12,12 +12,15 @@ A web rich-text editor whose posts are published to Telegram channels via a bot,
 - **CedarClerk.Localization** — language catalogs, UI/email/public-page text, formatting and language rules; see `docs/tech/LOCALIZATION.md`
 - **CedarClerk.Tests** — xUnit application tests.
 - **cedarclerk-web** — Angular SPA (standalone components, signals, TipTap editor)
+- **CedarClerk.Desktop** — Electron window onto production plus a local filesystem agent (ADR-117, ADR-312); `docs/tech/DESKTOP.md`
 
 It is a **module inside the same codebase, not a fork** (ADR-101), behind `Cedar:Modules:IndieDev` — read `docs/product/INDIEDEV.md` before touching anything in that area.
 
 ## Anti-desynchronization mechanism
 
-Before implementation of anything, firstly read `docs/product/PRD.md` and `docs/tech/ARCHITECTURE.md`. If you change ANY of your decisions, you must record the ADR first, then write code —  that means a new `docs/adr/ADR-xxx.md` (first line `# ADR-xxx — Title`) plus its row in the `docs/DECISIONS.md` index.
+Before implementation of anything, firstly read `docs/product/PRD.md` and `docs/tech/ARCHITECTURE.md`. If you change ANY decision, record the ADR first, then write code: a new `docs/adr/ADR-xxx.md` (copy of `docs/templates/ADR_Template.md`, first line `# ADR-xxx — Title`) plus its row in the `docs/DECISIONS.md` index. A choice no ADR covers stops the work and becomes a `Q-xx` row in `docs/tasks/BACKLOG.md`; do not guess.
+
+This repo runs the Moo.exe pipeline (`../Docs_AI/Pipeline.md`) under its own names: the inbox is `docs/INPUT_PROMPT.md`, tasks are `T-xxx`, and `docs/DOCS-FLOW.md` is this repo's map of it. Code reviewed by a different model than the one that wrote it; a review is input until the owner turns findings into rows.
 
 ## Stack
 
@@ -26,7 +29,7 @@ To see the product's architecture, see `docs/tech/ARCHITECTURE.md`.
 
 ## Key commands
 
-No operations console for now: the MooTool `cedar` CLI was removed (ADR-304); a cross-platform Rust/Ratatui replacement is `T-393`. Commands are bash (macOS is the primary dev machine).
+No operations console: the MooTool `cedar` CLI is gone (ADR-304); a Rust/Ratatui replacement is `T-393`. Commands are bash (macOS is the primary dev machine).
 
 | Task | Command |
 |---|---|
@@ -37,7 +40,7 @@ No operations console for now: the MooTool `cedar` CLI was removed (ADR-304); a 
 | Smoke suite | `pwsh Scripts/e2e.ps1` (needs `brew install powershell`; `-Serve` keeps it running) |
 | New migration | `dotnet ef migrations add <Name> --project CedarClerk.Server` |
 | Prod logs | `ssh martycow@periwinkle.mooexe.dev "journalctl -q -u cedarclerk -n 50 --no-pager"` |
-| Deploy | Manual until `T-393`: build web → `dotnet publish -c Release -o publish` → copy `dist/…/browser` to `publish/wwwroot` → upload → stop → swap `app`/`app.prev` → start → check `/api/health`. From `master` only, clean tree. |
+| Deploy | `bash docs/for_user/deploy.sh` (`--build-only` to dry-run the build). Gate, upload, stop, backup, swap `app`/`app.prev`, start, health check, then moves `LIVE`/`LIVE-PREV`. From `master` only, clean tree, HEAD tagged with `Consts.CurrentVersion`. Runbook: `docs/for_user/deploy.md` (ADR-308). |
 
 `Scripts/server/backup.sh` does not run here: it is the source of the droplet's nightly backup, installed by hand as `~/bin/backup.sh`.
 
@@ -46,6 +49,9 @@ No operations console for now: the MooTool `cedar` CLI was removed (ADR-304); a 
 `docs/` root holds only the high-level files (DOCS-FLOW, the DECISIONS index, the untracked INPUT_PROMPT); everything else lives in category folders — `product/ tasks/ design/ tech/ adr/ fleet/ knowledge_base/ for_user/ archive/` (+ `misc/` when something needs it). The taxonomy and placement rules: `docs/DOCS-FLOW.md` §File placement.
 
 - `docs/DOCS-FLOW.md` — **read this first**: which doc is the source of truth for what, how an item travels INPUT_PROMPT.md → BACKLOG → TASKS → CHANGELOG, and the three rules that keep them in sync
+- `docs/templates/` — copies of the ADR, brief, review and manual masters from `Docs_AI/Templates/`. Copy, never fill in place
+- `docs/briefs/` — `BR-xxx.md`, one per working session: decisions made, actions taken, actions left, warnings, errors. The next session reads the latest first
+- `docs/reviews/` — `REV-xxx_<name>.md`, independent reviews by another model (created with the first one)
 - `docs/product/PRODUCT.md` — what Cedar Clerk is, who it's for, pricing
 - `docs/product/BUSINESS.md` — the money side: what must be true before public registration opens, where the margin leaks, the four metrics worth counting, and the weekly/monthly checks
 - `docs/knowledge_base/STACK.md` — every library, framework and external service, with what each costs and what breaks when it goes down
@@ -59,11 +65,14 @@ No operations console for now: the MooTool `cedar` CLI was removed (ADR-304); a 
 - `docs/tasks/TASKS.md` — short-horizon "what's in progress now" list; its **Notes** section is also the fastest place to check current production version and active branch
 - `docs/tasks/CHANGELOG.md` — human-readable shipped history by session/date
 - `docs/design/UI-INVENTORY.md` — per-element inventory of the frontend UI (location, type, purpose, loading-state check) — update it when adding/changing a UI element
-- `docs/for_user/integrations-setup.md` — payment/translation provider setup runbook
+- `docs/for_user/` — manuals: `integrations-setup.md` (provider keys), `deploy.md` (release), `desktop-build.md` (installers). Numbered steps, nothing else
 - `docs/INPUT_PROMPT.md` — the dynamic prompt inbox: "considered as a new prompt every time". **Untracked on purpose** (gitignored; rewritten at will) — check its mtime against the last "Input sweep" note in `docs/tasks/CHANGELOG.md`. Content may predate the code — verify against it
 - `docs/product/INDIEDEV.md` — the indie-gamedev module (Phase 13): scope, data model, MUST/MIGHT. **Read before implementing any `T-120…T-137` row**
 - `docs/tech/SECURITY.md` — the threat model: assets, trust boundaries, a STRIDE table with each mitigation cited, and the gaps still open before registration opens
-- `docs/tech/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117; the sidecar model is history)
+- `docs/tech/DESKTOP.md` — how the desktop build works (Electron window onto production + local filesystem agent, ADR-117)
+- `docs/tech/QA.md` — the permanent verification checklist by surface
+- `docs/knowledge_base/TERMINOLOGY.md` — canonical vocabulary (the `cedar-terminology` skill loads it)
+- `docs/archive/incidents.md` — index of every recorded incident and what guards against a repeat
 
 ## Conventions
 
@@ -85,11 +94,11 @@ i18n rules.
 
 ## Branches
 
-- **`master` — only the latest stable version.** Every commit on it is tagged with a version, and **every deploy is run from `master` and only from `master`.**
-- **`dev` — general development.**
-- **`indiedev_module`** — was branched from `dev` for the indie-gamedev work; **merged into `master` with v0.10.0 and deleted** (branch gone by 18.08.2026). The module lives in `master` behind `Cedar:Modules:IndieDev`; reversibility is the flag plus ADR-101, no longer a branch.
-- **`LIVE` marks what is in production** (ADR-118). Move it onto HEAD after a successful deploy, keeping the old one as `LIVE-PREV`. Local only — it is never pushed (re-deleted from origin 18.08.2026 after it leaked there a second time). A tag name points at one object, so "one commit at a time" needs no enforcement; what the preflight does check is whether `LIVE` still agrees with the version production answers.
-- Deploy only from `master`, clean tree, HEAD tagged with `Consts.CurrentVersion`. The CLI enforced this; until `T-393`, it is on you.
+- **`master`** — the latest stable version; **every deploy runs from `master` and only from `master`.** Release commits carry a bare version tag.
+- **`dev`** — unused.
+- Feature work may use a short-lived branch (`claude/…`, `codex/…`) merged into `master`. The indie-gamedev module lives in `master` behind `Cedar:Modules:IndieDev` (ADR-101).
+- **`LIVE` marks what is in production** (ADR-118), `LIVE-PREV` its rollback target. `deploy.sh` moves them after a successful deploy. Local only — never push them; a pushed `LIVE` has leaked to origin twice. The preflight checks that `LIVE` agrees with the version production answers.
+- Deploy only from `master`, clean tree, HEAD tagged with `Consts.CurrentVersion`; `deploy.sh` enforces it.
 
 ## Commits and versioning
 

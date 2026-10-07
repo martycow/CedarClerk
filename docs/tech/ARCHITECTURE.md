@@ -50,7 +50,7 @@ Four .NET projects target `net10.0` (ADR-305):
 
 | Project | Purpose |
 |---|---|
-| `CedarClerk.Server` | ASP.NET Core 8: minimal-API REST endpoints, static host for the Angular SPA, Telegram bot host, Quartz.NET scheduled jobs, EF Core/SQLite data layer |
+| `CedarClerk.Server` | ASP.NET Core 10: minimal-API REST endpoints, static host for the Angular SPA, Telegram bot host, Quartz.NET scheduled jobs, EF Core/SQLite data layer |
 | `CedarClerk.Core` | Document format + renderers. Zero external dependencies — pure C#, fully unit-tested |
 | `CedarClerk.Localization` | Language catalogs, errors, email/public-page text, date/time formatting, language rules and TypeScript interface dictionaries. See [Localization](LOCALIZATION.md) (ADR-292). |
 | `CedarClerk.Tests` | xUnit, references `Core` and `Server` |

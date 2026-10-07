@@ -1055,7 +1055,6 @@ danger variant. Ordinary text editing and removal of pending attachments remain 
 Collection selects and filter buttons use an explicit desktop size fallback for `--hit-surface`.
 Documents use narrower default columns and place the folder panel below the list up to 1600px.
 Modal footers wrap long actions. Preview destination settings stack below the strip on phones.
-The [audit report](UI-AUDIT-2026-09-05.md) records browser evidence and coverage limits.
 
 
 ## `password-recovery.component` (`/forgot-password`, `/reset-password`)

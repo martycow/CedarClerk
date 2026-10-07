@@ -1,18 +1,25 @@
-﻿---
+---
 owner: marty
-last_verified: 2026-09-05
+last_verified: 2026-10-07
 source_of_truth_for: ADR index — which decisions exist and where their texts live
 guard: none
 ---
 
 # Decisions (ADR log)
 
-Consequential technical/product decisions already made and visible in the codebase or prior planning docs, recorded here per `CLAUDE.md`'s anti-desync rule: **any time a decision here changes, update this log first, then write code.** Entries are append-only; a superseded decision gets a new entry that references the old one rather than an edit-in-place.
+One file per ADR in `docs/adr/`; this file is the index. Entries are append-only: a changed decision is a new ADR that names the old one, never an edit in place (`Docs_AI/Pipeline.md`, rule 2).
 
-**Split into one file per ADR on 18.08.2026** (Marty's call after the docs audit — the single file had reached 406 KB and no longer fit any context window). Full texts live in `docs/adr/ADR-XXX.md`; this file is the index, and every existing `docs/DECISIONS.md` reference — there are ~40, half of them in code comments — lands here and follows the link. **Adding ADR-123 means: write `docs/adr/ADR-123.md` (first line `# ADR-123 — Title`), then add its row below** — the decision still lands before the code, same rule as ever. The ownership-audit table (09.07.2026) that lived between ADR-017 and ADR-018 is [`docs/adr/ownership-audit.md`](adr/ownership-audit.md). Nothing in the archive files was edited in the split — a reassembly of the pieces is byte-identical to the pre-split file (verified 18.08.2026).
+Adding an ADR:
+
+1. Copy `docs/templates/ADR_Template.md` to `docs/adr/ADR-xxx.md`. The first line is `# ADR-xxx — Title`.
+2. Add its row below, in number order.
+3. Write the code only after that.
+
+Status lives in the ADR file (`DRAFT`, `STARTED`, `DEVELOPED`, `DONE`, `SUPERSEDED`, `REJECTED`). ADRs written before the lifecycle was adopted carry a free-form status or none; read those as accepted unless a later ADR supersedes them.
+
+The ownership-audit table kept with the log is [`docs/adr/ownership-audit.md`](adr/ownership-audit.md).
 
 ## Index
-
 - [ADR-001 — Backend: C#/.NET 8 LTS, Rust excluded](adr/ADR-001.md)
 - [ADR-002 — Frontend: Angular + TipTap, standalone components](adr/ADR-002.md)
 - [ADR-003 — Database: SQLite + EF Core](adr/ADR-003.md)
@@ -290,7 +297,7 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-290 — Project layouts respond to their available width](adr/ADR-290.md)
 - [ADR-291 — Project cleanup and external operations ownership](adr/ADR-291.md)
 - [ADR-292 — Localization owns language resources and presentation rules](adr/ADR-292.md)
-- [ADR-293 - Project stores modules[], project's type is creation preset](adr/ADR-293.md)
+- [ADR-293 — A project stores its modules; its type is a creation preset](adr/ADR-293.md)
 - [ADR-294 — Branded authentication and email password recovery](adr/ADR-294.md)
 - [ADR-295 — Authentication recovery and provider configuration](adr/ADR-295.md)
 - [ADR-296 — Consolidate authentication recovery](adr/ADR-296.md)
@@ -303,16 +310,10 @@ Consequential technical/product decisions already made and visible in the codeba
 - [ADR-303 — Empty language versions need a full translation](adr/ADR-303.md)
 - [ADR-304 — Remove the MooTool `cedar` console](adr/ADR-304.md)
 - [ADR-305 — Move to .NET 10 LTS](adr/ADR-305.md)
-
 - [ADR-306 — Project-centered workflows and the Framer reference](adr/ADR-306.md)
-
 - [ADR-307 — Separate identity from project selection](adr/ADR-307.md)
-
 - [ADR-308 — Bash release deployment](adr/ADR-308.md)
-
 - [ADR-309 — Editorial landing with admin-owned copy](adr/ADR-309.md)
-
 - [ADR-310 — Resolve Discovery cover filenames on the blog host](adr/ADR-310.md)
-
 - [ADR-311 — Customizable project overview](adr/ADR-311.md)
 - [ADR-312 — Build the desktop shell on each supported host](adr/ADR-312.md)
