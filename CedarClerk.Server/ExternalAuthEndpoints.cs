@@ -47,7 +47,8 @@ public static class ExternalAuthEndpoints
 
         #region Google — the OAuth round trip
 
-        group.MapGet("/{provider}", (string provider, string? returnUrl, HttpContext ctx, IConfiguration cfg) =>
+        group.MapGet("/{provider}", (string provider, string? returnUrl, HttpContext ctx, IConfiguration cfg,
+            SignInManager<ApplicationUser> signIn) =>
         {
             var scheme = string.Equals(provider, DiscordAuthentication.Scheme, StringComparison.OrdinalIgnoreCase)
                 && DiscordAuthentication.IsConfigured(cfg) ? DiscordAuthentication.Scheme : GoogleScheme(provider, cfg);
@@ -59,16 +60,22 @@ public static class ExternalAuthEndpoints
             // would be a phishing hop wearing our domain.
             var safeReturn = SafeReturnUrl(returnUrl);
             var callback = $"/api/auth/external/callback?returnUrl={Uri.EscapeDataString(safeReturn)}";
-            return Results.Challenge(new AuthenticationProperties { RedirectUri = callback }, [scheme]);
+            // Through SignInManager and not a bare AuthenticationProperties: it stamps the provider
+            // name into the properties, and GetExternalLoginInfoAsync returns null without it —
+            // which made every successful provider round trip end in ?external=failed.
+            return Results.Challenge(signIn.ConfigureExternalAuthenticationProperties(scheme, callback), [scheme]);
         });
 
         group.MapGet("/callback", async (string? returnUrl,
-            SignInManager<ApplicationUser> signIn, CedarDbContext db) =>
+            SignInManager<ApplicationUser> signIn, CedarDbContext db, ILoggerFactory logs) =>
         {
             var safeReturn = SafeReturnUrl(returnUrl);
             var info = await signIn.GetExternalLoginInfoAsync();
             if (info is null)
+            {
+                logs.CreateLogger("ExternalAuth").LogWarning("External sign-in callback found no external login info (cookie missing or provider not recorded).");
                 return Redirect(Consts.ExternalAuth.LoginRoute, Consts.ExternalAuth.OutcomeFailed, safeReturn);
+            }
 
             // The happy path, and the common one: this provider account is already known.
             var known = await signIn.ExternalLoginSignInAsync(
@@ -78,7 +85,10 @@ public static class ExternalAuthEndpoints
 
             var email = info.Principal.FindFirstValue(ClaimTypes.Email);
             if (string.IsNullOrWhiteSpace(email))
+            {
+                logs.CreateLogger("ExternalAuth").LogWarning("External sign-in from {Provider} supplied no email claim.", info.LoginProvider);
                 return Redirect(Consts.ExternalAuth.LoginRoute, Consts.ExternalAuth.OutcomeFailed, safeReturn);
+            }
 
             // An account already holds the address. Not merged here on the provider's word (clause 3):
             // the password is what proves it is the same person, and /login says so.
