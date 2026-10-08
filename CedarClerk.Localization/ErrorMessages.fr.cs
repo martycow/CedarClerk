@@ -170,7 +170,6 @@ public static partial class ErrorMessages
         [nameof(NoVersionInLanguage)] = "Ce brouillon n'a pas de version {0}",
         [nameof(DocumentTypeNotPublishable)] = "Ce document est un document de travail, pas une publication : il ne peut pas être publié. Changez son type si c'est bien publier que vous vouliez.",
         [nameof(DocumentTypeBlogPublished)] = "Cette publication est en ligne sur le blog. Dépubliez-la avant de changer son type en document de travail.",
-        [nameof(ProjectNeedsOneDocument)] = "Un projet doit conserver au moins un document. Supprimez plutôt le projet, ou ajoutez d'abord un autre document.",
         [nameof(CreditAmountRequired)] = "Indiquez combien de crédits ajouter ou reprendre — zéro ne change rien.",
         [nameof(CreditsWouldGoNegative)] = "Le solde est de {0} ; en retirer davantage le rendrait négatif, ce que rien dans l'application ne sait lire.",
         [nameof(AssetFolderRequired)] = "Choisissez d'abord un dossier à indexer.",

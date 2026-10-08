@@ -10,10 +10,7 @@
 
 /// <summary>
 /// A game, or whatever else a body of work is called — the container documents live in (ADR-102).
-///
-/// A project always holds at least one document, and that is enforced at the endpoint rather than
-/// in the schema (ADR-103): as a constraint it would be violated by its own first INSERT, since
-/// neither row can reference the other before both exist.
+/// It may hold none (ADR-318).
 /// </summary>
 public class Project
 {
@@ -52,6 +49,10 @@ public class Project
     /// serving as ApplicationUser.AvatarUrl and GlossaryTerm.ImageUrl. Null = no cover.
     /// </summary>
     public string? CoverUrl { get; set; }
+
+    /// <summary>The wide image over the project overview, a /media/... path like <see cref="CoverUrl"/>.
+    /// Null draws the default pattern.</summary>
+    public string? BannerUrl { get; set; }
 
     /// <summary>One of <see cref="CedarClerk.Core.ProjectEngines"/>, or empty for unset. Separate from
     /// <see cref="PressEngine"/>, which is the press page's free text.</summary>

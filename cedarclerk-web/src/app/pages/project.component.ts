@@ -1,6 +1,7 @@
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { defaultOverviewLayout, moveOverviewPanel, normalizeOverviewLayout, OverviewLayout, OverviewSection, OverviewWidth } from '../core/project-overview-layout';
 import { ConfirmationService } from '../core/confirmation.service';
+import { CurrentProjectService } from '../core/current-project.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -14,6 +15,7 @@ import {
     DOCUMENT_TYPES,
     DOCUMENT_TYPE_ICONS,
     DocumentType,
+    ProjectAnalytics,
     ProjectDetail,
     ProjectDocument,
     ProjectSummary,
@@ -107,11 +109,10 @@ export class ProjectComponent {
     panelTools = signal<OverviewSection | null>(null);
     overviewLayout = signal<OverviewLayout>(defaultOverviewLayout());
     layoutError = signal(false);
-    bannerPickerOpen = signal(false);
     readonly widths: readonly OverviewWidth[] = ['narrow', 'wide', 'full'];
     readonly overviewPanels = computed(() => this.overviewLayout().panels.filter(panel =>
         (this.planningEnabled() || panel.id !== 'planning') && (this.customizing() || !panel.hidden)));
-    readonly bannerUrl = computed(() => this.overviewLayout().bannerUrl ?? null);
+    readonly bannerUrl = computed(() => this.project()?.bannerUrl ?? null);
     readonly publishedCount = computed(() => this.documents().filter(doc => doc.isBlogPublished && !doc.isArchived).length);
     readonly authoredLinks = computed(() => (this.project()?.showcaseLinks ?? '').split('\n').flatMap(line => {
         const separator = line.indexOf('|');
@@ -131,7 +132,6 @@ export class ProjectComponent {
     private readLayout(): void {
         this.customizing.set(false);
         this.panelTools.set(null);
-        this.bannerPickerOpen.set(false);
         this.layoutError.set(false);
         try {
             const stored = localStorage.getItem(this.layoutKey());
@@ -181,11 +181,6 @@ export class ProjectComponent {
 
     resetLayout(): void { this.panelTools.set(null); this.saveLayout(defaultOverviewLayout()); }
 
-    pickedBanner(asset: LibraryAsset): void {
-        this.saveLayout({ ...this.overviewLayout(), bannerUrl: `/media/${asset.localPath}` });
-        this.bannerPickerOpen.set(false);
-    }
-
     displayUrl(url: string): string { return url.replace(/^https?:\/\//, '').replace(/\/$/, ''); }
 
     readonly docTypes = DOCUMENT_TYPES;
@@ -223,6 +218,8 @@ export class ProjectComponent {
     editDescription = signal('');
     editCoverUrl = signal<string | null>(null);
     coverPickerOpen = signal(false);
+    editBannerUrl = signal<string | null>(null);
+    bannerPickerOpen = signal(false);
     // T-358 — which team reaches this project. '' is "nobody but me", which is a real answer and
     // therefore an option in the list rather than an empty select.
     teams = signal<Team[]>([]);
@@ -239,11 +236,19 @@ export class ProjectComponent {
     showcaseStats = signal<ShowcaseStats | null>(null);
     /** T-166 — the account's publishing streak in ISO weeks (ADR-281); null when unknown or zero. */
     streakWeeks = signal<number | null>(null);
+    /** T-417 — null until it arrives; a failed call says so in the panel and breaks nothing else. */
+    analytics = signal<ProjectAnalytics | null>(null);
+    analyticsFailed = signal(false);
     actionError = signal<string | null>(null);
     busy = signal(false);
-    // Deleting a project is two clicks on the same button rather than a second modal on top of the
-    // first: the explanation of what survives is what matters here, and it fits under the button.
+    // ADR-319 — the confirmation is a step of the settings dialog, not a dialog over it, so a
+    // refusal from the server is read where the button was pressed.
+    deleting = signal(false);
+    deleteName = signal('');
+    deleteError = signal<string | null>(null);
+    readonly deleteNameMatches = computed(() => this.deleteName().trim() === (this.project()?.name ?? '').trim());
     private readonly confirmation = inject(ConfirmationService);
+    private readonly currentProject = inject(CurrentProjectService);
 
     /** This project's row in the list — `assetCount` and `lastActivityAt` live on the summary. */
     summary = computed(() => {
@@ -360,9 +365,12 @@ export class ProjectComponent {
         }
 
         this.showcaseStats.set(null);
+        this.analytics.set(null);
+        this.analyticsFailed.set(false);
         this.journal.set([]);
         this.journalTake.set(JOURNAL_PAGE);
         if (this.project()) void this.loadJournal(id);
+        if (this.project()) void this.loadAnalytics(id);
         if (this.project()?.showcaseSlug) await this.loadShowcaseStats(id);
     }
 
@@ -375,6 +383,20 @@ export class ProjectComponent {
         } finally {
             this.journalLoading.set(false);
         }
+    }
+
+    private async loadAnalytics(id: string) {
+        try {
+            this.analytics.set(await this.api.analytics(id));
+        } catch {
+            this.analyticsFailed.set(true);
+        }
+    }
+
+    /** "+12", "−3", or nothing when the figure did not move. */
+    delta(n: number | null | undefined): string {
+        if (!n) return '';
+        return n > 0 ? `+${n}` : `−${Math.abs(n)}`;
     }
 
     /** A full page means there may be more; a short one is the whole story, and 100 is the server's ceiling. */
@@ -491,6 +513,8 @@ export class ProjectComponent {
         this.editName.set(project.name);
         this.editDescription.set(project.description);
         this.editCoverUrl.set(project.coverUrl);
+        this.editBannerUrl.set(project.bannerUrl ?? null);
+        this.deleting.set(false);
         this.editTeamId.set(project.teamId ?? '');
         this.editEngine.set(project.engine ?? '');
         this.editPlatforms.set(normalizePlatforms(project.targetPlatforms ?? []));
@@ -516,6 +540,7 @@ export class ProjectComponent {
         this.actionError.set(null);
         try {
             const coverUrl = this.editCoverUrl();
+            const bannerUrl = this.editBannerUrl();
             // The team is its own endpoint, and is only written when it actually moved: it is a
             // different permission from renaming a project and must not ride along with one.
             const teamId = this.editTeamId() || null;
@@ -529,19 +554,20 @@ export class ProjectComponent {
             const targetPlatforms = [...this.editPlatforms()];
             const engineMoved = engine !== (project.engine ?? '');
             const platformsMoved = targetPlatforms.join(',') !== normalizePlatforms(project.targetPlatforms ?? []).join(',');
-            await this.api.update(project.id, name, this.editDescription().trim(), coverUrl,
+            await this.api.update(project.id, name, this.editDescription().trim(), coverUrl, bannerUrl,
                 engineMoved ? engine : undefined, platformsMoved ? targetPlatforms : undefined);
             this.project.set({
                 ...project,
                 name,
                 description: this.editDescription().trim(),
                 coverUrl,
+                bannerUrl,
                 teamId,
                 engine,
                 targetPlatforms,
             });
             this.projects.update(rows => rows.map(row => row.id === project.id
-                ? { ...row, name, description: this.editDescription().trim(), coverUrl, engine, targetPlatforms }
+                ? { ...row, name, description: this.editDescription().trim(), coverUrl, bannerUrl, engine, targetPlatforms }
                 : row));
             this.editing.set(false);
         } catch (e) {
@@ -570,6 +596,11 @@ export class ProjectComponent {
         this.editCoverUrl.set(null);
     }
 
+    pickedBanner(asset: LibraryAsset) {
+        this.editBannerUrl.set(`/media/${asset.localPath}`);
+        this.bannerPickerOpen.set(false);
+    }
+
     async toggleArchived() {
         const project = this.project();
         if (!project || this.busy()) return;
@@ -586,19 +617,24 @@ export class ProjectComponent {
         }
     }
 
-    /** Documents survive: the server detaches them rather than deleting (ProjectEndpoints). */
+    startDelete() {
+        this.deleteName.set('');
+        this.deleteError.set(null);
+        this.deleting.set(true);
+    }
+
     async deleteProject() {
         const project = this.project();
-        if (!project || this.busy()) return;
-        if (!await this.confirmation.confirm({ title: project.name, message: this.t().projects.edit.removeConfirm })) return;
+        if (!project || this.busy() || !this.deleteNameMatches()) return;
 
         this.busy.set(true);
-        this.actionError.set(null);
+        this.deleteError.set(null);
         try {
             await this.api.remove(project.id);
+            this.currentProject.forget();
             void this.router.navigate(['/projects']);
         } catch (e) {
-            this.actionError.set(httpErrorMessage(e, this.t().projects.actionFailed));
+            this.deleteError.set(httpErrorMessage(e, this.t().projects.edit.removeFailed));
             this.busy.set(false);
         }
     }

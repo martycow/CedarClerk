@@ -1,6 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -8,7 +7,6 @@ import {
     DOCUMENT_TYPE_ICONS,
     DocumentType,
     PROJECT_TYPES,
-    PROJECT_TYPE_ICONS,
     ProjectSummary,
     ProjectType,
     ProjectsService,
@@ -24,7 +22,10 @@ import { HeaderMeta, PageHeaderComponent } from '../shell/page-header.component'
 import { EmptyStateComponent } from '../shell/empty-state.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { InputComponent } from '../bench/forms/input.component';
+import { CheckboxComponent } from '../bench/forms/checkbox.component';
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
+import { MediaPickerComponent } from '../shared/media-picker.component';
+import { LibraryAsset } from '../core/assets.service';
 
 // T-302 — 'shared' is a fourth tile on the same strip rather than a screen of its own: a project
 // somebody shared is still a project, and the place a reader looks for "my projects" is this one.
@@ -32,10 +33,10 @@ import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.com
 // project.
 type Filter = 'all' | 'active' | 'archived' | 'shared';
 
-/** The two shelves of the New-project dialog: the four built-in types, or the user's own presets. */
+/** The two shelves of the New-project dialog: the built-in types, or the user's own presets. */
 type CreateSource = 'builtin' | 'mine';
 
-/** What the dialog's detail column reads back for the current pick. */
+/** What the dialog's preview column reads back for the current pick. */
 interface CreateSelection {
     preset: Preset | null;
     type: ProjectType;
@@ -45,6 +46,8 @@ interface CreateSelection {
     documentType: DocumentType;
     documentTitle: string;
     outline: string[];
+    /** ADR-318 — the pick itself comes with no document, whatever the checkbox says. */
+    alwaysEmpty: boolean;
 }
 
 // T-226 (ADR-168) — the project index: where a project is found, made and compared. Hub.png
@@ -54,9 +57,9 @@ interface CreateSelection {
 @Component({
     selector: 'app-projects',
     imports: [
-        IconComponent, ZonedDatePipe, FormsModule, NgTemplateOutlet, RouterLink, ModalComponent,
+        IconComponent, ZonedDatePipe, FormsModule, RouterLink, ModalComponent,
         PageHeaderComponent, EmptyStateComponent, IndexTabsComponent,
-        ButtonComponent, InputComponent,
+        ButtonComponent, InputComponent, CheckboxComponent, MediaPickerComponent,
     ],
     templateUrl: 'projects.component.html',
     styleUrls: ['projects.component.css'],
@@ -70,8 +73,6 @@ export class ProjectsComponent {
     t = this.locale.t;
 
     readonly projectTypes = PROJECT_TYPES;
-    readonly typeIcons = PROJECT_TYPE_ICONS;
-    typeIcon(type: ProjectType) { return this.typeIcons[type]; }
     readonly docIcons = DOCUMENT_TYPE_ICONS;
     readonly initials = projectInitials;
 
@@ -91,6 +92,11 @@ export class ProjectsComponent {
     createSource = signal<CreateSource>('builtin');
     presetSearch = signal('');
     createName = signal('');
+    createDescription = signal('');
+    createLogoUrl = signal<string | null>(null);
+    createBannerUrl = signal<string | null>(null);
+    createPicker = signal<'logo' | 'banner' | null>(null);
+    startEmpty = signal(false);
     createError = signal<string | null>(null);
     saving = signal(false);
 
@@ -135,7 +141,7 @@ export class ProjectsComponent {
             || parseProjectConfig(p.configJson).description.toLowerCase().includes(needle));
     });
 
-    /** The detail column: the pick, and the one document the project is born with (ADR-103). */
+    /** The preview column: the pick, and the document it would start with. */
     selection = computed<CreateSelection | null>(() => {
         const t = this.t().projects;
         const presetId = this.createPresetId();
@@ -154,7 +160,18 @@ export class ProjectsComponent {
             documentType,
             documentTitle: preset ? this.presetStarter(preset) : typeText.starter,
             outline: this.starterOutline(documentType, type),
+            alwaysEmpty: type === 'empty' && !preset,
         };
+    });
+
+    /** Mirrors ProjectEndpoints.CreateAsync: the built-in Empty type or the checkbox, either is enough. */
+    createsNoDocument = computed(() => this.startEmpty() || !!this.selection()?.alwaysEmpty);
+
+    appearanceSummary = computed(() => {
+        const t = this.t().projects.create;
+        const logo = !!this.createLogoUrl();
+        const banner = !!this.createBannerUrl();
+        return logo && banner ? t.appearanceBoth : logo ? t.appearanceLogo : banner ? t.appearanceBanner : t.appearanceDefault;
     });
 
     filterTabs = computed<IndexTabItem[]>(() => {
@@ -224,12 +241,17 @@ export class ProjectsComponent {
         this.createSource.set('builtin');
         this.presetSearch.set('');
         this.createName.set('');
+        this.createDescription.set('');
+        this.createLogoUrl.set(null);
+        this.createBannerUrl.set(null);
+        this.createPicker.set(null);
+        this.startEmpty.set(false);
         this.createError.set(null);
         this.creating.set(true);
         void this.loadPresets();
     }
 
-    // T-331 — the user's own project presets stand beside the four built-in types. Failing to
+    // T-331 — the user's own project presets stand beside the built-in types. Failing to
     // load them is not an error the dialog reports: the built-ins are still a complete offer.
     private async loadPresets() {
         try { this.projectPresets.set(await this.presetsApi.list('project')); }
@@ -270,6 +292,13 @@ export class ProjectsComponent {
         this.createType.set(type);
     }
 
+    pickedImage(asset: LibraryAsset) {
+        const url = `/media/${asset.localPath}`;
+        if (this.createPicker() === 'logo') this.createLogoUrl.set(url);
+        else this.createBannerUrl.set(url);
+        this.createPicker.set(null);
+    }
+
     presetStarter(preset: Preset): string {
         const config = parseProjectConfig(preset.configJson);
         return config.documentTitle
@@ -283,8 +312,6 @@ export class ProjectsComponent {
         this.saving.set(true);
         this.createError.set(null);
         try {
-            // The starter document's title comes from the client because the server has no second
-            // language — see ADR-103's implementation note.
             const type = this.createType();
             const presetId = this.createPresetId();
             const preset = presetId
@@ -292,14 +319,17 @@ export class ProjectsComponent {
                 : null;
             const created = await this.api.create({
                 name,
+                description: this.createDescription().trim() || undefined,
                 projectType: type,
-                // A preset carries its own starter title; without one the client supplies it,
-                // because the server has no second language (ADR-103's implementation note).
+                // The starter's title is the client's to write: the server has no second language.
                 documentTitle: preset
                     ? this.presetStarter(preset)
                     : this.t().projects.projectTypes[type].starter,
                 language: this.locale.uiLang(),
                 presetId: presetId ?? undefined,
+                startWithoutDocuments: this.createsNoDocument(),
+                coverUrl: this.createLogoUrl(),
+                bannerUrl: this.createBannerUrl(),
             });
             this.creating.set(false);
             void this.router.navigate(['/projects', created.id]);

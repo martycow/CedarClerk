@@ -201,6 +201,9 @@ public static class AssetEndpoints
                 await db.Projects
                     .Where(p => p.OwnerId == uid && p.CoverUrl == publicUrl)
                     .ExecuteUpdateAsync(update => update.SetProperty(p => p.CoverUrl, (string?)null));
+                await db.Projects
+                    .Where(p => p.OwnerId == uid && p.BannerUrl == publicUrl)
+                    .ExecuteUpdateAsync(update => update.SetProperty(p => p.BannerUrl, (string?)null));
 
                 DeleteIfExists(Path.Combine(media.Dir, asset.LocalPath));
                 if (asset.TelegramLocalPath is not null)

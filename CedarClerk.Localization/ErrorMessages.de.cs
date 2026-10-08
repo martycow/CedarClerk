@@ -170,7 +170,6 @@ public static partial class ErrorMessages
         [nameof(NoVersionInLanguage)] = "Keine {0}-Version dieses Entwurfs",
         [nameof(DocumentTypeNotPublishable)] = "Dieses Dokument ist Arbeitsmaterial, kein Beitrag, und kann daher nicht veröffentlicht werden. Ändern Sie seinen Typ, wenn Sie es veröffentlichen wollten.",
         [nameof(DocumentTypeBlogPublished)] = "Dieser Beitrag ist im Blog veröffentlicht. Nehmen Sie die Veröffentlichung zurück, bevor Sie seinen Typ auf Arbeitsmaterial ändern.",
-        [nameof(ProjectNeedsOneDocument)] = "Ein Projekt muss mindestens ein Dokument behalten. Löschen Sie stattdessen das Projekt oder fügen Sie zuerst ein weiteres Dokument hinzu.",
         [nameof(CreditAmountRequired)] = "Geben Sie an, wie viele Credits gutgeschrieben oder abgezogen werden sollen — null ändert nichts.",
         [nameof(CreditsWouldGoNegative)] = "Der Kontostand ist {0}; mehr abzuziehen würde ins Minus führen, und das kann nichts in der App lesen.",
         [nameof(AssetFolderRequired)] = "Wählen Sie zuerst einen Ordner zum Indizieren.",

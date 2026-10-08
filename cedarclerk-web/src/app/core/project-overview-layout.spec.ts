@@ -26,18 +26,10 @@ describe('project overview preferences', () => {
     expect(normalizeOverviewLayout({ version: 2 })).toEqual(defaultOverviewLayout());
   });
 
-  it('accepts library banner paths and refuses external or executable URLs', () => {
-    expect(normalizeOverviewLayout({ version: 1, bannerUrl: '/media/abc.png' }).bannerUrl).toBe(
-      '/media/abc.png',
+  it('drops a banner an older layout stored, since the project owns it now', () => {
+    expect(normalizeOverviewLayout({ version: 1, bannerUrl: '/media/abc.png' })).toEqual(
+      defaultOverviewLayout(),
     );
-    for (const bannerUrl of [
-      'https://example.com/banner.png',
-      'javascript:alert(1)',
-      '/media/../secret',
-      '/media/file.png?x=1',
-    ]) {
-      expect(normalizeOverviewLayout({ version: 1, bannerUrl }).bannerUrl).toBeNull();
-    }
   });
 
   it('moves a section while retaining widths and visibility and rejecting invalid positions', () => {

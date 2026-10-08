@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-08 — 0.25.1 review, wave 4: projects (ADR-318, ADR-319)
+
+- **T-414** The New project dialog follows `UI_Prototypes/New_project.png`: "01 Project details" (name, optional description, optional Add logo / Add banner tiles through the asset window), "02 Starting point" (Built-in / My presets, search, compact cards, a Start without documents checkbox), a live preview (starter structure, project card, Type / Description / Documents / Appearance), and a footer that names what will be created. `POST /api/projects` takes `startWithoutDocuments`, `coverUrl` and `bannerUrl`.
+- **T-415** `Project.BannerUrl` (migration `AddProjectBannerUrl`) replaces the per-browser banner. Project settings has the banner control beside the logo; Customize keeps layout only. The hatch pattern stays the default. A banner a browser stored under ADR-311 is not carried over.
+- **T-416** A project may hold no documents: the built-in Empty type and "Start without documents" create none, and the last document can be deleted or moved out. `LastDocumentRefusal`, `IsLastDocumentOfProjectAsync` and `ErrorMessages.ProjectNeedsOneDocument` are gone from all nine languages. Personal is deletable: it takes its documents and filed assets with it (a file a surviving document still shows is unfiled instead, and its project-scoped glossary terms become global); any other project still hands its documents, assets and terms to Personal, which is recreated only when there is something to move. Deletion is a step of the settings dialog: counts, the typed project name, "cannot be undone", and the server's error printed inside it.
+- **T-417** The overview's Analytics panel is a short summary from `GET /api/projects/{id}/analytics`: the project's views and likes with their seven-day change, Telegram reactions, then the account's Telegram subscribers, blog subscribers and whole-blog views with their change. It reads `DraftStatSnapshot`, `Reaction`, `ChannelPost`, `ChannelStatSnapshot`, `ChannelMemberDaily`, `BlogSubscriber` and `BlogStatSnapshot`; no new entity. The "Telegram views — not tracked" row is gone.
+
+Validation: `dotnet test` 2092 passed (`ProjectLifecycleTests` added); front-end 99 files / 871 specs pass; `check:icons` and `check:density` pass; `npm run build` clean. `check:contrast` reports 0 failing pairs but exits 1 on three `--paper-ink*` references at `DiscoveryEndpoints.cs:527`, present before this wave. The dialog, the settings and delete step, an empty overview and the zero-project hub were checked by eye on a scratch bot-off server.
+
 ## 2026-10-08 — 0.25.1 review, wave 3: theme and public pages (ADR-321)
 
 - **T-410** One colour-mode control, `app-theme-menu`: a dropdown of Light / Dark / System toggle buttons on login, register, recovery, onboarding, download, the legal pages and Settings › Appearance. `ThemeService` stores the mode; `system` follows the OS live. The account appearance JSON accepts `system`.

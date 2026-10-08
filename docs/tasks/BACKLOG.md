@@ -42,11 +42,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 
 **Wave 3 — theme and public pages (ADR-321)** — done 08.10.2026.
 
-**Wave 4 — projects (ADR-318, ADR-319)**
-- [ ] T-414 New project dialog per `UI_Prototypes/New_project.png` — description, logo and banner upload, "Start without documents", live preview card (New project 1–2) #ui #projects P1
-- [ ] T-415 Project banner on the server — `Project.BannerUrl` + migration instead of `localStorage`; upload lives in Project Settings; Customize keeps layout only (Project Settings 1) #projects #backend P1
-- [ ] T-416 Empty projects and deletable Personal — remove `LastDocumentRefusal`/`ProjectNeedsOneDocument`, empty states on every project screen, Personal deletable with a typed-name confirmation listing counts, errors shown inside the dialog (Project Settings 2) #projects #backend P1
-- [ ] T-417 Project analytics panel — latest growth, audience, views, likes from existing `DraftStatSnapshot`, `ChannelMemberDaily`, `BlogStatSnapshot`, `BlogSubscriber`, reactions; short summary only (Project Analytics 1) #stats #ui P2
+**Wave 4 — projects (ADR-318, ADR-319)** — done 08.10.2026.
 
 **Wave 5 — publishing (ADR-316, ADR-317)**
 - [ ] T-418 Publishing Manager per `UI_Prototypes/Publishing_Manager.png` — rename, two panes, filter chips, Overview/Publishing/Engagement/Details tabs, next-step hint, Telegram activity from `ChannelPost.PublishedAt` (Posts 1–2) #publishing #ui P1

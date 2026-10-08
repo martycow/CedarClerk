@@ -230,7 +230,6 @@ public static partial class ErrorMessages
 
     public static string DocumentTypeBlogPublished => T("This post is published on the blog. Unpublish it before changing its type to working material.");
 
-    public static string ProjectNeedsOneDocument => T("A project must keep at least one document. Delete the project instead, or add another document first.");
 
     // Admin credit adjustments (11.08.2026).
     public static string CreditAmountRequired => T("Say how many credits to add or take back — zero changes nothing.");

@@ -170,7 +170,6 @@ public static partial class ErrorMessages
         [nameof(NoVersionInLanguage)] = "この下書きには{0}バージョンがありません",
         [nameof(DocumentTypeNotPublishable)] = "このドキュメントは投稿ではなく作業用の資料なので、公開できません。公開するつもりなら、ドキュメントの種類を変更してください。",
         [nameof(DocumentTypeBlogPublished)] = "この投稿はブログに公開されています。種類を作業用の資料に変更する前に、公開を取り消してください。",
-        [nameof(ProjectNeedsOneDocument)] = "プロジェクトには少なくとも1つのドキュメントが必要です。代わりにプロジェクトごと削除するか、先に別のドキュメントを追加してください。",
         [nameof(CreditAmountRequired)] = "追加または回収するクレジット数を指定してください。0では何も変わりません。",
         [nameof(CreditsWouldGoNegative)] = "残高は{0}です。これ以上回収すると残高がマイナスになり、アプリでは扱えません。",
         [nameof(AssetFolderRequired)] = "先にインデックスするフォルダーを選んでください。",

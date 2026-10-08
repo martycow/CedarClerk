@@ -314,6 +314,15 @@
 .analytics-list a:hover {
   text-decoration: underline;
 }
+.analytics-list .delta {
+  margin-left: var(--space-2);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  color: var(--t2);
+}
+.analytics-list .is-account dt {
+  color: var(--t2);
+}
 .side-card {
   display: flex;
   flex-direction: column;
@@ -738,6 +747,43 @@ a.jl-title:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.banner-preview {
+  width: 148px;
+  height: 52px;
+  flex: none;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.banner-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.delete-lead {
+  margin: 0;
+  font-size: var(--fs-body);
+}
+
+.delete-counts {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.delete-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--danger);
 }
 
 .cover-controls {

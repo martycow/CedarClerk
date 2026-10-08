@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { ProjectsComponent } from './projects.component';
-import { ProjectSummary, ProjectsService } from '../core/projects.service';
+import { CreateProjectInput, ProjectSummary, ProjectsService } from '../core/projects.service';
+import { Preset, PresetsService } from '../core/presets.service';
 import { en } from '@localization/en';
 
 const ONE: ProjectSummary = {
@@ -24,11 +25,22 @@ const OLD: ProjectSummary = {
 class FakeProjects {
     list_: ProjectSummary[] = [ONE, TWO, OLD];
     async list() { return structuredClone(this.list_); }
+    created: CreateProjectInput[] = [];
+    async create(input: CreateProjectInput) {
+        this.created.push(input);
+        return { id: 'new', name: input.name, documentId: null };
+    }
+}
+
+class FakePresets {
+    presets: Preset[] = [];
+    async list() { return structuredClone(this.presets); }
 }
 
 describe('project index', () => {
     let fixture: ComponentFixture<ProjectsComponent>;
     let projects: FakeProjects;
+    let presets: FakePresets;
     const t = en.projects;
 
     const el = () => fixture.nativeElement as HTMLElement;
@@ -40,8 +52,13 @@ describe('project index', () => {
 
     async function create() {
         projects = new FakeProjects();
+        presets = new FakePresets();
         TestBed.configureTestingModule({
-            providers: [provideRouter([]), { provide: ProjectsService, useValue: projects }],
+            providers: [
+                provideRouter([]),
+                { provide: ProjectsService, useValue: projects },
+                { provide: PresetsService, useValue: presets },
+            ],
         });
         fixture = TestBed.createComponent(ProjectsComponent);
         fixture.detectChanges();
@@ -118,34 +135,133 @@ describe('project index', () => {
         expect(el().querySelector('.cards app-empty-state.new-card')?.textContent).toContain(t.startNew);
     });
 
-    it('offers the six presets as cards, reads the pick back and asks for the name explicitly', () => {
+    const modal = () => document.querySelector('app-modal') as HTMLElement;
+    const startEmptyBox = () => modal().querySelector('#project-start-empty') as HTMLInputElement;
+
+    it('offers the six types as compact cards and asks for the name and description first', () => {
         fixture.componentInstance.startCreate();
         fixture.detectChanges();
-        const types = [...el().querySelectorAll('.type-name')].map(x => x.textContent?.trim());
+        const types = [...modal().querySelectorAll('.type-name')].map(x => x.textContent?.trim());
         expect(types).toEqual(['Empty', 'Blog', 'Game', 'Product', 'Work', 'Vault']);
-        expect(el().querySelectorAll('.type-card .project-type-symbol app-icon').length).toBe(6);
-        expect(el().querySelector('.type-card:last-child .type-starter')?.textContent)
-            .toContain(t.create.startsWith(t.projectTypes.vault.starter));
-        expect(el().querySelector('.type-card.selected .type-name')?.textContent?.trim()).toBe('Empty');
-        expect(el().querySelector('.detail-name')?.textContent?.trim()).toBe('Empty');
-        expect(el().querySelector('.tree-doc .tree-label')?.textContent?.trim()).toBe(t.projectTypes.empty.starter);
-        expect(el().querySelector('.tree-heading.is-blank')).not.toBeNull();
-        expect((el().querySelector('#project-name') as HTMLInputElement).placeholder)
-            .toBe('Enter project name here');
+        const starters = [...modal().querySelectorAll('.type-starter')].map(x => x.textContent?.trim());
+        expect(starters[0]).toBe(t.create.noDocuments);
+        expect(starters[5]).toBe(t.projectTypes.vault.starter);
+        expect(modal().querySelector('.type-card.selected .type-name')?.textContent?.trim()).toBe('Empty');
+        expect((modal().querySelector('#project-name') as HTMLInputElement).placeholder).toBe('Enter project name here');
+        expect(modal().querySelector('#project-description')).not.toBeNull();
+        const labels = [...modal().querySelectorAll('.step-label')].map(x => x.textContent?.trim());
+        expect(labels).toEqual([t.create.stepDetails, t.create.stepAppearance, t.create.stepStart, t.create.livePreview]);
+        expect([...modal().querySelectorAll('.image-tile .tile-name')].map(x => x.textContent?.trim()))
+            .toEqual([t.create.addLogo, t.create.addBanner]);
+    });
 
-        fixture.componentInstance.pickType('fullgame');
+    // ADR-318 — the Empty type holds "Start without documents" checked; any other type leaves it to the reader.
+    it('previews an empty project for the Empty type and a starter document for the others', () => {
+        const c = fixture.componentInstance;
+        c.startCreate();
         fixture.detectChanges();
-        expect(el().querySelector('.detail-name')?.textContent?.trim()).toBe('Game');
-        const headings = [...el().querySelectorAll('.tree-heading .tree-label')].map(x => x.textContent?.trim());
+        expect(startEmptyBox().checked).toBe(true);
+        expect(startEmptyBox().disabled).toBe(true);
+        expect(modal().querySelector('.tree-none')?.textContent).toContain(t.create.noDocumentsYet);
+        expect(modal().querySelector('.tree-doc')).toBeNull();
+        expect(modal().querySelector('.detail-section-meta')?.textContent?.trim()).toBe(t.documentCount(0));
+        expect(modal().querySelector('.foot-note')?.textContent?.trim()).toBe(t.create.footEmpty);
+
+        c.pickType('fullgame');
+        fixture.detectChanges();
+        expect(startEmptyBox().checked).toBe(false);
+        expect(startEmptyBox().disabled).toBe(false);
+        expect(modal().querySelector('.detail-name')?.textContent?.trim()).toBe('Game');
+        expect(modal().querySelector('.tree-doc .tree-label')?.textContent?.trim()).toBe(t.projectTypes.fullgame.starter);
+        const headings = [...modal().querySelectorAll('.tree-heading .tree-label')].map(x => x.textContent?.trim());
         expect(headings).toEqual(t.create.outline.design);
+        expect(modal().querySelector('.foot-note')?.textContent?.trim())
+            .toBe(t.create.startsWith(t.projectTypes.fullgame.starter));
+
+        startEmptyBox().click();
+        fixture.detectChanges();
+        expect(modal().querySelector('.tree-none')).not.toBeNull();
+        expect(modal().querySelector('.foot-note')?.textContent?.trim()).toBe(t.create.footEmpty);
+    });
+
+    it('reads the name, description, logo and banner back in the live preview', () => {
+        const c = fixture.componentInstance;
+        c.startCreate();
+        c.createName.set('Cedar Field Notes');
+        c.createDescription.set('A space for ideas.');
+        fixture.detectChanges();
+        expect(modal().querySelector('.preview-name')?.textContent?.trim()).toBe('Cedar Field Notes');
+        expect(modal().querySelector('.preview-logo')?.textContent?.trim()).toBe('CF');
+        const facts = () => [...modal().querySelectorAll('.preview-facts dd')].map(x => x.textContent?.trim());
+        expect(facts()).toEqual(['Empty', 'A space for ideas.', t.create.atCreation(0), t.create.appearanceDefault]);
+
+        c.createPicker.set('logo');
+        c.pickedImage({ localPath: 'logo.png' } as never);
+        c.createPicker.set('banner');
+        c.pickedImage({ localPath: 'banner.png' } as never);
+        fixture.detectChanges();
+        expect(c.createPicker()).toBeNull();
+        expect(modal().querySelector('.preview-logo img')?.getAttribute('src')).toBe('/media/logo.png');
+        expect(modal().querySelector('.is-banner .image-tile img')?.getAttribute('src')).toBe('/media/banner.png');
+        expect(facts()[3]).toBe(t.create.appearanceBoth);
+
+        (modal().querySelector('.is-logo .tile-remove') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        expect(facts()[3]).toBe(t.create.appearanceBanner);
+    });
+
+    it('sends the whole form, and whether the project starts without a document', async () => {
+        const c = fixture.componentInstance;
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        c.startCreate();
+        c.createName.set('  Field Notes ');
+        c.createDescription.set(' About ');
+        c.createBannerUrl.set('/media/banner.png');
+        await c.create();
+        expect(projects.created.at(-1)).toEqual(expect.objectContaining({
+            name: 'Field Notes', description: 'About', projectType: 'empty',
+            startWithoutDocuments: true, coverUrl: null, bannerUrl: '/media/banner.png',
+        }));
+
+        c.startCreate();
+        c.createName.set('Blog');
+        c.pickType('blog');
+        await c.create();
+        expect(projects.created.at(-1)).toEqual(expect.objectContaining({
+            projectType: 'blog', startWithoutDocuments: false, description: undefined, bannerUrl: null,
+            documentTitle: t.projectTypes.blog.starter,
+        }));
+
+        c.startCreate();
+        c.createName.set('Blog');
+        c.pickType('blog');
+        c.startEmpty.set(true);
+        await c.create();
+        expect(projects.created.at(-1)).toEqual(expect.objectContaining({ projectType: 'blog', startWithoutDocuments: true }));
+        expect(navigate).toHaveBeenLastCalledWith(['/projects', 'new']);
+    });
+
+    it('keeps the starter document of a saved preset built on the Empty type', async () => {
+        presets.presets = [
+            { id: 'pr1', name: 'Notebook', kind: 'project', configJson: JSON.stringify({ projectType: 'empty', documentTitle: 'Inbox' }) } as Preset,
+        ];
+        const c = fixture.componentInstance;
+        c.startCreate();
+        for (let i = 0; i < 5; i++) await Promise.resolve();
+        c.pickSource('mine');
+        c.pickPreset(c.projectPresets()[0]);
+        fixture.detectChanges();
+        expect(c.createsNoDocument()).toBe(false);
+        expect(startEmptyBox().disabled).toBe(false);
+        expect(modal().querySelector('.tree-doc .tree-label')?.textContent?.trim()).toBe('Inbox');
     });
 
     it('keeps the presets on their own shelf and says when there are none', () => {
         fixture.componentInstance.startCreate();
         fixture.componentInstance.pickSource('mine');
         fixture.detectChanges();
-        expect(el().querySelectorAll('.type-card').length).toBe(0);
-        expect(el().querySelector('.choice-note')?.textContent).toContain(t.create.noPresets);
-        expect(el().querySelector('app-button[link="/presets"]')).not.toBeNull();
+        expect(modal().querySelectorAll('.type-card').length).toBe(0);
+        expect(modal().querySelector('.choice-note')?.textContent).toContain(t.create.noPresets);
+        expect(modal().querySelector('app-button[link="/presets"]')).not.toBeNull();
     });
 });

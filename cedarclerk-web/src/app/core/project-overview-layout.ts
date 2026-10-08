@@ -15,7 +15,6 @@ export interface OverviewPanel {
 export interface OverviewLayout {
   version: 1;
   panels: OverviewPanel[];
-  bannerUrl: string | null;
 }
 
 export function defaultOverviewLayout(): OverviewLayout {
@@ -27,7 +26,6 @@ export function defaultOverviewLayout(): OverviewLayout {
         id === 'journal' ? 'full' : id === 'analytics' || id === 'planning' ? 'narrow' : 'wide',
       hidden: false,
     })),
-    bannerUrl: null,
   };
 }
 
@@ -51,12 +49,7 @@ export function normalizeOverviewLayout(value: unknown): OverviewLayout {
     }
   }
   panels.push(...fallback.panels.filter((panel) => !panels.some((p) => p.id === panel.id)));
-  // Only library media paths can become a stored banner; imported preferences cannot load arbitrary URLs.
-  const bannerUrl =
-    typeof input.bannerUrl === 'string' && /^\/media\/[\w.-]+$/.test(input.bannerUrl)
-      ? input.bannerUrl
-      : null;
-  return { version: 1, panels, bannerUrl };
+  return { version: 1, panels };
 }
 
 export function moveOverviewPanel(

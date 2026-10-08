@@ -7,8 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CedarClerk.Tests;
 
-// T-120 (ADR-102/103). Two rules carry real consequences and neither is visible from a signature:
-// what an untyped, pre-module draft is allowed to do, and whether a project can be emptied.
+// T-120 (ADR-102). What an untyped, pre-module draft is allowed to do is not visible from a signature.
 public class DocumentTypesTests
 {
     // Drafts carry a real FK to AspNetUsers (they have an Owner navigation property), so the owners
@@ -90,7 +89,6 @@ public class DocumentTypesTests
     [Fact]
     public void An_unknown_project_type_still_produces_a_document()
     {
-        // ADR-103 — a project cannot exist without one, so this branch must never return nothing.
         Assert.Equal(DocumentTypes.Post, ProjectTypes.StarterDocumentType(null));
         Assert.Equal(DocumentTypes.Post, ProjectTypes.StarterDocumentType("mmo"));
         Assert.True(DocumentTypes.IsKnown(ProjectTypes.StarterDocumentType("anything")));
@@ -102,50 +100,5 @@ public class DocumentTypesTests
         // Guards the pairing itself: a typo in StarterDocumentType would otherwise only surface as
         // a 400 at the moment someone creates a project.
         Assert.All(ProjectTypes.All, t => Assert.True(DocumentTypes.IsKnown(ProjectTypes.StarterDocumentType(t))));
-    }
-
-    [Fact]
-    public async Task The_last_document_of_a_project_is_recognised()
-    {
-        using var db = NewDb("u1");
-        var projectId = Guid.NewGuid();
-        var only = new Draft { OwnerId = "u1", ProjectId = projectId, Title = "only" };
-        db.Drafts.Add(only);
-        await db.SaveChangesAsync();
-
-        Assert.True(await ProjectEndpoints.IsLastDocumentOfProjectAsync(db, only.Id, projectId, "u1"));
-
-        var second = new Draft { OwnerId = "u1", ProjectId = projectId, Title = "second" };
-        db.Drafts.Add(second);
-        await db.SaveChangesAsync();
-
-        Assert.False(await ProjectEndpoints.IsLastDocumentOfProjectAsync(db, only.Id, projectId, "u1"));
-    }
-
-    [Fact]
-    public async Task A_document_outside_a_project_is_never_the_last_one()
-    {
-        using var db = NewDb("u1");
-        var loose = new Draft { OwnerId = "u1", Title = "unfiled" };
-        db.Drafts.Add(loose);
-        await db.SaveChangesAsync();
-
-        // Every draft written before the module is this case, so a false positive here would refuse
-        // to delete anything in the app.
-        Assert.False(await ProjectEndpoints.IsLastDocumentOfProjectAsync(db, loose.Id, null, "u1"));
-    }
-
-    [Fact]
-    public async Task Someone_elses_document_does_not_keep_a_project_alive()
-    {
-        using var db = NewDb("u1", "u2");
-        var projectId = Guid.NewGuid();
-        var mine = new Draft { OwnerId = "u1", ProjectId = projectId, Title = "mine" };
-        // Not a real state — ownership is enforced everywhere — but the count must be owner-scoped
-        // regardless, or one tenant's rows would decide another tenant's refusals.
-        db.Drafts.AddRange(mine, new Draft { OwnerId = "u2", ProjectId = projectId, Title = "theirs" });
-        await db.SaveChangesAsync();
-
-        Assert.True(await ProjectEndpoints.IsLastDocumentOfProjectAsync(db, mine.Id, projectId, "u1"));
     }
 }

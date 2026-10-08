@@ -99,7 +99,7 @@
 </div>
 
 @if (creating()) {
-    <app-modal [width]="1080" (closed)="creating.set(false)">
+    <app-modal [width]="1180" (closed)="creating.set(false)">
         <app-icon modal-icon name="tree-evergreen" size="md"></app-icon>
         <span modal-title class="modal-head-row">
             <span class="modal-heading">{{ t().projects.create.title }}</span>
@@ -107,124 +107,204 @@
         </span>
 
         <div class="wizard">
-            <div class="wizard-bar">
-                <app-index-tabs [items]="sourceTabs()" [value]="createSource()" [label]="t().projects.create.sourceLabel"
-                                (selected)="pickSource($event)" />
-                <app-input class="preset-search" type="search" [label]="t().projects.create.search"
-                           [ngModel]="presetSearch()" (ngModelChange)="presetSearch.set($event)" />
-                <app-button variant="paper" size="sm" link="/presets" [queryParams]="{ kind: 'project', new: 1 }">
-                    <app-icon name="plus" weight="bold" size="sm" />
-                    {{ t().presets.newPreset }}
-                </app-button>
-            </div>
+            <section class="details">
+                <div class="details-main">
+                    <span class="step-label">{{ t().projects.create.stepDetails }}</span>
+                    <label class="field-label" for="project-name">{{ t().projects.create.nameLabel }} <span class="required" aria-hidden="true">*</span></label>
+                    <input id="project-name" class="text-input" type="text" maxlength="80" required data-modal-autofocus
+                           [ngModel]="createName()" (ngModelChange)="createName.set($event)"
+                           [placeholder]="t().projects.create.namePlaceholder" (keydown.enter)="create()">
+                    <label class="field-label spaced" for="project-description">
+                        {{ t().projects.create.descriptionLabel }} <span class="optional">{{ t().projects.create.optional }}</span>
+                    </label>
+                    <textarea id="project-description" class="text-input" rows="2" maxlength="2000"
+                              [ngModel]="createDescription()" (ngModelChange)="createDescription.set($event)"></textarea>
+                </div>
 
-            <div class="wizard-body">
-                <div class="choice-grid">
-                    @if (createSource() === 'builtin') {
-                        @for (type of visibleTypes(); track type) {
-                            <button class="type-card" [class.selected]="createPresetId() === null && createType() === type"
-                                    (click)="pickType(type)"
-                                    [attr.aria-pressed]="createPresetId() === null && createType() === type">
-                                <span class="type-cover">
-                                    <ng-container *ngTemplateOutlet="cover; context: { $implicit: type }" />
+                <div class="appearance">
+                    <span class="step-label">{{ t().projects.create.stepAppearance }}</span>
+                    <div class="image-tiles">
+                        <div class="image-slot is-logo">
+                            <button type="button" class="image-tile" [class.has-image]="!!createLogoUrl()"
+                                    [attr.aria-label]="t().projects.create.addLogo" (click)="createPicker.set('logo')">
+                                @if (createLogoUrl(); as src) {
+                                    <img [src]="src" alt="">
+                                } @else {
+                                    <app-icon name="plus" size="md" />
+                                    <span class="tile-name">{{ t().projects.create.addLogo }}</span>
+                                    <span class="tile-shape">{{ t().projects.create.logoShape }}</span>
+                                }
+                            </button>
+                            @if (createLogoUrl()) {
+                                <button type="button" class="tile-remove" [attr.aria-label]="t().projects.create.removeLogo"
+                                        [title]="t().projects.create.removeLogo" (click)="createLogoUrl.set(null)">
+                                    <app-icon name="x" size="sm" />
+                                </button>
+                            }
+                        </div>
+                        <div class="image-slot is-banner">
+                            <button type="button" class="image-tile" [class.has-image]="!!createBannerUrl()"
+                                    [attr.aria-label]="t().projects.create.addBanner" (click)="createPicker.set('banner')">
+                                @if (createBannerUrl(); as src) {
+                                    <img [src]="src" alt="">
+                                } @else {
+                                    <app-icon name="image" size="md" />
+                                    <span class="tile-name">{{ t().projects.create.addBanner }}</span>
+                                    <span class="tile-shape">{{ t().projects.create.bannerShape }}</span>
+                                }
+                            </button>
+                            @if (createBannerUrl()) {
+                                <button type="button" class="tile-remove" [attr.aria-label]="t().projects.create.removeBanner"
+                                        [title]="t().projects.create.removeBanner" (click)="createBannerUrl.set(null)">
+                                    <app-icon name="x" size="sm" />
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <p class="appearance-hint">{{ t().projects.create.appearanceHint }}</p>
+                </div>
+            </section>
+
+            <section class="start">
+                <div class="start-main">
+                    <span class="step-label">{{ t().projects.create.stepStart }}</span>
+                    <div class="wizard-bar">
+                        <app-index-tabs [items]="sourceTabs()" [value]="createSource()" [label]="t().projects.create.sourceLabel"
+                                        (selected)="pickSource($event)" />
+                        <app-input class="preset-search" type="search" [label]="t().projects.create.search"
+                                   [ngModel]="presetSearch()" (ngModelChange)="presetSearch.set($event)" />
+                        <app-button variant="paper" size="sm" link="/presets" [queryParams]="{ kind: 'project', new: 1 }">
+                            <app-icon name="plus" weight="bold" size="sm" />
+                            {{ t().presets.newPreset }}
+                        </app-button>
+                    </div>
+
+                    <div class="choice-grid">
+                        @if (createSource() === 'builtin') {
+                            @for (type of visibleTypes(); track type) {
+                                <button type="button" class="type-card" [class.selected]="createPresetId() === null && createType() === type"
+                                        (click)="pickType(type)"
+                                        [attr.aria-pressed]="createPresetId() === null && createType() === type">
+                                    <span class="type-text">
+                                        <span class="type-name">{{ t().projects.projectTypes[type].name }}</span>
+                                        <span class="type-blurb">{{ t().projects.projectTypes[type].blurb }}</span>
+                                        <span class="type-starter">{{ type === 'empty' ? t().projects.create.noDocuments : t().projects.projectTypes[type].starter }}</span>
+                                    </span>
                                     @if (createPresetId() === null && createType() === type) {
                                         <span class="type-check"><app-icon name="check" weight="bold" size="sm" /></span>
                                     }
-                                </span>
-                                <span class="type-text">
-                                    <span class="type-name">{{ t().projects.projectTypes[type].name }}</span>
-                                    <span class="type-blurb">{{ t().projects.projectTypes[type].blurb }}</span>
-                                    <span class="type-starter">{{ t().projects.create.startsWith(t().projects.projectTypes[type].starter) }}</span>
-                                </span>
-                            </button>
-                        } @empty {
-                            <p class="choice-note">{{ t().projects.create.noMatch }}</p>
-                        }
-                    } @else {
-                        <!--T-331 — the user's own project presets are the second shelf of the same dialog,
-                        exactly as document presets are in the New-document dialog.-->
-                        @for (preset of visiblePresets(); track preset.id) {
-                            <button class="type-card is-preset" [class.selected]="createPresetId() === preset.id"
-                                    (click)="pickPreset(preset)"
-                                    [attr.aria-pressed]="createPresetId() === preset.id">
-                                <span class="type-cover">
-                                    <ng-container *ngTemplateOutlet="cover; context: { $implicit: presetType(preset) }" />
+                                </button>
+                            } @empty {
+                                <p class="choice-note">{{ t().projects.create.noMatch }}</p>
+                            }
+                        } @else {
+                            <!--T-331 — the user's own project presets are the second shelf of the same dialog,
+                            exactly as document presets are in the New-document dialog.-->
+                            @for (preset of visiblePresets(); track preset.id) {
+                                <button type="button" class="type-card is-preset" [class.selected]="createPresetId() === preset.id"
+                                        (click)="pickPreset(preset)"
+                                        [attr.aria-pressed]="createPresetId() === preset.id">
+                                    <span class="type-text">
+                                        <span class="type-name">{{ preset.name }}</span>
+                                        <span class="type-blurb">{{ presetBlurb(preset) }}</span>
+                                        <span class="type-starter">{{ presetStarter(preset) }}</span>
+                                    </span>
                                     @if (createPresetId() === preset.id) {
                                         <span class="type-check"><app-icon name="check" weight="bold" size="sm" /></span>
                                     }
-                                </span>
-                                <span class="type-text">
-                                    <span class="type-name">{{ preset.name }}</span>
-                                    <span class="type-blurb">{{ presetBlurb(preset) }}</span>
-                                    <span class="type-starter">{{ t().projects.create.startsWith(presetStarter(preset)) }}</span>
-                                </span>
-                            </button>
-                        } @empty {
-                            @if (projectPresets().length === 0) {
-                                <div class="choice-note">
-                                    <p>{{ t().projects.create.noPresets }}</p>
-                                    <p class="choice-note-hint">{{ t().projects.create.noPresetsHint }}</p>
-                                </div>
-                            } @else {
-                                <p class="choice-note">{{ t().projects.create.noMatch }}</p>
+                                </button>
+                            } @empty {
+                                @if (projectPresets().length === 0) {
+                                    <div class="choice-note">
+                                        <p>{{ t().projects.create.noPresets }}</p>
+                                        <p class="choice-note-hint">{{ t().projects.create.noPresetsHint }}</p>
+                                    </div>
+                                } @else {
+                                    <p class="choice-note">{{ t().projects.create.noMatch }}</p>
+                                }
                             }
                         }
-                    }
+                    </div>
+
+                    <!--ADR-318 — a pick that comes with no document holds the box checked.-->
+                    <app-checkbox class="start-empty" inputId="project-start-empty"
+                                  [value]="createsNoDocument()" [disabled]="!!selection()?.alwaysEmpty"
+                                  (valueChange)="startEmpty.set($event)">
+                        <span class="start-empty-text">
+                            <b>{{ t().projects.create.startEmpty }}</b>
+                            <span>{{ t().projects.create.startEmptyHint }}</span>
+                        </span>
+                    </app-checkbox>
                 </div>
 
                 @if (selection(); as sel) {
-                    <aside class="detail">
+                    <aside class="detail" [attr.aria-label]="t().projects.create.livePreview">
                         <div class="detail-head">
-                            <span class="detail-plate"><app-icon [name]="typeIcons[sel.type]" size="lg" /></span>
                             <span class="detail-title">
+                                <span class="step-label">{{ t().projects.create.livePreview }}</span>
                                 <span class="detail-name">{{ sel.name }}</span>
                                 <span class="detail-blurb">{{ sel.blurb }}</span>
                             </span>
                             <span class="tag detail-tag">{{ sel.preset ? t().projects.create.presetTag : t().projects.create.builtInTag }}</span>
                         </div>
-                        @if (sel.about) { <p class="detail-about">{{ sel.about }}</p> }
 
                         <div class="detail-section">
                             <span class="detail-section-name">{{ t().projects.create.structure }}</span>
-                            <span class="detail-section-meta">{{ sel.outline.length ? t().projects.create.sectionCount(sel.outline.length) : t().projects.create.blankDocument }}</span>
+                            <span class="detail-section-meta">{{ t().projects.documentCount(createsNoDocument() ? 0 : 1) }}</span>
                         </div>
                         <ul class="tree">
                             <li class="tree-root">
                                 <app-icon name="folder-open" size="sm" />
                                 <span class="tree-label">{{ createName().trim() || t().projects.create.unnamed }}</span>
                             </li>
-                            <li class="tree-doc">
-                                <app-icon [name]="docIcons[sel.documentType]" size="sm" />
-                                <span class="tree-label">{{ sel.documentTitle }}</span>
-                                <span class="tree-kind">{{ t().projects.docTypes[sel.documentType].name }}</span>
-                            </li>
-                            @for (heading of sel.outline; track $index) {
-                                <li class="tree-heading"><span class="tree-label">{{ heading }}</span></li>
-                            } @empty {
-                                <li class="tree-heading is-blank"><span class="tree-label">{{ t().projects.create.blankDocument }}</span></li>
+                            @if (createsNoDocument()) {
+                                <li class="tree-none"><span class="tree-label">{{ t().projects.create.noDocumentsYet }}</span></li>
+                            } @else {
+                                <li class="tree-doc">
+                                    <app-icon [name]="docIcons[sel.documentType]" size="sm" />
+                                    <span class="tree-label">{{ sel.documentTitle }}</span>
+                                    <span class="tree-kind">{{ t().projects.docTypes[sel.documentType].name }}</span>
+                                </li>
+                                @for (heading of sel.outline; track $index) {
+                                    <li class="tree-heading"><span class="tree-label">{{ heading }}</span></li>
+                                } @empty {
+                                    <li class="tree-heading is-blank"><span class="tree-label">{{ t().projects.create.blankDocument }}</span></li>
+                                }
                             }
                         </ul>
 
-                        <p class="detail-tip">
-                            <app-icon name="note" size="sm" />
-                            <span>{{ t().projects.create.tip }}</span>
-                        </p>
+                        <div class="detail-section">
+                            <span class="detail-section-name">{{ t().projects.create.info }}</span>
+                        </div>
+                        <div class="preview-card">
+                            <span class="preview-logo" [class.has-image]="!!createLogoUrl()">
+                                @if (createLogoUrl(); as src) { <img [src]="src" alt=""> } @else { {{ initials(createName()) }} }
+                            </span>
+                            <span class="preview-text">
+                                <span class="preview-name">{{ createName().trim() || t().projects.create.unnamed }}</span>
+                                <span class="preview-note">{{ t().projects.create.cardPreview }}</span>
+                            </span>
+                        </div>
+                        <dl class="preview-facts">
+                            <div><dt>{{ t().projects.create.infoType }}</dt><dd>{{ sel.preset ? sel.name : t().projects.projectTypes[sel.type].name }}</dd></div>
+                            <div><dt>{{ t().projects.create.infoDescription }}</dt><dd>{{ createDescription().trim() || (sel.preset ? sel.about : '') || t().projects.create.noDescription }}</dd></div>
+                            <div><dt>{{ t().projects.create.infoDocuments }}</dt><dd>{{ t().projects.create.atCreation(createsNoDocument() ? 0 : 1) }}</dd></div>
+                            <div><dt>{{ t().projects.create.infoAppearance }}</dt><dd>{{ appearanceSummary() }}</dd></div>
+                        </dl>
                     </aside>
                 }
-            </div>
+            </section>
         </div>
 
-        @if (createError(); as err) { <p class="load-error">{{ err }}</p> }
+        @if (createError(); as err) { <p class="load-error" role="alert">{{ err }}</p> }
 
-        <div modal-actions class="name-field">
-            <label class="field-label" for="project-name">{{ t().projects.create.nameLabel }}</label>
-            <span class="name-input">
-                <app-icon name="folder" size="sm" />
-                <input id="project-name" class="text-input" type="text" maxlength="80"
-                       [ngModel]="createName()" (ngModelChange)="createName.set($event)"
-                       [placeholder]="t().projects.create.namePlaceholder" (keydown.enter)="create()">
-            </span>
-        </div>
+        <span modal-actions class="foot-note">
+            @if (createsNoDocument()) {
+                {{ t().projects.create.footEmpty }}
+            } @else if (selection(); as sel) {
+                {{ t().projects.create.startsWith(sel.documentTitle) }}
+            }
+        </span>
         <ng-container modal-actions>
             <app-button variant="paper" (clicked)="creating.set(false)">{{ t().common.cancel }}</app-button>
             <app-button variant="pine" [disabled]="createName().trim().length === 0 || saving()" (clicked)="create()">
@@ -234,8 +314,6 @@
     </app-modal>
 }
 
-<!--The four covers are flat scenes painted in the palette, so both themes own them. A preset wears
-the cover of the type it produces.-->
-<ng-template #cover let-type>
-    <span class="project-type-symbol"><app-icon [name]="typeIcon(type)" size="lg" /></span>
-</ng-template>
+@if (createPicker()) {
+    <app-media-picker [imagesOnly]="true" (picked)="pickedImage($event)" (closed)="createPicker.set(null)" />
+}

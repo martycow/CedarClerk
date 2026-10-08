@@ -60,9 +60,6 @@
           <strong>{{ t().projects.hub.customizeHint }}</strong>
           <p>{{ t().projects.hub.layoutScope }}</p>
         </div>
-        <app-button variant="paper" (clicked)="bannerPickerOpen.set(true)"
-          ><app-icon name="image" size="sm" />{{ t().projects.hub.changeBanner }}</app-button
-        >
         <app-button variant="paper" (clicked)="resetLayout()">{{
           t().projects.hub.resetLayout
         }}</app-button>
@@ -270,29 +267,28 @@
               }
               @case ('analytics') {
                 <dl class="analytics-list">
-                  <div>
-                    <dt>{{ t().projects.hub.blog }} · {{ t().shell.context.views }}</dt>
-                    <dd>{{ blogViews() }}</dd>
-                  </div>
+                  @if (analytics(); as a) {
+                    <div>
+                      <dt>{{ t().projects.hub.views }}</dt>
+                      <dd>{{ a.views }}<small class="delta">{{ delta(a.viewsGrowth) }}</small></dd>
+                    </div>
+                    <div>
+                      <dt>{{ t().projects.hub.likes }}</dt>
+                      <dd>{{ a.likes }}<small class="delta">{{ delta(a.likesGrowth) }}</small></dd>
+                    </div>
+                    <div>
+                      <dt>{{ t().projects.hub.telegramReactions }}</dt>
+                      <dd>{{ a.telegramReactions }}</dd>
+                    </div>
+                  } @else if (analyticsFailed()) {
+                    <div>
+                      <dt>{{ t().projects.hub.analyticsFailed }}</dt>
+                    </div>
+                  }
                   <div>
                     <dt>{{ t().projects.hub.publishedPosts }}</dt>
                     <dd>{{ publishedCount() }}</dd>
                   </div>
-                  <div>
-                    <dt>{{ t().projects.hub.telegram }} · {{ t().shell.context.views }}</dt>
-                    <dd class="metric-text" [title]="t().stats.sources.notTrackedWhy">
-                      {{ t().stats.sources.notTracked }}
-                    </dd>
-                  </div>
-                  @if (streakWeeks(); as weeks) {
-                    <div>
-                      <dt>
-                        {{ t().projects.hub.streakLabel
-                        }}<small>{{ t().projects.hub.accountStreak }}</small>
-                      </dt>
-                      <dd class="metric-text">{{ t().projects.hub.streak(weeks) }}</dd>
-                    </div>
-                  }
                   @if (p.showcaseSlug && showcaseStats(); as stats) {
                     <div>
                       <dt>{{ t().projects.hub.publicViews }}</dt>
@@ -301,6 +297,38 @@
                     <div>
                       <dt>{{ t().projects.hub.followers }}</dt>
                       <dd>{{ stats.followerCount }}</dd>
+                    </div>
+                  }
+                  @if (analytics(); as a) {
+                    <div class="is-account">
+                      <dt>{{ t().projects.hub.telegramMembers }}</dt>
+                      <dd>
+                        {{ a.telegramMembers ?? '—'
+                        }}<small class="delta">{{ delta(a.telegramMembersGrowth) }}</small>
+                      </dd>
+                    </div>
+                    <div class="is-account">
+                      <dt>{{ t().projects.hub.blogSubscribers }}</dt>
+                      <dd>
+                        {{ a.blogSubscribers
+                        }}<small class="delta">{{ delta(a.blogSubscribersGrowth) }}</small>
+                      </dd>
+                    </div>
+                    <div class="is-account">
+                      <dt>{{ t().projects.hub.blogViews }}</dt>
+                      <dd>
+                        {{ a.blogViews ?? '—'
+                        }}<small class="delta">{{ delta(a.blogViewsGrowth) }}</small>
+                      </dd>
+                    </div>
+                  }
+                  @if (streakWeeks(); as weeks) {
+                    <div class="is-account">
+                      <dt>
+                        {{ t().projects.hub.streakLabel
+                        }}<small>{{ t().projects.hub.accountStreak }}</small>
+                      </dt>
+                      <dd class="metric-text">{{ t().projects.hub.streak(weeks) }}</dd>
                     </div>
                   }
                   @if (planningEnabled()) {
@@ -322,6 +350,11 @@
                     </div>
                   }
                 </dl>
+                @if (analytics(); as a) {
+                  <p class="panel-note">
+                    {{ t().projects.hub.analyticsWindow(a.days) }}. {{ t().projects.hub.accountWide }}
+                  </p>
+                }
               }
               @case ('links') {
                 <div class="links-list">
@@ -574,8 +607,46 @@
 @if (editing()) {
   <app-modal [width]="520" (closed)="editing.set(false)">
     <span modal-title class="modal-head-row"
-      ><span class="modal-heading">{{ t().projects.edit.title }}</span></span
+      ><span class="modal-heading">{{
+        deleting() ? t().projects.edit.remove : t().projects.edit.title
+      }}</span></span
     >
+
+    @if (deleting()) {
+      @if (project(); as p) {
+        <div class="delete-step">
+          <p class="delete-lead">
+            {{ p.isPersonal ? t().projects.edit.removeDeletes : t().projects.edit.removeMoves }}
+          </p>
+          <ul class="delete-counts">
+            <li>{{ t().projects.documentCount(p.documents.length) }}</li>
+            <li>{{ t().projects.assetCount(p.filedAssetCount ?? 0) }}</li>
+          </ul>
+          @if (!p.isPersonal) {
+            <p class="hint">{{ t().projects.edit.removeAlsoGone }}</p>
+          }
+          <p class="delete-warning">
+            <app-icon name="warning" size="sm" />{{ t().projects.edit.removeIrreversible }}
+          </p>
+          <label class="field-label spaced" for="delete-name">{{
+            t().projects.edit.removeTypeName(p.name)
+          }}</label>
+          <input
+            id="delete-name"
+            class="text-input"
+            type="text"
+            autocomplete="off"
+            data-modal-autofocus
+            [ngModel]="deleteName()"
+            (ngModelChange)="deleteName.set($event)"
+            (keydown.enter)="deleteProject()"
+          />
+          @if (deleteError(); as err) {
+            <p class="load-error" role="alert">{{ err }}</p>
+          }
+        </div>
+      }
+    } @else {
 
     <label class="field-label" for="edit-name">{{ t().projects.edit.nameLabel }}</label>
     <input
@@ -666,6 +737,43 @@
       </div>
     </div>
 
+    <div class="cover-field">
+      <span class="field-label">{{ t().projects.edit.bannerLabel }}</span>
+      <div class="cover-row">
+        <span class="banner-preview">
+          @if (editBannerUrl(); as bannerUrl) {
+            <img [src]="bannerUrl" alt="" />
+          } @else {
+            <span class="banner-pattern" aria-hidden="true"></span>
+          }
+        </span>
+        <div class="cover-controls">
+          <span class="hint">{{ t().projects.edit.bannerHint }}</span>
+          <div class="cover-actions">
+            <app-button
+              variant="paper"
+              size="sm"
+              [disabled]="busy()"
+              (clicked)="bannerPickerOpen.set(true)"
+            >
+              <app-icon name="image" size="sm"></app-icon>
+              {{ t().projects.edit.chooseLogo }}
+            </app-button>
+            @if (editBannerUrl()) {
+              <app-button
+                variant="paper"
+                size="sm"
+                [disabled]="busy()"
+                (clicked)="editBannerUrl.set(null)"
+              >
+                {{ t().projects.edit.removeBanner }}
+              </app-button>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!--T-358 — handing the project to a team. One row, because that is the whole decision:
         which group of people reaches this, or nobody but its owner. Who is IN a team is the Teams
         screen's business, and a second place to edit that is exactly what ui-changes.md warns
@@ -692,27 +800,42 @@
       <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="toggleArchived()">
         {{ project()?.archivedAt ? t().projects.edit.unarchive : t().projects.edit.archive }}
       </app-button>
-      <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="deleteProject()">
+      <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="startDelete()">
         {{ t().projects.edit.remove }}
       </app-button>
     </div>
 
     @if (actionError(); as err) {
-      <p class="load-error">{{ err }}</p>
+      <p class="load-error" role="alert">{{ err }}</p>
+    }
     }
 
     <ng-container modal-actions>
-      <app-button variant="paper" size="sm" (clicked)="editing.set(false)">{{
-        t().common.cancel
-      }}</app-button>
-      <app-button
-        variant="pine"
-        size="sm"
-        [disabled]="editName().trim().length === 0 || busy()"
-        (clicked)="saveEdit()"
-      >
-        {{ t().common.save }}
-      </app-button>
+      @if (deleting()) {
+        <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="deleting.set(false)">{{
+          t().common.cancel
+        }}</app-button>
+        <app-button
+          variant="danger"
+          size="sm"
+          [disabled]="!deleteNameMatches() || busy()"
+          (clicked)="deleteProject()"
+        >
+          {{ t().projects.edit.removeSubmit }}
+        </app-button>
+      } @else {
+        <app-button variant="paper" size="sm" (clicked)="editing.set(false)">{{
+          t().common.cancel
+        }}</app-button>
+        <app-button
+          variant="pine"
+          size="sm"
+          [disabled]="editName().trim().length === 0 || busy()"
+          (clicked)="saveEdit()"
+        >
+          {{ t().common.save }}
+        </app-button>
+      }
     </ng-container>
   </app-modal>
 }

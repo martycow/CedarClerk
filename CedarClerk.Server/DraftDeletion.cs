@@ -11,7 +11,7 @@ namespace CedarClerk.Server;
 /// places that delete a document.
 ///
 /// The draft row itself is left to the caller — the endpoint has an ordering constraint of its own
-/// (it reads ProjectId before deleting) that does not belong in here.
+/// (it reads ParentDraftId before deleting) that does not belong in here.
 /// </summary>
 public static class DraftDeletion
 {

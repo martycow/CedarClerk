@@ -120,7 +120,7 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 
 | Term | Russian | Meaning | Source |
 |---|---|---|---|
-| Project | проект | A game as a container for documents, tasks, sprints and an asset index; always holds ≥1 document, is archived rather than deleted | `Entities.IndieDev.cs` |
+| Project | проект | A game as a container for documents, tasks, sprints and an asset index; may hold no documents (ADR-318); deleting it moves its documents and assets into Personal, and deleting Personal deletes them (ADR-319) | `Entities.IndieDev.cs` |
 | ProjectType / CreatedFromPreset | тип проекта, пресет создания | The creation offer is empty/blog/fullgame/product/work/vault; the retired jam/prototype/released values were folded into fullgame/product by the ProjectModules migration. Stored on `Project.CreatedFromPreset`: it decides the starting document and the initial module rows at creation, then keeps only its icon and vocabulary (ADR-293) | `Core/ProjectTypes.cs` |
 | ProjectModule | модуль проекта | One switch of one project — a `(ProjectId, ModuleKey, Enabled)` row per key of `ProjectModules.All` (documents, assets, site, posts, calendar, metrics, tasks, planner, builds, canvas, dialogues), created with the project, off rows included. Off hides a section and deletes nothing; `documents` never goes off; the API is `PUT /api/projects/{id}/modules` and the `modules` map on every project DTO. Navigation still ignores it until 14a | `Core/ProjectModules.cs`, `Entities.IndieDev.cs`, ADR-293 |
 | GameTask | задача | A set of fixed fields, not a document (ADR-106 boundary): Description is plain text; named GameTask because Task is taken by async | `Entities.IndieDev.cs` |

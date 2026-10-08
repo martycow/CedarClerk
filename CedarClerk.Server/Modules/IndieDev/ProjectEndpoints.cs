@@ -22,7 +22,11 @@ public static class ProjectEndpoints
     // PresetId names a project preset (T-331): it supplies the type, the starter document and its
     // title in one pick, and anything the caller states outright still wins over it — the dialog
     // lets a preset be chosen and then edited before Create.
-    public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null, Guid? PresetId = null);
+    public record CreateProjectRequest(string Name, string? Description, string? ProjectType, string? DocumentType, string? DocumentTitle, string? Language = null, Guid? PresetId = null,
+        bool StartWithoutDocuments = false, string? CoverUrl = null, string? BannerUrl = null);
+
+    /// <summary>Exactly one of <c>Error</c> and <c>Project</c> is set; <c>Document</c> is null for an empty project (ADR-318).</summary>
+    public sealed record CreateOutcome(IResult? Error, Project? Project, Draft? Document);
 
     /// <summary>Count is every build of the project; LatestVersion is the newest *released* one, null
     /// while nothing has shipped — a planned build is a plan, not a version anyone can play.</summary>
@@ -242,7 +246,7 @@ public static class ProjectEndpoints
     public record ShowcaseAssistRequest(string Kind, string Text);
     // T-247 — Engine/TargetPlatforms are null for "leave alone", so a client written before they
     // existed keeps working; "" and [] clear them.
-    public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl, string? Engine = null, string[]? TargetPlatforms = null);
+    public record UpdateProjectRequest(string Name, string? Description, string? CoverUrl, string? Engine = null, string[]? TargetPlatforms = null, string? BannerUrl = null);
     /// <summary>ADR-293 — the switches to change, by module key; keys left out keep their state.</summary>
     public record UpdateModulesRequest(Dictionary<string, bool> Modules);
     public record ArchiveProjectRequest(bool Archived);
@@ -260,16 +264,79 @@ public static class ProjectEndpoints
 
     public static bool IsEnabled(IConfiguration config) => config.IsOn(EnabledKey);
 
-    /// <summary>
-    /// ADR-103 — a project always holds at least one document, enforced here rather than in the
-    /// schema. Called from the module's detach path AND from the ordinary draft delete in
-    /// <c>DraftEndpoints</c>, because a rule that only one of the two doors honours is not a rule.
-    /// </summary>
-    public static async Task<bool> IsLastDocumentOfProjectAsync(CedarDbContext db, Guid draftId, Guid? projectId, string ownerId)
+    // Only a library path is stored: an arbitrary URL would be fetched by every browser that opens the project.
+    public static string? MediaPathOrNull(string? url) =>
+        url is not null && System.Text.RegularExpressions.Regex.IsMatch(url, @"^/media/[\w.-]+$") ? url : null;
+
+    public static async Task<CreateOutcome> CreateAsync(CedarDbContext db, string uid, CreateProjectRequest req)
     {
-        if (projectId is null) return false;
-        var siblings = await db.Drafts.CountAsync(d => d.ProjectId == projectId && d.OwnerId == ownerId && d.Id != draftId);
-        return siblings == 0;
+        if (Invalid(req.Name, req.Description) is { } badRequest) return new(badRequest, null, null);
+
+        // T-331 — a project preset is a named default for the fields below. It is read first so an
+        // explicit value in the request still overrides it.
+        ProjectPresetConfig? preset = null;
+        if (req.PresetId is { } presetId)
+        {
+            var row = await db.Presets.FirstOrDefaultAsync(p =>
+                p.Id == presetId && p.OwnerId == uid && p.Kind == PresetKinds.Project);
+            if (row is null) return new(Results.NotFound(), null, null);
+            preset = ProjectPresetConfig.Parse(row.ConfigJson);
+        }
+
+        var projectType = req.ProjectType ?? preset?.ProjectType ?? ProjectTypes.FullGame;
+        if (!ProjectTypes.IsKnown(projectType))
+            return new(Results.Json(new { error = ErrorMessages.UnknownProjectType(projectType) }, statusCode: StatusCodes.Status400BadRequest), null, null);
+
+        var type = req.DocumentType ?? preset?.DocumentType ?? ProjectTypes.StarterDocumentType(projectType);
+        if (!DocumentTypes.IsKnown(type))
+            return new(Results.Json(new { error = ErrorMessages.UnknownDocumentType(type) }, statusCode: StatusCodes.Status400BadRequest), null, null);
+
+        var name = req.Name.Trim();
+        var description = req.Description?.Trim();
+        if (string.IsNullOrEmpty(description)) description = preset?.Description ?? "";
+        // ADR-293 — the preset unfolds into the module rows here and has no say afterwards.
+        var modules = ProjectModules.ForPreset(projectType);
+        if (modules is null)
+            return new(Results.Json(new { error = ErrorMessages.UnknownProjectType(projectType) }, statusCode: StatusCodes.Status400BadRequest), null, null);
+        var project = new Project
+        {
+            OwnerId = uid,
+            Name = name,
+            Description = description,
+            CreatedFromPreset = projectType,
+            DiscoveryCategory = DiscoveryCategories.ForProjectType(projectType),
+            CoverUrl = MediaPathOrNull(req.CoverUrl),
+            BannerUrl = MediaPathOrNull(req.BannerUrl),
+        };
+        project.Modules.AddRange(modules.Select(m => new ProjectModule
+        {
+            OwnerId = uid, ProjectId = project.Id, ModuleKey = m.Key, Enabled = m.Value,
+        }));
+        db.Projects.Add(project);
+
+        // ADR-318 — the built-in Empty type is a project with no document; a saved preset built on
+        // it keeps the starter the Presets page promises.
+        if (req.StartWithoutDocuments || (projectType == ProjectTypes.Empty && preset is null && req.DocumentType is null))
+        {
+            await db.SaveChangesAsync();
+            return new(null, project, null);
+        }
+
+        var title = string.IsNullOrWhiteSpace(req.DocumentTitle)
+            ? preset?.DocumentTitle ?? name
+            : req.DocumentTitle.Trim();
+        var draft = new Draft { OwnerId = uid, Title = title, DocumentType = type, ProjectId = project.Id };
+        // T-160 (ADR-133) — the starter document is born with a skeleton, not blank, in the
+        // language the client asked for (the interface language, most usefully).
+        if (!string.IsNullOrWhiteSpace(req.Language) && Languages.IsContentLanguage(req.Language))
+            draft.PrimaryLanguage = req.Language;
+        draft.CedarJson = StarterTemplates.For(type, projectType, draft.PrimaryLanguage);
+
+        db.Drafts.Add(draft);
+        await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
+        await db.SaveChangesAsync();
+        await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
+        return new(null, project, draft);
     }
 
     public static void MapIndieDevEndpoints(this WebApplication app)
@@ -329,6 +396,7 @@ public static class ProjectEndpoints
                 modules = modules.GetValueOrDefault(p.Id) ?? new Dictionary<string, bool>(),
                 p.DiscoveryCategory,
                 p.CoverUrl,
+                p.BannerUrl,
                 p.Engine,
                 targetPlatforms = ProjectPlatforms.Parse(p.TargetPlatforms),
                 p.CreatedAt,
@@ -339,9 +407,6 @@ public static class ProjectEndpoints
                 buildCount = builds.GetValueOrDefault(p.Id)?.Count ?? 0,
                 latestBuildVersion = builds.GetValueOrDefault(p.Id)?.LatestVersion,
                 lastPublishedAt = lastPublished.TryGetValue(p.Id, out var publishedAt) ? publishedAt : (DateTime?)null,
-                // Falls back to the project's own creation for the moment between the two writes
-                // of a create — there is no state in which a project has no documents (ADR-103),
-                // but a null here would still render as an empty cell rather than a date.
                 lastActivityAt = stats.GetValueOrDefault(p.Id)?.LastActivity ?? p.CreatedAt,
             }));
         });
@@ -376,6 +441,7 @@ public static class ProjectEndpoints
                 .ToDictionaryAsync(g => g.Status, g => g.Count);
 
             var modules = await ModulesAsync(db, uid, [id]);
+            var deletion = await ProjectDeletion.CountsAsync(db, uid, id);
 
             return Results.Ok(new
             {
@@ -386,6 +452,9 @@ public static class ProjectEndpoints
                 modules = modules.GetValueOrDefault(id) ?? new Dictionary<string, bool>(),
                 project.DiscoveryCategory,
                 project.CoverUrl,
+                project.BannerUrl,
+                isPersonal = id == DocumentProjects.PersonalId(uid),
+                filedAssetCount = deletion.Assets,
                 project.Engine,
                 targetPlatforms = ProjectPlatforms.Parse(project.TargetPlatforms),
                 project.TeamId,
@@ -428,72 +497,20 @@ public static class ProjectEndpoints
             return Results.Ok(new { items });
         });
 
-        // ADR-103 — creating a project creates its first document in the same transaction. There is
-        // no moment at which an empty project exists, which is what makes the invariant true rather
-        // than merely intended.
         group.MapPost("/", async (CreateProjectRequest req, ClaimsPrincipal user, CedarDbContext db) =>
         {
-            if (Invalid(req.Name, req.Description) is { } badRequest) return badRequest;
+            var created = await CreateAsync(db, user.FindFirstValue(ClaimTypes.NameIdentifier)!, req);
+            if (created.Error is { } error) return error;
+            var project = created.Project!;
+            return Results.Created($"/api/projects/{project.Id}", new { project.Id, project.Name, documentId = created.Document?.Id });
+        });
 
+        // T-417 — the overview's analytics panel. Owner only: half of it is the account's audience.
+        group.MapGet("/{id:guid}/analytics", async (Guid id, ClaimsPrincipal user, CedarDbContext db, CancellationToken ct) =>
+        {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-            // T-331 — a project preset is a named default for the three fields below. It is read
-            // first so an explicit value in the request still overrides it.
-            ProjectPresetConfig? preset = null;
-            if (req.PresetId is { } presetId)
-            {
-                var row = await db.Presets.FirstOrDefaultAsync(p =>
-                    p.Id == presetId && p.OwnerId == uid && p.Kind == PresetKinds.Project);
-                if (row is null) return Results.NotFound();
-                preset = ProjectPresetConfig.Parse(row.ConfigJson);
-            }
-
-            var projectType = req.ProjectType ?? preset?.ProjectType ?? ProjectTypes.FullGame;
-            if (!ProjectTypes.IsKnown(projectType))
-                return Results.Json(new { error = ErrorMessages.UnknownProjectType(projectType) }, statusCode: StatusCodes.Status400BadRequest);
-
-            // The project type decides the starter document unless the caller or the preset names one.
-            var type = req.DocumentType ?? preset?.DocumentType ?? ProjectTypes.StarterDocumentType(projectType);
-            if (!DocumentTypes.IsKnown(type))
-                return Results.Json(new { error = ErrorMessages.UnknownDocumentType(type) }, statusCode: StatusCodes.Status400BadRequest);
-
-            var name = req.Name.Trim();
-            var description = req.Description?.Trim();
-            if (string.IsNullOrEmpty(description)) description = preset?.Description ?? "";
-            // ADR-293 — the preset unfolds into the module rows here and has no say afterwards.
-            var modules = ProjectModules.ForPreset(projectType);
-            if (modules is null)
-                return Results.Json(new { error = ErrorMessages.UnknownProjectType(projectType) }, statusCode: StatusCodes.Status400BadRequest);
-            var project = new Project
-            {
-                OwnerId = uid,
-                Name = name,
-                Description = description,
-                CreatedFromPreset = projectType,
-                DiscoveryCategory = DiscoveryCategories.ForProjectType(projectType),
-            };
-            project.Modules.AddRange(modules.Select(m => new ProjectModule
-            {
-                OwnerId = uid, ProjectId = project.Id, ModuleKey = m.Key, Enabled = m.Value,
-            }));
-
-            var title = string.IsNullOrWhiteSpace(req.DocumentTitle)
-                ? preset?.DocumentTitle ?? name
-                : req.DocumentTitle.Trim();
-            var draft = new Draft { OwnerId = uid, Title = title, DocumentType = type, ProjectId = project.Id };
-            // T-160 (ADR-133) — the starter document is born with a skeleton, not blank, in the
-            // language the client asked for (the interface language, most usefully).
-            if (!string.IsNullOrWhiteSpace(req.Language) && Languages.IsContentLanguage(req.Language))
-                draft.PrimaryLanguage = req.Language;
-            draft.CedarJson = StarterTemplates.For(type, projectType, draft.PrimaryLanguage);
-
-            db.Projects.Add(project);
-            db.Drafts.Add(draft);
-            await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, draft.Title, draft.CedarJson);
-            await db.SaveChangesAsync();
-            await GlossaryUsage.SyncForDraftAsync(db, uid, draft.Id);
-
-            return Results.Created($"/api/projects/{project.Id}", new { project.Id, project.Name, documentId = draft.Id });
+            if (!await db.Projects.AnyAsync(p => p.Id == id && p.OwnerId == uid, ct)) return Results.NotFound();
+            return Results.Ok(await ProjectAnalyticsSummary.ForAsync(db, uid, id, DateTime.UtcNow, ct));
         });
 
         group.MapPut("/{id:guid}", async (Guid id, UpdateProjectRequest req, ClaimsPrincipal user, CedarDbContext db) =>
@@ -510,10 +527,11 @@ public static class ProjectEndpoints
             project.Name = req.Name.Trim();
             project.Description = req.Description?.Trim() ?? "";
             project.CoverUrl = req.CoverUrl;
+            project.BannerUrl = MediaPathOrNull(req.BannerUrl);
             await db.SaveChangesAsync();
             return Results.Ok(new
             {
-                project.Id, project.Name, project.Description, project.CoverUrl, project.Engine,
+                project.Id, project.Name, project.Description, project.CoverUrl, project.BannerUrl, project.Engine,
                 targetPlatforms = ProjectPlatforms.Parse(project.TargetPlatforms),
             });
         });
@@ -765,49 +783,14 @@ public static class ProjectEndpoints
             return Results.Ok(new { project.Id, project.ArchivedAt });
         });
 
-        // Documents are DETACHED, never deleted with the project — the same choice FolderEndpoints
-        // made, and for the stronger reason here: a project holds the actual writing, and deleting
-        // a container must not be a way to lose it by accident.
-        group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db) =>
+        // ADR-319 — Personal takes its documents and filed assets with it; any other project hands
+        // them to Personal.
+        group.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == uid);
-            if (project is null) return Results.NotFound();
-
-            if (id == DocumentProjects.PersonalId(uid)) return LastDocumentRefusal();
-            await using var deletion = await db.Database.BeginTransactionAsync();
-            var personalId = await DocumentProjects.PersonalAsync(db, uid);
-            await db.SaveChangesAsync();
-            await db.Drafts.Where(d => d.ProjectId == id && d.OwnerId == uid)
-                .ExecuteUpdateAsync(s => s.SetProperty(d => d.ProjectId, personalId));
-            await db.Assets.Where(a => a.ProjectId == id && a.OwnerId == uid)
-                .ExecuteUpdateAsync(s => s.SetProperty(a => a.ProjectId, personalId));
-            await db.GlossaryTerms.Where(t => t.ProjectId == id && t.OwnerId == uid)
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.ProjectId, personalId));
-
-            // Everything that only means anything *inside* this project does go, though. None of
-            // these three has a navigation property, so EF cascades none of them, and each was
-            // being left behind: an asset index of a folder nobody is indexing any more, tasks with
-            // no board to appear on, and links naming both.
-            await db.AssetEntries.Where(a => a.ProjectId == id && a.OwnerId == uid).ExecuteDeleteAsync();
-            await db.GameTasks.Where(t => t.ProjectId == id && t.OwnerId == uid).ExecuteDeleteAsync();
-            await db.EntityLinks.Where(l => l.ProjectId == id && l.OwnerId == uid).ExecuteDeleteAsync();
-            await db.Builds.Where(b => b.ProjectId == id && b.OwnerId == uid).ExecuteDeleteAsync();
-            await db.Sprints.Where(sp => sp.ProjectId == id && sp.OwnerId == uid).ExecuteDeleteAsync();
-            // The public page's rows go with the page. A follower kept past the project would be an
-            // address subscribed to nothing, and its counters would answer about a page that is gone.
-            await db.ShowcaseFollowers.Where(f => f.ProjectId == id && f.OwnerId == uid).ExecuteDeleteAsync();
-            await db.ShowcaseStatDailies.Where(st => st.ProjectId == id && st.OwnerId == uid).ExecuteDeleteAsync();
-            // Items go by project rather than by board: sweeping board by board would leave the items
-            // of a board that was already gone, which is why CanvasItem carries ProjectId at all.
-            await db.CanvasItems.Where(i => i.ProjectId == id && i.OwnerId == uid).ExecuteDeleteAsync();
-            await db.CanvasBoards.Where(b => b.ProjectId == id && b.OwnerId == uid).ExecuteDeleteAsync();
-            // A membership outliving its project would keep granting access to an id nothing answers for.
-            await db.ProjectMembers.Where(m => m.ProjectId == id && m.OwnerId == uid).ExecuteDeleteAsync();
-
-            db.Projects.Remove(project);
-            await db.SaveChangesAsync();
-            await deletion.CommitAsync();
+            var files = await ProjectDeletion.DeleteAsync(db, uid, id);
+            if (files is null) return Results.NotFound();
+            AccountDeletion.DeleteFiles(media.Dir, files);
             return Results.NoContent();
         });
 
@@ -847,9 +830,7 @@ public static class ProjectEndpoints
             return Results.Created($"/api/drafts/{draft.Id}", new { draft.Id, draft.Title, draft.DocumentType });
         });
 
-        // Attaching an already-existing draft. Moving it out of another project is allowed and
-        // silent, except when it would empty that other project — the invariant belongs to every
-        // project, not only the one being edited.
+        // Attaching an already-existing draft. Moving it out of another project is allowed and silent.
         group.MapPut("/{id:guid}/documents/{draftId:guid}", async (Guid id, Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -858,9 +839,6 @@ public static class ProjectEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == uid);
             if (draft is null) return Results.NotFound();
             if (draft.ProjectId == id) return Results.Ok(new { draft.Id, draft.ProjectId });
-
-            if (await IsLastDocumentOfProjectAsync(db, draftId, draft.ProjectId, uid))
-                return LastDocumentRefusal();
 
             draft.ProjectId = id;
             // ADR-204 — the pictures inside it come along, unless another project already claimed them.
@@ -887,10 +865,8 @@ public static class ProjectEndpoints
             var draft = await db.Drafts.FirstOrDefaultAsync(d => d.Id == draftId && d.OwnerId == uid && d.ProjectId == id);
             if (draft is null) return Results.NotFound();
 
-            if (await IsLastDocumentOfProjectAsync(db, draftId, id, uid))
-                return LastDocumentRefusal();
-
-            if (id == DocumentProjects.PersonalId(uid)) return LastDocumentRefusal();
+            // Detaching files the document in Personal, so there is nothing to do when it is already there.
+            if (id == DocumentProjects.PersonalId(uid)) return Results.NoContent();
             draft.ProjectId = await DocumentProjects.PersonalAsync(db, uid);
             await db.SaveChangesAsync();
             return Results.NoContent();
@@ -928,9 +904,6 @@ public static class ProjectEndpoints
         value = trimmed.Length == 0 ? null : trimmed;
         return trimmed.Length > maxLength;
     }
-
-    private static IResult LastDocumentRefusal() =>
-        Results.Json(new { error = ErrorMessages.ProjectNeedsOneDocument }, statusCode: StatusCodes.Status409Conflict);
 
     private static IResult? Invalid(string name, string? description)
     {

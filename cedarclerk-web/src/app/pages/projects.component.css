@@ -175,8 +175,138 @@
 .wizard {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-5);
     color: var(--text);
+}
+
+.step-label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--t2);
+}
+
+.details,
+.start {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: var(--space-5);
+    align-items: start;
+}
+
+.start {
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border);
+}
+
+.details-main,
+.start-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.start-main { gap: var(--space-3); }
+.start-main .step-label { margin-bottom: 0; }
+
+.field-label {
+    display: block;
+    font-size: var(--fs-caption);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
+    color: var(--t2);
+    margin-bottom: var(--space-1);
+}
+
+.field-label.spaced { margin-top: var(--space-3); }
+.field-label .required { color: var(--danger); }
+
+.field-label .optional {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--t3);
+}
+
+.text-input { width: 100%; }
+
+.image-tiles {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--space-2);
+}
+
+.image-slot { position: relative; }
+
+.image-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    width: 100%;
+    height: 96px;
+    padding: var(--space-2);
+    overflow: hidden;
+    border: 1px dashed var(--abord);
+    border-radius: var(--radius-md);
+    background: var(--asoft);
+    color: var(--accent);
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color var(--motion-fast) var(--ease);
+}
+
+.image-tile:hover { border-color: var(--accent); }
+
+.image-tile.has-image {
+    padding: 0;
+    border-style: solid;
+    border-color: var(--border);
+}
+
+.image-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tile-name {
+    font-size: var(--fs-13);
+    font-weight: 700;
+    color: var(--text);
+}
+
+.tile-shape {
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.tile-remove {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--sheet);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.tile-remove:hover { background: var(--hover-danger); }
+
+.appearance-hint {
+    margin: var(--space-2) 0 0;
+    font-size: var(--fs-caption);
+    color: var(--t2);
 }
 
 .wizard-bar {
@@ -193,17 +323,10 @@
     margin-left: auto;
 }
 
-.wizard-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: var(--space-4);
-    align-items: start;
-}
-
 .choice-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
+    gap: var(--space-2);
 }
 
 .choice-note {
@@ -225,11 +348,10 @@
     color: var(--t3);
 }
 
-/* One card per starting point: the cover leads, as it does on the project card outside. */
 .type-card {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    align-items: flex-start;
+    gap: var(--space-2);
     padding: var(--space-3);
     text-align: left;
     border: 1px solid var(--border);
@@ -239,14 +361,12 @@
     cursor: pointer;
     font-family: inherit;
     transition: border-color var(--motion-fast) var(--ease),
-                box-shadow var(--motion-fast) var(--ease),
-                transform var(--motion-fast) var(--ease);
+                box-shadow var(--motion-fast) var(--ease);
 }
 
 .type-card:hover {
     border-color: var(--abord);
     box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
 }
 
 .type-card.selected {
@@ -255,34 +375,16 @@
     box-shadow: 0 0 0 1px var(--accent);
 }
 
-.type-cover {
-    position: relative;
-    display: block;
-    aspect-ratio: 2 / 1;
-    overflow: hidden;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-}
-
-.cover-art {
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-
 .type-check {
-    position: absolute;
-    top: var(--space-2);
-    right: var(--space-2);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: none;
     width: 24px;
     height: 24px;
     border-radius: 50%;
     background: var(--accent);
     color: var(--text-on-pine);
-    box-shadow: var(--shadow-paper-sm);
 }
 
 .type-text {
@@ -291,7 +393,7 @@
     align-items: flex-start;
     gap: var(--space-1);
     min-width: 0;
-    padding: 0 var(--space-1) var(--space-1);
+    flex: 1;
 }
 
 .type-name {
@@ -301,29 +403,37 @@
 }
 
 .type-blurb {
-    font-size: var(--fs-ui);
+    font-size: var(--fs-13);
     color: var(--t2);
     line-height: 1.4;
 }
 
 .type-starter {
-    margin-top: var(--space-1);
-    padding: 2px var(--space-2);
     font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
     color: var(--t2);
-    background: var(--alt);
-    border-radius: var(--radius-sm);
 }
 
-/* The right column reads the selection back: what it is, and the document it is born with. */
+.start-empty-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.start-empty-text span {
+    font-size: var(--fs-13);
+    color: var(--t2);
+}
+
+/* The right column reads the form back: the structure the project starts with, then its card. */
 .detail {
-    position: sticky;
-    top: 0;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     padding: var(--space-4);
-    border: 1px solid var(--border);
+    border: 1px solid var(--abord);
     border-radius: var(--radius-md);
     background: var(--surface);
 }
@@ -332,18 +442,8 @@
     display: flex;
     align-items: flex-start;
     gap: var(--space-3);
-}
-
-.detail-plate {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    background: var(--asoft);
-    color: var(--accent);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border);
 }
 
 .detail-title {
@@ -353,6 +453,8 @@
     min-width: 0;
     flex: 1;
 }
+
+.detail-title .step-label { margin-bottom: var(--space-1); }
 
 .detail-name {
     font-family: var(--font-display);
@@ -372,15 +474,6 @@
     white-space: nowrap;
 }
 
-.detail-about {
-    margin: 0;
-    padding-bottom: var(--space-3);
-    font-size: var(--fs-ui);
-    color: var(--t2);
-    line-height: 1.5;
-    border-bottom: 1px solid var(--border);
-}
-
 .detail-section {
     display: flex;
     align-items: baseline;
@@ -396,7 +489,7 @@
 
 .detail-section-meta {
     font-size: var(--fs-caption);
-    color: var(--t3);
+    color: var(--t2);
 }
 
 .tree {
@@ -424,6 +517,14 @@
 .tree-root .tree-label { font-weight: 700; }
 
 .tree-doc { padding-left: var(--space-4); }
+
+.tree-none {
+    padding-left: var(--space-4);
+    font-style: italic;
+    color: var(--t2);
+}
+
+.tree-none .tree-label { white-space: normal; }
 
 .tree-heading {
     position: relative;
@@ -456,72 +557,93 @@
     color: var(--t3);
 }
 
-.detail-tip {
+.preview-card {
     display: flex;
-    align-items: flex-start;
-    gap: var(--space-2);
-    margin: 0;
-    padding: var(--space-3);
-    font-size: var(--fs-caption);
-    line-height: 1.45;
-    color: var(--t2);
-    background: var(--asoft);
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+    background: var(--sheet);
 }
 
-.detail-tip app-icon { color: var(--accent); flex: none; margin-top: 1px; }
+.preview-logo {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--asoft);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: var(--fs-16);
+    font-weight: 700;
+}
 
-/* The footer is the modal's own action row: the name on the left, the two buttons on the right. */
-.name-field {
+.preview-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.preview-name {
+    font-family: var(--font-display);
+    font-size: var(--fs-16);
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preview-note {
+    font-size: var(--fs-caption);
+    color: var(--t2);
+}
+
+.preview-facts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    font-size: var(--fs-13);
+}
+
+.preview-facts > div {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: var(--space-2);
+}
+
+.preview-facts dt { color: var(--t2); }
+
+.preview-facts dd {
+    margin: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.foot-note {
     flex: 1;
     min-width: 0;
     margin-right: var(--space-4);
-}
-
-.field-label {
-    display: block;
-    font-size: var(--fs-caption);
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    font-weight: 600;
+    font-size: var(--fs-13);
     color: var(--t2);
-    margin-bottom: var(--space-1);
-}
-
-.name-input {
-    position: relative;
-    display: block;
-}
-
-.name-input app-icon {
-    position: absolute;
-    left: var(--space-3);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--t3);
-    pointer-events: none;
-}
-
-/* The global field face out-specifies anything scoped here, so the room for the icon is forced. */
-.text-input {
-    width: 100%;
-    padding-left: calc(var(--space-3) * 2 + var(--icon-sm)) !important;
-}
-
-/* An empty shelf must not shrink the dialog under the reader's hand. */
-@media (min-width: 901px) {
-    .wizard-body { min-height: 560px; }
 }
 
 @media (max-width: 900px) {
-    .wizard-body { grid-template-columns: minmax(0, 1fr); }
-    .detail { position: static; }
-    .name-field { flex-basis: 100%; margin-right: 0; }
+    .details,
+    .start { grid-template-columns: minmax(0, 1fr); }
+    .foot-note { flex-basis: 100%; margin-right: 0; }
 }
 
 @media (max-width: 640px) {
     .choice-grid { grid-template-columns: minmax(0, 1fr); }
 }
-
-.project-type-symbol { display: grid; place-items: center; width: 100%; min-height: 100px; background: var(--asoft); color: var(--accent); }
-.project-type-symbol app-icon { transform: scale(2); }

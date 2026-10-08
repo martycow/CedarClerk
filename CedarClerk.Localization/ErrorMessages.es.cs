@@ -170,7 +170,6 @@ public static partial class ErrorMessages
         [nameof(NoVersionInLanguage)] = "Este borrador no tiene versión en {0}",
         [nameof(DocumentTypeNotPublishable)] = "Este documento es material de trabajo, no una publicación, así que no se puede publicar. Cambia su tipo si lo que querías era publicarlo.",
         [nameof(DocumentTypeBlogPublished)] = "Esta publicación está publicada en el blog. Anula su publicación antes de cambiar su tipo a material de trabajo.",
-        [nameof(ProjectNeedsOneDocument)] = "Un proyecto debe conservar al menos un documento. Elimina el proyecto en su lugar, o añade otro documento primero.",
         [nameof(CreditAmountRequired)] = "Indica cuántos créditos añadir o retirar — cero no cambia nada.",
         [nameof(CreditsWouldGoNegative)] = "El saldo es {0}; retirar más lo dejaría en negativo, y nada en la aplicación puede leer eso.",
         [nameof(AssetFolderRequired)] = "Elige primero una carpeta para indexar.",

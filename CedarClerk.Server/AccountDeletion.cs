@@ -80,7 +80,7 @@ public static class AccountDeletion
         return true;
     }
 
-    private static void DeleteFiles(string mediaDir, IEnumerable<string> localPaths)
+    public static void DeleteFiles(string mediaDir, IEnumerable<string> localPaths)
     {
         var root = Path.GetFullPath(mediaDir);
 

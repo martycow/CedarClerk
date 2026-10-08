@@ -66,7 +66,10 @@ export const PROJECT_TYPE_ICONS: Record<ProjectType, IconName> = {
     vault: 'lock',
 };
 
-/** Which document type a project of each type starts with — mirrors ProjectTypes.StarterDocumentType. */
+/**
+ * Which document type a project of each type starts with — mirrors ProjectTypes.StarterDocumentType.
+ * The built-in Empty type is born with none (ADR-318); its entry is what a saved preset built on it gets.
+ */
 export const STARTER_DOCUMENT_TYPE: Record<ProjectType, DocumentType> = {
     empty: 'note',
     blog: 'post',
@@ -85,6 +88,8 @@ export interface ProjectSummary {
     modules: Partial<Record<ModuleKey, boolean>>;
     discoveryCategory?: DiscoveryCategory;
     coverUrl: string | null;
+    /** The wide image over the project overview; null or absent draws the default pattern. */
+    bannerUrl?: string | null;
     createdAt: string;
     archivedAt: string | null;
     documentCount: number;
@@ -117,6 +122,10 @@ export interface ProjectDocument {
 }
 
 export interface ProjectDetail extends Omit<ProjectSummary, 'documentCount' | 'openTaskCount' | 'assetCount' | 'buildCount' | 'latestBuildVersion' | 'lastActivityAt' | 'lastPublishedAt'> {
+    /** ADR-319 — deleting Personal deletes what it holds; any other project hands it to Personal. */
+    isPersonal?: boolean;
+    /** Uploaded files filed in this project — what a deletion moves or deletes. */
+    filedAssetCount?: number;
     /** T-358 — the team whose people reach this project, or null for the owner's alone. */
     teamId: string | null;
     /** T-159 (ADR-134) — null means no public page. */
@@ -211,6 +220,27 @@ export interface CreateProjectInput {
      * Anything named above still wins over it, so a preset can be chosen and then edited.
      */
     presetId?: string;
+    /** ADR-318 — no starter document; the Empty type implies it. */
+    startWithoutDocuments?: boolean;
+    /** `/media/...` paths from the asset library. */
+    coverUrl?: string | null;
+    bannerUrl?: string | null;
+}
+
+/** T-417 — mirrors ProjectAnalyticsSummary.Summary. A null figure has no snapshot behind it yet. */
+export interface ProjectAnalytics {
+    days: number;
+    views: number;
+    viewsGrowth: number;
+    likes: number;
+    likesGrowth: number;
+    telegramReactions: number;
+    telegramMembers: number | null;
+    telegramMembersGrowth: number;
+    blogSubscribers: number;
+    blogSubscribersGrowth: number;
+    blogViews: number | null;
+    blogViewsGrowth: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -227,7 +257,7 @@ export class ProjectsService {
     }
 
     create(input: CreateProjectInput) {
-        return firstValueFrom(this.http.post<{ id: string; name: string; documentId: string }>('/api/projects', input));
+        return firstValueFrom(this.http.post<{ id: string; name: string; documentId: string | null }>('/api/projects', input));
     }
 
     /** T-159 (ADR-134) — the public game page's switch; the server slugifies and answers the URL. */
@@ -253,21 +283,25 @@ export class ProjectsService {
         return firstValueFrom(this.http.get<{ items: ActivityItem[] }>(`/api/projects/${id}/activity?take=${take}`));
     }
 
+    analytics(id: string) {
+        return firstValueFrom(this.http.get<ProjectAnalytics>(`/api/projects/${id}/analytics`));
+    }
+
     /** T-296/T-297 — the public page's own counters, for the owner. */
     showcaseStats(id: string) {
         return firstValueFrom(this.http.get<ShowcaseStats>(`/api/projects/${id}/showcase/stats`));
     }
 
     /** `engine`/`targetPlatforms` left undefined are left alone by the server; "" and [] clear them. */
-    update(id: string, name: string, description: string, coverUrl: string | null, engine?: string, targetPlatforms?: string[]) {
-        return firstValueFrom(this.http.put<ProjectSummary>(`/api/projects/${id}`, { name, description, coverUrl, engine, targetPlatforms }));
+    update(id: string, name: string, description: string, coverUrl: string | null, bannerUrl: string | null, engine?: string, targetPlatforms?: string[]) {
+        return firstValueFrom(this.http.put<ProjectSummary>(`/api/projects/${id}`, { name, description, coverUrl, bannerUrl, engine, targetPlatforms }));
     }
 
     setArchived(id: string, archived: boolean) {
         return firstValueFrom(this.http.post<{ id: string; archivedAt: string | null }>(`/api/projects/${id}/archive`, { archived }));
     }
 
-    /** Documents are detached, not deleted — see ProjectEndpoints. */
+    /** ADR-319 — Personal takes its documents and filed assets with it; any other project hands them to Personal. */
     remove(id: string) {
         return firstValueFrom(this.http.delete<void>(`/api/projects/${id}`));
     }
@@ -279,7 +313,7 @@ export class ProjectsService {
                 `/api/projects/${projectId}/documents`, { documentType, title, presetId }));
     }
 
-    /** Refused with 409 when it would leave the project with no documents at all (ADR-103). */
+    /** Files the document in Personal instead. */
     detachDocument(projectId: string, draftId: string) {
         return firstValueFrom(this.http.delete<void>(`/api/projects/${projectId}/documents/${draftId}`));
     }

@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ProjectComponent, daysSince, journalLevel, journalLink } from './project.component';
-import { ActivityItem, ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
+import { ActivityItem, ProjectAnalytics, ProjectDetail, ProjectSummary, ProjectsService } from '../core/projects.service';
+import { CurrentProjectService } from '../core/current-project.service';
 import { Channel, ChannelsService } from '../core/channels.service';
 import { en } from '@localization/en';
 import { formatInZone } from '../core/display-time';
@@ -60,6 +62,12 @@ const JOURNAL: ActivityItem[] = [
     { at: '2026-08-15T09:00:00Z', kind: 'task-completed', title: 'Fix saves on quit', subtitle: 'done', href: '/projects/p1/tasks', actor: 'Marty' },
 ];
 
+const ANALYTICS: ProjectAnalytics = {
+    days: 7, views: 125, viewsGrowth: 25, likes: 4, likesGrowth: 0, telegramReactions: 9,
+    telegramMembers: 312, telegramMembersGrowth: -3, blogSubscribers: 18, blogSubscribersGrowth: 2,
+    blogViews: null, blogViewsGrowth: null,
+};
+
 const CHANNELS: Channel[] = [
     { id: 'c1', title: 'Dev Dairy', telegramChatId: 1, username: 'devdairy', avatarUrl: null },
 ];
@@ -77,9 +85,17 @@ class FakeProjects {
     }
     async get() { if (!this.detail) throw new Error('nope'); return structuredClone(this.detail); }
     async list() { if (!this.list_) throw new Error('nope'); return structuredClone(this.list_); }
-    async update(id: string, name: string, description: string, coverUrl: string | null, engine?: string, targetPlatforms?: string[]) {
-        this.updates.push({ id, name, description, coverUrl, engine, targetPlatforms });
+    async update(id: string, name: string, description: string, coverUrl: string | null, bannerUrl: string | null, engine?: string, targetPlatforms?: string[]) {
+        this.updates.push({ id, name, description, coverUrl, bannerUrl, engine, targetPlatforms });
         return { ...SUMMARY, id, name, description, coverUrl };
+    }
+    analytics_: ProjectAnalytics | null = ANALYTICS;
+    async analytics() { if (!this.analytics_) throw new Error('nope'); return structuredClone(this.analytics_); }
+    removed: string[] = [];
+    removeError: unknown = null;
+    async remove(id: string) {
+        if (this.removeError) throw this.removeError;
+        this.removed.push(id);
     }
     async setShowcase(_id: string, _enabled: boolean, slug: string | null, _links: string) {
         return { showcaseSlug: slug };
@@ -439,30 +455,115 @@ describe('project hub', () => {
         expect(component.project()?.coverUrl).toBe('/media/project-cover.png');
         expect(component.summary()?.coverUrl).toBe('/media/project-cover.png');
     });
-    it('persists width, order, visibility and banner by account and project, with a recoverable reset', async () => {
+    it('persists width, order and visibility by account and project, with a recoverable reset', async () => {
         const c = fixture.componentInstance;
         c.customizing.set(true);
         c.setPanelWidth('documents', 'full');
         c.movePanel('journal', -1);
         c.togglePanel('links');
-        c.pickedBanner({ localPath: 'banner.png' } as never);
         fixture.detectChanges();
         expect(el().querySelector('.is-hidden h2')?.textContent).toContain(t.hub.links);
+        expect(el().querySelector('.customize-bar')?.textContent).not.toContain('anner');
         c.customizing.set(false);
         fixture.detectChanges();
         expect(el().querySelector('#overview-links')).toBeNull();
         await c.load('p1');
         expect(c.overviewLayout().panels.find(p => p.id === 'documents')?.width).toBe('full');
         expect(c.overviewLayout().panels.find(p => p.id === 'links')?.hidden).toBe(true);
-        expect(c.bannerUrl()).toBe('/media/banner.png');
         TestBed.inject(AuthService).userId.set('other-account');
         await c.load('p1');
-        expect(c.bannerUrl()).toBeNull();
+        expect(c.overviewLayout().panels.every(p => !p.hidden)).toBe(true);
         TestBed.inject(AuthService).userId.set('test-account');
         await c.load('p1');
         c.resetLayout();
         expect(c.overviewLayout().panels.every(p => !p.hidden)).toBe(true);
-        expect(c.bannerUrl()).toBeNull();
+    });
+
+    it('draws the banner the project stores, and saves the one picked in project settings', async () => {
+        projects.detail = { ...DETAIL, bannerUrl: '/media/stored.png' };
+        const c = fixture.componentInstance;
+        await c.load('p1');
+        fixture.detectChanges();
+        expect(el().querySelector('.project-banner img')?.getAttribute('src')).toBe('/media/stored.png');
+
+        c.startEdit();
+        fixture.detectChanges();
+        expect(document.querySelector('.banner-preview img')?.getAttribute('src')).toBe('/media/stored.png');
+        c.pickedBanner({ localPath: 'banner.png' } as never);
+        await c.saveEdit();
+        fixture.detectChanges();
+        expect(projects.updates.at(-1)).toEqual(expect.objectContaining({ bannerUrl: '/media/banner.png' }));
+        expect(el().querySelector('.project-banner img')?.getAttribute('src')).toBe('/media/banner.png');
+
+        c.startEdit();
+        c.editBannerUrl.set(null);
+        await c.saveEdit();
+        fixture.detectChanges();
+        expect(projects.updates.at(-1)).toEqual(expect.objectContaining({ bannerUrl: null }));
+        expect(el().querySelector('.project-banner .banner-pattern')).toBeTruthy();
+    });
+
+    // ADR-319 — the counts, the typed name and the server's refusal all live inside the settings dialog.
+    it('asks for the typed name before deleting, and says what moves into Personal', async () => {
+        projects.detail = { ...DETAIL, isPersonal: false, filedAssetCount: 6 };
+        const c = fixture.componentInstance;
+        await c.load('p1');
+        c.startEdit();
+        c.startDelete();
+        fixture.detectChanges();
+        const step = document.querySelector('.delete-step')!;
+        expect(step.textContent).toContain(t.edit.removeMoves);
+        expect(step.textContent).toContain(t.documentCount(4));
+        expect(step.textContent).toContain(t.assetCount(6));
+        expect(step.textContent).toContain(t.edit.removeAlsoGone);
+        expect(step.textContent).toContain(t.edit.removeIrreversible);
+
+        await c.deleteProject();
+        expect(projects.removed).toEqual([]);
+        c.deleteName.set('Cedar Quest');
+        const forget = vi.spyOn(TestBed.inject(CurrentProjectService), 'forget');
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        await c.deleteProject();
+        expect(projects.removed).toEqual(['p1']);
+        expect(forget).toHaveBeenCalled();
+        expect(navigate).toHaveBeenCalledWith(['/projects']);
+    });
+
+    it('says Personal takes its documents and assets with it, and keeps a refusal inside the dialog', async () => {
+        projects.detail = { ...DETAIL, isPersonal: true, filedAssetCount: 2 };
+        projects.removeError = new HttpErrorResponse({ status: 500, error: { error: 'The database is busy.' } });
+        const c = fixture.componentInstance;
+        await c.load('p1');
+        c.startEdit();
+        c.startDelete();
+        c.deleteName.set('Cedar Quest');
+        fixture.detectChanges();
+        const step = document.querySelector('.delete-step')!;
+        expect(step.textContent).toContain(t.edit.removeDeletes);
+        expect(step.textContent).not.toContain(t.edit.removeAlsoGone);
+
+        await c.deleteProject();
+        fixture.detectChanges();
+        expect(c.editing()).toBe(true);
+        expect(document.querySelector('.delete-step .load-error')?.textContent).toContain('The database is busy.');
+        expect(el().querySelector('.project-overview > .load-error')).toBeNull();
+    });
+
+    it('summarises growth, audience, views and likes, and survives a failed call', async () => {
+        expect(kvValue(t.hub.views)?.textContent?.replace(/\s+/g, '')).toBe('125+25');
+        expect(kvValue(t.hub.likes)?.textContent?.trim()).toBe('4');
+        expect(kvValue(t.hub.telegramReactions)?.textContent?.trim()).toBe('9');
+        expect(kvValue(t.hub.telegramMembers)?.textContent?.replace(/\s+/g, '')).toBe('312−3');
+        expect(kvValue(t.hub.blogSubscribers)?.textContent?.replace(/\s+/g, '')).toBe('18+2');
+        expect(kvValue(t.hub.blogViews)?.textContent?.trim()).toBe('—');
+        expect(el().querySelector('.analytics-list + .panel-note')?.textContent).toContain(t.hub.analyticsWindow(7));
+
+        projects.analytics_ = null;
+        await fixture.componentInstance.load('p1');
+        fixture.detectChanges();
+        expect(kvValue(t.hub.views)).toBeNull();
+        expect(el().querySelector('.analytics-list')?.textContent).toContain(t.hub.analyticsFailed);
+        expect(el().querySelector('.analytics-list')?.textContent).toContain(t.hub.publishedPosts);
     });
 
     it('leaves the current layout usable and reports unavailable browser storage', () => {

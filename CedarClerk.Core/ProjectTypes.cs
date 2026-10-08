@@ -23,15 +23,14 @@ public static class ProjectTypes
     // where the server would manage only one.
     public static string StarterDocumentType(string? projectType) => projectType switch
     {
-        // A bare container still has to produce something (ADR-103) — the lightest document there is.
+        // The built-in Empty type is born with no document (ADR-318); a saved preset built on it starts with this.
         Empty or Work or Vault => DocumentTypes.Note,
         // The master reference the whole project hangs off.
         FullGame => DocumentTypes.Design,
         // Post-launch support of anything: patches, releases, press.
         Product => DocumentTypes.Changelog,
         Blog => DocumentTypes.Post,
-        // An unknown or absent type still has to produce something — a project without a document
-        // cannot exist (ADR-103), so the fallback is the type every draft already is.
+        // An unknown or absent type falls back to the type every draft already is.
         _ => DocumentTypes.Post,
     };
 }

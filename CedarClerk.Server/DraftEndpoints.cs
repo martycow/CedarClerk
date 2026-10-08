@@ -1554,14 +1554,8 @@ public static class DraftEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-            // ADR-103 — a project keeps at least one document. The rule is enforced here as well as
-            // on the module's own detach path, because a draft can be deleted from the ordinary
-            // drafts list, and an invariant only one of the two doors honours is not an invariant.
-            // Costs one indexed lookup; for the overwhelmingly common unfiled draft it stops there.
             var info = await db.Drafts.Where(x => x.Id == id && x.OwnerId == uid)
-                .Select(x => new { x.ProjectId, x.ParentDraftId }).FirstOrDefaultAsync();
-            if (await Modules.IndieDev.ProjectEndpoints.IsLastDocumentOfProjectAsync(db, id, info?.ProjectId, uid))
-                return Results.Json(new { error = ErrorMessages.ProjectNeedsOneDocument }, statusCode: StatusCodes.Status409Conflict);
+                .Select(x => new { x.ParentDraftId }).FirstOrDefaultAsync();
 
             var deleted = await db.Drafts
                 .Where(x => x.Id == id && x.OwnerId == uid)
