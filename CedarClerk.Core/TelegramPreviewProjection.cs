@@ -113,6 +113,8 @@ public static class TelegramPreviewProjection
         RichAudioBlock a => Media(Kinds.Audio, [a.Url], a.Caption),
         RichSlideshowBlock s => Media(Kinds.Slideshow, s.Urls, null),
         RichCollageBlock c => Media(Kinds.Collage, c.Urls, null),
+        // Invisible in-message jump target for TOC links; nothing to draw on the phone.
+        RichAnchorBlock => null,
         _ => null,
     };
 

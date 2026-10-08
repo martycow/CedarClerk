@@ -300,8 +300,9 @@ public class TelegramPreviewProjectionTests
         var preview = Project(cedarJson, thread: false);
 
         var blocks = Assert.Single(preview.Messages).Blocks;
-        // Nothing is dropped on the way from the renderer to the phone.
-        Assert.Equal(rendered.Count, blocks.Count);
+        // Nothing visible is dropped on the way from the renderer to the phone. A RichAnchorBlock is an
+        // invisible jump target emitted before each heading (TOC links), so it has no phone counterpart.
+        Assert.Equal(rendered.Count(b => b is not RichAnchorBlock), blocks.Count);
         Assert.Equal(
             ["heading", "paragraph", "list", "list", "list", "quote", "code", "divider", "photo", "slideshow", "video", "audio"],
             blocks.Select(b => b.Kind));
