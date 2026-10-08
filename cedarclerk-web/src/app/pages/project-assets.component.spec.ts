@@ -274,4 +274,56 @@ describe('project assets', () => {
         expect(fixture.componentInstance.selected()?.id).toBe('second');
         expect(fixture.componentInstance.links().map(link => link.id)).toEqual(['d2']);
     });
+    it('keeps two areas on screen and says so when no file is chosen', async () => {
+        const t = en.projects.assets;
+        const grid = root().querySelector<HTMLElement>('.assets-grid')!;
+        const pane = () => grid.querySelector<HTMLElement>('aside.inspector')!;
+
+        expect(grid.querySelector('section.index')).not.toBeNull();
+        expect(pane().classList.contains('is-empty')).toBe(true);
+        expect(pane().textContent).toContain(t.noSelectionTitle);
+        expect(pane().querySelector('.preview-pane')).toBeNull();
+
+        root().querySelector<HTMLButtonElement>('button.tile')!.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(pane().classList.contains('is-empty')).toBe(false);
+        expect(pane().querySelector('.preview-pane')).not.toBeNull();
+        expect(pane().querySelector('.asset-name')?.textContent).toContain('hero.png');
+        expect(grid.querySelector('section.index')).not.toBeNull();
+    });
+
+    it('names the scope of a local file and where it comes from', async () => {
+        const t = en.projects.assets;
+        root().querySelector<HTMLButtonElement>('button.tile')!.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const pane = root().querySelector<HTMLElement>('aside.inspector')!;
+        expect(pane.querySelector('.scope-tag')?.textContent?.trim()).toBe(t.scopeLocal);
+        const from = pane.querySelector<HTMLElement>('app-spec-row.from-row')!;
+        expect(from.querySelector('.label')?.textContent?.trim()).toBe(t.fromLabel);
+        expect(from.querySelector('.value')?.textContent?.trim()).toBe('DEV-PC · D:\\Game');
+    });
+
+    it('labels the two scopes and explains the one on screen', () => {
+        const t = en.projects.assets;
+        const labels = [...root().querySelectorAll('app-index-tabs.source-strip .it-label')]
+            .map(node => node.textContent?.trim());
+        expect(labels).toEqual([t.sourceUploaded, t.sourceDisk]);
+        expect(labels).toEqual(['Project files', 'Local files']);
+        expect(root().querySelector('.scope-note')?.textContent?.trim()).toBe(t.scopeLocalNote);
+        expect(ru.projects.assets.sourceUploaded).toBe('Файлы проекта');
+        expect(ru.projects.assets.sourceDisk).toBe('Локальные файлы');
+    });
+
+    it('sends a browser without the desktop bridge to the download page', async () => {
+        api.listHandler = async () => ({ ...PAGE, rootPath: null, sourceMachine: null, total: 0, totalIndexed: 0, items: [] });
+        await fixture.componentInstance.load();
+        fixture.detectChanges();
+
+        const link = root().querySelector<HTMLAnchorElement>('.pick-card app-button.get-desktop a')!;
+        expect(link.getAttribute('href')).toBe('/download');
+    });
 });

@@ -26,7 +26,7 @@ public static class DownloadEndpoints
     private const string Manifest = "latest.yml";
 
     /// <summary>
-    /// Registers the static-file branch and the one convenience route. Call it beside the other
+    /// Registers the static-file branch and the convenience routes. Call it beside the other
     /// <c>UseStaticFiles</c> calls — never in desktop mode, where this server *is* the thing being
     /// updated and the folder would only ever be empty.
     /// </summary>
@@ -96,5 +96,74 @@ public static class DownloadEndpoints
                 ? Results.NotFound(new { error = ErrorMessages.NoDesktopBuildPublished })
                 : Results.Redirect($"{RequestPath}/{file}");
         });
+
+        app.MapGet($"{RequestPath}/platforms", (HttpContext ctx) =>
+        {
+            // The list changes under a fixed URL, like the manifests it is read from.
+            ctx.Response.Headers.CacheControl = "no-cache, must-revalidate";
+            return Results.Ok(new
+            {
+                platforms = DesktopInstallers.Published(downloadsDir).Select(i => new
+                {
+                    platform = i.Platform,
+                    version = i.Version,
+                    url = $"{RequestPath}/latest/{i.Platform}",
+                }),
+            });
+        });
+
+        app.MapGet($"{RequestPath}/latest/{{platform}}", (string platform) =>
+            DesktopInstallers.Find(downloadsDir, platform) is { } installer
+                ? Results.Redirect($"{RequestPath}/{Uri.EscapeDataString(installer.File)}")
+                : Results.NotFound(new { error = ErrorMessages.NoDesktopBuildPublished }));
     }
+}
+
+public sealed record DesktopInstaller(string Platform, string Version, string File);
+
+/// <summary>
+/// Which installers are published, read from the same `electron-updater` manifests the installed
+/// copies update from — one per platform, so a platform is offered exactly when its manifest and
+/// the file it names are both in the folder.
+/// </summary>
+public static class DesktopInstallers
+{
+    // A manifest's `path:` is what the updater wants, which on macOS is the ZIP; a person
+    // downloading by hand wants the DMG the same manifest lists under `files:`.
+    private static readonly (string Platform, string Manifest, string[] Extensions)[] Platforms =
+    [
+        ("windows", "latest.yml", [".exe"]),
+        ("mac", "latest-mac.yml", [".dmg", ".zip"]),
+        ("linux", "latest-linux.yml", [".AppImage"]),
+    ];
+
+    public static IReadOnlyList<DesktopInstaller> Published(string downloadsDir) =>
+        Platforms.Select(p => Read(downloadsDir, p.Platform, p.Manifest, p.Extensions))
+            .OfType<DesktopInstaller>().ToList();
+
+    public static DesktopInstaller? Find(string downloadsDir, string platform) =>
+        Published(downloadsDir).FirstOrDefault(i => i.Platform.Equals(platform, StringComparison.OrdinalIgnoreCase));
+
+    private static DesktopInstaller? Read(string downloadsDir, string platform, string manifest, string[] extensions)
+    {
+        var manifestPath = Path.Combine(downloadsDir, manifest);
+        if (!File.Exists(manifestPath)) return null;
+
+        var lines = File.ReadLines(manifestPath).Select(line => line.Trim()).ToList();
+        var version = Value(lines, "version:").FirstOrDefault();
+        var candidates = Value(lines, "- url:").Concat(Value(lines, "path:"))
+            // A manifest is uploaded by hand; a name that is not a bare file name must not become a path.
+            .Where(name => name.Length > 0 && Path.GetFileName(name) == name && File.Exists(Path.Combine(downloadsDir, name)))
+            .ToList();
+
+        var file = extensions
+            .Select(ext => candidates.FirstOrDefault(name => name.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+            .FirstOrDefault(name => name is not null);
+
+        return string.IsNullOrEmpty(version) || file is null ? null : new DesktopInstaller(platform, version, file);
+    }
+
+    private static IEnumerable<string> Value(IEnumerable<string> lines, string key) =>
+        lines.Where(line => line.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+            .Select(line => line[key.Length..].Trim().Trim('\'', '"'));
 }

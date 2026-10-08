@@ -24,12 +24,15 @@
     max-width: 100%;
 }
 
+.scope-note,
 .refile-note {
     flex: none;
     margin: 0;
     color: var(--wood-ink-soft);
     font-size: var(--fs-meta);
 }
+
+.scope-note { max-width: 80ch; }
 
 /* The library runs embedded here (its own padding and storage shelf suppressed), so it takes the
    room left under the strip and scrolls inside it. */
@@ -38,24 +41,27 @@
     min-height: 0;
 }
 
-.kind-strip { flex: none; }
+.kind-strip {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-self: flex-start;
+    min-width: 0;
+    width: fit-content;
+    max-width: 100%;
+}
 
-/* One column until a file is opened: a right column with nothing in it is a hole, not a column
-   (ADR-164 rule 4). */
+/* Two areas at every moment: the index on the left, the chosen file's preview and properties on
+   the right. With nothing chosen the right one says so rather than leaving. */
 .assets-grid {
     display: grid;
     flex: 1;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-    align-items: stretch;
-    min-height: 0;
-}
-
-.assets-grid.with-inspector {
     grid-template-columns:
         minmax(0, 1fr)
         minmax(var(--pane-inspector-min), var(--pane-inspector-max));
     gap: var(--pane-gap);
+    align-items: stretch;
+    min-height: 0;
 }
 
 .index {
@@ -136,14 +142,18 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    min-height: var(--hit-chrome);
 }
+
+.inspector app-empty-state { flex: 1; }
+
+.scope-tag { white-space: nowrap; }
 
 .asset-name {
     margin: 0;
+    font-size: var(--fs-body);
     font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 .file-actions {
@@ -267,8 +277,7 @@
 }
 
 /* Not full-width: a button stretched across the card reads as a banner, not as the action. */
-.pick-card app-button,
-.pick-card .btn {
+.pick-card app-button {
     align-self: flex-start;
 }
 
@@ -361,7 +370,10 @@
 
 .preview { aspect-ratio: 4 / 3; }
 
+/* The pane is a scrolling flex column, and a flex item gives up its aspect ratio before the
+   column agrees to scroll. */
 .preview-pane {
+    flex: none;
     aspect-ratio: 4 / 3;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
@@ -579,7 +591,11 @@
 .tile-cell > .tile { flex: 1; min-width: 0; }
 
 @media (max-width: 900px) {
-    .assets-grid.with-inspector {
+    /* With no file chosen the index keeps the whole bounded column, and with it its own scroll —
+       which is what asks for the next page. */
+    .assets-grid { grid-template-columns: minmax(0, 1fr); }
+
+    .assets-grid.has-selection {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: none;
         grid-auto-rows: auto;
@@ -588,15 +604,18 @@
         overflow-y: auto;
     }
 
-    .assets-grid.with-inspector > .index,
-    .assets-grid.with-inspector > .inspector,
-    .assets-grid.with-inspector .index-body {
+    .assets-grid.has-selection > .index,
+    .assets-grid.has-selection > .inspector,
+    .assets-grid.has-selection .index-body {
         min-height: auto;
         overflow: visible;
     }
 
-    .assets-grid.with-inspector .index-body { flex: none; }
+    .assets-grid.has-selection .index-body { flex: none; }
+
+    /* Stacked under the list, a pane with no file in it is only a prompt to scroll past. */
+    .inspector.is-empty { display: none; }
 
     /* The body stops bounding the height here, and a viewport without one draws nothing. */
-    .assets-grid.with-inspector .asset-rows { height: calc(var(--hit-touch) * 12); }
+    .assets-grid.has-selection .asset-rows { height: calc(var(--hit-touch) * 12); }
 }

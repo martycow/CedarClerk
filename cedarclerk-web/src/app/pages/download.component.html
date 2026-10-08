@@ -10,12 +10,39 @@
 
         <p class="dl-body">{{ t().download.body }}</p>
 
-        <div class="dl-cta">
-            <app-button variant="pine" href="/downloads/latest">
-                <app-icon name="download-simple" size="sm" />
-                {{ t().download.get }}
-            </app-button>
+        <div class="dl-cta" aria-live="polite">
+            @if (loading()) {
+                <p class="dl-status">{{ t().download.checking }}</p>
+            } @else {
+                @if (detected(); as os) { <p class="dl-status dl-detected">{{ t().download.detected(name(os)) }}</p> }
+                @if (primary(); as p) {
+                    <app-button class="dl-primary" variant="pine" [href]="p.url">
+                        <app-icon name="download-simple" size="sm" />
+                        {{ t().download.getFor(name(p.platform)) }}
+                    </app-button>
+                    <p class="dl-status dl-version">{{ t().download.version(p.version) }}</p>
+                } @else if (installers().length === 0) {
+                    <p class="dl-status dl-missing">{{ t().download.nonePublished }}</p>
+                } @else if (detected(); as os) {
+                    <p class="dl-status dl-missing">{{ t().download.notPublishedFor(name(os)) }}</p>
+                }
+            }
         </div>
+
+        @if (others().length > 0) {
+            <div class="dl-others">
+                <span class="label">{{ primary() ? t().download.otherPlatforms : t().download.choosePlatform }}</span>
+                <div class="dl-other-row">
+                    @for (o of others(); track o.platform) {
+                        <app-button class="dl-other" variant="paper" size="sm" [href]="o.url"
+                                    [title]="t().download.version(o.version)">
+                            <app-icon name="download-simple" size="sm" />
+                            {{ name(o.platform) }}
+                        </app-button>
+                    }
+                </div>
+            </div>
+        }
 
         <p class="dl-note">{{ t().download.dataNote }}</p>
 

@@ -107,14 +107,17 @@ describe('media library', () => {
     });
 
     it('opening a file fills the inspector shelf and leaves the list standing', async () => {
-        expect(panel(t.fileDetails)).toBeUndefined();
+        expect(panel(t.fileDetails)!.classList.contains('is-empty')).toBe(true);
+        expect(panel(t.fileDetails)!.textContent).toContain(t.noSelectionTitle);
+        expect(panel(t.fileDetails)!.querySelector('.preview-pane')).toBeNull();
 
         (el().querySelector('.tile') as HTMLElement).click();
         fixture.detectChanges();
 
         // The point of the shelf over the modal: both are on screen at once, and the list says
         // which row is being read.
-        expect(panel(t.fileDetails)).toBeDefined();
+        expect(panel(t.fileDetails)!.classList.contains('is-empty')).toBe(false);
+        expect(panel(t.fileDetails)!.querySelector('.preview-pane')).not.toBeNull();
         expect(panel(t.open)).toBeDefined();
         expect(el().querySelector('app-modal')).toBeNull();
         expect(el().querySelector('.tile.is-on')?.textContent).toContain('a1.bin');
@@ -130,10 +133,10 @@ describe('media library', () => {
         const meta = el().querySelector('app-page-header .page-meta')?.textContent ?? '';
         expect(meta).toContain(t.fileCount(105));
         expect(meta).toContain(t.usage(formatBytes(500), formatBytes(1000)));
-        expect(el().querySelector('app-empty-state')).toBeNull();
+        expect(el().querySelector('.library app-empty-state')).toBeNull();
 
         await create({ ...PAGE, items: [], total: 0, counts: { image: 0, video: 0, audio: 0 }, buckets: [] });
-        const empty = el().querySelector('app-empty-state')!;
+        const empty = el().querySelector('.library app-empty-state')!;
         expect(empty).not.toBeNull();
         expect(empty.textContent).toContain(t.empty);
         expect(empty.querySelector('button')).not.toBeNull();
@@ -235,5 +238,36 @@ describe('media library', () => {
 
         expect(fixture.componentInstance.skip()).toBe(60);
         expect(api.queries.map(q => q.skip)).toEqual([60]);
+    });
+    it('says which scope a file is in and where it came from', async () => {
+        const filed = { ...asset('f1', 'image/png'), projectId: 'p1' };
+        await create({ ...PAGE, items: [asset('a1', 'image/png'), filed] });
+        const from = () => panel(t.fileDetails)!.querySelector('app-spec-row.from-row .value')?.textContent?.trim();
+        const scope = () => panel(t.fileDetails)!.querySelector('.scope-tag')?.textContent?.trim();
+
+        fixture.componentInstance.open(fixture.componentInstance.page()!.items[0]);
+        fixture.detectChanges();
+        expect(scope()).toBe(t.scopeAccount);
+        expect(from()).toBe(t.fromAccount('1 Aug 2026'));
+
+        fixture.componentInstance.projects.set([{ id: 'p1', name: 'Cedar Quest' } as never]);
+        fixture.componentInstance.open(fixture.componentInstance.page()!.items[1]);
+        fixture.detectChanges();
+        expect(scope()).toBe(t.scopeProject);
+        expect(from()).toBe(t.fromProject('1 Aug 2026', 'Cedar Quest'));
+    });
+
+    it('embedded in a project it still keeps the file pane beside the list', async () => {
+        fixture.componentRef.setInput('embedded', true);
+        fixture.componentRef.setInput('pinnedProject', 'p1');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(el().querySelector('.media-grid.solo')).toBeNull();
+        expect(panel(t.fileDetails)).toBeDefined();
+        expect(panel(t.storage)).toBeUndefined();
+        expect(fixture.componentInstance.fromLine({ ...asset('f2', 'image/png'), projectId: 'p1' }))
+            .toBe(t.fromThisProject('1 Aug 2026'));
     });
 });

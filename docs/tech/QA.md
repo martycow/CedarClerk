@@ -109,7 +109,7 @@ This is the most incident-hardened surface in the project (ADR-065/066/067, afte
 - **EXIF stripping.** Upload a phone photo that has GPS, download it back from `/media/`, and confirm
   the coordinates are gone in any EXIF viewer. Check the Telegram derivative too.
 - **Assets follow their project.** A file used by a document belongs to that document's project, and
-  the project's Assets screen separates Uploaded from On disk.
+  the project's Assets screen separates Project files from Local files.
 
 ## Blog and showcase
 

@@ -6,6 +6,7 @@ import { formatBytes } from '../core/asset-index.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { ZonedDatePipe } from '../shared/zoned-date.pipe';
+import { formatInZone } from '../core/display-time';
 import { IconComponent } from '../shared/icon.component';
 import { IconName } from '../shared/icon-data.generated';
 import { ButtonComponent } from '../bench/forms/button.component';
@@ -361,6 +362,24 @@ export class MediaLibraryComponent implements OnDestroy {
 
     onThumbError(asset: LibraryAsset) {
         this.thumbFailed.update(set => new Set(set).add(asset.id));
+    }
+
+    /** Pinned to a project the list is that project's scope, and carries the scope's own name. */
+    readonly listTitle = computed(() =>
+        this.pinnedProject() ? this.t().projects.assets.sourceUploaded : this.t().media.open);
+
+    scopeLabel(asset: LibraryAsset) {
+        return asset.projectId ? this.t().media.scopeProject : this.t().media.scopeAccount;
+    }
+
+    /** Only what the row carries: when it was uploaded and which project it is filed in. */
+    fromLine(asset: LibraryAsset) {
+        const t = this.t().media;
+        const date = formatInZone(asset.createdAt, 'd MMM yyyy');
+        if (!asset.projectId) return t.fromAccount(date);
+        const name = this.projects().find(p => p.id === asset.projectId)?.name;
+        if (name) return t.fromProject(date, name);
+        return asset.projectId === this.pinnedProject() ? t.fromThisProject(date) : t.fromProject(date, t.bucketGone);
     }
 
     open(asset: LibraryAsset) {

@@ -13,7 +13,7 @@ because linking it to a document means choosing from a list the modal was coveri
             </app-button>
         }
         @if (source() === 'uploaded') {
-            <app-button primary variant="paper" [disabled]="refiling()" (clicked)="refile()">
+            <app-button primary variant="paper" [disabled]="refiling()" [title]="t().media.refileHint" (clicked)="refile()">
                 <app-icon name="images" size="sm"></app-icon>
                 {{ t().media.refile }}
             </app-button>
@@ -30,8 +30,12 @@ because linking it to a document means choosing from a list the modal was coveri
     <app-index-tabs class="source-strip" [items]="sourceTabs()" [value]="source()"
                     [label]="t().projects.assets.sourceStrip" (selected)="setSource($any($event))" />
 
+    <p class="scope-note">
+        {{ source() === 'uploaded' ? t().projects.assets.scopeProjectNote : t().projects.assets.scopeLocalNote }}
+    </p>
+
     @if (source() === 'uploaded') {
-        <p class="refile-note">{{ refileNote() || t().media.refileHint }}</p>
+        @if (refileNote(); as note) { <p class="refile-note" role="status">{{ note }}</p> }
         <app-media-library class="uploaded" [pinnedProject]="projectId()" embedded />
     } @else {
         <!-- Scanning banner. Two phases, because they cost wildly different amounts: the index is
@@ -125,14 +129,17 @@ because linking it to a document means choosing from a list the modal was coveri
                     <!-- A browser has no folder to offer, and the hosted server has no disk of the
                          author's to read. Both facts, one sentence, plus where to get the app. -->
                     <p class="hint web-only">{{ t().projects.assets.webOnly }}</p>
-                    <a class="btn" href="/downloads/latest">{{ t().projects.assets.getDesktop }}</a>
+                    <app-button class="get-desktop" variant="paper" link="/download">
+                        <app-icon name="download-simple" size="sm"></app-icon>
+                        {{ t().projects.assets.getDesktop }}
+                    </app-button>
                 }
             </div>
         } @else if (page(); as p) {
             <app-index-tabs class="kind-strip" [items]="kindTabs()" [value]="kindTab()" [label]="t().projects.assets.kindStrip"
                             (selected)="pickKind($event)" />
 
-            <div class="assets-grid" [class.with-inspector]="!!selected()">
+            <div class="assets-grid" [class.has-selection]="!!selected()">
                 <section class="card index" [attr.aria-label]="t().projects.assets.title">
                     <div class="index-head">
                         <span class="label">{{ t().projects.assets.title }}</span>
@@ -292,11 +299,11 @@ because linking it to a document means choosing from a list the modal was coveri
                     </div>
                 </section>
 
-                @if (selected(); as a) {
-                    <aside class="card inspector" [attr.aria-label]="t().projects.assets.filePanel">
+                <aside class="card inspector" [class.is-empty]="!selected()" [attr.aria-label]="t().projects.assets.filePanel">
+                    @if (selected(); as a) {
                         <div class="inspector-head">
                             <span class="label">{{ t().projects.assets.filePanel }}</span>
-                            <span class="index-count">{{ t().projects.assets.kindOne[a.kind] }}</span>
+                            <span class="tag muted is-plain scope-tag">{{ t().projects.assets.scopeLocal }}</span>
                             <span class="spacer"></span>
                             <app-button variant="rail" size="sm" [title]="t().common.close"
                                         (clicked)="clearSelection()">
@@ -320,16 +327,14 @@ because linking it to a document means choosing from a list the modal was coveri
                         </div>
 
                         <p class="asset-name" [title]="a.relativePath">{{ a.fileName }}</p>
+                        <app-spec-row class="from-row" wrap [label]="t().projects.assets.fromLabel" [value]="fromLine(a)" />
+                        <app-spec-row [label]="t().projects.assets.colType" [value]="t().projects.assets.kindOne[a.kind]" />
                         <app-spec-row [label]="t().projects.assets.colDetails" [value]="detailsOf(a)" />
                         <app-spec-row [label]="t().drafts.columns.updated"
                                       [value]="a.modifiedAt | zonedDate:'d MMM yyyy, HH:mm'" />
                         <app-spec-row [warn]="!!a.missingSince" [label]="t().projects.assets.colStatus"
                                       [value]="a.missingSince ? t().projects.assets.notFoundAtPath
                                                : (isLocal() ? t().projects.assets.onDisk : t().projects.assets.fingerprint)" />
-                        @if (a.sourceMachine) {
-                            <app-spec-row [label]="t().projects.assets.machineLabel"
-                                          [value]="a.sourceMachine.name ?? t().projects.assets.unknownMachine" />
-                        }
                         <app-spec-row [label]="t().projects.assets.indexedLabel"
                                       [value]="a.indexedAt | zonedDate:'d MMM yyyy, HH:mm'" />
 
@@ -385,8 +390,14 @@ because linking it to a document means choosing from a list the modal was coveri
                             </div>
                         }
                         <p class="hint">{{ t().projects.assets.fileStaysOnDisk }}</p>
-                    </aside>
-                }
+                    } @else {
+                        <div class="inspector-head">
+                            <span class="label">{{ t().projects.assets.filePanel }}</span>
+                        </div>
+                        <app-empty-state icon="file-text" [title]="t().projects.assets.noSelectionTitle"
+                                         [text]="t().projects.assets.noSelectionText" />
+                    }
+                </aside>
             </div>
         }
     }

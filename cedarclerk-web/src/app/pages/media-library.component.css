@@ -50,10 +50,6 @@
     min-height: 0;
 }
 
-/* Embedded with no file chosen the dock would be an empty column, so the board takes the row. */
-.media-grid.solo { grid-template-columns: minmax(0, 1fr); }
-.media-grid.solo .shelves { display: none; }
-
 .card {
     display: flex;
     flex-direction: column;
@@ -107,6 +103,17 @@
 }
 
 .shelves > .card { flex: none; }
+
+/* The file pane is the second area of the screen whether or not a file is chosen, so it takes the
+   column's remaining height instead of collapsing to its content. */
+.shelves > .inspector { flex: 1 0 auto; }
+
+.inspector app-empty-state {
+    flex: 1;
+    padding: var(--space-4);
+}
+
+.scope-tag { white-space: nowrap; }
 
 .search {
     width: 200px;
@@ -352,6 +359,7 @@
     justify-content: center;
     min-height: 120px;
     max-height: 260px;
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     overflow: hidden;
     background: repeating-linear-gradient(45deg, var(--alt), var(--alt) 4px, var(--surface) 4px, var(--surface) 8px);
@@ -403,6 +411,9 @@
     }
 
     .list-row .list-type { display: none; }
+
+    /* Stacked under the list, a pane with no file in it is only a prompt to scroll past. */
+    .inspector.is-empty { display: none; }
 }
 
 @media (max-width: 600px) {

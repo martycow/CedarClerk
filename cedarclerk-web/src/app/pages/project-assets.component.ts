@@ -449,8 +449,8 @@ export class ProjectAssetsComponent implements OnDestroy {
     });
 
     readonly sourceTabs = computed<IndexTabItem[]>(() => [
-        { id: 'uploaded', label: this.t().projects.assets.sourceUploaded },
-        { id: 'disk', label: this.t().projects.assets.sourceDisk },
+        { id: 'uploaded', label: this.t().projects.assets.sourceUploaded, hint: this.t().projects.assets.scopeProjectNote },
+        { id: 'disk', label: this.t().projects.assets.sourceDisk, hint: this.t().projects.assets.scopeLocalNote },
     ]);
 
     setSource(id: 'uploaded' | 'disk') {
@@ -653,6 +653,12 @@ export class ProjectAssetsComponent implements OnDestroy {
             if (asset.sampleRate) parts.splice(1, 0, `${Math.round(asset.sampleRate / 1000)} kHz`);
         }
         return parts.join(' · ');
+    }
+
+    /** Whose machine and which folder under it: the two facts that say where a local file lives. */
+    fromLine(asset: AssetDetail) {
+        const machine = asset.sourceMachine?.name ?? this.sourceMachineName();
+        return this.t().projects.assets.fromLocal(machine, this.page()?.rootPath ?? '');
     }
 
     readonly trackAsset = (_: number, asset: AssetEntry) => asset.id;

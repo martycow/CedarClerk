@@ -33,11 +33,11 @@
                             (selected)="pickType($event)" />
         </div>
 
-        <div class="media-grid" [class.solo]="embedded() && !selected()">
-            <section class="card library" role="region" [attr.aria-label]="t().media.open">
+        <div class="media-grid">
+            <section class="card library" role="region" [attr.aria-label]="listTitle()">
                 <header class="card-head">
                     <span class="card-name">
-                        <span class="label">{{ t().media.open }}</span>
+                        <span class="label">{{ listTitle() }}</span>
                         @if (rangeLabel()) { <span class="card-count">{{ rangeLabel() }}</span> }
                     </span>
                     <span class="spacer"></span>
@@ -87,7 +87,7 @@
                                 </span>
                                 <span class="tile-meta">
                                     <span class="tile-name" [title]="a.fileName">{{ a.fileName }}</span>
-                                    <span class="tile-sub">{{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'MM/dd' }}</span>
+                                    <span class="tile-sub">{{ bytes(a.sizeBytes) }} · {{ a.createdAt | zonedDate:'d MMM' }}</span>
                                 </span>
                             </button>
                         }
@@ -138,7 +138,7 @@
                                 </span>
                                 <span class="m list-type" role="cell">{{ a.contentType }}</span>
                                 <span class="m list-size" role="cell">{{ bytes(a.sizeBytes) }}</span>
-                                <span class="m list-date" role="cell">{{ a.createdAt | zonedDate:'MM/dd/yyyy' }}</span>
+                                <span class="m list-date" role="cell">{{ a.createdAt | zonedDate:'d MMM yyyy' }}</span>
                             </div>
                         }
                     </div>
@@ -178,16 +178,17 @@
                 </section>
                 }
 
-                @if (selected(); as a) {
-                    <section class="card inspector" role="region" [attr.aria-label]="t().media.fileDetails">
+                <section class="card inspector" role="region" [class.is-empty]="!selected()"
+                         [attr.aria-label]="t().media.fileDetails">
+                    @if (selected(); as a) {
                         <header class="card-head">
                             <span class="card-name">
                                 <span class="label">{{ t().media.fileDetails }}</span>
-                                <span class="card-count">{{ bytes(a.sizeBytes) }}</span>
+                                <span class="tag muted is-plain scope-tag">{{ scopeLabel(a) }}</span>
                             </span>
                             <span class="spacer"></span>
                             <app-button variant="rail" size="sm" [title]="t().common.close" (clicked)="close()">
-                                <app-icon name="x" size="xs"></app-icon>
+                                <app-icon name="x" size="xs" [label]="t().common.close"></app-icon>
                             </app-button>
                         </header>
 
@@ -205,10 +206,11 @@
                         </div>
 
                         <p class="file-name" [title]="a.fileName">{{ a.fileName }}</p>
+                        <app-spec-row class="from-row" wrap [label]="t().media.fromLabel" [value]="fromLine(a)" />
                         <app-spec-row [label]="t().media.fileType" [value]="a.contentType" />
                         <app-spec-row [label]="t().media.fileSize" [value]="bytes(a.sizeBytes)" />
                         <app-spec-row [label]="t().media.added"
-                                      [value]="a.createdAt | zonedDate:'MM/dd/yyyy, HH:mm'" />
+                                      [value]="a.createdAt | zonedDate:'d MMM yyyy, HH:mm'" />
 
                         <p class="hint">{{ t().media.insertHint }}</p>
                         <p class="hint">{{ t().media.deleteForever }}</p>
@@ -227,8 +229,14 @@
                             {{ t().common.delete }}
                         </app-button>
                         </div>
-                    </section>
-                }
+                    } @else {
+                        <header class="card-head">
+                            <span class="card-name"><span class="label">{{ t().media.fileDetails }}</span></span>
+                        </header>
+                        <app-empty-state icon="image" [title]="t().media.noSelectionTitle"
+                                         [text]="t().media.noSelectionText" />
+                    }
+                </section>
             </div>
         </div>
     }

@@ -46,10 +46,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 
 **Wave 5 — publishing (ADR-316, ADR-317)** — done 08.10.2026.
 
-**Wave 6 — assets**
-- [ ] T-421 Asset viewer: grid left, preview + properties right; visual pass (Assets 1, 3) #assets #ui P2
-- [ ] T-422 Asset origin is legible — replace "No project / Uploaded / On disk" with clear scope labels and a per-file "from" line; add the terms to `TERMINOLOGY.md` (Assets 5) #assets #ui P2
-- [ ] T-423 Downloads page with OS detection — On disk's download button opens it; installers per OS (Assets 4) #desktop #ui P2
+**Wave 6 — assets** — done 08.10.2026.
 
 **Wave 7 — glossary (ADR-320)**
 - [ ] T-424 Glossary entry model — `GlossaryEntry` + per-language rows with localized name, spellings, description; migration grouping by `SourceTermId`; renderers and editor lookup rewritten; one editor form (Glossary 1) #glossary #backend P2
