@@ -112,7 +112,8 @@ export interface KnownChat {
     type: string;
 }
 
-const seriesQuery = (days: number, sources: readonly string[]) => `?days=${days}&sources=${sources.join(',')}`;
+const seriesQuery = (days: number, sources: readonly string[], project?: string | null) =>
+    `?days=${days}&sources=${sources.join(',')}${project ? `&project=${project}` : ''}`;
 
 @Injectable({ providedIn: 'root' })
 export class ChannelsService {
@@ -132,13 +133,13 @@ export class ChannelsService {
 
     /** Selection reaches the server: `sources` are the selected ids (`blog`, `channel:{id}`,
      *  `target:{id}`); unknown or unowned ids are silently omitted, never 404. */
-    series(days: number, sources: readonly string[]) {
-        return firstValueFrom(this.http.get<StatsSeries>(`/api/stats/series${seriesQuery(days, sources)}`));
+    series(days: number, sources: readonly string[], project?: string | null) {
+        return firstValueFrom(this.http.get<StatsSeries>(`/api/stats/series${seriesQuery(days, sources, project)}`));
     }
 
     /** The same matrix as `series()` as a file — an `<a download>` target, cookie-authenticated. */
-    seriesCsvUrl(days: number, sources: readonly string[]) {
-        return `/api/stats/series.csv${seriesQuery(days, sources)}`;
+    seriesCsvUrl(days: number, sources: readonly string[], project?: string | null) {
+        return `/api/stats/series.csv${seriesQuery(days, sources, project)}`;
     }
 
     listKnown() {
@@ -154,8 +155,8 @@ export class ChannelsService {
         return firstValueFrom(this.http.get<BestTimeSlot[]>(`/api/channels/${id}/best-times`));
     }
 
-    publishingStats() {
-        return firstValueFrom(this.http.get<PublishingStats>('/api/stats/publishing'));
+    publishingStats(project?: string | null) {
+        return firstValueFrom(this.http.get<PublishingStats>('/api/stats/publishing', { params: project ? { project } : {} }));
     }
 
     listInviteLinks(id: string) {

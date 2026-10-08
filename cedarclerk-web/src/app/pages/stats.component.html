@@ -1,5 +1,13 @@
-<!--The Posts Manager's Stats tab (ADR-148): the page header is the manager's, so this file starts
-at the filter strip.-->
+<div class="page stats-page" data-layout="operational">
+<app-page-header [title]="t().stats.crumb">
+    <!--An anchor, so the browser saves the file with the session cookie and no fetch; with
+    nothing drawn the address goes, not the element (ADR-169).-->
+    <a primary class="btn export-csv" download [attr.href]="canExport() ? csvUrl() : null"
+       [attr.aria-disabled]="canExport() ? null : 'true'" [title]="t().stats.exportCsvHint">
+        <app-icon name="download-simple" size="sm" />{{ t().stats.exportCsv }}
+    </a>
+</app-page-header>
+<div class="stats-scroll">
 @if (loading()) {
 <p class="stats-hint">{{ t().common.loading }}</p>
 } @else {
@@ -96,14 +104,6 @@ at the filter strip.-->
                                 [label]="t().stats.metricStrip" (selected)="setMetric($event)" />
                 <app-index-tabs [items]="viewTabs()" [value]="view()"
                                 [label]="t().stats.viewStrip" (selected)="setView($event)" />
-                <!--T-243 — the panel's own command in its header (ADR-148 §4): the drawn matrix as
-                a file, by the same parameters as the request. An anchor, so the browser saves it
-                with the session cookie and no fetch; with nothing drawn the address goes, not the
-                element (ADR-169).-->
-                <a class="btn sm export-csv" download [attr.href]="canExport() ? csvUrl() : null"
-                   [attr.aria-disabled]="canExport() ? null : 'true'" [title]="t().stats.exportCsvHint">
-                    <app-icon name="download-simple" size="xs" />{{ t().stats.exportCsv }}
-                </a>
             </div>
             <div class="card-body chart-body">
             @if (!drawable().length) {
@@ -368,3 +368,5 @@ at the filter strip.-->
     </div>
 </div>
 }
+</div>
+</div>

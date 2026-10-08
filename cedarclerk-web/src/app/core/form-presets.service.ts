@@ -15,7 +15,7 @@ export interface FormPreset {
     createdAt: string;
 }
 
-// ADR-060 — the Forms tab edits the v2 multi-language blob natively: one skeleton of stable
+// ADR-060 — the Forms page edits the v2 multi-language blob natively: one skeleton of stable
 // question/option ids, per-language text dictionaries on top. Everything else in the app keeps
 // consuming the single-language projection (parseRegistrationForm in drafts.service).
 export interface FormOptionEdit { id: string; label: Record<string, string>; }

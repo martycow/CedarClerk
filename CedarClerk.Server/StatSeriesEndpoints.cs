@@ -49,23 +49,23 @@ public static class StatSeriesEndpoints
 
     public static void MapStatSeriesEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/stats/series", async (ClaimsPrincipal user, CedarDbContext db, int days = DefaultDays, string? sources = null) =>
+        app.MapGet("/api/stats/series", async (ClaimsPrincipal user, CedarDbContext db, int days = DefaultDays, string? sources = null, Guid? project = null) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (!TryParseSources(sources, out var selected))
                 return Results.BadRequest(new { error = ErrorMessages.UnknownStatSource });
 
-            var result = await BuildAsync(db, uid, days, selected, DateTime.UtcNow);
+            var result = await BuildAsync(db, uid, days, selected, DateTime.UtcNow, project);
             return Results.Ok(result.Response);
         }).RequireAuthorization();
 
-        app.MapGet("/api/stats/series.csv", async (ClaimsPrincipal user, CedarDbContext db, int days = DefaultDays, string? sources = null) =>
+        app.MapGet("/api/stats/series.csv", async (ClaimsPrincipal user, CedarDbContext db, int days = DefaultDays, string? sources = null, Guid? project = null) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (!TryParseSources(sources, out var selected))
                 return Results.BadRequest(new { error = ErrorMessages.UnknownStatSource });
 
-            var result = await BuildAsync(db, uid, days, selected, DateTime.UtcNow);
+            var result = await BuildAsync(db, uid, days, selected, DateTime.UtcNow, project);
             var from = result.Aligned.Days.Count > 0 ? result.Aligned.Days[0] : result.Today;
             var to = result.Aligned.Days.Count > 0 ? result.Aligned.Days[^1] : result.Today;
             // The BOM is already in the string; UTF8.GetBytes adds no preamble of its own.
@@ -100,7 +100,12 @@ public static class StatSeriesEndpoints
 
     public sealed record BuildResult(StatSeriesResponse Response, StatSeries Aligned, DateOnly Today);
 
-    public static async Task<BuildResult> BuildAsync(CedarDbContext db, string uid, int days, IReadOnlyList<string> selected, DateTime nowUtc)
+    /// <summary>
+    /// A named project narrows what is derived from documents — the publish days. A source's own
+    /// readings measure a channel, an account or the whole blog and have no document to filter by.
+    /// </summary>
+    public static async Task<BuildResult> BuildAsync(
+        CedarDbContext db, string uid, int days, IReadOnlyList<string> selected, DateTime nowUtc, Guid? project = null)
     {
         days = Math.Clamp(days, MinDays, MaxDays);
 
@@ -158,7 +163,8 @@ public static class StatSeriesEndpoints
                 var rows = await db.BlogStatSnapshots.Where(s => s.OwnerId == uid).OrderBy(s => s.TakenAt)
                     .Select(s => new { s.TakenAt, s.ViewCount, s.LikeCount, s.CommentCount }).ToListAsync();
                 var publishDays = await db.Drafts
-                    .Where(d => d.OwnerId == uid && d.BlogPublishedAt != null && d.BlogPublishedAt >= publishSince)
+                    .Where(d => d.OwnerId == uid && d.BlogPublishedAt != null && d.BlogPublishedAt >= publishSince
+                        && (project == null || d.ProjectId == project))
                     .Select(d => d.BlogPublishedAt!.Value).ToListAsync();
                 readings.Add(new SourceReadings(source.Id, source.Name, source.Tracked,
                     rows.Select(r => new StatReading(DayOf(r.TakenAt), new Dictionary<string, int>
@@ -175,7 +181,8 @@ public static class StatSeriesEndpoints
                 var rows = await db.ChannelStatSnapshots.Where(s => s.OwnerId == uid && s.ChannelId == channelId).OrderBy(s => s.TakenAt)
                     .Select(s => new { s.TakenAt, s.MemberCount, s.TelegramReactionCount, s.TelegramCommentCount }).ToListAsync();
                 var publishDays = await db.ChannelPosts
-                    .Where(p => p.OwnerId == uid && p.ChannelId == channelId && p.PublishedAt >= publishSince)
+                    .Where(p => p.OwnerId == uid && p.ChannelId == channelId && p.PublishedAt >= publishSince
+                        && (project == null || db.Drafts.Any(d => d.Id == p.DraftId && d.ProjectId == project)))
                     .Select(p => p.PublishedAt).ToListAsync();
                 readings.Add(new SourceReadings(source.Id, source.Name, source.Tracked,
                     rows.Select(r => new StatReading(DayOf(r.TakenAt), new Dictionary<string, int>
@@ -194,7 +201,8 @@ public static class StatSeriesEndpoints
                     .Select(s => new { s.TakenAt, s.FollowerCount, s.LikeCount, s.CommentCount }).ToListAsync();
                 var publishDays = await db.PublishJobs
                     .Where(j => j.OwnerId == uid && j.TargetId == targetId && j.Status == PublishJobStatus.Succeeded
-                        && j.FinishedAt != null && j.FinishedAt >= publishSince)
+                        && j.FinishedAt != null && j.FinishedAt >= publishSince
+                        && (project == null || db.Drafts.Any(d => d.Id == j.DraftId && d.ProjectId == project)))
                     .Select(j => j.FinishedAt!.Value).ToListAsync();
                 readings.Add(new SourceReadings(source.Id, source.Name, source.Tracked,
                     rows.Select(r =>

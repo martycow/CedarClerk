@@ -1,0 +1,291 @@
+/* Shared by the Publishing Manager and the Forms page: the page column, the list pane and its rows,
+   the working sheet and the small field controls both draw. */
+/* The shell's body is the scroll container; the page fills it and never sizes itself from the
+   viewport (ADR-239 clause 7). */
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    font-family: var(--font-sans);
+}
+
+/* On the wall, so the wall's ink (ADR-141); everything under a card goes back to paper's. */
+.page > .hint {
+    margin: 0;
+    color: var(--wood-ink-soft);
+    font-size: var(--fs-ui);
+}
+
+.hint {
+    color: var(--t2);
+    font-size: var(--dens-fs);
+}
+
+.channel-error {
+    font-size: var(--fs-meta);
+    color: var(--danger);
+    margin: var(--space-1) 0;
+}
+
+.field-hint {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    margin: 0 0 var(--space-2);
+}
+
+.field-hint-inline {
+    font-size: var(--fs-meta);
+    color: var(--t2);
+    font-weight: 400;
+}
+
+.spacer { flex: 1; }
+
+.sheet {
+    min-width: 0;
+}
+
+.card-head {
+    border-bottom: 1px solid var(--paper-edge);
+}
+
+.card-title {
+    min-width: 0;
+    font-size: var(--fs-15);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-meta {
+    margin-left: auto;
+    font-size: var(--fs-13);
+    color: var(--t3);
+    white-space: nowrap;
+}
+
+.sheet-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: var(--space-4);
+}
+
+.post-toolbar {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    flex: none;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--paper-edge);
+}
+
+.post-search {
+    flex: 1 0 100%;
+    min-width: 0;
+}
+
+.post-sort {
+    flex: 1;
+    min-width: 14ch;
+}
+
+.post-result-count {
+    flex: none;
+    padding-bottom: var(--space-2);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+    .post-toolbar:not(.form-toolbar) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+    }
+
+    .post-toolbar:not(.form-toolbar) .post-search,
+    .post-toolbar:not(.form-toolbar) .post-result-count {
+        grid-column: 1 / -1;
+    }
+
+    .post-toolbar:not(.form-toolbar) .post-sort { min-width: 0; }
+
+    .post-toolbar:not(.form-toolbar) .post-result-count {
+        justify-self: end;
+        padding-bottom: 0;
+    }
+}
+
+.post-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* A row: plate · title over languages · tally · state. Only the title column shrinks, so a long
+   title gives way to the tag and the tag never to the title (T-271). */
+.post-card {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    min-height: var(--hit-touch);
+    padding-top: var(--space-1);
+    padding-bottom: var(--space-1);
+}
+
+.post-card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.post-card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.post-card-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A language is a code in mono, not a pill (ADR-155). */
+.post-card-lang {
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: .03em;
+}
+
+.post-list-message {
+    padding: var(--space-4);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+    line-height: 1.4;
+}
+
+.post-list-message p { margin: 0 0 var(--space-3); }
+
+.post-list-message p:last-child { margin-bottom: 0; }
+
+.detail-field {
+    margin-bottom: 12px;
+}
+
+.detail-field label {
+    display: block;
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--t2);
+    margin-bottom: 5px;
+}
+
+.chat-input {
+    width: 100%;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 8.3 — the remove buttons in the forms editor had no rule on this page at all: `.mini-remove` is
+   declared in editor.component.css, and Angular's view encapsulation keeps it there, so every ✕ in
+   the form editor rendered as a bare browser button. Defined here rather than moved to the global
+   sheet: this is the third page to need it, and a shared icon-button component is a Phase 11
+   cleanup (T-076's mockups decide the shape), not something to invent mid-fix. */
+.mini-remove,
+.mini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--hit-target);
+    height: var(--hit-target);
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--t2);
+    cursor: pointer;
+    transition: background var(--motion-fast) var(--ease),
+                border-color var(--motion-fast) var(--ease),
+                color var(--motion-fast) var(--ease);
+}
+
+.mini:hover:not(:disabled) {
+    background: var(--hover);
+    color: var(--text);
+}
+
+.mini-remove:hover:not(:disabled) {
+    background: var(--hover-danger);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.mini:disabled,
+.mini-remove:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.shelf-list,
+.sheet {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.post-sort {
+    display: grid;
+    gap: var(--space-1);
+    color: var(--t2);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+}
+
+.post-sort select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--hit-surface, var(--hit-chrome));
+    padding: 0 var(--dens-control-x);
+    border: var(--border-field);
+    border-radius: var(--radius-stamp);
+    background: var(--paper-bright);
+    color: var(--text);
+    box-shadow: var(--shadow-field-inset);
+    font: inherit;
+}
+
+.detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+}
+
+.post-card-meta,
+.post-card-langs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}

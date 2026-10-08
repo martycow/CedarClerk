@@ -69,6 +69,19 @@ export interface PublishedPost {
     finishedAt: string | null;
 }
 
+/** One thing that went out: a Telegram send, a job on another network, or the blog publication. */
+export interface PublishEvent {
+    draftId: string;
+    draftTitle: string;
+    network: string;
+    targetName: string | null;
+    publishedAt: string;
+    publicUrl: string | null;
+    partCount: number;
+    /** A Sent scheduled post already stands for this send. */
+    scheduled: boolean;
+}
+
 /** One message of a thread, as the preview describes it (T-106). */
 export interface ThreadPart {
     index: number;
@@ -152,11 +165,17 @@ export class PublishService {
 
     /**
      * Where this owner's posts went — one row per (draft, network, language, account), newest
-     * first. Read by the Posts Manager: before this existed the only place a published URL was
+     * first. Read by the Publishing Manager: before this existed the only place a published URL was
      * ever shown was the editor's progress checklist, and closing it lost the link for good.
      */
     published() {
         return firstValueFrom(this.http.get<{ posts: PublishedPost[] }>('/api/publish/published'));
+    }
+
+    /** Every publication, newest first; Telegram rows are the channel's own send records (ADR-317). */
+    events(project?: string | null) {
+        return firstValueFrom(this.http.get<{ events: PublishEvent[] }>(
+            '/api/publish/events', { params: project ? { project } : {} }));
     }
 
     jobs(draftId: string) {

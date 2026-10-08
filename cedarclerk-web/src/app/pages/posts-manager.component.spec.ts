@@ -1,24 +1,16 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { PostsManagerComponent } from './posts-manager.component';
 import { DraftMeta, DraftsService } from '../core/drafts.service';
 import { blankFormEdit, FormPreset, FormPresetsService } from '../core/form-presets.service';
 import { PostsService } from '../core/posts.service';
-import { PublishService } from '../core/publish.service';
+import { PublishEvent, PublishService } from '../core/publish.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { AuthService } from '../core/auth.service';
+import { WorkspaceContextService } from '../core/workspace-context.service';
 import { en } from '@localization/en';
-
-function sheetFor(marker: string): string {
-    const inline = Array.from(document.querySelectorAll('style')).map(style => style.textContent ?? '');
-    const adopted = Array.from(document.adoptedStyleSheets ?? []).map(
-        sheet => Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n'));
-    const hits = [...inline, ...adopted].filter(text => text.includes(marker));
-    expect(hits.length, `no stylesheet carrying "${marker}" reached the document`).toBeGreaterThan(0);
-    return hits.join('\n').replace(/\/\*[\s\S]*?\*\//g, ' ');
-}
 
 function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
     return {
@@ -32,41 +24,25 @@ function draft(id: string, over: Partial<DraftMeta> = {}): DraftMeta {
     };
 }
 
-// Two live posts (one with a Telegram message and a translation), one private draft that never
-// went out, one archived. The three publish states are what the status stamp is read against,
-// and the unpublished one is what proves the blog row says so rather than rendering an empty
-// link. Four posts, two published, one archived and one pending schedule: every number the
-// header and the inspector print is different from every other, so none of them can be standing
-// in for a neighbour.
+// LIVE is on the blog, in Telegram (two sends) and on Bluesky, so X is its first unreached
+// destination. Its updatedAt is later than every send: a time read from the draft would show.
 const LIVE = draft('live', {
     title: 'Devlog 12', blogSlug: 'devlog-12', isBlogPublished: true,
-    blogPublishedAt: '2026-08-10T09:00:00', languages: ['en'],
-    lastTelegramUsername: 'testingandfun', lastTelegramMessageId: 42,
+    blogPublishedAt: '2026-08-10T09:00:00', languages: ['en'], updatedAt: '2026-08-20T09:00:00',
+    lastTelegramUsername: 'testingandfun', lastTelegramMessageId: 42, projectId: 'p1',
 });
 const EARLIER = draft('earlier', {
     title: 'Devlog 11', blogSlug: 'devlog-11', isBlogPublished: true,
-    blogPublishedAt: '2026-08-03T09:00:00',
+    blogPublishedAt: '2026-08-03T09:00:00', projectId: 'p2',
 });
-const DRAFTED = draft('drafted', { title: 'Notes', isPrivate: true });
+const DRAFTED = draft('drafted', { title: 'Notes', isPrivate: true, projectId: 'p1' });
 const OLD = draft('old', { title: 'Retired', isArchived: true });
+const PLANNED = draft('planned', { title: 'Next stream' });
 
 const PRESET: FormPreset = {
-    id: 'preset-1',
-    name: 'Game experience',
-    formJson: JSON.stringify(blankFormEdit('ru')),
-    language: 'ru',
-    createdAt: '2026-08-01T09:00:00',
+    id: 'preset-1', name: 'Game experience', formJson: JSON.stringify(blankFormEdit('ru')),
+    language: 'ru', createdAt: '2026-08-01T09:00:00',
 };
-
-const EDITABLE_PRESET: FormPreset = (() => {
-    const form = blankFormEdit('ru');
-    form.languages.push('en');
-    form.questions.push({
-        id: 'question-1', type: 'text', required: false,
-        label: { ru: 'Имя', en: 'Name' }, options: [],
-    });
-    return { ...PRESET, formJson: JSON.stringify(form) };
-})();
 
 const SNAPSHOTS = [
     { viewCount: 100, likeCount: 4, dislikeCount: 0, commentCount: 1, takenAt: '2026-08-09T03:30:00Z' },
@@ -74,46 +50,29 @@ const SNAPSHOTS = [
     { viewCount: 150, likeCount: 9, dislikeCount: 0, commentCount: 2, takenAt: '2026-08-11T03:30:00Z' },
 ];
 
-const REGISTRATIONS = [
-    { id: 'r1', name: 'Alice', nickname: null, email: null, socialLink: null, answersJson: null, createdAt: '2026-08-02T09:00:00', isRevoked: false },
-    { id: 'r2', name: null, nickname: 'bob', email: null, socialLink: null, answersJson: null, createdAt: '2026-08-03T09:00:00', isRevoked: true },
-];
+const send = (over: Partial<PublishEvent>): PublishEvent => ({
+    draftId: 'live', draftTitle: 'Devlog 12', network: 'telegram', targetName: 'Testing',
+    publishedAt: '2026-08-12T08:00:00', publicUrl: 'https://t.me/testingandfun/42', partCount: 1,
+    scheduled: false, ...over,
+});
 
 class FakeDrafts {
-    static access: { id: string; revoked: boolean }[] = [];
-    static failRevoke = false;
-    async list() { return structuredClone([LIVE, EARLIER, DRAFTED, OLD]); }
-    async revokeRegistration(_id: string, regId: string) {
-        if (FakeDrafts.failRevoke) throw new Error('nope');
-        FakeDrafts.access.push({ id: regId, revoked: true });
-        return { id: regId, isRevoked: true };
-    }
-    async restoreRegistration(_id: string, regId: string) {
-        FakeDrafts.access.push({ id: regId, revoked: false });
-        return { id: regId, isRevoked: false };
-    }
+    async list() { return structuredClone([LIVE, EARLIER, DRAFTED, OLD, PLANNED]); }
     async listFolders() { return []; }
     async get(id: string) {
         return {
-            id, articleTitle: '', cedarJson: '{}', formLanguages: ['ru', 'en'],
-            registrationFormJson: JSON.stringify({
-                v: 2, languages: ['ru', 'en'], requireName: true,
-                intro: { ru: 'Русское вступление', en: 'English intro' },
-                questions: [{
-                    id: 'q1', type: 'choice', required: true,
-                    label: { ru: 'Русский вопрос', en: 'English question' },
-                    options: [{ id: 'yes', label: { ru: 'Да', en: 'Yes' } }],
-                }],
-            }),
+            id, articleTitle: '', cedarJson: '{}', formLanguages: ['ru'],
+            registrationFormJson: JSON.stringify({ v: 2, languages: ['ru'], requireName: true, intro: {}, questions: [] }),
         } as never;
     }
-    async listRegistrations() { return structuredClone(REGISTRATIONS); }
 }
 
 class FakePosts {
-    async listScheduled() {
+    projects: (string | null | undefined)[] = [];
+    async listScheduled(project?: string | null) {
+        this.projects.push(project);
         return [{
-            id: 's1', draftId: 'live', status: 'Pending', language: 'ru', chatId: '1',
+            id: 's1', draftId: 'planned', status: 'Pending', language: 'ru', chatId: '1',
             targetName: 'Testing', scheduledAtUtc: '2026-08-20T18:00:00Z', network: 'telegram', error: null,
         }] as never;
     }
@@ -121,6 +80,7 @@ class FakePosts {
 }
 
 class FakePublish {
+    projects: (string | null | undefined)[] = [];
     async published() {
         return {
             posts: [{
@@ -130,54 +90,63 @@ class FakePublish {
             }],
         } as never;
     }
+    async events(project?: string | null) {
+        this.projects.push(project);
+        return {
+            events: [
+                send({}),
+                send({ publishedAt: '2026-08-05T08:00:00', publicUrl: 'https://t.me/testingandfun/30' }),
+            ],
+        };
+    }
 }
 
 class FakePresets {
-    listCalls = 0;
-    nextList: Promise<FormPreset[]> | null = null;
-
-    list() {
-        this.listCalls++;
-        return this.nextList ?? Promise.resolve([]);
-    }
-
-    async create(name: string, formJson: string, language: string) {
-        return { id: 'preset-new', name, formJson, language, createdAt: '2026-08-02T09:00:00' };
-    }
+    async list() { return [PRESET]; }
 }
 
 class FakeComments {
     newComments = signal(0);
     newReactions = signal(0);
     async refreshNewCount() {}
-    async listAll() { return { reactions: { likes: 0, dislikes: 0, newLikes: 0, newDislikes: 0 }, reactionsByDraft: [], comments: [] }; }
+    async listAll() {
+        return {
+            reactions: { likes: 0, dislikes: 0, newLikes: 0, newDislikes: 0 }, reactionsByDraft: [],
+            comments: [{ draftId: 'live', isNew: true }, { draftId: 'live', isNew: true }],
+        } as never;
+    }
 }
 
-describe('posts manager', () => {
+describe('publishing manager', () => {
     let fixture: ComponentFixture<PostsManagerComponent>;
-    let feedback: CommentsService;
-    let presetsApi: FakePresets;
     const t = en.manager;
 
     const page = () => fixture.componentInstance;
     const el = () => fixture.nativeElement as HTMLElement;
-    const tiles = () => [...el().querySelectorAll('.manager-tabs [role="tab"]')] as HTMLElement[];
     const cards = () => [...el().querySelectorAll('.post-card')] as HTMLElement[];
     const card = (title: string) => cards().find(c => c.textContent?.includes(title))!;
-    const shelf = () => el().querySelector('.inspector') as HTMLElement;
-    const rows = () => [...shelf().querySelectorAll('app-spec-row')] as HTMLElement[];
-    const row = (label: string) => rows().find(r => r.querySelector('.label')?.textContent?.trim() === label);
-    const rowValue = (label: string) => row(label)?.querySelector('.text')?.textContent?.trim();
     const sheet = () => el().querySelector('.sheet') as HTMLElement;
     const header = () => el().querySelector('app-page-header') as HTMLElement;
+    const chips = () => [...el().querySelectorAll('.post-chips button')] as HTMLButtonElement[];
+    const tabs = () => [...sheet().querySelectorAll('app-index-tabs [role="tab"]')] as HTMLButtonElement[];
+    const text = (selector: string) => el().querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim();
 
-    async function settle() {
-        fixture.detectChanges();
-        for (let i = 0; i < 6; i++) await Promise.resolve();
-        fixture.detectChanges();
+    async function settle(target: ComponentFixture<PostsManagerComponent> = fixture) {
+        target.detectChanges();
+        for (let i = 0; i < 8; i++) await Promise.resolve();
+        target.detectChanges();
     }
 
-    beforeEach(async () => {
+    async function open(title: string, tab?: string) {
+        card(title).click();
+        await settle();
+        if (tab) {
+            page().setDetailTab(tab);
+            await settle();
+        }
+    }
+
+    function configure(queryParams: Record<string, string> = {}) {
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
@@ -186,289 +155,266 @@ describe('posts manager', () => {
                 { provide: PublishService, useClass: FakePublish },
                 { provide: FormPresetsService, useClass: FakePresets },
                 { provide: CommentsService, useClass: FakeComments },
+                ...(Object.keys(queryParams).length
+                    ? [{ provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } } }]
+                    : []),
             ],
         });
-        feedback = TestBed.inject(CommentsService);
-        presetsApi = TestBed.inject(FormPresetsService) as unknown as FakePresets;
         TestBed.inject(LocaleService).set('en');
         // A blog lives at its owner's subdomain, and the component asks the server which one.
         TestBed.inject(AuthService).blogUrl.set('https://martycow.cedarclerk.app');
+    }
+
+    beforeEach(async () => {
+        configure();
         fixture = TestBed.createComponent(PostsManagerComponent);
         await settle();
     });
 
-    // The strip is a tablist, and the tally it carries is the badge rules' own: nothing at zero,
-    // and the count when there is one.
-    // #1 — Documents counted a Telegram-only post as published and Posts called it a draft.
     it('treats a post sent only to Telegram as live, like the Documents screen does', () => {
         const telegramOnly = draft('tg', { lastTelegramMessageId: 7, lastTelegramUsername: 'chan' });
         expect(page().publishState(telegramOnly)).toBe('live');
         expect(page().publishState(draft('never'))).toBe('draft');
+        expect(page().publishState(PLANNED)).toBe('scheduled');
         expect(page().publishState(draft('old', { isArchived: true, lastTelegramMessageId: 7 }))).toBe('archived');
     });
 
-    it('draws the sections as tabs and badges the feedback tally on Posts', async () => {
-        expect(tiles().map(x => x.firstChild?.textContent?.trim()))
-            .toEqual([t.tabs.posts, t.tabs.stats, t.tabs.forms]);
-        expect(tiles()[0].getAttribute('aria-selected')).toBe('true');
-        expect(tiles()[0].querySelector('.seg-badge')).toBeNull();
-
-        feedback.newComments.set(3);
-        feedback.newReactions.set(4);
-        await settle();
-        expect(tiles()[0].querySelector('.seg-badge')?.textContent?.trim()).toBe('7');
-    });
-
-    it('switches the body with the tab, and keeps the inspector out of the forms tab', async () => {
-        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-        expect(page().tab()).toBe('posts');
-        tiles()[2].click();
-        await settle();
-
-        expect(page().tab()).toBe('forms');
-        expect(el().querySelector('.inspector')).toBeNull();
-        expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({
-            queryParams: expect.objectContaining({ tab: 'forms' }),
-        }));
-    });
-
-    it('declares the operational measure and uses the shared fluid pane anatomy', async () => {
-        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
-        const postsGrid = el().querySelector('.mg-grid') as HTMLElement;
-        expect(postsGrid.classList.contains('split-workspace')).toBe(true);
-        expect(postsGrid.classList.contains('is-two')).toBe(false);
-        expect([...postsGrid.children].every(child => child.classList.contains('split-pane'))).toBe(true);
-
-        page().presets.set([PRESET]);
-        page().presetsLoaded.set(true);
-        tiles()[2].click();
-        await settle();
-        const formsGrid = el().querySelector('.mg-grid') as HTMLElement;
-        expect(formsGrid.classList.contains('split-workspace')).toBe(true);
-        expect(formsGrid.classList.contains('is-two')).toBe(true);
-        expect([...formsGrid.children].every(child => child.classList.contains('split-pane'))).toBe(true);
-    });
-
-    // ADR-239 clause 6 — the screen-level counts are the header's meta line, the same on every
-    // tab. An empty Forms list owns its creation action; once data exists it moves to the header.
-    it('draws the counts and keeps the Forms creation action in exactly one place', async () => {
-        expect(header().querySelector('.page-title')?.textContent?.trim()).toBe(t.crumb);
+    // ADR-317 §1 and §5 — the name, the counts, and "+ New post" as the header's one action.
+    it('is the Publishing Manager, with the counts and New post in its header', () => {
+        expect(header().querySelector('.page-title')?.textContent?.trim()).toBe('Publishing Manager');
         const meta = [...header().querySelectorAll('.page-meta > span:not(.sep)')].map(s => s.textContent?.trim());
-        expect(meta).toEqual([t.rulerPosts(4), t.rulerPublished(2), t.rulerScheduled(1)]);
-        expect(header().querySelector('.page-actions .btn')).toBeNull();
+        expect(meta).toEqual([t.rulerPosts(5), t.rulerPublished(2), t.rulerScheduled(1)]);
 
-        tiles()[2].click();
-        await settle();
-        expect(header().querySelector('.page-actions .btn')).toBeNull();
-        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
-        expect(el().querySelector('.is-forms')).toBeNull();
-        expect([...el().querySelectorAll('app-button')].filter(x => x.textContent?.trim() === t.forms.newPreset).length).toBe(1);
-
-        page().presets.set([PRESET]);
-        await settle();
-        expect(header().querySelector('.page-actions .btn')?.textContent?.trim()).toBe(t.forms.newPreset);
-        expect([...el().querySelectorAll('app-button')].filter(x => x.textContent?.trim() === t.forms.newPreset).length).toBe(1);
+        const create = header().querySelector('.new-post a') as HTMLAnchorElement;
+        expect(create.textContent).toContain(t.newPost);
+        expect(create.getAttribute('href')).toBe('/drafts?new=1');
+        expect(header().querySelectorAll('.page-actions a, .page-actions button').length).toBe(1);
     });
 
-    it('treats a successful empty preset response as loaded instead of fetching it again', async () => {
-        expect(presetsApi.listCalls).toBe(1);
-        expect(page().presetsLoaded()).toBe(true);
-
-        page().setTab('forms');
-        page().setTab('posts');
-        page().setTab('forms');
-        await settle();
-
-        expect(presetsApi.listCalls).toBe(1);
+    // ADR-317 §2 and ADR-316 §3 — two panes, and no tab strip left to hold Stats or Forms.
+    it('lays out the list and the selected post as two panes with no section tabs', () => {
+        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+        const grid = el().querySelector('.mg-grid') as HTMLElement;
+        expect(grid.classList.contains('split-workspace')).toBe(true);
+        expect(grid.classList.contains('is-two')).toBe(true);
+        expect(grid.children.length).toBe(2);
+        expect([...grid.children].every(child => child.classList.contains('split-pane'))).toBe(true);
+        expect(el().querySelector('.manager-tabs')).toBeNull();
+        expect(el().querySelector('.inspector')).toBeNull();
+        expect(el().querySelector('app-stats')).toBeNull();
+        expect((page() as unknown as Record<string, unknown>)['setTab']).toBeUndefined();
     });
 
-    it('deduplicates an in-flight preset request and shows its loading state', async () => {
-        let resolveList!: (value: FormPreset[]) => void;
-        presetsApi.nextList = new Promise(resolve => { resolveList = resolve; });
-        page().presets.set([]);
-        page().presetsLoaded.set(false);
-        const callsBefore = presetsApi.listCalls;
+    it('filters the list with the All, Published, Scheduled and Drafts chips', async () => {
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        expect(chips().map(c => c.textContent?.trim())).toEqual([t.filterAll, t.chipPublished, t.scheduled, t.chipDrafts]);
+        expect(chips()[0].getAttribute('aria-pressed')).toBe('true');
+        expect(el().querySelector('.post-filter-trigger')).toBeNull();
 
-        const first = page().loadPresets();
-        const second = page().loadPresets();
-        page().selectedId.set('drafted');
+        chips()[1].click();
         await settle();
+        expect(cards().map(c => c.querySelector('.post-card-title-text')?.textContent)).toEqual(['Devlog 12', 'Devlog 11']);
+        expect(chips()[1].getAttribute('aria-pressed')).toBe('true');
+        expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({
+            queryParams: expect.objectContaining({ status: 'live' }),
+        }));
 
-        expect(el().querySelector('app-form-ref')).toBeNull();
-        expect(el().querySelector('[role="status"]')?.textContent?.trim()).toBe(en.common.loading);
-
-        page().setTab('forms');
+        chips()[2].click();
         await settle();
+        expect(page().visiblePosts().map(d => d.id)).toEqual(['planned']);
 
-        expect(first).toBe(second);
-        expect(presetsApi.listCalls).toBe(callsBefore + 1);
-        expect(page().presetsLoading()).toBe(true);
-        expect(el().querySelector('[role="status"]')?.textContent?.trim()).toBe(en.common.loading);
-        expect(el().querySelector('.is-forms')).toBeNull();
-
-        resolveList([PRESET]);
-        await first;
+        chips()[3].click();
         await settle();
+        expect(page().visiblePosts().map(d => d.id)).toEqual(['drafted']);
 
-        expect(page().presetsLoaded()).toBe(true);
-        expect(page().presetsLoading()).toBe(false);
-        expect(el().querySelector('.is-forms')).not.toBeNull();
+        chips()[0].click();
+        await settle();
+        expect(page().visiblePosts().length).toBe(5);
+        expect(text('.post-result-count')).toBe(t.resultCount(5, 5));
     });
 
-    it('shows one retryable error instead of presenting a failed preset load as an empty library', async () => {
-        let rejectList!: (reason: Error) => void;
-        presetsApi.nextList = new Promise((_resolve, reject) => { rejectList = reject; });
-        page().presets.set([]);
-        page().presetsLoaded.set(false);
-
-        const load = page().loadPresets();
-        page().setTab('forms');
-        rejectList(new Error('offline'));
-        await load;
+    it('searches and stably sorts only publishable, non-template posts', async () => {
+        page().drafts.set([
+            LIVE, EARLIER, DRAFTED, OLD,
+            draft('working-note', { title: 'Internal note', documentType: 'note' }),
+            draft('template', { title: 'Post template', isTemplate: true }),
+            draft('changelog', { title: 'Alpha release', documentType: 'changelog' }),
+        ]);
+        page().setPostSortValue('title:asc');
         await settle();
 
-        expect(page().presetsLoaded()).toBe(false);
-        expect(page().presetLoadError()).toBe(t.errors.loadPresets);
-        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
-        expect([...el().querySelectorAll('app-button')]
-            .filter(x => x.textContent?.trim() === t.forms.newPreset).length).toBe(0);
-
-        presetsApi.nextList = Promise.resolve([PRESET]);
-        const retry = el().querySelector('app-empty-state app-button button') as HTMLButtonElement;
-        expect(retry.textContent?.trim()).toBe(en.projects.canvas.retry);
-        retry.click();
-        await settle();
-
-        expect(page().presetsLoaded()).toBe(true);
-        expect(page().presetLoadError()).toBe('');
-        expect(el().querySelector('.is-forms')).not.toBeNull();
+        expect(page().postPool().map(d => d.id)).toEqual(['live', 'earlier', 'drafted', 'old', 'changelog']);
+        expect(page().visiblePosts().map(d => d.title)).toEqual([
+            'Alpha release', 'Devlog 11', 'Devlog 12', 'Notes', 'Retired',
+        ]);
+        page().onPostSearch('devlog');
+        expect(page().visiblePosts().map(d => d.id)).toEqual(['earlier', 'live']);
     });
 
-    // ADR-167 clause 4. The values are the assertion: a shelf that stayed on the library's numbers
-    // while a post was picked would still be 'selection'-scoped and would still pass a scope check.
-    it('describes the library until a post is picked, then that post and nothing else', async () => {
-        expect(page().inspectorScope()).toBe('document');
-        expect(rows().every(r => r.getAttribute('data-scope') === 'document')).toBe(true);
-        expect(rowValue(t.inspector.posts)).toBe('4');
-        expect(rowValue(t.inspector.published)).toBe('2');
-        expect(rowValue(t.inspector.archivedCount)).toBe('1');
-
-        card('Devlog 12').click();
+    it('shows the active sort value and replaces a broken cover with the document type', async () => {
+        page().drafts.set([
+            { ...LIVE, viewCount: 40, reactionCount: 3, coverImagePath: 'missing.jpg' },
+            { ...EARLIER, viewCount: 10, reactionCount: 2 },
+        ]);
+        page().setPostSortValue('activity:desc');
         await settle();
+
+        expect(cards()[0].textContent).toContain(t.activityMetric(43));
+        (cards()[0].querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
+        await settle();
+        expect(cards()[0].querySelector('img')).toBeNull();
+        expect(cards()[0].querySelector('app-icon')).not.toBeNull();
+    });
+
+    // ADR-317 §3 — the selected post: its header, then Overview · Publishing · Engagement · Details.
+    it('heads the selected post with its state and opens on Overview of four tabs', async () => {
+        await open('Devlog 12');
 
         expect(card('Devlog 12').getAttribute('aria-current')).toBe('true');
-        expect(page().inspectorScope()).toBe('selection');
-        expect(rows().every(r => r.getAttribute('data-scope') === 'selection')).toBe(true);
-        expect(row(t.inspector.posts)).toBeUndefined();
-        expect(shelf().querySelector('.tag')?.textContent?.trim()).toBe('LIVE');
-        expect(rowValue(t.inspector.visibility)).toBe(t.inspector.public);
-    });
-
-    // ADR-167 clause 3 — the links are facts about the post, so the shelf is the only place they
-    // are drawn; the sheet keeps only what is done to it.
-    it('puts every outbound link on the shelf and none of them back on the sheet', async () => {
-        card('Devlog 12').click();
-        await settle();
-
-        const hrefs = [...shelf().querySelectorAll('a.insp-link')].map(a => a.getAttribute('href'));
-        expect(hrefs).toEqual([
-            'https://martycow.cedarclerk.app/devlog-12',
-            'https://t.me/testingandfun/42',
-            'https://bsky.app/p/1',
+        expect(sheet().querySelector('.post-head h2')?.textContent?.trim()).toBe('Devlog 12');
+        expect(sheet().querySelector('.post-state')?.textContent?.trim()).toBe(t.liveChip);
+        expect(text('.post-head .post-card-lang')).toBe('RU · EN');
+        expect(text('.post-head-visibility')).toBe(t.inspector.public);
+        expect(tabs().map(tab => tab.firstChild?.textContent?.trim()))
+            .toEqual([t.detailTabs.overview, t.detailTabs.publishing, t.detailTabs.engagement, t.detailTabs.details]);
+        expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
+        expect([...sheet().querySelectorAll('.ov-card h3')].map(h => h.textContent?.trim())).toEqual([
+            t.studio.destinations, t.studio.performance, t.studio.recentActivity, t.studio.postDetails,
         ]);
-        expect(sheet().querySelectorAll('a[href^="http"]').length).toBe(0);
     });
 
-    // T-108 (ADR-084) — the grant travels with the row: revoke confirms and keeps the entry,
-    // restore is one click, and the chip says which rows are out.
-    it('revokes a reader behind a confirm, marks the row, and restores in one click', async () => {
-        FakeDrafts.access = [];
-        card('Notes').click();
-        await settle();
+    // The editor falls back to the newest draft when the query is missing, so the link names the post.
+    it('opens the picked post in the editor through a link that names it', async () => {
+        await open('Devlog 12');
+        const link = sheet().querySelector('.open-in-editor a') as HTMLAnchorElement;
+        expect(link.getAttribute('href')).toBe('/editor?draft=live');
 
-        const items = () => [...el().querySelectorAll('.registration-item')] as HTMLElement[];
-        expect(items().length).toBe(2);
-        expect(items()[0].querySelector('.tag.muted')).toBeNull();
-        expect(items()[1].querySelector('.tag.muted')?.textContent?.trim()).toBe(t.forms.revokedTag);
-        expect(items()[0].querySelector('.registration-revoke')?.getAttribute('aria-label')).toBe(t.forms.revokeAccess);
-        expect(items()[1].querySelector('.registration-revoke')?.getAttribute('aria-label')).toBe(t.forms.restoreAccess);
-
-        (items()[0].querySelector('.registration-revoke') as HTMLButtonElement).click();
-        await settle();
-        expect(FakeDrafts.access).toEqual([]);
-        expect(page().revokeRegistrationTarget()?.id).toBe('r1');
-        expect(el().querySelector('app-modal')?.textContent).toContain(t.forms.revokeAccessBody('Alice'));
-
-        await page().confirmRevokeRegistration();
-        await settle();
-        expect(FakeDrafts.access).toEqual([{ id: 'r1', revoked: true }]);
-        expect(page().revokeRegistrationTarget()).toBeNull();
-        expect(items()[0].querySelector('.tag.muted')?.textContent?.trim()).toBe(t.forms.revokedTag);
-        expect(items()[0].classList.contains('is-revoked')).toBe(true);
-
-        (items()[1].querySelector('.registration-revoke') as HTMLButtonElement).click();
-        await settle();
-        expect(FakeDrafts.access.at(-1)).toEqual({ id: 'r2', revoked: false });
-        expect(items()[1].querySelector('.tag.muted')).toBeNull();
-    });
-
-    it('offers revoke or restore inside the submission modal and patches the open row', async () => {
-        FakeDrafts.access = [];
-        card('Notes').click();
-        await settle();
-
-        page().selectedRegistration.set(page().registrations()[1]);
-        await settle();
-        const access = () => el().querySelector('app-modal .registration-access') as HTMLElement;
-        expect(access().textContent?.trim()).toBe(t.forms.restoreAccess);
-
-        await page().restoreRegistration(page().registrations()[1]);
-        await settle();
-        expect(page().selectedRegistration()?.isRevoked).toBe(false);
-        expect(access().textContent?.trim()).toBe(t.forms.revokeAccess);
-    });
-
-    it('keeps the confirm open and names the failure when revoking is refused', async () => {
-        FakeDrafts.failRevoke = true;
-        try {
-            card('Notes').click();
-            await settle();
-            page().revokeRegistrationTarget.set(page().registrations()[0]);
-            await page().confirmRevokeRegistration();
-            await settle();
-            expect(page().revokeRegistrationTarget()?.id).toBe('r1');
-            expect(page().registrations()[0].isRevoked).toBe(false);
-            expect(page().error()).toBe(t.forms.revokeFailed);
-        } finally {
-            FakeDrafts.failRevoke = false;
-        }
-    });
-
-    it('resolves submission questions and options in the current UI language', async () => {
-        card('Notes').click();
-        await settle();
-        expect(page().regForm()?.intro).toBe('English intro');
-        expect(page().regForm()?.questions[0]?.label).toBe('English question');
-        expect(page().regForm()?.questions[0]?.options?.[0]?.label).toBe('Yes');
-    });
-
-    // ADR-163/ADR-169 — the one action here that opens something is the header's primary and
-    // carries its address, and the address names the picked post: the editor falls back to the
-    // newest draft when the query is missing, so a link to the wrong id and a link to none look
-    // identical on screen.
-    it('opens the picked post in the editor as the header link, not a handler', async () => {
-        card('Devlog 12').click();
-        await settle();
-
-        const open = header().querySelector('.open-in-editor a') as HTMLAnchorElement;
-        expect(open.tagName).toBe('A');
-        expect(open.getAttribute('href')).toBe('/editor?draft=live');
+        await open('Notes');
+        expect((sheet().querySelector('.open-in-editor a') as HTMLAnchorElement).getAttribute('href')).toBe('/editor?draft=drafted');
         expect([...el().querySelectorAll('a')].filter(a => a.textContent?.includes(t.openInEditor)).length).toBe(1);
+    });
 
-        card('Notes').click();
+    it('counts the destinations reached and names the first unreached one as the next step', async () => {
+        await open('Devlog 12');
+
+        expect(page().destinations(LIVE).map(row => [row.key, row.reached])).toEqual([
+            ['blog', true], ['telegram', true], ['x', false], ['bluesky', true],
+        ]);
+        expect(text('.reached-count')).toBe(t.studio.reachedCount(3, 4));
+        expect(text('.next-step strong')).toBe(t.studio.nextStep('X'));
+        expect(text('.next-step p')).toBe(t.studio.nextStepBody(3, 'X'));
+
+        (el().querySelector('.next-step app-button button') as HTMLButtonElement).click();
         await settle();
-        const other = header().querySelector('.open-in-editor a') as HTMLAnchorElement;
-        expect(other.getAttribute('href')).toBe('/editor?draft=drafted');
+        expect(page().detailTab()).toBe('publishing');
+
+        expect(page().nextStep(draft('fresh'))?.key).toBe('blog');
+        expect(t.studio.nextStepBody(0, 'Blog')).toContain('not been published anywhere');
+    });
+
+    // ADR-317 §4 — the draft's UpdatedAt (20 Aug) and its LastTelegram* columns are not the source.
+    it('takes Telegram times and links from the channel send records, not from the draft', async () => {
+        await open('Devlog 12');
+
+        const telegram = page().destinations(LIVE).find(row => row.key === 'telegram')!;
+        expect(telegram.state).toBe(t.studio.sentOn('12 Aug 2026'));
+        expect(telegram.url).toBe('https://t.me/testingandfun/42');
+
+        const activity = page().activity(LIVE);
+        expect(activity.map(item => [item.label, item.at])).toEqual([
+            [t.studio.publishedTo('Telegram'), '2026-08-12T08:00:00'],
+            [t.studio.publishedTo('Bluesky'), '2026-08-10T10:00:00'],
+            [t.studio.publishedTo('Blog'), '2026-08-10T09:00:00'],
+            [t.studio.publishedTo('Telegram'), '2026-08-05T08:00:00'],
+            [t.studio.draftPrepared, '2026-08-01T09:00:00'],
+        ]);
+        expect(activity.some(item => item.at === LIVE.updatedAt)).toBe(false);
+        expect(el().querySelector('.studio-activity')?.textContent).not.toContain('20 Aug');
+
+        const legacy = draft('legacy', { lastTelegramMessageId: 7, lastTelegramUsername: 'chan' });
+        const row = page().destinations(legacy).find(r => r.key === 'telegram')!;
+        expect([row.reached, row.state, row.url]).toEqual([true, t.studio.published, null]);
+    });
+
+    it('lists every Telegram send and the other networks on the Publishing tab', async () => {
+        await open('Devlog 12', 'publishing');
+
+        const sends = [...sheet().querySelectorAll('.telegram-sends .link-row')];
+        expect(sends.length).toBe(2);
+        expect(sends.map(row => row.querySelector('a')?.getAttribute('href')))
+            .toEqual(['https://t.me/testingandfun/42', 'https://t.me/testingandfun/30']);
+        expect(sends[0].textContent).toContain('12 Aug 2026');
+        expect([...sheet().querySelectorAll('a.insp-link')].map(a => a.getAttribute('href'))).toContain('https://bsky.app/p/1');
+        expect(sheet().querySelector('.unpublish')).not.toBeNull();
+    });
+
+    it('says a post is not published rather than drawing an empty link', async () => {
+        await open('Notes');
+
+        expect(text('.reached-count')).toBe(t.studio.reachedCount(0, 4));
+        expect(sheet().querySelectorAll('.dest-list a').length).toBe(0);
+        expect(sheet().querySelectorAll('.dest-review').length).toBe(4);
+        expect(sheet().querySelector('.ov-details .insp-none')?.textContent?.trim()).toBe(t.inspector.notPublished);
+
+        page().setDetailTab('publishing');
+        await settle();
+        expect(sheet().querySelector('.telegram-sends')?.textContent).toContain(t.studio.noTelegramSends);
+    });
+
+    // ADR-317 Consequences — the tab states the gap instead of leaving an empty space for it.
+    it('says on the Engagement tab that X and Bluesky per-post engagement is unavailable', async () => {
+        await open('Devlog 12', 'engagement');
+
+        expect(text('.social-unavailable')).toBe(t.studio.socialUnavailable);
+        expect(t.studio.socialUnavailable).toContain('X and Bluesky');
+        expect(t.studio.socialUnavailable).toContain('unavailable');
+        expect(sheet().querySelector('app-comments')).not.toBeNull();
+    });
+
+    it('draws the nightly snapshots as one line per metric, and a leaf switches a line off', async () => {
+        await open('Devlog 12', 'engagement');
+
+        expect(page().growthSeries()!.map(s => `${s.name}:${s.slot}`))
+            .toEqual([t.groups.views + ':1', t.groups.likes + ':2', t.groups.comments + ':3']);
+        expect(page().growthSeries()![0].points).toEqual([100, 130, 150]);
+        expect(page().overviewSeries()!.map(s => s.name)).toEqual([t.groups.views]);
+
+        page().toggleGrowthMetric('likeCount');
+        expect(page().growthSeries()!.map(s => s.name)).toEqual([t.groups.views, t.groups.comments]);
+    });
+
+    it('badges the Engagement tab with the feedback that arrived for the selected post', async () => {
+        await open('Devlog 12');
+        expect(tabs()[2].querySelector('.it-badge, [class*="badge"]')?.textContent?.trim()).toBe('2');
+        await open('Notes');
+        expect(tabs()[2].querySelector('.it-badge, [class*="badge"]')).toBeNull();
+    });
+
+    // ADR-316 §2 — the form is picked here and authored on /forms, which every link points at.
+    it('keeps a private post’s form on Details and links its authoring and submissions to /forms', async () => {
+        await open('Notes', 'details');
+
+        const ref = sheet().querySelector('app-form-ref') as HTMLElement;
+        expect(ref).not.toBeNull();
+        expect((ref.querySelector('.form-ref-manage a') as HTMLAnchorElement).getAttribute('href')).toBe('/forms');
+        expect((sheet().querySelector('.view-submissions a') as HTMLAnchorElement).getAttribute('href'))
+            .toBe('/forms?view=submissions&post=drafted');
+        expect(sheet().querySelector('.registration-item')).toBeNull();
+        expect(sheet().querySelector('.form-editor')).toBeNull();
+
+        await open('Devlog 12', 'details');
+        expect(sheet().querySelector('app-form-ref')).toBeNull();
+        expect(sheet().querySelector('#post-title')).not.toBeNull();
+    });
+
+    it('keeps privacy, archive and delete behind More', async () => {
+        await open('Devlog 12');
+        expect(sheet().querySelector('.more-menu')).toBeNull();
+
+        (sheet().querySelector('.more-trigger button') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        const items = [...el().querySelectorAll('.more-menu app-button')].map(b => b.textContent?.trim());
+        expect(items).toEqual([t.makePrivate, t.archive, en.common.delete]);
     });
 
     it('offers a useful action when no post is selected', async () => {
@@ -477,13 +423,6 @@ describe('posts manager', () => {
         action.click();
         await settle();
         expect(page().selectedId()).toBe('live');
-    });
-
-    it('keeps the publication journey inside a narrow working pane', () => {
-        const css = sheetFor('.publish-journey');
-        expect(css).toMatch(/\.sheet-body[^{}]*\{[^{}]*overflow-x\s*:\s*hidden/i);
-        expect(css).toMatch(/\.publish-journey[^{}]*\{[^{}]*minmax\(0(?:px)?,\s*auto\)/i);
-        expect(css).toMatch(/\.journey-step[^{}]*\{[^{}]*min-width\s*:\s*0(?:px)?/i);
     });
 
     it('uses one empty-state surface and one action for search misses and an empty post library', async () => {
@@ -500,182 +439,49 @@ describe('posts manager', () => {
         page().selectedId.set(null);
         await settle();
 
-        expect(el().querySelector('.post-list app-empty-state')).toBeNull();
         expect(el().querySelectorAll('app-empty-state').length).toBe(1);
         expect([...el().querySelectorAll('app-button')]
             .filter(x => x.textContent?.trim() === t.writeFirst).length).toBe(1);
     });
 
-    it('filters and stably sorts only publishable, non-template posts', async () => {
-        page().drafts.set([
-            LIVE, EARLIER, DRAFTED, OLD,
-            draft('working-note', { title: 'Internal note', documentType: 'note' }),
-            draft('template', { title: 'Post template', isTemplate: true }),
-            draft('changelog', { title: 'Alpha release', documentType: 'changelog' }),
-        ]);
-        page().setPostSortValue('title:asc');
-        await settle();
+    // ADR-317 Consequences — the shell is told the surface, and draws nothing about the post.
+    it('does not hand the selected post to the shell inspector', async () => {
+        const workspace = TestBed.inject(WorkspaceContextService);
+        const set = vi.spyOn(workspace, 'set');
+        await open('Devlog 12');
 
-        expect(page().postPool().map(d => d.id)).toEqual(['live', 'earlier', 'drafted', 'old', 'changelog']);
-        expect(page().visiblePosts().map(d => d.title)).toEqual([
-            'Alpha release', 'Devlog 11', 'Devlog 12', 'Notes', 'Retired',
-        ]);
-
-        page().setVisibilityFilter('private');
-        expect(page().visiblePosts().map(d => d.id)).toEqual(['drafted']);
-        page().setVisibilityFilter('all');
-        page().setStateFilter('archived');
-        expect(page().visiblePosts().map(d => d.id)).toEqual(['old']);
+        expect(set.mock.calls.every(([context]) => !('open' in context) && !('properties' in context))).toBe(true);
     });
+});
 
-    it('connects the Posts filter trigger to its labelled dialog', () => {
-        const trigger = el().querySelector('.post-filter-trigger') as HTMLButtonElement;
-        expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
-        expect(trigger.getAttribute('aria-controls')).toBe('post-filter-panel');
-        trigger.click();
+describe('publishing manager inside a project', () => {
+    it('shows that project’s posts only and asks the server for its schedule and sends', async () => {
+        TestBed.configureTestingModule({
+            providers: [
+                provideRouter([]),
+                { provide: DraftsService, useClass: FakeDrafts },
+                { provide: PostsService, useClass: FakePosts },
+                { provide: PublishService, useClass: FakePublish },
+                { provide: FormPresetsService, useClass: FakePresets },
+                { provide: CommentsService, useClass: FakeComments },
+                { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ project: 'p1', tab: 'stats', draft: 'drafted' }) } } },
+            ],
+        });
+        TestBed.inject(LocaleService).set('en');
+        vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        const fixture = TestBed.createComponent(PostsManagerComponent);
+        fixture.detectChanges();
+        for (let i = 0; i < 8; i++) await Promise.resolve();
         fixture.detectChanges();
 
-        const panel = el().querySelector('#post-filter-panel') as HTMLElement;
-        expect(panel.getAttribute('role')).toBe('dialog');
-        expect(panel.getAttribute('aria-label')).toBe(t.filters);
-    });
-
-    it('shows the active sort value and replaces a broken cover with the document type', async () => {
-        page().drafts.set([
-            { ...LIVE, updatedAt: '2026-08-12T09:00:00', viewCount: 40, reactionCount: 3,
-                coverImagePath: 'missing.jpg' },
-            { ...EARLIER, updatedAt: '2026-08-11T09:00:00', viewCount: 10, reactionCount: 2 },
-        ]);
-        page().setPostSortValue('activity:desc');
-        await settle();
-
-        expect(cards()[0].textContent).toContain(t.activityMetric(43));
-        const image = cards()[0].querySelector('img') as HTMLImageElement;
-        image.dispatchEvent(new Event('error'));
-        await settle();
-        expect(cards()[0].querySelector('img')).toBeNull();
-        expect(cards()[0].querySelector('app-icon')).not.toBeNull();
-
-        page().setPostSortValue('updated:desc');
-        await settle();
-        expect(cards()[0].querySelector('.post-card-meta')?.getAttribute('title')).toBeNull();
-        expect(cards()[0].querySelector(`[title="${t.editedOn}"]`)).not.toBeNull();
-    });
-
-    it('queries, filters, and sorts the Forms collection independently', async () => {
-        const form = blankFormEdit('en');
-        form.questions.push({ id: 'q', type: 'text', label: { en: 'Name' }, options: [] });
-        const survey: FormPreset = {
-            id: 'preset-2', name: 'Alpha survey', formJson: JSON.stringify(form), language: 'en',
-            createdAt: '2026-08-03T09:00:00',
-        };
-        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-        page().presets.set([PRESET, survey]);
-        page().setTab('forms');
-
-        page().setPresetSortValue('name:asc');
-        expect(page().visiblePresets().map(p => p.name)).toEqual(['Alpha survey', 'Game experience']);
-        page().setPresetLanguageFilter('en');
-        expect(page().visiblePresets().map(p => p.id)).toEqual(['preset-2']);
-        page().onPresetSearch('missing');
-        await settle();
-
-        expect(page().visiblePresets()).toEqual([]);
-        expect(el().querySelectorAll('app-empty-state').length).toBe(1);
-        expect([...el().querySelectorAll('app-button')]
-            .filter(x => x.textContent?.trim() === t.clearFilters).length).toBe(1);
-        expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({
-            queryParams: expect.objectContaining({ formq: 'missing', formlanguage: 'en', formsort: 'name', formdir: 'asc' }),
-        }));
-    });
-
-    it('names the translate icon and marks the selected question type without colour alone', async () => {
-        TestBed.inject(AuthService).planTier.set('Pro');
-        page().presets.set([EDITABLE_PRESET]);
-        page().presetsLoaded.set(true);
-        page().setTab('forms');
-        await page().selectPreset(EDITABLE_PRESET);
-        await settle();
-
-        const pills = [...el().querySelectorAll<HTMLButtonElement>('.pill')];
-        const selectedPills = pills.filter(button => button.classList.contains('on'));
-        expect(pills.length).toBe(6);
-        expect(selectedPills.length).toBe(1);
-        expect(selectedPills[0].getAttribute('aria-pressed')).toBe('true');
-        expect(selectedPills[0].querySelector('.pill-marker.is-visible')).not.toBeNull();
-        expect(pills.filter(button => !button.classList.contains('on'))
-            .every(button => button.querySelector('.pill-marker.is-visible') === null)).toBe(true);
-
-        const translate = [...el().querySelectorAll<HTMLButtonElement>('.lang-chip-act')]
-            .find(button => button.getAttribute('aria-label') === t.forms.translateLang);
-        expect(translate).toBeDefined();
-        expect(translate?.getAttribute('title')).toBe(t.forms.translateLang);
-
-        const questionLabels = [...el().querySelectorAll('.q-label-row .form-field-label')]
-            .map(label => label.textContent?.replace(/\s+/g, ' ').trim());
-        expect(questionLabels).toEqual([
-            `${t.forms.questionPlaceholder} RU`,
-            `${t.forms.questionPlaceholder} EN`,
-        ]);
-
-        page().setQuestionType('question-1', 'choice');
-        fixture.detectChanges();
-        const optionLabels = [...el().querySelectorAll('.option-field .form-field-label')]
-            .map(label => label.textContent?.replace(/\s+/g, ' ').trim());
-        expect(optionLabels).toEqual([
-            `${t.forms.optionPlaceholder} 1 RU`, `${t.forms.optionPlaceholder} 1 EN`,
-            `${t.forms.optionPlaceholder} 2 RU`, `${t.forms.optionPlaceholder} 2 EN`,
-        ]);
-    });
-
-    it('resets the Forms sheet to its first field after tab, selection, and creation changes', async () => {
-        page().presets.set([PRESET]);
-        page().setTab('forms');
-        await settle();
-        await page().selectPreset(PRESET);
-        await settle();
-
-        const body = el().querySelector('.sheet-body') as HTMLElement;
-        body.scrollTop = 240;
-        await page().selectPreset(PRESET);
-        expect(body.scrollTop).toBe(0);
-
-        body.scrollTop = 180;
-        page().setTab('forms');
-        expect(body.scrollTop).toBe(0);
-
-        body.scrollTop = 120;
-        await page().newPreset();
-        expect(body.scrollTop).toBe(0);
-    });
-
-    it('says a post is not published rather than drawing an empty link', async () => {
-        card('Notes').click();
-        await settle();
-
-        expect(rowValue(t.blog)).toBeUndefined();
-        expect(shelf().querySelector('.insp-none')?.textContent?.trim()).toBe(t.inspector.notPublished);
-        expect(shelf().querySelectorAll('a.insp-link').length).toBe(0);
-    });
-
-    // ADR-167 clause 6 — three named lines on their own slots, and the leaf strip filters them.
-    it('draws the nightly snapshots as one chart per metric, and a leaf switches a line off', async () => {
-        card('Devlog 12').click();
-        await settle();
-        // Through the real path: the fetch is tied to the group being opened, and a test that
-        // called loadHistory directly would pass over a group that never opens.
-        const growth = [...sheet().querySelectorAll('details.detail-group')]
-            .find(d => d.querySelector('summary')?.textContent?.trim() === t.groups.growth) as HTMLDetailsElement;
-        growth.open = true;
-        growth.dispatchEvent(new Event('toggle'));
-        await settle();
-
-        expect(page().growthSeries()!.map(s => `${s.name}:${s.slot}`))
-            .toEqual([t.groups.views + ':1', t.groups.likes + ':2', t.groups.comments + ':3']);
-        expect(page().growthSeries()![0].points).toEqual([100, 130, 150]);
-        expect(page().growthLabels().length).toBe(3);
-
-        page().toggleGrowthMetric('likeCount');
-        expect(page().growthSeries()!.map(s => s.name)).toEqual([t.groups.views, t.groups.comments]);
+        const page = fixture.componentInstance;
+        expect(page.postPool().map(d => d.id)).toEqual(['live', 'drafted']);
+        expect(page.selectedId()).toBe('drafted');
+        expect((TestBed.inject(PostsService) as unknown as FakePosts).projects).toEqual(['p1']);
+        expect((TestBed.inject(PublishService) as unknown as FakePublish).projects).toEqual(['p1']);
+        const create = (fixture.nativeElement as HTMLElement).querySelector('.new-post a') as HTMLAnchorElement;
+        expect(create.getAttribute('href')).toBe('/drafts?new=1&project=p1');
+        // The retired ?tab= is not read: the page is the post list whatever it says.
+        expect((fixture.nativeElement as HTMLElement).querySelector('.mg-grid')).not.toBeNull();
     });
 });

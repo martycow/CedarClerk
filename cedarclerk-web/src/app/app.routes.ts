@@ -5,6 +5,7 @@ import { adminGuard } from './core/admin.guard';
 import { guestGuard } from './core/guest.guard';
 import { indieDevGuard } from './core/indiedev.guard';
 import { projectScopeGuard } from './core/project-scope.guard';
+import { retiredManagerTabGuard } from './core/retired-manager-tab.guard';
 
 // T-092 — every route is lazy (`loadComponent`), and the router preloads them all in the
 // background once the app has booted (see app.config.ts). The measurement behind that: with the
@@ -78,6 +79,17 @@ export const routes: Routes = [
             {
                 path: 'posts',
                 loadComponent: () => import('./pages/posts-manager.component').then(m => m.PostsManagerComponent),
+                canActivate: [authGuard, retiredManagerTabGuard, projectScopeGuard],
+            },
+            // ADR-316 — Metrics and Forms are their own pages, project-scoped like Publishing (ADR-322).
+            {
+                path: 'metrics',
+                loadComponent: () => import('./pages/stats.component').then(m => m.StatsComponent),
+                canActivate: [authGuard, projectScopeGuard],
+            },
+            {
+                path: 'forms',
+                loadComponent: () => import('./pages/forms.component').then(m => m.FormsComponent),
                 canActivate: [authGuard, projectScopeGuard],
             },
             // Wave 2 item 9 — the content calendar: scheduled sends and queue slots as a month
@@ -215,13 +227,10 @@ export const routes: Routes = [
                 loadComponent: () => import('./pages/icons.component').then(m => m.IconsComponent),
                 canActivate: [adminGuard],
             },
-            // N7 folded both of these into the Posts Manager; the old paths stay as redirects because
-            // they're what any existing bookmark points at.
+            // The old paths stay as redirects because they are what an existing bookmark points at.
             { path: 'comments', redirectTo: 'posts' },
-            // A redirectTo *string* is a path, so the query would become part of a segment and the
-            // tab would be dropped — an old metrics bookmark landing on the posts list. Only a
-            // UrlTree carries ?tab=, which is what the manager reads on entry (ADR-148).
-            { path: 'stats', redirectTo: () => inject(Router).parseUrl('/posts?tab=stats') },
+            // A function, so the bookmark's own query (range, sources) reaches /metrics with it.
+            { path: 'stats', redirectTo: ({ queryParams }) => inject(Router).createUrlTree(['/metrics'], { queryParams }) },
             // The hub is the landing screen: it is the one page that names the project everything
             // else hangs off. With the module off, indieDevGuard turns this into /drafts, so the
             // two builds land on the only screen each of them has.

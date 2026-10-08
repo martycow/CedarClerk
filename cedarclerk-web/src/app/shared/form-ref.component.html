@@ -3,11 +3,7 @@
         <app-icon name="clipboard-text" size="sm"></app-icon>
         <span class="form-ref-status">{{ regForm() ? onLabel() : offLabel() }}</span>
         <span class="spacer"></span>
-        @if (manageRoute()) {
-        <app-button class="form-ref-manage" variant="paper" size="sm" [link]="manageRoute()" [queryParams]="manageQueryParams()">{{ manageLabel() }}</app-button>
-        } @else {
-        <app-button class="form-ref-manage" variant="paper" size="sm" (clicked)="manage.emit()">{{ manageLabel() }}</app-button>
-        }
+        <app-button class="form-ref-manage" variant="paper" size="sm" link="/forms">{{ manageLabel() }}</app-button>
     </div>
 
     @if (languages().length) {
@@ -25,20 +21,12 @@
     </select>
     @if (!presets().length) {
     <p class="form-ref-hint">{{ emptyHint() }}
-        @if (manageRoute()) {
-        <a [routerLink]="manageRoute()" [queryParams]="manageQueryParams()">{{ createLabel() }}</a>
-        } @else {
-        <button (click)="manage.emit()">{{ createLabel() }}</button>
-        }
+        <a routerLink="/forms">{{ createLabel() }}</a>
     </p>
     }
     } @else {
     <p class="form-ref-hint">{{ emptyHint() }}
-        @if (manageRoute()) {
-        <a [routerLink]="manageRoute()" [queryParams]="manageQueryParams()">{{ createLabel() }}</a>
-        } @else {
-        <button (click)="manage.emit()">{{ createLabel() }}</button>
-        }
+        <a routerLink="/forms">{{ createLabel() }}</a>
     </p>
     }
 </div>

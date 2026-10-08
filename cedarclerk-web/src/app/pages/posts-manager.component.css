@@ -1,241 +1,258 @@
-/* The shell's body is the scroll container; the page fills it and never sizes itself from the
-   viewport (ADR-239 clause 7). */
-:host {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    font-family: var(--font-sans);
-}
-
 .manager {
     --growth-plot-h: 260px;
 }
 
-/* On the wall, so the wall's ink (ADR-141); everything under a card goes back to paper's. */
-.manager > .hint {
-    margin: 0;
-    color: var(--wood-ink-soft);
-    font-size: var(--fs-ui);
+/* Publishing_Manager.png (ADR-317): two panes, the list and the selected post. */
+.post-chips {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
 }
 
-.hint {
-    color: var(--t2);
-    font-size: var(--dens-fs);
-}
-
-.channel-error {
-    font-size: var(--fs-meta);
-    color: var(--danger);
-    margin: var(--space-1) 0;
-}
-
-.field-hint {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    margin: 0 0 var(--space-2);
-}
-
-.field-hint-inline {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-    font-weight: 400;
-}
-
-.spacer { flex: 1; }
-
-/* ---------- Layout ---------- */
-.mg-top {
+.post-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     flex-wrap: wrap;
     gap: var(--space-4);
     flex: none;
-    padding-bottom: var(--space-4);
-}
-
-.page-intro {
-    margin: 0;
-    font-size: var(--fs-14);
-    color: var(--wood-ink-soft);
-}
-
-.shelf-list,
-.sheet,
-.inspector {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.sheet {
-    min-width: 0;
-}
-
-.inspector .card-body { min-width: 0; }
-
-.card-head {
+    padding: var(--space-5);
     border-bottom: 1px solid var(--paper-edge);
 }
 
-
-.card-title {
-    min-width: 0;
-    font-size: var(--fs-15);
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.card-meta {
-    margin-left: auto;
-    font-size: var(--fs-13);
-    color: var(--t3);
-    white-space: nowrap;
-}
-
-.sheet-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding: var(--space-4);
-}
-
-/* The selected post opens as a read-first studio. Editing controls stay in the disclosure rows
-   below, so the first viewport answers status, reach and the next action instead of starting with
-   a form. */
-.studio-overview {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-    margin-bottom: var(--space-4);
-    padding: var(--space-5);
-    border: 1px solid var(--paper-edge);
-    border-radius: var(--radius-paper);
-    background-color: var(--paper-bright);
-    background-image: var(--tex-paper);
-    box-shadow: var(--shadow-sheet);
-}
-
-.studio-hero,
-.studio-section-head,
-.studio-performance-body {
-    display: flex;
+.post-head-plate {
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-3);
+    justify-content: center;
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: var(--alt);
+    color: var(--accent);
+    overflow: hidden;
 }
 
-.studio-hero { align-items: flex-start; }
-.studio-title-block { flex: 1; min-width: 0; }
+.post-head-plate img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-.studio-title-block h2 {
+.post-head-main { flex: 1 1 240px; min-width: 0; }
+
+.post-head-main h2 {
     margin: var(--space-1) 0 var(--space-2);
     font-family: var(--font-display);
     font-size: var(--fs-27);
     line-height: 1.1;
+    overflow-wrap: anywhere;
 }
 
-.studio-meta {
+.post-head-meta {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--space-1);
-}
-
-.studio-visibility {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    margin-left: var(--space-1);
+    gap: var(--space-2);
     color: var(--t2);
     font-size: var(--fs-ui);
 }
 
-.studio-section {
-    min-width: 0;
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--paper-edge);
+.post-head-visibility {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
 }
 
-.studio-section-head { justify-content: space-between; }
+.post-head-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
 
-.studio-section-head h3 {
+.more-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+    min-width: 200px;
+    padding: var(--space-2);
+}
+
+.post-tabs {
+    display: flex;
+    flex: none;
+    padding: var(--space-2) var(--space-5);
+    border-bottom: 1px solid var(--paper-edge);
+    overflow-x: auto;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: var(--space-4);
+}
+
+.ov-card {
+    min-width: 0;
+    padding: var(--space-4);
+    border: 1px solid var(--paper-edge);
+    border-radius: var(--radius-paper);
+    background-color: var(--paper-bright);
+}
+
+.ov-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.ov-head h3,
+.tab-section h3 {
     margin: 0;
     font-family: var(--font-display);
     font-size: var(--fs-16);
 }
 
-.studio-section-head > span {
+.ov-head > span,
+.ov-head > button {
     color: var(--t3);
     font-size: var(--fs-meta);
 }
 
-.publish-journey {
-    display: grid;
-    grid-template-columns:
-        minmax(0, auto) minmax(4px, 1fr)
-        minmax(0, auto) minmax(4px, 1fr)
-        minmax(0, auto) minmax(4px, 1fr)
-        minmax(0, auto) minmax(4px, 1fr)
-        minmax(0, auto);
-    align-items: start;
-    gap: var(--space-1);
-    margin-top: var(--space-4);
+.ov-head > button {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    cursor: pointer;
 }
 
-.journey-step {
+.ov-head > button:hover { text-decoration: underline; }
+
+.dest-list {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+}
+
+.dest-row {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: var(--space-1);
-    min-width: 0;
-    text-align: center;
-    color: var(--t3);
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-2) 0;
+    border-top: 1px solid var(--paper-edge);
+    font-size: var(--fs-ui);
 }
 
-.journey-step strong { font-size: var(--fs-ui); color: var(--t2); }
-.journey-step small { max-width: 14ch; font-size: var(--fs-caption); overflow-wrap: anywhere; }
-.journey-step.is-done strong { color: var(--text); }
+.dest-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    opacity: .5;
+}
 
-.journey-mark {
+.dest-row.is-reached .dest-dot { background: var(--accent); opacity: 1; }
+
+.dest-name {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    box-sizing: border-box;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    background: var(--sheet);
-    color: var(--t3);
+    flex: none;
+    gap: var(--space-2);
+    font-weight: 600;
 }
 
-.journey-step.is-done .journey-mark {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: var(--text-on-pine);
+.dest-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    color: var(--t2);
+    text-align: right;
 }
 
-.journey-line {
-    height: 2px;
-    margin-top: 17px;
-    background: var(--border);
+.dest-review {
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: var(--font-sans);
+    font-size: var(--fs-ui);
+    cursor: pointer;
 }
 
-.journey-line.is-done { background: var(--accent); }
-
-.studio-insights {
+.kv {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: var(--space-5);
+    grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+    gap: var(--space-2) var(--space-4);
+    margin: var(--space-3) 0 0;
+    font-size: var(--fs-ui);
 }
 
-.studio-performance-body { margin-top: var(--space-3); align-items: stretch; }
+.kv dt { color: var(--t2); }
+.kv dd { margin: 0; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+
+.next-step {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--abord);
+    border-radius: var(--radius-paper);
+    background: var(--asoft);
+}
+
+.next-step > div { flex: 1 1 240px; min-width: 0; }
+.next-step strong { display: block; font-size: var(--fs-ui); }
+.next-step p { margin: var(--space-1) 0 0; font-size: var(--fs-ui); }
+
+.tab-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-4) 0;
+    border-top: 1px solid var(--paper-edge);
+}
+
+.tab-section:first-child { padding-top: 0; border-top: none; }
+
+.tab-section > app-button { align-self: flex-start; }
+
+.notice {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--alt);
+    color: var(--t2);
+    font-size: var(--fs-ui);
+    line-height: 1.45;
+}
+
+.link-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--paper-edge);
+    font-size: var(--fs-ui);
+}
+
+.link-row > span:first-child { min-width: 0; color: var(--t2); }
+.link-row strong { color: var(--text); font-weight: 600; }
+
+.studio-performance-body {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
 
 .studio-readout {
     display: flex;
@@ -252,16 +269,23 @@
 }
 
 .studio-readout span { color: var(--t2); font-size: var(--fs-ui); }
+
 .studio-readout small { margin-top: var(--space-2); color: var(--ok); font-size: var(--fs-caption); }
 
 .studio-chart { display: block; flex: 1; min-width: 0; height: 150px; }
+
 .studio-empty { margin: auto 0; color: var(--t2); font-size: var(--fs-ui); }
 
 .studio-activity ol { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+
 .studio-activity li { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2); min-height: 34px; }
+
 .studio-activity li > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+
 .studio-activity strong { color: var(--text); font-size: var(--fs-ui); font-weight: 600; text-decoration: none; }
+
 .studio-activity small { color: var(--t3); font-size: var(--fs-caption); }
+
 .studio-activity .is-empty { display: block; color: var(--t2); font-size: var(--fs-ui); }
 
 .activity-dot {
@@ -274,145 +298,6 @@
 }
 
 .studio-activity li:not(:last-child) .activity-dot { box-shadow: 0 20px 0 -3px var(--brass); }
-
-/* The metrics tab brings its own layout and no scroller of its own, so the page gives it one. */
-.manager > app-stats {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-}
-
-.post-toolbar {
-    display: flex;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    flex: none;
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--paper-edge);
-}
-
-.post-search {
-    flex: 1 0 100%;
-    min-width: 0;
-}
-
-.post-sort,
-.post-filter-panel label {
-    display: grid;
-    gap: var(--space-1);
-    color: var(--t2);
-    font-size: var(--fs-caption);
-    font-weight: 600;
-}
-
-.post-sort {
-    flex: 1;
-    min-width: 14ch;
-}
-
-.post-sort select,
-.post-filter-panel select {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: var(--hit-surface, var(--hit-chrome));
-    padding: 0 var(--dens-control-x);
-    border: var(--border-field);
-    border-radius: var(--radius-stamp);
-    background: var(--paper-bright);
-    color: var(--text);
-    box-shadow: var(--shadow-field-inset);
-    font: inherit;
-}
-
-.post-filter-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-1);
-    box-sizing: border-box;
-    min-height: var(--hit-surface, var(--hit-chrome));
-    padding: 0 var(--dens-control-x);
-    border: var(--border-paper);
-    border-radius: var(--radius-sm);
-    background: var(--paper-bright);
-    color: var(--text);
-    box-shadow: var(--shadow-paper-sm);
-    font-family: var(--font-sans);
-    font-size: var(--fs-12);
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.filter-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 var(--space-1);
-    border-radius: var(--radius-stamp);
-    background: var(--asoft);
-    color: var(--accent);
-    font-size: var(--fs-11);
-    font-weight: 700;
-}
-
-.post-filter-panel {
-    display: grid;
-    gap: var(--space-3);
-    box-sizing: border-box;
-    width: min(280px, calc(100vw - var(--space-5)));
-    padding: var(--space-3);
-}
-
-.post-filter-panel app-button { justify-self: start; }
-
-.post-result-count {
-    flex: none;
-    padding-bottom: var(--space-2);
-    color: var(--t2);
-    font-size: var(--fs-caption);
-    font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 640px) {
-    .post-toolbar:not(.form-toolbar) {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: end;
-    }
-
-    .post-toolbar:not(.form-toolbar) .post-search,
-    .post-toolbar:not(.form-toolbar) .post-result-count {
-        grid-column: 1 / -1;
-    }
-
-    .post-toolbar:not(.form-toolbar) .post-sort { min-width: 0; }
-
-    .post-toolbar:not(.form-toolbar) .post-result-count {
-        justify-self: end;
-        padding-bottom: 0;
-    }
-}
-
-.post-list {
-    display: flex;
-    flex-direction: column;
-}
-
-/* A row: plate · title over languages · tally · state. Only the title column shrinks, so a long
-   title gives way to the tag and the tag never to the title (T-271). */
-.post-card {
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-    min-height: var(--hit-touch);
-    padding-top: var(--space-1);
-    padding-bottom: var(--space-1);
-}
-
-.post-card.is-preset {
-    grid-template-columns: minmax(0, 1fr);
-}
 
 /* T-337 — the type plate: a small tinted square carrying the document-type icon, so a glance
    reads the kind before the title. */
@@ -431,40 +316,6 @@
 
 .post-card-type.has-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.post-card-main {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-.post-card-title {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-width: 0;
-}
-
-.post-card-title-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.post-card-meta,
-.post-card-langs {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.form-toolbar .post-sort { flex-basis: calc(50% - var(--space-1)); }
-
-.form-toolbar app-button { align-self: end; }
-
 .post-card-project {
     max-width: 12ch;
     overflow: hidden;
@@ -478,14 +329,6 @@
     color: var(--t2);
 }
 
-/* A language is a code in mono, not a pill (ADR-155). */
-.post-card-lang {
-    font-family: var(--font-mono);
-    font-size: var(--fs-caption);
-    font-weight: 700;
-    letter-spacing: .03em;
-}
-
 .post-card-state {
     flex: none;
     color: var(--t2);
@@ -497,18 +340,10 @@
 }
 
 .post-card-state.is-live { color: var(--ok); }
+
 .post-card-state.is-warn { color: var(--warn); }
+
 .post-card-state.is-muted { color: var(--t2); }
-
-.post-list-message {
-    padding: var(--space-4);
-    color: var(--t2);
-    font-size: var(--fs-ui);
-    line-height: 1.4;
-}
-
-.post-list-message p { margin: 0 0 var(--space-3); }
-.post-list-message p:last-child { margin-bottom: 0; }
 
 /* The slug and the button that saves it are one control, and the button that takes the post down
    is not: without this the three stacked edge to edge and read as one column of parts. */
@@ -521,249 +356,6 @@
 .action-row .chat-input { flex: 1; min-width: 0; }
 
 .action-row + .unpublish { margin-top: var(--space-3); }
-
-.detail-field {
-    margin-bottom: 12px;
-}
-
-.detail-field label {
-    display: block;
-    font-size: var(--fs-caption);
-    font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-    color: var(--t2);
-    margin-bottom: 5px;
-}
-
-.chat-input {
-    width: 100%;
-}
-
-.pill-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.pill {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-height: var(--hit-target);
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--t2);
-    border-radius: 999px;
-    padding: 4px 11px;
-    font-size: var(--fs-meta);
-    font-family: inherit;
-    cursor: pointer;
-}
-
-.pill-marker:not(.is-visible) {
-    visibility: hidden;
-}
-
-.pill.on {
-    border-color: var(--accent);
-    background: var(--asoft);
-    color: var(--accent);
-}
-
-.detail-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 14px;
-}
-
-/* ---------- Forms tab ---------- */
-/* T-035 — a row opens the submission, so it is a button now. */
-/* The row opens the submission; the trash beside it deletes one (owner's own test answers
-   pollute the charts). A wrapper rather than a button-in-button — nested buttons are invalid
-   HTML and the click targets should not overlap. */
-.registration-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    margin-bottom: 6px;
-}
-
-.registration-item .registration-remove,
-.registration-item .registration-revoke { margin-top: 8px; }
-
-/* A revoked row is still a row — the chip says so; the fade only keeps it from reading as live. */
-.registration-item.is-revoked .registration-row { opacity: .7; }
-
-.registration-head .tag { flex: none; }
-
-.registration-row {
-    display: block;
-    flex: 1;
-    min-width: 0;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 8px 10px;
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.registration-row:hover { background: var(--alt); }
-
-.answer-block { margin-top: 10px; }
-
-.answer-label {
-    margin: 0;
-    font-size: var(--fs-12);
-    color: var(--t2);
-}
-
-.answer-value {
-    margin: 2px 0 0;
-    font-size: var(--fs-13);
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.answer-line {
-    margin: 4px 0 0;
-    font-size: var(--fs-13);
-}
-
-.registration-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: space-between;
-}
-
-.invite-email {
-    font-size: var(--fs-ui);
-    color: var(--text);
-    font-weight: 500;
-}
-
-.form-editor {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    width: 100%;
-    max-width: var(--measure-form);
-    min-width: 0;
-    margin-right: auto;
-}
-
-.form-save-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 14px;
-}
-
-.form-save-state {
-    font-size: var(--fs-ui);
-    color: var(--t2);
-}
-
-.form-save-state.dirty {
-    color: var(--accent);
-}
-
-.form-save-state.error {
-    color: var(--danger);
-}
-
-/* ---------- Answer distribution (N10) ---------- */
-.chart-block {
-    margin-bottom: 16px;
-}
-
-.chart-title {
-    font-size: var(--fs-ui);
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 8px;
-}
-
-.chart-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.pie {
-    width: 128px;
-    height: 128px;
-    flex: none;
-}
-
-/* The surface-coloured stroke is the 2px gap between slices — it also keeps two similar hues
-   from touching, which is what makes adjacent segments readable at this size. */
-.pie-slice {
-    stroke: var(--sheet);
-    stroke-width: 2;
-}
-
-.legend {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.legend li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: var(--fs-meta);
-    min-width: 0;
-}
-
-.legend-swatch {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    flex: none;
-}
-
-/* Labels and values wear text tokens, not the series colour — the swatch carries identity. */
-.legend-label {
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.legend-value {
-    color: var(--t2);
-    flex: none;
-}
-
-.chart-single {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: var(--fs-ui);
-    color: var(--t2);
-    margin: 0;
-}
-
-.spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
 
 /* FI2.8 — scheduled sends for the selected post, moved here out of the Export window. */
 .scheduled-item {
@@ -778,359 +370,6 @@
 .scheduled-info {
     flex: 1;
     min-width: 0;
-}
-
-
-/* FI4.2 - the form editor was one flat stack of inputs and outlined rows; these are the three
-   labelled blocks it became, plus the per-question card. Fewer borders, more grouping. */
-.form-block {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px 16px;
-    margin-bottom: 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    min-width: 0;
-}
-
-.form-block-title {
-    font-size: var(--fs-10);
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--t2);
-}
-
-.form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-}
-
-.form-field-label {
-    font-size: var(--fs-meta);
-    color: var(--t2);
-}
-
-.form-check-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 8px 14px;
-}
-
-.form-check {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: var(--dens-fs);
-    color: var(--t2);
-    cursor: pointer;
-}
-
-/* A question is one card rather than a bordered row among rows, so its type, options and
-   required flag visibly belong to the label above them. */
-.question-card {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--sheet);
-    overflow: hidden;
-}
-
-.question-card-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 8px 10px;
-    background: var(--alt);
-}
-
-.question-card-head .chat-input {
-    flex: 1;
-    min-width: 0;
-}
-
-/* ADR-060 — one label input per active language, stacked; the chip names the language. */
-.q-label-stack {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.q-label-row {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 5px;
-}
-
-.q-label-row .form-field-label,
-.option-field .form-field-label { display: flex; align-items: center; gap: 5px; }
-
-/* Option rows: one option = one row of per-language inputs sharing a stable id, so a comma
-   field can't desync the languages. */
-.option-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.option-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.option-row .option-input {
-    width: 100%;
-    min-width: 0;
-}
-
-.option-field {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-}
-
-.option-add {
-    align-self: flex-start;
-}
-
-/* Language chips with their add/translate/remove controls. */
-.lang-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-}
-
-.lang-chip-edit {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid var(--abord);
-    background: var(--asoft);
-    color: var(--accent);
-    border-radius: 999px;
-    padding: 3px 10px;
-    font-size: var(--fs-meta);
-    font-weight: 600;
-}
-
-.lang-chip-edit.primary {
-    border-style: solid;
-    font-weight: 700;
-}
-
-.lang-chip-act {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--hit-target);
-    min-height: var(--hit-target);
-    border: none;
-    background: none;
-    color: inherit;
-    padding: 0;
-    cursor: pointer;
-    opacity: .7;
-}
-
-.lang-chip-act:hover { opacity: 1; }
-.lang-chip-act:disabled { opacity: .4; cursor: default; }
-
-.lang-add { display: inline-flex; }
-
-/* T-341 — the panel rides app-popover now (fixed + clamped); only the list's own shape stays. */
-.lang-add-menu {
-    display: flex;
-    flex-direction: column;
-}
-
-.lang-add-item {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    border: none;
-    background: none;
-    color: var(--text);
-    padding: 7px 16px;
-    font-size: var(--dens-fs);
-    text-align: left;
-    cursor: pointer;
-}
-
-.lang-add-item:disabled { opacity: .55; cursor: default; }
-
-.lang-add-item:hover { background: var(--alt); }
-
-.reg-error-inline {
-    color: var(--danger);
-    font-size: var(--fs-ui);
-    margin: 4px 0 0;
-}
-
-.question-number {
-    flex: none;
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: var(--asoft);
-    color: var(--accent);
-    font-size: var(--fs-meta);
-    font-weight: 700;
-}
-
-/* T-031 — a static block's picture: link field with a preview above it. */
-.static-media {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.static-preview {
-    max-width: 220px;
-    height: auto;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-}
-
-.question-card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px;
-}
-
-.question-card-body .spacer {
-    flex: 1;
-}
-
-/* Matches the Export window's hint treatment (FI2.5) so advice reads the same on both screens. */
-.hint-bubble {
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    margin: 0;
-    padding: 7px 10px;
-    border: 1px solid var(--abord);
-    background: var(--asoft);
-    border-radius: var(--radius-md);
-    font-size: var(--fs-meta);
-    line-height: 1.45;
-    color: var(--t2);
-}
-
-.hint-bubble .icon-sm {
-    flex: none;
-    margin-top: 1px;
-    color: var(--accent);
-}
-
-/* 8.3 — the remove buttons in the forms editor had no rule on this page at all: `.mini-remove` is
-   declared in editor.component.css, and Angular's view encapsulation keeps it there, so every ✕ in
-   the form editor rendered as a bare browser button. Defined here rather than moved to the global
-   sheet: this is the third page to need it, and a shared icon-button component is a Phase 11
-   cleanup (T-076's mockups decide the shape), not something to invent mid-fix. */
-.mini-remove,
-.mini {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-    width: var(--hit-target);
-    height: var(--hit-target);
-    padding: 0;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--t2);
-    cursor: pointer;
-    transition: background var(--motion-fast) var(--ease),
-                border-color var(--motion-fast) var(--ease),
-                color var(--motion-fast) var(--ease);
-}
-
-.mini:hover:not(:disabled) {
-    background: var(--hover);
-    color: var(--text);
-}
-
-.mini-remove:hover:not(:disabled) {
-    background: var(--hover-danger);
-    border-color: var(--danger);
-    color: var(--danger);
-}
-
-.mini:disabled,
-.mini-remove:disabled {
-    opacity: .5;
-    cursor: not-allowed;
-}
-
-/* 8.4/8.5 — collapsible detail groups. The <details> marker is replaced by our own caret so the
-   summary reads as a section header rather than as a browser widget, and the group's own padding
-   comes from the density tokens instead of the 12/14/16px literals this pane used to mix. */
-.detail-group {
-    border-bottom: 1px solid var(--border);
-    padding: var(--space-1) 0;
-}
-
-.detail-group:last-of-type {
-    border-bottom: none;
-}
-
-.detail-group > summary {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--dens-row-y) 0;
-    font-family: var(--font-display);
-    font-size: var(--fs-ui);
-    font-weight: 600;
-    color: var(--t2);
-    cursor: pointer;
-    list-style: none;
-}
-
-.detail-group > summary::-webkit-details-marker {
-    display: none;
-}
-
-.detail-group > summary::before {
-    content: '';
-    width: 0;
-    height: 0;
-    border-left: 5px solid currentColor;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    transition: transform var(--motion-fast) var(--ease);
-}
-
-.detail-group[open] > summary::before {
-    transform: rotate(90deg);
-}
-
-.detail-group[open] > summary {
-    color: var(--text);
-}
-
-/* One rhythm inside a group, replacing the mix of margins each field used to carry. */
-.detail-group > *:not(summary) {
-    margin-bottom: var(--dens-gap);
-}
-
-.detail-group > *:last-child {
-    margin-bottom: var(--space-2);
 }
 
 .growth-legend {
@@ -1148,29 +387,12 @@
     height: var(--growth-plot-h);
 }
 
-/* ---------- Inspector ---------- */
-.insp-note {
-    margin: 0 0 var(--space-3);
-    font-size: var(--fs-ui);
-    line-height: 1.45;
-    color: var(--t2);
-}
-
-/* Inside a spec row, and therefore on chrome. */
-[data-surface="chrome"] .insp-link,
-[data-surface="chrome"] .insp-none {
+.insp-link {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    min-width: 0;
-    font-size: var(--text-chrome-sm);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.insp-link {
     color: var(--accent);
+    font-weight: 600;
     text-decoration: none;
 }
 

@@ -12,6 +12,7 @@ import { LeafState, LeafTagComponent } from '../bench/display/leaf-tag.component
 import { IndexTabItem, IndexTabsComponent } from '../bench/chrome/index-tabs.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { EmptyStateComponent } from '../shell/empty-state.component';
+import { PageHeaderComponent } from '../shell/page-header.component';
 import { IconComponent } from '../shared/icon.component';
 import { BrandIconComponent, BrandIconName } from '../shared/brand-icon.component';
 import { GrowthChartComponent, GrowthSeries, SeriesSlot, seriesColor } from '../bench/worktop/growth-chart.component';
@@ -119,14 +120,11 @@ function sparkPath(points: readonly number[]): string | null {
     selector: 'app-stats',
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [FormsModule, LeafTagComponent, IndexTabsComponent, GrowthChartComponent, EmptyStateComponent,
-              ButtonComponent, IconComponent, BrandIconComponent, SortHeaderComponent],
-    // The tab body is the reading surface the shell hands over (ADR-154); the two shelves declare
-    // their own chrome from inside.
+              ButtonComponent, IconComponent, BrandIconComponent, SortHeaderComponent, PageHeaderComponent],
     host: { 'data-surface': 'paper' },
     templateUrl: 'stats.component.html',
     styleUrls: ['stats.component.css'],
 })
-// Rendered as the Posts Manager's statistics tab (ADR-148) — no page chrome of its own.
 export class StatsComponent implements OnInit {
     private readonly confirmation = inject(ConfirmationService);
     private channelsApi = inject(ChannelsService);
@@ -134,6 +132,8 @@ export class StatsComponent implements OnInit {
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     t = this.locale.t;
+    /** ADR-322: the open project narrows what is derived from documents. */
+    private readonly project = this.route.snapshot.queryParamMap.get('project');
 
     loading = signal(true);
     pending = signal(false);
@@ -323,7 +323,7 @@ export class StatsComponent implements OnInit {
     // T-243 — the same matrix as a file. Disabled while the server drew nothing: an empty
     // selection would download a header row and nothing else.
     canExport = computed(() => (this.data()?.series.length ?? 0) > 0);
-    csvUrl = computed(() => this.channelsApi.seriesCsvUrl(this.rangeDays(), this.selectedIds()));
+    csvUrl = computed(() => this.channelsApi.seriesCsvUrl(this.rangeDays(), this.selectedIds(), this.project));
 
     tableRows = computed(() => {
         const days = this.days();
@@ -391,7 +391,7 @@ export class StatsComponent implements OnInit {
         }
         // The streak card and the invite-links shelf, both best-effort: a failure leaves the
         // board exactly as it was.
-        this.channelsApi.publishingStats()
+        this.channelsApi.publishingStats(this.project)
             .then(stats => this.publishing.set(stats))
             .catch(() => this.publishing.set(null));
         const requestedChannel = this.route.snapshot.queryParamMap.get('inviteChannel');
@@ -610,7 +610,7 @@ export class StatsComponent implements OnInit {
         const seq = ++this.loadSeq;
         this.pending.set(true);
         try {
-            const data = await this.channelsApi.series(this.rangeDays(), this.selectedIds());
+            const data = await this.channelsApi.series(this.rangeDays(), this.selectedIds(), this.project);
             if (seq !== this.loadSeq) return;
             this.data.set(data);
             this.lastCurrent.update(map => {

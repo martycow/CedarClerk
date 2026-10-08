@@ -1,384 +1,278 @@
-<!--The manager: a page header, a segmented strip, and one body per tab. The strip keeps its class
-so it stays addressable by the name the smoke suite binds.-->
 <div class="page manager" data-layout="operational">
     <app-page-header [title]="t().manager.crumb" [meta]="headerMeta()">
-        <ng-container ngProjectAs="[primary]">
-            @if (tab() === 'forms' && presets().length > 0) {
-            <app-button variant="pine" (clicked)="newPreset()">
-                <app-icon name="plus" weight="bold" size="sm" /> {{ t().manager.forms.newPreset }}
-            </app-button>
-            } @else if (tab() === 'posts') {
-                @if (selected(); as d) {
-                <!--ADR-163/ADR-169 — the one action here that opens something carries its address.-->
-                <app-button class="open-in-editor" variant="pine" link="/editor" [queryParams]="{ draft: d.id }">
-                    <app-icon name="pen" size="sm" /> {{ t().manager.openInEditor }}
-                </app-button>
-                }
-            }
-        </ng-container>
+        <app-button primary class="new-post" variant="pine" link="/drafts" [queryParams]="newPostParams()">
+            <app-icon name="plus" weight="bold" size="sm" /> {{ t().manager.newPost }}
+        </app-button>
     </app-page-header>
-
-    <div class="mg-top">
-        <div class="seg manager-tabs" role="tablist" [attr.aria-label]="t().manager.tabStrip">
-            @for (item of tabs(); track item.id) {
-            <button type="button" role="tab" [class.is-on]="item.id === tab()"
-                    [attr.aria-selected]="item.id === tab()" (click)="pickTab(item.id)">
-                {{ item.label }}
-                @if (badgeOf(item); as count) {
-                <!--An aria-label REPLACES the text it is on, so the title alone would take the count
-                out of the tab's name.-->
-                <span class="seg-badge" [attr.title]="item.badgeTitle || null"
-                      [attr.aria-label]="item.badgeTitle ? count + ' ' + item.badgeTitle : null">{{ count }}</span>
-                }
-            </button>
-            }
-        </div>
-        @if (tab() === 'forms') {
-        <p class="page-intro">{{ t().manager.forms.presetsIntro }}</p>
-        }
-    </div>
 
     @if (error()) { <p class="channel-error">{{ error() }}</p> }
 
-    @if (tab() === 'posts') {
-        @if (loading()) {
-        <p class="hint">{{ t().common.loading }}</p>
-        } @else {
-        <div class="mg-grid split-workspace">
-            <section class="card shelf-list split-pane" [attr.aria-label]="t().manager.tabs.posts">
-                <div class="post-toolbar">
-                    <app-input class="post-search" type="search" [dense]="true"
-                               [label]="t().manager.searchPlaceholder" [value]="search()"
-                               (valueChange)="onPostSearch($any($event) ?? '')" />
-                    <label class="post-sort">
-                        <span>{{ t().manager.sortLabel }}</span>
-                        <select [value]="postSortValue()" (change)="setPostSortValue($any($event.target).value)">
-                            @for (option of postSortOptions(); track option.value) {
-                                <option [value]="option.value">{{ option.label }}</option>
+    @if (loading()) {
+    <p class="hint">{{ t().common.loading }}</p>
+    } @else {
+    <div class="mg-grid split-workspace is-two">
+        <section class="card shelf-list split-pane" [attr.aria-label]="t().manager.allPosts">
+            <div class="card-head">
+                <span class="card-title">{{ t().manager.allPosts }}</span>
+                <span class="card-count post-result-count">{{ t().manager.resultCount(visiblePosts().length, postPool().length) }}</span>
+            </div>
+            <div class="post-toolbar">
+                <app-input class="post-search" type="search" [dense]="true"
+                           [label]="t().manager.searchPlaceholder" [value]="search()"
+                           (valueChange)="onPostSearch($any($event) ?? '')" />
+                <div class="seg post-chips" role="group" [attr.aria-label]="t().manager.filterState">
+                    @for (chip of stateChips(); track chip.value) {
+                    <button type="button" [class.is-on]="stateFilter() === chip.value"
+                            [attr.aria-pressed]="stateFilter() === chip.value"
+                            (click)="setStateFilter(chip.value)">{{ chip.label }}</button>
+                    }
+                </div>
+                <label class="post-sort">
+                    <span>{{ t().manager.sortLabel }}</span>
+                    <select [value]="postSortValue()" (change)="setPostSortValue($any($event.target).value)">
+                        @for (option of postSortOptions(); track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <div class="row-list post-list">
+            @for (d of visiblePosts(); track d.id) {
+            <button class="row post-card" [class.is-on]="selectedId() === d.id"
+                    [attr.aria-current]="selectedId() === d.id ? 'true' : null" (click)="select(d)">
+                @if (d.coverImagePath && !coverFailed(d)) {
+                <span class="post-card-type has-thumb">
+                    <img [src]="'/media/' + d.coverImagePath" alt="" loading="lazy" (error)="markCoverFailed(d)">
+                </span>
+                } @else {
+                <span class="post-card-type" [title]="t().projects.docTypes[d.documentType].name">
+                    <app-icon [name]="docIcons[d.documentType]" size="sm"></app-icon>
+                </span>
+                }
+                <span class="post-card-main">
+                    <span class="post-card-title">
+                        <span class="t post-card-title-text" [title]="d.title || t().drafts.untitled">{{ d.title || t().drafts.untitled }}</span>
+                    </span>
+                    <span class="m post-card-meta">
+                        @if (auth.indieDev()) {
+                            <span class="post-card-project" [title]="projectName(d.projectId)">{{ projectName(d.projectId) }}</span>
+                            <span aria-hidden="true">·</span>
+                        }
+                        @if (postSort() === 'activity') {
+                            <span [title]="postActivityTitle(d)">{{ postActivity(d) }}</span>
+                        } @else if (postSort() === 'published') {
+                            @if (d.blogPublishedAt) {
+                                <span [title]="t().manager.publishedOn">{{ d.blogPublishedAt | zonedDate:'d MMM' }}</span>
+                            } @else {
+                                <span [title]="t().manager.publishedOn">{{ t().manager.unpublishedChip }}</span>
                             }
-                        </select>
-                    </label>
-                    <app-popover #postFilters align="left">
-                        <button trigger type="button" class="post-filter-trigger" aria-haspopup="dialog"
-                                aria-controls="post-filter-panel" [attr.aria-expanded]="postFilters.isOpen()">
-                            {{ t().manager.filters }}
-                            @if (filterCount()) { <span class="filter-count">{{ filterCount() }}</span> }
-                        </button>
-                        <div panel id="post-filter-panel" class="post-filter-panel" role="dialog"
-                             [attr.aria-label]="t().manager.filters">
-                            <label>
-                                <span>{{ t().manager.filterState }}</span>
-                                <select [value]="stateFilter()" (change)="setStateFilter($any($event.target).value)">
-                                    <option value="all">{{ t().manager.filterAll }}</option>
-                                    <option value="live">{{ t().manager.liveChip }}</option>
-                                    <option value="draft">{{ t().manager.unpublishedChip }}</option>
-                                    <option value="scheduled">{{ t().manager.scheduled }}</option>
-                                    <option value="archived">{{ t().manager.archived }}</option>
-                                </select>
-                            </label>
-                            <label>
-                                <span>{{ t().manager.filterVisibility }}</span>
-                                <select [value]="visibilityFilter()" (change)="setVisibilityFilter($any($event.target).value)">
-                                    <option value="all">{{ t().manager.filterAll }}</option>
-                                    <option value="public">{{ t().manager.filterPublic }}</option>
-                                    <option value="private">{{ t().manager.filterPrivate }}</option>
-                                </select>
-                            </label>
-                            @if (auth.indieDev()) {
-                            <label>
-                                <span>{{ t().manager.filterProject }}</span>
-                                <select [value]="projectFilter()" (change)="setProjectFilter($any($event.target).value)">
-                                    <option value="all">{{ t().manager.filterAll }}</option>
-                                    <option value="none">{{ t().manager.filterNoProject }}</option>
-                                    @for (project of projects(); track project.id) {
-                                        <option [value]="project.id">{{ project.name }}</option>
-                                    }
-                                </select>
-                            </label>
-                            }
-                            <label>
-                                <span>{{ t().manager.filterLanguage }}</span>
-                                <select [value]="languageFilter()" (change)="setLanguageFilter($any($event.target).value)">
-                                    <option value="all">{{ t().manager.filterAll }}</option>
-                                    @for (language of availableLanguages(); track language) {
-                                        <option [value]="language">{{ language.toUpperCase() }}</option>
-                                    }
-                                </select>
-                            </label>
-                            <app-button variant="paper" size="sm" [disabled]="!hasPostFilters()"
-                                        (clicked)="clearPostFilters(); postFilters.close()">
-                                {{ t().manager.clearFilters }}
+                        } @else {
+                            <span [title]="t().manager.editedOn">{{ d.updatedAt | zonedDate:'d MMM' }}</span>
+                        }
+                        <span aria-hidden="true">·</span>
+                        @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
+                        @if (extraLanguageCount(d); as extra) {
+                        <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
+                        }
+                        @if (d.isPrivate) {
+                            <span class="post-card-private"><app-icon name="lock" size="xs" />{{ t().manager.privateChip }}</span>
+                        }
+                    </span>
+                </span>
+                @if (newFeedbackFor(d.id); as n) {
+                <span class="tag ok is-plain" [title]="t().manager.newSinceLastLook">+{{ n }}</span>
+                } @else { <span></span> }
+                <span class="post-card-state" [class.is-live]="stateTone(d) === 'ok'"
+                      [class.is-warn]="stateTone(d) === 'warn'" [class.is-muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
+            </button>
+            } @empty {
+                <div class="post-list-message" role="status">
+                <p>
+                    {{ hasPostFilters() ? (search().trim() ? t().manager.noMatches(search().trim()) : t().manager.noFiltered) : t().manager.noPosts }}
+                </p>
+                </div>
+            }
+            </div>
+        </section>
+
+        <section class="card sheet split-pane" [attr.aria-label]="sheetLabel()">
+            @if (selected(); as d) {
+            <header class="post-head">
+                <span class="post-head-plate" [title]="t().projects.docTypes[d.documentType].name">
+                    @if (d.coverImagePath && !coverFailed(d)) {
+                    <img [src]="'/media/' + d.coverImagePath" alt="" (error)="markCoverFailed(d)">
+                    } @else {
+                    <app-icon [name]="docIcons[d.documentType]" size="md"></app-icon>
+                    }
+                </span>
+                <div class="post-head-main">
+                    <span class="label">{{ t().manager.studio.selectedPost }}</span>
+                    <h2>{{ d.title || t().drafts.untitled }}</h2>
+                    <div class="post-head-meta">
+                        <span class="tag post-state" [class.ok]="stateTone(d) === 'ok'"
+                              [class.warn]="stateTone(d) === 'warn'"
+                              [class.muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
+                        <span class="post-card-lang">{{ languagesLine(d) }}</span>
+                        <span class="post-head-visibility">
+                            <app-icon [name]="d.isPrivate ? 'lock' : 'globe'" size="xs"></app-icon>
+                            {{ d.isPrivate ? t().manager.inspector.private : t().manager.inspector.public }}
+                        </span>
+                        @if (d.blogPublishedAt) {
+                        <span>{{ t().manager.publishedOn }} {{ d.blogPublishedAt | zonedDate:'d MMM yyyy' }}</span>
+                        }
+                    </div>
+                </div>
+                <div class="post-head-actions">
+                    <app-popover #more align="right">
+                        <app-button trigger class="more-trigger" variant="paper" aria-haspopup="menu">{{ t().manager.more }}</app-button>
+                        <div panel class="more-menu" role="menu" [attr.aria-label]="t().manager.more">
+                            <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="togglePrivate(); more.close()">
+                                <app-icon name="lock" size="sm"></app-icon>
+                                {{ d.isPrivate ? t().manager.makePublic : t().manager.makePrivate }}
+                            </app-button>
+                            <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="toggleArchive(); more.close()">
+                                @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> {{ t().manager.unarchive }} }
+                                @else { <app-icon name="archive" size="sm"></app-icon> {{ t().manager.archive }} }
+                            </app-button>
+                            <app-button variant="danger" size="sm" [disabled]="busy()" (clicked)="deleteConfirmId.set(d.id); more.close()">
+                                <app-icon name="trash" size="sm"></app-icon>
+                                {{ t().common.delete }}
                             </app-button>
                         </div>
                     </app-popover>
-                    <span class="post-result-count">{{ t().manager.resultCount(visiblePosts().length, postPool().length) }}</span>
+                    <!--An anchor, so a middle click opens the editor in a tab (ADR-163/ADR-169).-->
+                    <app-button class="open-in-editor" variant="pine" link="/editor" [queryParams]="{ draft: d.id }">
+                        {{ t().manager.openInEditor }}
+                    </app-button>
                 </div>
-                <div class="row-list post-list">
-                @for (d of visiblePosts(); track d.id) {
-                <button class="row post-card" [class.is-on]="selectedId() === d.id"
-                        [attr.aria-current]="selectedId() === d.id ? 'true' : null" (click)="select(d)">
-                    @if (d.coverImagePath && !coverFailed(d)) {
-                    <span class="post-card-type has-thumb">
-                        <img [src]="'/media/' + d.coverImagePath" alt="" loading="lazy" (error)="markCoverFailed(d)">
-                    </span>
-                    } @else {
-                    <span class="post-card-type" [title]="t().projects.docTypes[d.documentType].name">
-                        <app-icon [name]="docIcons[d.documentType]" size="sm"></app-icon>
-                    </span>
-                    }
-                    <span class="post-card-main">
-                        <span class="post-card-title">
-                            <span class="t post-card-title-text" [title]="d.title || t().drafts.untitled">{{ d.title || t().drafts.untitled }}</span>
-                        </span>
-                        <span class="m post-card-meta">
-                            @if (auth.indieDev()) {
-                                <span class="post-card-project" [title]="projectName(d.projectId)">{{ projectName(d.projectId) }}</span>
-                                <span aria-hidden="true">·</span>
-                            }
-                            @if (postSort() === 'activity') {
-                                <span [title]="postActivityTitle(d)">{{ postActivity(d) }}</span>
-                            } @else if (postSort() === 'published') {
-                                @if (d.blogPublishedAt) {
-                                    <span [title]="t().manager.publishedOn">{{ d.blogPublishedAt | zonedDate:'d MMM' }}</span>
-                                } @else {
-                                    <span [title]="t().manager.publishedOn">{{ t().manager.unpublishedChip }}</span>
-                                }
-                            } @else {
-                                <span [title]="t().manager.editedOn">{{ d.updatedAt | zonedDate:'d MMM' }}</span>
-                            }
-                            <span aria-hidden="true">·</span>
-                            @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                            @if (extraLanguageCount(d); as extra) {
-                            <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
-                            }
-                            @if (d.isPrivate) {
-                                <span class="post-card-private"><app-icon name="lock" size="xs" />{{ t().manager.privateChip }}</span>
-                            }
-                        </span>
-                    </span>
-                    @if (newFeedbackFor(d.id); as n) {
-                    <span class="tag ok is-plain" [title]="t().manager.newSinceLastLook">+{{ n }}</span>
-                    } @else { <span></span> }
-                    <span class="post-card-state" [class.is-live]="stateTone(d) === 'ok'"
-                          [class.is-warn]="stateTone(d) === 'warn'" [class.is-muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
-                </button>
-                } @empty {
-                    <div class="post-list-message" role="status">
-                    <p>
-                        {{ hasPostFilters() ? (search().trim() ? t().manager.noMatches(search().trim()) : t().manager.noFiltered) : t().manager.noPosts }}
-                    </p>
-                    </div>
-                }
-                </div>
-            </section>
+            </header>
 
-            <section class="card sheet split-pane" [attr.aria-label]="sheetLabel()">
-                <div class="card-head">
-                    <span class="card-title">{{ t().manager.studio.workbench }}</span>
-                    @if (sheetMeta()) { <span class="card-meta">{{ sheetMeta() }}</span> }
-                </div>
-                <div class="sheet-body">
-                @if (selected(); as d) {
-                <section class="studio-overview" [attr.aria-label]="t().manager.studio.overview">
-                    <div class="studio-hero">
-                        <div class="studio-title-block">
-                            <span class="label">{{ t().manager.studio.selectedPost }}</span>
-                            <h2>{{ d.title || t().drafts.untitled }}</h2>
-                            <div class="studio-meta">
-                                <span class="tag" [class.ok]="stateTone(d) === 'ok'"
-                                      [class.warn]="stateTone(d) === 'warn'"
-                                      [class.muted]="stateTone(d) === 'muted'">
-                                    <app-icon [name]="stateTone(d) === 'ok' ? 'check' : 'file-text'" size="xs"></app-icon>
-                                    {{ publishStateLabel(d) }}
+            <div class="post-tabs">
+                <app-index-tabs [items]="detailTabs()" [value]="detailTab()"
+                                [label]="t().manager.detailTabs.strip" (selected)="setDetailTab($event)" />
+            </div>
+
+            <div class="sheet-body">
+            @switch (detailTab()) {
+            @case ('overview') {
+                <div class="overview-grid">
+                    <section class="ov-card ov-destinations">
+                        <div class="ov-head">
+                            <h3>{{ t().manager.studio.destinations }}</h3>
+                            <span class="reached-count">{{ t().manager.studio.reachedCount(reachedCount(d), destinations(d).length) }}</span>
+                        </div>
+                        <ul class="dest-list">
+                            @for (row of destinations(d); track row.key) {
+                            <li class="dest-row" [class.is-reached]="row.reached">
+                                <span class="dest-dot" aria-hidden="true"></span>
+                                <span class="dest-name">
+                                    @if (row.brand; as brand) { <app-brand-icon [name]="brand" [size]="14"></app-brand-icon> }
+                                    {{ row.name }}
                                 </span>
-                                @for (l of visibleLanguages(d); track l) {
-                                <span class="post-card-lang">{{ l.toUpperCase() }}</span>
-                                }
-                                <span class="studio-visibility">
-                                    <app-icon [name]="d.isPrivate ? 'lock' : 'globe'" size="xs"></app-icon>
-                                    {{ d.isPrivate ? t().manager.inspector.private : t().manager.inspector.public }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="studio-section studio-publishing">
-                        <div class="studio-section-head">
-                            <h3>{{ t().manager.studio.publishedEverywhere }}</h3>
-                            <span>{{ t().manager.studio.destinationCount((d.isBlogPublished ? 1 : 0) + (telegramUrl(d) ? 1 : 0) + publishedElsewhere(d).length) }}</span>
-                        </div>
-                        <div class="publish-journey">
-                            <div class="journey-step is-done">
-                                <span class="journey-mark"><app-icon name="file-text" size="sm"></app-icon></span>
-                                <strong>{{ t().manager.studio.draft }}</strong>
-                                <small>{{ d.updatedAt | zonedDate:'d MMM' }}</small>
-                            </div>
-                            <div class="journey-line" [class.is-done]="d.isBlogPublished"></div>
-                            <div class="journey-step" [class.is-done]="d.isBlogPublished">
-                                <span class="journey-mark"><app-icon name="file-text" size="sm"></app-icon></span>
-                                <strong>{{ t().manager.blog }}</strong>
-                                <small>{{ d.blogPublishedAt ? (d.blogPublishedAt | zonedDate:'d MMM') : t().manager.inspector.notPublished }}</small>
-                            </div>
-                            <div class="journey-line" [class.is-done]="!!telegramUrl(d)"></div>
-                            <div class="journey-step" [class.is-done]="!!telegramUrl(d)">
-                                <span class="journey-mark"><app-brand-icon name="telegram" [size]="14"></app-brand-icon></span>
-                                <strong>{{ t().manager.telegram }}</strong>
-                                <small>{{ telegramUrl(d) ? t().manager.studio.sent : t().manager.inspector.notPublished }}</small>
-                            </div>
-                            <div class="journey-line" [class.is-done]="!!publishedNetwork(d, 'x')"></div>
-                            <div class="journey-step" [class.is-done]="!!publishedNetwork(d, 'x')">
-                                <span class="journey-mark"><app-brand-icon name="twitter" [size]="13"></app-brand-icon></span>
-                                <strong>X</strong>
-                                <small>{{ publishedNetwork(d, 'x') ? t().manager.studio.sent : t().manager.inspector.notPublished }}</small>
-                            </div>
-                            <div class="journey-line" [class.is-done]="!!publishedNetwork(d, 'bluesky')"></div>
-                            <div class="journey-step" [class.is-done]="!!publishedNetwork(d, 'bluesky')">
-                                <span class="journey-mark"><app-brand-icon name="bluesky" [size]="14"></app-brand-icon></span>
-                                <strong>Bluesky</strong>
-                                <small>{{ publishedNetwork(d, 'bluesky') ? t().manager.studio.sent : t().manager.inspector.notPublished }}</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="studio-insights">
-                        <div class="studio-section studio-performance">
-                            <div class="studio-section-head">
-                                <h3>{{ t().manager.studio.performance }}</h3>
-                                <span>{{ t().manager.studio.recordedNightly }}</span>
-                            </div>
-                            <div class="studio-performance-body">
-                                <div class="studio-readout">
-                                    <strong>{{ d.viewCount }}</strong>
-                                    <span>{{ t().manager.groups.views }}</span>
-                                    @if (d.newViewCount) {
-                                    <small>+{{ d.newViewCount }} · {{ t().manager.newSinceLastLook }}</small>
+                                <span class="dest-state">
+                                    <span>{{ row.state }}</span>
+                                    @if (row.url) {
+                                    <a class="insp-link" [href]="row.url" target="_blank" rel="noopener">{{ row.linkLabel }}</a>
+                                    } @else if (!row.reached) {
+                                    <button type="button" class="insp-link dest-review" (click)="setDetailTab('publishing')">{{ t().manager.studio.review }}</button>
                                     }
-                                </div>
-                                @if (overviewSeries(); as series) {
-                                <app-growth-chart class="studio-chart" [label]="t().manager.groups.views"
-                                                  [series]="series" [openTail]="false"
-                                                  [xLabels]="growthLabels()" [strings]="t().stats.chart" />
+                                </span>
+                            </li>
+                            }
+                        </ul>
+                    </section>
+
+                    <section class="ov-card ov-performance">
+                        <div class="ov-head">
+                            <h3>{{ t().manager.studio.performance }}</h3>
+                            <span>{{ t().manager.studio.recordedNightly }}</span>
+                        </div>
+                        <div class="studio-performance-body">
+                            <div class="studio-readout">
+                                <strong>{{ d.viewCount }}</strong>
+                                <span>{{ t().manager.groups.views }}</span>
+                                @if (d.newViewCount) {
+                                <small>{{ t().manager.studio.sinceLastVisit(d.newViewCount) }}</small>
+                                }
+                            </div>
+                            @if (overviewSeries(); as series) {
+                            <app-growth-chart class="studio-chart" [label]="t().manager.groups.views"
+                                              [series]="series" [openTail]="false"
+                                              [xLabels]="growthLabels()" [strings]="t().stats.chart" />
+                            } @else {
+                            <p class="studio-empty">{{ t().manager.groups.growthEmpty }}</p>
+                            }
+                        </div>
+                    </section>
+
+                    <section class="ov-card studio-activity">
+                        <div class="ov-head">
+                            <h3>{{ t().manager.studio.recentActivity }}</h3>
+                            <span>{{ t().manager.studio.latestFirst }}</span>
+                        </div>
+                        <ol>
+                            @for (item of activity(d); track item.label + item.at) {
+                            <li>
+                                <span class="activity-dot"></span>
+                                <span>
+                                    @if (item.url) {
+                                    <a class="insp-link" [href]="item.url" target="_blank" rel="noopener">{{ item.label }}</a>
+                                    } @else {
+                                    <strong>{{ item.label }}</strong>
+                                    }
+                                    @if (item.at) { <small>{{ item.at | zonedDate:'d MMM yyyy, HH:mm' }}</small> }
+                                </span>
+                            </li>
+                            }
+                        </ol>
+                    </section>
+
+                    <section class="ov-card ov-details">
+                        <div class="ov-head">
+                            <h3>{{ t().manager.studio.postDetails }}</h3>
+                            <button type="button" (click)="setDetailTab('details')">{{ t().manager.studio.editDetails }} →</button>
+                        </div>
+                        <dl class="kv">
+                            @if (projects().length) {
+                            <dt>{{ t().manager.project }}</dt><dd>{{ projectName(d.projectId) }}</dd>
+                            }
+                            <dt>{{ t().manager.folder }}</dt><dd>{{ folderName(d) }}</dd>
+                            <dt>{{ t().manager.inspector.languages }}</dt><dd>{{ languagesLine(d) }}</dd>
+                            <dt>{{ t().manager.inspector.visibility }}</dt>
+                            <dd>{{ d.isPrivate ? t().manager.inspector.private : t().manager.inspector.public }}</dd>
+                            <dt>{{ t().manager.studio.blogUrl }}</dt>
+                            <dd>
+                                @if (blogUrl(d); as url) {
+                                <a class="insp-link" [href]="url" target="_blank" rel="noopener">/{{ d.blogSlug }}</a>
                                 } @else {
-                                <p class="studio-empty">{{ t().manager.groups.growthEmpty }}</p>
+                                <span class="insp-none">{{ t().manager.inspector.notPublished }}</span>
                                 }
-                            </div>
-                        </div>
+                            </dd>
+                        </dl>
+                    </section>
+                </div>
 
-                        <div class="studio-section studio-activity">
-                            <div class="studio-section-head">
-                                <h3>{{ t().manager.studio.recentActivity }}</h3>
-                            </div>
-                            <ol>
-                                @for (item of studioActivity(d); track item.label + item.at) {
-                                <li>
-                                    <span class="activity-dot"></span>
-                                    <span>
-                                        <strong>{{ item.label }}</strong>
-                                        @if (item.at) { <small>{{ item.at | zonedDate:'d MMM, HH:mm' }}</small> }
-                                    </span>
-                                </li>
-                                } @empty {
-                                <li class="is-empty">{{ t().manager.studio.noActivity }}</li>
-                                }
-                            </ol>
-                        </div>
+                <!--The hint names the first destination the post has not reached.-->
+                <div class="next-step" role="note">
+                    @if (nextStep(d); as next) {
+                    <div>
+                        <strong>{{ t().manager.studio.nextStep(next.name) }}</strong>
+                        <p>{{ t().manager.studio.nextStepBody(reachedCount(d), next.name) }}</p>
                     </div>
-                </section>
-
-                <!--8.4 — the detail pane used to render every setting a post has at once, which
-                is a wall of controls for a page whose usual job is "check where this went".
-                Native <details>, not a hand-rolled accordion: it collapses without JavaScript,
-                is keyboard- and screen-reader-correct for free, and its <summary> already
-                counts as a control for the 44px touch rule. Which groups start open is
-                remembered per browser, so the two anyone keeps open stay open.-->
-                <details class="detail-group" [open]="isOpen('basics')" (toggle)="rememberOpen('basics', $event)">
-                    <summary>{{ t().manager.groups.basics }}</summary>
-                <div class="detail-field">
-                    <label for="post-title">{{ t().manager.title }}</label>
-                    <input id="post-title" class="chat-input" [(ngModel)]="editTitle">
+                    <app-button variant="paper" (clicked)="setDetailTab('publishing')">{{ t().manager.studio.viewPublishing }} →</app-button>
+                    } @else {
+                    <div>
+                        <strong>{{ t().manager.studio.allReached }}</strong>
+                        <p>{{ t().manager.studio.allReachedBody }}</p>
+                    </div>
+                    }
                 </div>
-                <!--Idea #4: the name in the drafts list and the headline a reader sees are
-                two different things. Empty keeps them the same.-->
-                <div class="detail-field">
-                    <label for="post-article-title">{{ t().manager.articleTitle }}</label>
-                    <input id="post-article-title" class="chat-input" [(ngModel)]="editArticleTitle"
-                           [placeholder]="editTitle || t().manager.articleTitlePlaceholder" maxlength="200">
-                    <p class="field-hint-inline">{{ t().manager.articleTitleHint }}</p>
-                </div>
-                <!--FI3.2: the same tag picker the editor and the new-draft dialog use, rather
-                than this page's own text-field-plus-pills take on it.-->
-                <div class="detail-field">
-                    <label>{{ t().manager.tags }} <span class="field-hint-inline">{{ t().manager.tagsHint }}</span></label>
-                    <app-tag-picker [tags]="editTags()" (tagsChange)="editTags.set($event)"></app-tag-picker>
-                </div>
-                <app-button variant="pine" (clicked)="saveMeta()" [disabled]="busy()">
-                    @if (renaming()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                    {{ t().common.save }}
-                </app-button>
-
-                </details>
-
-                <details class="detail-group" [open]="isOpen('placement')" (toggle)="rememberOpen('placement', $event)">
-                    <summary>{{ t().manager.groups.placement }}</summary>
-                <!--T-039 — reactions and comments, per post. Enforced server-side too: the
-                controls are markup, and a POST needs no button to be sent.-->
-                <div class="detail-field">
-                    <label class="field-hint">
-                        <input type="checkbox" [checked]="!d.disableReactions"
-                               (change)="setEngagement(!d.disableReactions, d.disableComments)" [disabled]="busy()">
-                        {{ t().manager.allowReactions }}
-                    </label>
-                    <label class="field-hint">
-                        <input type="checkbox" [checked]="!d.disableComments"
-                               (change)="setEngagement(d.disableReactions, !d.disableComments)" [disabled]="busy()">
-                        {{ t().manager.allowComments }}
-                    </label>
-                </div>
-
-                <!--ADR-203 — which project this post belongs to. The last document cannot be taken
-                out of a project, so the server refuses that and the error is what says so.-->
-                @if (projects().length) {
-                <div class="detail-field">
-                    <label for="post-project">{{ t().manager.project }}</label>
-                    <select id="post-project" [value]="d.projectId ?? ''" [disabled]="busy()"
-                            (change)="setProject(d.id, $any($event.target).value)">
-                        <option value="">{{ t().manager.noProject }}</option>
-                        @for (p of projects(); track p.id) {
-                        <option [value]="p.id">{{ p.name }}</option>
-                        }
-                    </select>
-                    <p class="field-hint">{{ t().manager.projectHint }}</p>
-                </div>
-                }
-
-                <div class="detail-actions">
-                    <app-button variant="paper" (clicked)="togglePrivate()" [disabled]="busy()">
-                        <app-icon name="lock" size="sm"></app-icon>
-                        {{ d.isPrivate ? t().manager.makePublic : t().manager.makePrivate }}
-                    </app-button>
-                    <app-button variant="paper" (clicked)="toggleArchive()" [disabled]="busy()">
-                        @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> {{ t().manager.unarchive }} }
-                        @else { <app-icon name="archive" size="sm"></app-icon> {{ t().manager.archive }} }
-                    </app-button>
-                    <app-button variant="danger" (clicked)="deleteConfirmId.set(d.id)" [disabled]="busy()">
-                        <app-icon name="trash" size="sm"></app-icon>
-                        {{ t().common.delete }}
-                    </app-button>
-                </div>
-
-                </details>
-
-                <!--What this group is left with after ADR-167 clause 3: the two things in it
-                that were commands rather than facts. Every link it used to carry is a property
-                of the post, and is read on the inspector instead.-->
-                @if (d.isBlogPublished || d.blogSlug) {
-                <details class="detail-group" [open]="isOpen('destinations')" (toggle)="rememberOpen('destinations', $event)">
-                    <summary>{{ t().manager.groups.destinations }}</summary>
-                <div class="detail-field">
-                    <label>{{ t().manager.blog }}</label>
+            }
+            @case ('publishing') {
+                <section class="tab-section">
+                    <h3>{{ t().manager.blog }}</h3>
                     @if (d.isBlogPublished) {
-                    <!--FI3.4: the URL outlives the draft, so it's worth being able to choose.
-                    Slugified server-side, so a hand-typed value can't be unroutable.-->
+                    <!--The URL outlives the draft, so it is worth choosing; slugified server-side.-->
                     <div class="action-row">
                         <input class="chat-input" [(ngModel)]="editSlug" [placeholder]="t().manager.slugPlaceholder"
                                [attr.aria-label]="t().manager.slugLabel">
@@ -386,30 +280,68 @@ so it stays addressable by the name the smoke suite binds.-->
                             {{ t().common.save }}
                         </app-button>
                     </div>
-                    }
-                    <!--FI2.1: unpublishing is managing an already-published post, which the
-                    Export window explicitly stops doing (FI2.6) — it belongs here.-->
-                    @if (d.isBlogPublished) {
-                    <app-button class="unpublish" variant="danger" (clicked)="unpublish(d)" [disabled]="busy()">
-                        @if (unpublishing()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                        {{ t().manager.unpublish }}
-                    </app-button>
+                    <div class="detail-actions">
+                        @if (blogUrl(d); as url) {
+                        <a class="insp-link" [href]="url" target="_blank" rel="noopener">
+                            <app-icon name="arrow-square-out" size="xs"></app-icon>{{ t().manager.openBlog }}
+                        </a>
+                        }
+                        <app-button class="unpublish" variant="danger" (clicked)="unpublish(d)" [disabled]="busy()">
+                            @if (unpublishing()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                            {{ t().manager.unpublish }}
+                        </app-button>
+                    </div>
                     } @else if (d.blogSlug) {
                     <p class="field-hint-inline">{{ t().manager.unpublishedNote }} {{ t().manager.republishHint }}</p>
+                    } @else {
+                    <p class="field-hint-inline">{{ t().manager.studio.notPublished }}. {{ t().manager.republishHint }}</p>
                     }
-                </div>
-                </details>
-                }
+                </section>
 
-                <!--FI2.8: scheduled posts are managed here, not in the Export window. Kept
-                per-post rather than as one global list: every scheduled post belongs to a
-                draft that is in the list on the left, so nothing becomes unreachable, and
-                the row carries a clock icon so a post with a pending send is findable.-->
+                <!--ADR-317 §4 — every send as the channel recorded it, not the draft's last one.-->
+                <section class="tab-section telegram-sends">
+                    <h3>{{ t().manager.studio.telegramSends }}</h3>
+                    @for (send of telegramSends(d); track send.publishedAt + send.targetName) {
+                    <div class="link-row">
+                        <span>
+                            <strong>{{ send.targetName || t().manager.telegram }}</strong> ·
+                            {{ send.publishedAt | zonedDate:'d MMM yyyy, HH:mm' }}
+                            @if (send.partCount > 1) { · {{ t().manager.threadOf(send.partCount) }} }
+                        </span>
+                        @if (send.publicUrl) {
+                        <a class="insp-link" [href]="send.publicUrl" target="_blank" rel="noopener">
+                            <app-icon name="arrow-square-out" size="xs"></app-icon>{{ t().manager.openTelegram }}
+                        </a>
+                        }
+                    </div>
+                    } @empty {
+                    <p class="field-hint-inline">{{ t().manager.studio.noTelegramSends }}</p>
+                    }
+                </section>
+
+                <section class="tab-section">
+                    <h3>{{ t().manager.studio.otherNetworks }}</h3>
+                    @for (post of publishedElsewhere(d); track post.network + post.language + post.targetId) {
+                    <div class="link-row">
+                        <span>
+                            <strong>{{ networkLabel(post.network) }}</strong> · {{ post.language.toUpperCase() }}
+                            @if (post.finishedAt) { · {{ post.finishedAt | zonedDate:'d MMM yyyy, HH:mm' }} }
+                        </span>
+                        <a class="insp-link" [href]="post.publicUrl" target="_blank" rel="noopener">
+                            <app-icon name="arrow-square-out" size="xs"></app-icon>
+                            @if (post.partCount > 1) { {{ t().manager.threadOf(post.partCount) }} }
+                            @else { {{ t().manager.openPost(networkLabel(post.network)) }} }
+                        </a>
+                    </div>
+                    } @empty {
+                    <p class="field-hint-inline">{{ t().manager.studio.noOtherNetworks }} {{ t().manager.republishHint }}</p>
+                    }
+                </section>
+
                 @if (scheduledFor(d.id); as scheduled) {
                 @if (scheduled.length || sentScheduleCount(d.id)) {
-                <details class="detail-group" [open]="isOpen('scheduled')" (toggle)="rememberOpen('scheduled', $event)">
-                    <summary>{{ t().manager.scheduled }}</summary>
-                <div class="detail-field">
+                <section class="tab-section">
+                    <h3>{{ t().manager.scheduled }}</h3>
                     @if (sentScheduleCount(d.id); as sentCount) {
                     <app-button variant="paper" size="sm" (clicked)="showSentSchedules.set(!showSentSchedules())">
                         {{ showSentSchedules() ? t().manager.hideSent : t().manager.showSent(sentCount) }}
@@ -433,16 +365,17 @@ so it stays addressable by the name the smoke suite binds.-->
                         </button>
                     </div>
                     }
-                </div>
-                </details>
+                </section>
                 }
                 }
+            }
+            @case ('engagement') {
+                <section class="tab-section">
+                    <p class="notice social-unavailable">{{ t().manager.studio.socialUnavailable }}</p>
+                </section>
 
-                <!--8.6 — how this post grew, from the nightly per-draft snapshots. Closed by
-                default: it is a question you ask about a post, not something you need every
-                time you open one.-->
-                <details class="detail-group" [open]="isOpen('growth')" (toggle)="rememberOpen('growth', $event); loadHistory(d.id)">
-                    <summary>{{ t().manager.groups.growth }}</summary>
+                <section class="tab-section">
+                    <h3>{{ t().manager.groups.growth }}</h3>
                     @if (predatesHistory(d.blogPublishedAt)) {
                     <p class="field-hint-inline">{{ t().manager.groups.growthSince }}</p>
                     }
@@ -471,23 +404,96 @@ so it stays addressable by the name the smoke suite binds.-->
                     <p class="field-hint-inline">{{ t().manager.groups.growthEmpty }}</p>
                     }
                     }
-                </details>
+                </section>
 
-                <!--FI3.5: this post's reactions and comments, where "what happened with this
-                post" already lives. One instance filtered by the selected post, so switching
-                posts costs no request — everything was fetched in one call.-->
-                <details class="detail-group" [open]="isOpen('feedback')" (toggle)="rememberOpen('feedback', $event)">
-                    <summary>{{ t().manager.tabs.feedback }}</summary>
+                @if (draftLinks().length) {
+                <section class="tab-section">
+                    <h3>{{ t().manager.inspector.clicks }} · {{ totalClicks() }}</h3>
+                    @for (link of draftLinks(); track link.id) {
+                    <div class="link-row">
+                        <span>/l/{{ link.code }}</span>
+                        <a class="insp-link" [href]="shortUrlOf(link)" target="_blank" rel="noopener" [title]="link.url">
+                            {{ link.clickCount }}
+                        </a>
+                    </div>
+                    }
+                </section>
+                }
+
+                <section class="tab-section">
+                    <h3>{{ t().manager.tabs.feedback }}</h3>
                     <app-comments [onlyDraftId]="d.id"></app-comments>
-                </details>
+                </section>
+            }
+            @case ('details') {
+                <section class="tab-section">
+                    <h3>{{ t().manager.groups.basics }}</h3>
+                <div class="detail-field">
+                    <label for="post-title">{{ t().manager.title }}</label>
+                    <input id="post-title" class="chat-input" [(ngModel)]="editTitle">
+                </div>
+                <!--Idea #4: the name in the drafts list and the headline a reader sees are
+                two different things. Empty keeps them the same.-->
+                <div class="detail-field">
+                    <label for="post-article-title">{{ t().manager.articleTitle }}</label>
+                    <input id="post-article-title" class="chat-input" [(ngModel)]="editArticleTitle"
+                           [placeholder]="editTitle || t().manager.articleTitlePlaceholder" maxlength="200">
+                    <p class="field-hint-inline">{{ t().manager.articleTitleHint }}</p>
+                </div>
+                <!--FI3.2: the same tag picker the editor and the new-draft dialog use, rather
+                than this page's own text-field-plus-pills take on it.-->
+                <div class="detail-field">
+                    <label>{{ t().manager.tags }} <span class="field-hint-inline">{{ t().manager.tagsHint }}</span></label>
+                    <app-tag-picker [tags]="editTags()" (tagsChange)="editTags.set($event)"></app-tag-picker>
+                </div>
+                <app-button variant="pine" (clicked)="saveMeta()" [disabled]="busy()">
+                    @if (renaming()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+                    {{ t().common.save }}
+                </app-button>
+                </section>
 
-                <!--Item 2: a private post's form is chosen HERE, by picking a preset. The
-                definition itself is authored on the Forms tab; the preset is copied onto the
-                post (N12), so editing it later can't rewrite a post that already used it.-->
+                <section class="tab-section">
+                    <h3>{{ t().manager.groups.placement }}</h3>
+                <div class="detail-field">
+                    <label>{{ t().manager.folder }}</label>
+                    <app-folder-picker [folderId]="d.folderId" (picked)="assignFolder($event)"></app-folder-picker>
+                </div>
+                @if (projects().length) {
+                <div class="detail-field">
+                    <label for="post-project">{{ t().manager.project }}</label>
+                    <select id="post-project" [value]="d.projectId ?? ''" [disabled]="busy()"
+                            (change)="setProject(d.id, $any($event.target).value)">
+                        <option value="">{{ t().manager.noProject }}</option>
+                        @for (p of projects(); track p.id) {
+                        <option [value]="p.id" [selected]="p.id === d.projectId">{{ p.name }}</option>
+                        }
+                    </select>
+                    <p class="field-hint">{{ t().manager.projectHint }}</p>
+                </div>
+                }
+                <!--T-039 — reactions and comments, per post. Enforced server-side too: the
+                controls are markup, and a POST needs no button to be sent.-->
+                <div class="detail-field">
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="!d.disableReactions"
+                               (change)="setEngagement(!d.disableReactions, d.disableComments)" [disabled]="busy()">
+                        {{ t().manager.allowReactions }}
+                    </label>
+                    <label class="field-hint">
+                        <input type="checkbox" [checked]="!d.disableComments"
+                               (change)="setEngagement(d.disableReactions, !d.disableComments)" [disabled]="busy()">
+                        {{ t().manager.allowComments }}
+                    </label>
+                </div>
+                <dl class="kv">
+                    <dt>{{ t().manager.createdOn }}</dt><dd>{{ d.createdAt | zonedDate:'MM/dd/yyyy' }}</dd>
+                    <dt>{{ t().manager.editedOn }}</dt><dd>{{ d.updatedAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</dd>
+                </dl>
+                </section>
+
                 @if (d.isPrivate) {
-                <details class="detail-group" [open]="isOpen('access')" (toggle)="rememberOpen('access', $event)">
-                    <summary>{{ t().manager.groups.access }}</summary>
-
+                <section class="tab-section">
+                    <h3>{{ t().manager.groups.access }}</h3>
                 <!--Copy protection — same private-only family as the watermark: a deterrent
                 on the rendered blog page, toggled here and in the editor's Export window.-->
                 <div class="detail-field">
@@ -519,111 +525,22 @@ so it stays addressable by the name the smoke suite binds.-->
                         [changeLabel]="t().manager.forms.changeForm" [noFormLabel]="t().manager.forms.noFormChosen"
                         [clearLabel]="t().manager.forms.clearForm" [languagesLabel]="t().manager.forms.formLanguages"
                         [noPresetsLabel]="t().manager.forms.noPresetsYet" [noPresetsSavedLabel]="t().manager.forms.noPresetsSaved"
-                        [createLabel]="t().manager.forms.createOne" [manageLabel]="t().manager.tabs.forms"
-                        (pick)="pickPreset($event)" (manage)="setTab('forms')">
+                        [createLabel]="t().manager.forms.createOne" [manageLabel]="t().manager.forms.crumb"
+                        (pick)="pickPreset($event)">
                     </app-form-ref>
                     }
                 </div>
-                </details>
+                @if (regForm()) {
+                <app-button class="view-submissions" variant="paper" size="sm" link="/forms"
+                            [queryParams]="{ view: 'submissions', post: d.id }">{{ t().manager.forms.viewSubmissions }}</app-button>
                 }
-
-                <!--I19: form answers and their distribution live here rather than on the forms
-                tab — this is where "what happened with this post" already is. Its own group:
-                the access settings above are configuration, these are results, and a reader
-                of one rarely wants the other open at the same time.-->
-                @if (d.isPrivate && regForm()) {
-                <details class="detail-group" [open]="isOpen('submissions')" (toggle)="rememberOpen('submissions', $event)">
-                    <summary>{{ t().manager.forms.submissions }} <span class="field-hint-inline">{{ registrations().length }}</span></summary>
-
-                <!--Distribution charts: closed questions only. Free text would produce as many
-                slices as there are submissions.-->
-                @for (q of chartQuestions(); track q.id) {
-                @if (distribution(q); as slices) {
-                @if (slices.length) {
-                <div class="chart-block">
-                    <div class="chart-title">{{ q.label }}</div>
-                    @if (slices.length === 1) {
-                    <!--A one-slice pie is a full circle carrying no comparison — the number is
-                    the chart here.-->
-                    <p class="chart-single">
-                        <span class="legend-swatch" [style.background]="slices[0].color"></span>
-                        {{ slices[0].label }} — {{ slices[0].count }} ({{ slices[0].percent }}%), {{ t().manager.forms.everyoneAnswered }}
-                    </p>
-                    } @else {
-                    <div class="chart-row">
-                        <svg class="pie" viewBox="0 0 100 100" role="img" [attr.aria-label]="'Answer distribution for ' + q.label">
-                            @for (s of slices; track s.label) {
-                            <path [attr.d]="s.path" [attr.fill]="s.color" class="pie-slice">
-                                <title>{{ s.label }}: {{ s.count }} ({{ s.percent }}%)</title>
-                            </path>
-                            }
-                        </svg>
-                        <!--Legend carries label + count + percent, so identity never rests on
-                        colour alone.-->
-                        <ul class="legend">
-                            @for (s of slices; track s.label) {
-                            <li>
-                                <span class="legend-swatch" [style.background]="s.color"></span>
-                                <span class="legend-label">{{ s.label }}</span>
-                                <span class="legend-value">{{ s.count }} · {{ s.percent }}%</span>
-                            </li>
-                            }
-                        </ul>
-                    </div>
-                    }
-                </div>
+                </section>
                 }
-                }
-                }
-
-                <!--T-035: the row is a summary, the modal is the answer. Inline was fine while
-                every answer was one line; a long answer (T-032) runs to 2000 characters.-->
-                @for (r of registrations(); track r.id) {
-                <div class="registration-item" [class.is-revoked]="r.isRevoked">
-                    <button type="button" class="registration-row" (click)="selectedRegistration.set(r)">
-                        <div class="registration-head">
-                            <span class="invite-email">{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</span>
-                            @if (r.isRevoked) { <span class="tag muted">{{ t().manager.forms.revokedTag }}</span> }
-                            <span class="field-hint-inline">{{ r.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}</span>
-                        </div>
-                        <div class="field-hint-inline">
-                            @if (r.email) { {{ r.email }} }
-                            @if (r.nickname) { · {{ r.nickname }} }
-                            @if (r.socialLink) { · {{ r.socialLink }} }
-                        </div>
-                        @if (registrationAnswers(r).length; as answered) {
-                        <div class="field-hint-inline">{{ t().manager.forms.answerCount(answered) }}</div>
-                        }
-                    </button>
-                    <!--T-108 (ADR-084) — the grant travels with the row: revoke keeps the list
-                    entry and stops the link, restore lets the reader back in.-->
-                    @if (r.isRevoked) {
-                    <button type="button" class="mini registration-revoke" [disabled]="registrationRevoking()"
-                            (click)="restoreRegistration(r); $event.stopPropagation()"
-                            [title]="t().manager.forms.restoreAccess" [attr.aria-label]="t().manager.forms.restoreAccess">
-                        <app-icon name="arrow-counter-clockwise" size="sm"></app-icon>
-                    </button>
-                    } @else {
-                    <button type="button" class="mini registration-revoke"
-                            (click)="revokeRegistrationTarget.set(r); $event.stopPropagation()"
-                            [title]="t().manager.forms.revokeAccess" [attr.aria-label]="t().manager.forms.revokeAccess">
-                        <app-icon name="prohibit" size="sm"></app-icon>
-                    </button>
-                    }
-                    <!--The owner's own test answers pollute the distribution charts — every
-                    submission is deletable, behind the same confirm pattern as posts/presets.-->
-                    <button type="button" class="mini-remove registration-remove"
-                            (click)="deleteRegistrationTarget.set(r); $event.stopPropagation()"
-                            [title]="t().manager.forms.deleteSubmission" [attr.aria-label]="t().manager.forms.deleteSubmission">
-                        <app-icon name="trash" size="sm"></app-icon>
-                    </button>
-                </div>
-                } @empty {
-                <app-empty-state icon="user" [title]="t().manager.forms.noSubmissions" [text]="t().manager.forms.noSubmissionsHint" />
-                }
-                </details>
-                }
-                } @else {
+            }
+            }
+            </div>
+            } @else {
+            <div class="sheet-body">
                     @if (visiblePosts().length) {
                     <app-empty-state icon="file-text" [title]="t().manager.pickPost" [text]="t().manager.pickPostHint">
                         <app-button variant="paper" (clicked)="selectFirstPost()">{{ t().manager.selectFirstPost }}</app-button>
@@ -638,408 +555,10 @@ so it stays addressable by the name the smoke suite binds.-->
                         <app-button variant="pine" link="/drafts">{{ t().manager.writeFirst }}</app-button>
                     </app-empty-state>
                     }
-                }
-                </div>
-            </section>
-
-            <!--The inspector states what the post IS; the sheet holds what is done to it (ADR-167
-            clauses 3 and 4). With nothing picked it describes the library, never both at once.-->
-            <aside class="card inspector split-pane" [attr.aria-label]="inspectorTitle()">
-                <div class="card-head">
-                    <span class="label">{{ inspectorTitle() }}</span>
-                    @if (inspectorScopeWord()) { <span class="card-count">{{ inspectorScopeWord() }}</span> }
-                </div>
-                <div class="card-body">
-                @if (selected(); as d) {
-                    <app-spec-row scope="selection" [label]="t().manager.inspector.status">
-                        <span class="tag" [class.ok]="stateTone(d) === 'ok'" [class.warn]="stateTone(d) === 'warn'"
-                              [class.muted]="stateTone(d) === 'muted'">{{ publishStateLabel(d) }}</span>
-                    </app-spec-row>
-                    <app-spec-row scope="selection" [label]="t().manager.inspector.languages">
-                        @for (l of visibleLanguages(d); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                        @if (extraLanguageCount(d); as extra) {
-                        <span class="post-card-lang" [title]="extraLanguageTitle(d)">+{{ extra }}</span>
-                        }
-                    </app-spec-row>
-                    <app-spec-row scope="selection" [label]="t().manager.inspector.visibility"
-                                  [value]="d.isPrivate ? t().manager.inspector.private : t().manager.inspector.public"></app-spec-row>
-                    <!--FI3.3: folders are picked, created, renamed and deleted from here too,
-                    with the same control every other screen carries.-->
-                    <app-spec-row scope="selection" [label]="t().manager.folder" field>
-                        <app-folder-picker [folderId]="d.folderId" (picked)="assignFolder($event)"></app-folder-picker>
-                    </app-spec-row>
-
-                    <app-spec-row scope="selection" [label]="t().manager.blog">
-                        @if (blogUrl(d); as url) {
-                        <a class="insp-link" [href]="url" target="_blank" rel="noopener">
-                            <app-icon name="arrow-square-out" size="xs"></app-icon>{{ d.blogSlug }}
-                        </a>
-                        } @else {
-                        <span class="insp-none">{{ t().manager.inspector.notPublished }}</span>
-                        }
-                    </app-spec-row>
-                    @if (d.blogPublishedAt) {
-                    <app-spec-row scope="selection" [label]="t().manager.publishedOn"
-                                  [value]="d.blogPublishedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
-                    }
-                    <app-spec-row scope="selection" [label]="t().manager.createdOn"
-                                  [value]="d.createdAt | zonedDate:'MM/dd/yyyy'"></app-spec-row>
-                    <app-spec-row scope="selection" [label]="t().manager.editedOn"
-                                  [value]="d.updatedAt | zonedDate:'MM/dd/yyyy, HH:mm'"></app-spec-row>
-                    @if (telegramUrl(d); as url) {
-                    <app-spec-row scope="selection" [label]="t().manager.telegram">
-                        <a class="insp-link" [href]="url" target="_blank" rel="noopener">
-                            <app-icon name="arrow-square-out" size="xs"></app-icon>{{ t().manager.openTelegram }}
-                        </a>
-                    </app-spec-row>
-                    }
-                    <!--Where else this post went. Read from the publish queue's own record,
-                    which held every URL all along and was never shown anywhere outside the
-                    editor's progress checklist — so closing that modal lost the link for good.-->
-                    @for (post of publishedElsewhere(d); track post.network + post.language + post.targetId) {
-                    <app-spec-row scope="selection"
-                                  [label]="networkLabel(post.network) + ' · ' + post.language.toUpperCase()">
-                        <a class="insp-link" [href]="post.publicUrl" target="_blank" rel="noopener">
-                            <app-icon name="arrow-square-out" size="xs"></app-icon>
-                            @if (post.partCount > 1) { {{ t().manager.threadOf(post.partCount) }} }
-                            @else { {{ t().manager.openPost(networkLabel(post.network)) }} }
-                        </a>
-                    </app-spec-row>
-                    }
-                    @if (scheduledFor(d.id); as pending) {
-                    @if (pending.length) {
-                    <app-spec-row scope="selection" [label]="t().manager.scheduled" value="{{ pending.length }}"></app-spec-row>
-                    }
-                    }
-                    <!--Wave 2 item 16 — the clicks the post's tracked short links collected.
-                    Counters only, bots included; absent entirely while the post has no links.-->
-                    @if (draftLinks().length) {
-                    <app-spec-row scope="selection" [label]="t().manager.inspector.clicks"
-                                  value="{{ totalClicks() }}"></app-spec-row>
-                    @for (link of draftLinks(); track link.id) {
-                    <app-spec-row scope="selection" [label]="'/l/' + link.code">
-                        <a class="insp-link" [href]="shortUrlOf(link)" target="_blank" rel="noopener" [title]="link.url">
-                            {{ link.clickCount }}
-                        </a>
-                    </app-spec-row>
-                    }
-                    }
-                } @else {
-                    <p class="insp-note">{{ t().manager.inspector.pick }}</p>
-                    <app-spec-row scope="document" [label]="t().manager.inspector.posts" value="{{ drafts().length }}"></app-spec-row>
-                    <app-spec-row scope="document" [label]="t().manager.inspector.published" value="{{ publishedCount() }}"></app-spec-row>
-                    <app-spec-row scope="document" [label]="t().manager.inspector.privateCount" value="{{ privateCount() }}"></app-spec-row>
-                    <app-spec-row scope="document" [label]="t().manager.inspector.archivedCount" value="{{ archivedCount() }}"></app-spec-row>
-                    <app-spec-row scope="document" [label]="t().manager.inspector.pending" value="{{ pendingScheduleCount() }}"></app-spec-row>
-                }
-                </div>
-            </aside>
-        </div>
-        }
-    }
-
-    <!--The former /stats page, minus its own page header — this page provides the chrome.-->
-    @if (tab() === 'stats') { <app-stats></app-stats> }
-
-    <!--Item 4: this tab is ONLY about forms. It used to require picking a private post and
-    edited that post's form, which made a form look like a property of a post. Forms are
-    authored here as presets; a post picks one on the Posts tab.-->
-    @if (tab() === 'forms') {
-        @if (presetsLoading()) {
-        <p class="hint" role="status">{{ t().common.loading }}</p>
-        } @else if (presetLoadError()) {
-        <app-empty-state role="alert" icon="warning" [title]="presetLoadError()">
-            <app-button variant="paper" (clicked)="loadPresets()">{{ t().projects.canvas.retry }}</app-button>
-        </app-empty-state>
-        } @else if (!presets().length) {
-        <app-empty-state icon="clipboard-text" [title]="t().manager.forms.noPresetsTitle" [text]="t().manager.forms.presetsIntro">
-            <app-button variant="pine" (clicked)="newPreset()">{{ t().manager.forms.newPreset }}</app-button>
-        </app-empty-state>
-        } @else {
-        <div class="mg-grid split-workspace is-two is-forms">
-            <section class="card shelf-list split-pane" [attr.aria-label]="t().manager.tabs.forms">
-                <div class="card-head">
-                    <span class="label">{{ t().manager.tabs.forms }}</span>
-                    <span class="card-count">{{ presets().length }}</span>
-                </div>
-                <div class="post-toolbar form-toolbar">
-                    <app-input class="post-search" type="search" [dense]="true"
-                               [label]="t().manager.forms.searchLabel" [value]="presetSearch()"
-                               (valueChange)="onPresetSearch($any($event) ?? '')" />
-                    <label class="post-sort">
-                        <span>{{ t().manager.forms.sortLabel }}</span>
-                        <select [value]="presetSortValue()" (change)="setPresetSortValue($any($event.target).value)">
-                            @for (option of presetSortOptions(); track option.value) {
-                                <option [value]="option.value">{{ option.label }}</option>
-                            }
-                        </select>
-                    </label>
-                    <label class="post-sort">
-                        <span>{{ t().manager.filterLanguage }}</span>
-                        <select [value]="presetLanguageFilter()" (change)="setPresetLanguageFilter($any($event.target).value)">
-                            <option value="all">{{ t().manager.filterAll }}</option>
-                            @for (language of availablePresetLanguages(); track language) {
-                                <option [value]="language">{{ language.toUpperCase() }}</option>
-                            }
-                        </select>
-                    </label>
-                    @if (hasPresetFilters() && visiblePresets().length) {
-                        <app-button variant="paper" size="sm" (clicked)="clearPresetFilters()">
-                            {{ t().manager.clearFilters }}
-                        </app-button>
-                    }
-                    <span class="post-result-count">{{ t().manager.resultCount(visiblePresets().length, presets().length) }}</span>
-                </div>
-                <div class="row-list post-list">
-                @for (p of visiblePresets(); track p.id) {
-                <!--Same row as the posts list: two lists on one screen that behaved and looked
-                differently was a difference with no meaning behind it.-->
-                <button class="row post-card is-preset" [class.is-on]="selectedPresetId() === p.id"
-                        [attr.aria-current]="selectedPresetId() === p.id ? 'true' : null" (click)="selectPreset(p)">
-                    <span class="post-card-main">
-                        <span class="post-card-title"><span class="t post-card-title-text" [title]="p.name">{{ p.name }}</span></span>
-                        <!--ADR-060: every language the preset carries text for, first = primary.-->
-                        <span class="m post-card-langs">
-                            @for (l of presetLanguagesOf(p); track l) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                            <span aria-hidden="true">·</span>
-                            <span>{{ t().manager.forms.questionsCount(presetQuestionCount(p)) }}</span>
-                        </span>
-                    </span>
-                </button>
-                } @empty {
-                    <p class="post-list-message" role="status">{{ t().manager.forms.emptyFiltered }}</p>
-                }
-                </div>
-            </section>
-
-            <section class="card sheet split-pane" [attr.aria-label]="presetSheetLabel()">
-                <div class="card-head">
-                    <span class="card-title">{{ presetSheetLabel() }}</span>
-                    @if (presetSheetMeta()) { <span class="card-meta">{{ presetSheetMeta() }}</span> }
-                </div>
-                <div class="sheet-body" #presetSheetBody>
-                @if (presetForm(); as form) {
-                <div class="form-editor">
-                <!--FI4.2: the editor used to be one flat stack of inputs, checkboxes and
-                outlined rows with nothing saying what belonged to what. It is three labelled
-                blocks now - identity, the built-in fields, the questions - and each question
-                is a card carrying its own controls instead of a bordered row among rows.-->
-                <div class="form-block">
-                    <span class="form-block-title">{{ t().manager.forms.blockIdentity }}</span>
-                    <label class="form-field">
-                        <span class="form-field-label">{{ t().manager.forms.presetName }}</span>
-                        <input class="chat-input" [(ngModel)]="presetName" (ngModelChange)="markPresetNameDirty()" maxlength="60">
-                    </label>
-                    <!--ADR-060: one preset carries every language. The first chip is the
-                    skeleton's fallback language; each added one gets its own text field on
-                    every question below, plus an auto-translate shortcut.-->
-                    <div class="form-field">
-                        <span class="form-field-label">{{ t().manager.forms.formLanguages }} <app-hint-dot [text]="t().manager.forms.languageHint" /></span>
-                        <div class="lang-chip-row">
-                            @for (l of presetLangs(); track l; let first = $first) {
-                            <span class="lang-chip-edit" [class.primary]="first">
-                                {{ l.toUpperCase() }}
-                                @if (!first) {
-                                <button class="lang-chip-act" (click)="translatePresetLanguage(l)"
-                                        [disabled]="presetTranslating() !== null || !auth.hasAiPlan()"
-                                        [title]="auth.hasAiPlan() ? t().manager.forms.translateLang : t().planLock.pro"
-                                        [attr.aria-label]="auth.hasAiPlan() ? t().manager.forms.translateLang : t().planLock.pro">
-                                    @if (presetTranslating() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                                    @else if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
-                                    @else { <app-icon name="arrow-clockwise" size="sm"></app-icon> }
-                                </button>
-                                <button class="lang-chip-act" (click)="removePresetLanguage(l)" [title]="t().manager.forms.removeLang" [attr.aria-label]="t().manager.forms.removeLang">
-                                    <app-icon name="x" size="sm"></app-icon>
-                                </button>
-                                }
-                            </span>
-                            }
-                            @if (addableLanguages().length) {
-                            <!--T-350 — the one shared language menu, so the search, the endonyms
-                            and the plan locks are the same here as everywhere else.-->
-                            <app-language-menu class="lang-add" [active]="presetLangs()[0]"
-                                               [only]="addableLanguages()"
-                                               [triggerLabel]="'+ ' + t().manager.forms.addLanguage"
-                                               (picked)="addPresetLanguage($event)" />
-                            }
-                        </div>
-                        @if (presetTranslateError()) {
-                        <p class="reg-error-inline">{{ presetTranslateError() }}</p>
-                        }
-                    </div>
-                    @for (l of presetLangs(); track l) {
-                    <label class="form-field">
-                        <span class="form-field-label">{{ t().manager.forms.introLabel }}
-                            @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                        </span>
-                        <input class="chat-input" [value]="form.intro[l] || ''" (change)="setIntro(l, $any($event.target).value)"
-                               [placeholder]="t().manager.forms.introPlaceholder" maxlength="500">
-                    </label>
-                    }
-                </div>
-
-                <!--T-033 — the reply the respondent gets. Empty body = no mail: an owner who has
-                not written one has not agreed to write to their readers.-->
-                <div class="form-block">
-                    <span class="form-block-title">{{ t().manager.forms.blockReply }}</span>
-                    <p class="field-hint-inline">{{ t().manager.forms.replyHint }}</p>
-                    @for (l of presetLangs(); track l) {
-                    <label class="form-field">
-                        <span class="form-field-label">{{ t().manager.forms.replySubject }}
-                            @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                        </span>
-                        <input class="chat-input" [value]="form.responseEmailSubject[l] || ''"
-                               (change)="setReplySubject(l, $any($event.target).value)"
-                               [placeholder]="t().manager.forms.replySubjectPlaceholder" maxlength="200">
-                    </label>
-                    <label class="form-field">
-                        <span class="form-field-label">{{ t().manager.forms.replyBody }}</span>
-                        <textarea class="chat-input" rows="4" [value]="form.responseEmailBody[l] || ''"
-                                  (change)="setReplyBody(l, $any($event.target).value)"
-                                  [placeholder]="t().manager.forms.replyBodyPlaceholder" maxlength="2000"></textarea>
-                    </label>
-                    }
-                </div>
-
-                <div class="form-block">
-                    <span class="form-block-title">{{ t().manager.forms.blockFields }}</span>
-                    <p class="field-hint-inline">{{ t().manager.forms.fieldsHint }}</p>
-                    <div class="form-check-grid">
-                        <label class="form-check"><input type="checkbox" [checked]="form.requireName" (change)="togglePresetField('requireName')"> {{ t().manager.forms.fieldName }}</label>
-                        <label class="form-check"><input type="checkbox" [checked]="form.requireNickname" (change)="togglePresetField('requireNickname')"> {{ t().manager.forms.fieldNickname }}</label>
-                        <label class="form-check"><input type="checkbox" [checked]="form.requireEmail" (change)="togglePresetField('requireEmail')"> {{ t().manager.forms.fieldEmail }}</label>
-                        <label class="form-check"><input type="checkbox" [checked]="form.requireSocial" (change)="togglePresetField('requireSocial')"> {{ t().manager.forms.fieldSocial }}</label>
-                    </div>
-                </div>
-
-                <div class="form-block">
-                    <span class="form-block-title">{{ t().manager.forms.blockQuestions }}</span>
-                    @for (q of form.questions; track q.id; let i = $index) {
-                    <div class="question-card">
-                        <div class="question-card-head">
-                            <span class="question-number">{{ i + 1 }}</span>
-                            <!--ADR-060: one input per active language; the option ids below
-                            keep "Да" and "Yes" the same answer in the charts.-->
-                            <div class="q-label-stack">
-                                @for (l of presetLangs(); track l) {
-                                <label class="q-label-row">
-                                    <span class="form-field-label">
-                                        {{ t().manager.forms.questionPlaceholder }}
-                                        @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                                    </span>
-                                    @if (q.type === 'consent' || q.type === 'static') {
-                                    <textarea class="chat-input" rows="2" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
-                                              [placeholder]="q.type === 'static' ? t().manager.forms.staticPlaceholder : t().manager.forms.consentPlaceholder"
-                                              maxlength="1000"></textarea>
-                                    } @else {
-                                    <input class="chat-input" [value]="q.label[l] || ''" (change)="setQuestionLabel(q.id, l, $any($event.target).value)"
-                                           [placeholder]="t().manager.forms.questionPlaceholder" maxlength="200">
-                                    }
-                                </label>
-                                }
-                            </div>
-                            <button class="mini-remove" (click)="removeQuestion(q.id)" [title]="t().manager.forms.removeQuestion" [attr.aria-label]="t().manager.forms.removeQuestion">
-                                <app-icon name="x" size="sm"></app-icon>
-                            </button>
-                        </div>
-                        <div class="question-card-body">
-                            <div class="pill-row">
-                                <button class="pill" [class.on]="q.type === 'text'" [attr.aria-pressed]="q.type === 'text'" (click)="setQuestionType(q.id, 'text')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'text'" name="check" size="xs" />{{ t().manager.forms.typeText }}</button>
-                                <button class="pill" [class.on]="q.type === 'longtext'" [attr.aria-pressed]="q.type === 'longtext'" (click)="setQuestionType(q.id, 'longtext')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'longtext'" name="check" size="xs" />{{ t().manager.forms.typeLongText }}</button>
-                                <button class="pill" [class.on]="q.type === 'choice'" [attr.aria-pressed]="q.type === 'choice'" (click)="setQuestionType(q.id, 'choice')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'choice'" name="check" size="xs" />{{ t().manager.forms.typeChoice }}</button>
-                                <button class="pill" [class.on]="q.type === 'multi'" [attr.aria-pressed]="q.type === 'multi'" (click)="setQuestionType(q.id, 'multi')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'multi'" name="check" size="xs" />{{ t().manager.forms.typeMulti }}</button>
-                                <button class="pill" [class.on]="q.type === 'consent'" [attr.aria-pressed]="q.type === 'consent'" (click)="setQuestionType(q.id, 'consent')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'consent'" name="check" size="xs" />{{ t().manager.forms.typeConsent }}</button>
-                                <button class="pill" [class.on]="q.type === 'static'" [attr.aria-pressed]="q.type === 'static'" (click)="setQuestionType(q.id, 'static')"><app-icon class="pill-marker" [class.is-visible]="q.type === 'static'" name="check" size="xs" />{{ t().manager.forms.typeStatic }}</button>
-                                <span class="spacer"></span>
-                                <label class="form-check">
-                                    <input type="checkbox" [checked]="!!q.required" [disabled]="q.type === 'consent' || q.type === 'static'"
-                                           (change)="updateQuestion(q.id, { required: !q.required })"> {{ t().manager.forms.required }}
-                                </label>
-                            </div>
-                            @if (q.type === 'choice' || q.type === 'multi') {
-                            <div class="option-rows">
-                                @for (o of q.options; track o.id; let optionIndex = $index) {
-                                <div class="option-row" [class.multi-lang]="presetLangs().length > 1">
-                                    @for (l of presetLangs(); track l) {
-                                    <label class="option-field">
-                                        <span class="form-field-label">
-                                            {{ t().manager.forms.optionPlaceholder }} {{ optionIndex + 1 }}
-                                            @if (presetLangs().length > 1) { <span class="post-card-lang">{{ l.toUpperCase() }}</span> }
-                                        </span>
-                                        <input class="chat-input option-input" [value]="o.label[l] || ''"
-                                               (change)="setOptionLabel(q.id, o.id, l, $any($event.target).value)"
-                                               [placeholder]="t().manager.forms.optionPlaceholder" maxlength="200">
-                                    </label>
-                                    }
-                                    <button class="mini-remove" (click)="removeOption(q.id, o.id)" [title]="t().manager.forms.removeOption" [attr.aria-label]="t().manager.forms.removeOption">
-                                        <app-icon name="x" size="sm"></app-icon>
-                                    </button>
-                                </div>
-                                }
-                                <app-button variant="paper" size="sm" class="option-add" (clicked)="addOption(q.id)">+ {{ t().manager.forms.addOption }}</app-button>
-                            </div>
-                            }
-                            @if (q.type === 'consent') {
-                            <p class="field-hint-inline">{{ t().manager.forms.consentHint }}</p>
-                            }
-                            <!--T-031: the picture is language-neutral, so it sits outside the
-                            per-language label stack above.-->
-                            @if (q.type === 'static') {
-                            <div class="static-media">
-                                @if (q.imageUrl) { <img class="static-preview" [src]="q.imageUrl" alt=""> }
-                                <label class="form-field">
-                                    <span class="form-field-label">{{ t().manager.forms.staticImagePlaceholder }}</span>
-                                    <input class="chat-input" [value]="q.imageUrl || ''"
-                                           (change)="setQuestionImage(q.id, $any($event.target).value)"
-                                           [placeholder]="t().manager.forms.staticImagePlaceholder" maxlength="500">
-                                </label>
-                            </div>
-                            <p class="field-hint-inline">{{ t().manager.forms.staticHint }}</p>
-                            }
-                        </div>
-                    </div>
-                    } @empty {
-                    <app-empty-state icon="list-checks" [title]="t().manager.forms.noQuestions">
-                        <app-button variant="paper" size="sm" (clicked)="addQuestion()">+ {{ t().manager.forms.addQuestion }}</app-button>
-                    </app-empty-state>
-                    }
-                    @if (form.questions.length) {
-                    <app-button variant="paper" (clicked)="addQuestion()">+ {{ t().manager.forms.addQuestion }}</app-button>
-                    }
-                </div>
-
-                    <div class="detail-actions">
-                        <app-button variant="danger" (clicked)="deletePresetId.set(selectedPresetId())">{{ t().manager.forms.deletePreset }}</app-button>
-                    </div>
-
-                    <div class="form-save-row">
-                        <app-button variant="pine" (clicked)="savePreset()" [disabled]="presetState() === 'saving' || presetState() === 'saved'">
-                            {{ t().common.save }}
-                        </app-button>
-                        <span class="form-save-state" [class.dirty]="presetState() === 'dirty'" [class.error]="presetState() === 'error'">
-                            @switch (presetState()) {
-                                @case ('saved') { {{ t().manager.forms.saved }} }
-                                @case ('saving') { {{ t().common.saving }} }
-                                @case ('dirty') { {{ t().manager.forms.unsaved }} }
-                                @case ('error') { {{ t().manager.errors.savePreset }} }
-                            }
-                        </span>
-                    </div>
-                </div>
-                } @else if (hasPresetFilters() && !visiblePresets().length) {
-                <app-empty-state icon="magnifying-glass" [title]="t().manager.forms.emptyFiltered"
-                                 [text]="t().manager.forms.emptyFilteredHint">
-                    <app-button variant="paper" size="sm" (clicked)="clearPresetFilters()">
-                        {{ t().manager.clearFilters }}
-                    </app-button>
-                </app-empty-state>
-                } @else {
-                <app-empty-state icon="clipboard-text" [title]="t().manager.forms.pickPreset" />
-                }
-                </div>
-            </section>
-        </div>
-        }
+            </div>
+            }
+        </section>
+    </div>
     }
 
     @if (deleteConfirmId()) {
@@ -1049,85 +568,6 @@ so it stays addressable by the name the smoke suite binds.-->
         <p>{{ t().drafts.deleteDraftBody }}</p>
         <app-button data-modal-autofocus modal-actions variant="paper" (clicked)="deleteConfirmId.set(null)">{{ t().common.cancel }}</app-button>
         <app-button modal-actions variant="danger" (clicked)="confirmDelete()">{{ t().common.delete }}</app-button>
-    </app-modal>
-    }
-
-    <!--T-035: one submission in full — every built-in field and every answer, untruncated.-->
-    @if (selectedRegistration(); as r) {
-    <app-modal [width]="520" (closed)="selectedRegistration.set(null)">
-        <h2 modal-title>{{ r.name || r.nickname || r.email || t().manager.forms.anonymous }}</h2>
-        <div modal-body>
-            <p class="field-hint-inline">
-                {{ r.createdAt | zonedDate:'MM/dd/yyyy, HH:mm' }}
-                @if (r.isRevoked) { <span class="tag muted">{{ t().manager.forms.revokedTag }}</span> }
-            </p>
-            @if (r.name) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldName }}:</span> {{ r.name }}</p> }
-            @if (r.nickname) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldNickname }}:</span> {{ r.nickname }}</p> }
-            @if (r.email) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldEmail }}:</span> {{ r.email }}</p> }
-            @if (r.socialLink) { <p class="answer-line"><span class="answer-label">{{ t().manager.forms.fieldSocial }}:</span> {{ r.socialLink }}</p> }
-
-            @for (a of registrationAnswers(r); track a.label) {
-            <div class="answer-block">
-                <p class="answer-label">{{ a.label }}</p>
-                <p class="answer-value">{{ a.value }}</p>
-            </div>
-            } @empty {
-            <p class="hint">{{ t().manager.forms.noAnswers }}</p>
-            }
-        </div>
-        @if (r.isRevoked) {
-        <app-button modal-actions class="registration-access" variant="paper" size="sm" [disabled]="registrationRevoking()"
-                    (clicked)="restoreRegistration(r)">{{ t().manager.forms.restoreAccess }}</app-button>
-        } @else {
-        <app-button modal-actions class="registration-access" variant="paper" size="sm" [disabled]="registrationRevoking()"
-                    (clicked)="revokeRegistrationTarget.set(r)">{{ t().manager.forms.revokeAccess }}</app-button>
-        }
-        <app-button modal-actions variant="paper" (clicked)="deleteRegistrationTarget.set(r)">{{ t().common.delete }}</app-button>
-        <app-button modal-actions variant="paper" (clicked)="selectedRegistration.set(null)">{{ t().common.close }}</app-button>
-    </app-modal>
-    }
-
-    <!--T-108 — revoking throws out a reader who may be mid-read, so it gets the delete confirm.
-    The body says what survives: the list entry and its answers stay, only the link stops.-->
-    @if (revokeRegistrationTarget(); as target) {
-    <app-modal (closed)="revokeRegistrationTarget.set(null)">
-        <app-icon modal-icon name="prohibit" size="sm"></app-icon>
-        <span modal-title>{{ t().manager.forms.revokeAccess }}</span>
-        <p>{{ t().manager.forms.revokeAccessBody(target.name || target.nickname || target.email || t().manager.forms.anonymous) }}</p>
-        <ng-container modal-actions>
-            <app-button variant="paper" size="sm" (clicked)="revokeRegistrationTarget.set(null)">{{ t().common.cancel }}</app-button>
-            <app-button variant="danger" size="sm" [disabled]="registrationRevoking()" (clicked)="confirmRevokeRegistration()">
-                @if (registrationRevoking()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-                {{ t().manager.forms.revokeAccess }}
-            </app-button>
-        </ng-container>
-    </app-modal>
-    }
-
-    <!--Deleting a submission is also revoking that reader's access — the row carries the grant
-    (ADR-084) — so it gets the same explicit confirm as deleting a post or a preset.-->
-    @if (deleteRegistrationTarget(); as target) {
-    <app-modal (closed)="deleteRegistrationTarget.set(null)">
-        <app-icon modal-icon name="trash" size="sm"></app-icon>
-        <span modal-title>{{ t().manager.forms.deleteSubmission }}</span>
-        <p>{{ t().manager.forms.deleteSubmissionBody(target.name || target.nickname || target.email || t().manager.forms.anonymous) }}</p>
-        <app-button modal-actions variant="paper" (clicked)="deleteRegistrationTarget.set(null)">{{ t().common.cancel }}</app-button>
-        <app-button modal-actions variant="danger" (clicked)="confirmDeleteRegistration()" [disabled]="registrationDeleting()">
-            @if (registrationDeleting()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-            {{ t().common.delete }}
-        </app-button>
-    </app-modal>
-    }
-
-    <!--A preset can be in use by published posts; deleting it doesn't touch them (it was copied,
-    not linked), but it is still not something to do on a stray click.-->
-    @if (deletePresetId()) {
-    <app-modal (closed)="deletePresetId.set(null)">
-        <app-icon modal-icon name="trash" size="sm"></app-icon>
-        <span modal-title>{{ t().manager.forms.deletePreset }}</span>
-        <p>{{ t().manager.forms.deletePresetBody }}</p>
-        <app-button data-modal-autofocus modal-actions variant="paper" (clicked)="deletePresetId.set(null)">{{ t().common.cancel }}</app-button>
-        <app-button modal-actions variant="danger" (clicked)="confirmDeletePreset()">{{ t().common.delete }}</app-button>
     </app-modal>
     }
 </div>

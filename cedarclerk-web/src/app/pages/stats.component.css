@@ -1,15 +1,22 @@
-/* The tab body is paper (ADR-154); every rule below is scoped to that so tools/check-density.mjs
-   holds this screen to paper's floors instead of finding an unmeasured page root. */
-/* The tab fills the box the manager gives it, so both columns run to the bottom and the plot takes
-   whatever is left under the readouts (ADR-239 clause 7). */
+/* Every rule below is scoped to paper (ADR-154) so tools/check-density.mjs holds this screen to
+   paper's floors instead of finding an unmeasured page root. */
 :host([data-surface="paper"]) {
     display: flex;
+    flex: 1;
     flex-direction: column;
     min-height: 0;
 
     /* No token owns a side column's width — the kit states 320px and the design system stops
        there — so it is named here rather than dropped into a rule. */
     --stats-side-w: 360px;
+}
+
+:host([data-surface="paper"]) .stats-scroll {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
 }
 
 /* The side column shrinks before it wraps, so the screen never needs a width rule (ADR-147). */
@@ -32,7 +39,7 @@
 
 :host([data-surface="paper"]) .stats-hint {
     margin: 0;
-    color: var(--t2);
+    color: var(--wood-ink-soft);
     font-size: var(--fs-ui);
 }
 

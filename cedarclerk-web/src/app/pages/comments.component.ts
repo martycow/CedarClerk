@@ -11,11 +11,10 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
 // Feedback for published posts. It owns no page chrome — no header, no theme toggle, no back
 // link — because it has never been a page of its own since N7.
 //
-// FI3.5 folded the "Reactions & comments" tab into the Posts tab, so the normal use is now
-// scoped: `onlyDraftId` narrows it to the selected post and drops the group header and the
-// cross-post totals, both of which only make sense when several posts are on screen. Unscoped
-// (the every-post list) is kept because the component is still whole without the Posts Manager
-// around it.
+// The normal use is scoped, on the Publishing Manager's Engagement tab: `onlyDraftId` narrows it
+// to the selected post and drops the group header and the cross-post totals, both of which only
+// make sense when several posts are on screen. Unscoped (the every-post list) is kept because
+// the component is still whole without the manager around it.
 @Component({
     selector: 'app-comments',
     imports: [IconComponent, ZonedDatePipe, ButtonComponent, EmptyStateComponent],

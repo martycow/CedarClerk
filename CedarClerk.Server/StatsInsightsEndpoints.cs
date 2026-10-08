@@ -12,27 +12,31 @@ public static class StatsInsightsEndpoints
 {
     public static void MapStatsInsightsEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/stats/publishing", async (ClaimsPrincipal user, CedarDbContext db) =>
+        app.MapGet("/api/stats/publishing", async (ClaimsPrincipal user, CedarDbContext db, Guid? project = null) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-            var channelDates = await db.ChannelPosts
-                .Where(p => p.OwnerId == uid)
-                .Select(p => p.PublishedAt)
-                .ToListAsync();
-            var jobDates = await db.PublishJobs
-                .Where(j => j.OwnerId == uid && j.Status == PublishJobStatus.Succeeded && j.FinishedAt != null)
-                .Select(j => j.FinishedAt!.Value)
-                .ToListAsync();
-            var blogDates = await db.Drafts
-                .Where(d => d.OwnerId == uid && d.BlogPublishedAt != null)
-                .Select(d => d.BlogPublishedAt!.Value)
-                .ToListAsync();
-
-            var result = PublishingStreaks.Compute(
-                channelDates.Concat(jobDates).Concat(blogDates), DateTime.UtcNow);
-            return Results.Ok(result);
+            return Results.Ok(PublishingStreaks.Compute(await PublishDatesAsync(db, uid, project), DateTime.UtcNow));
         }).RequireAuthorization();
+    }
+
+    /// <summary>Every publish instant of the owner, narrowed to one project's documents when one is named.</summary>
+    public static async Task<List<DateTime>> PublishDatesAsync(CedarDbContext db, string uid, Guid? project)
+    {
+        var channelDates = await db.ChannelPosts
+            .Where(p => p.OwnerId == uid
+                        && (project == null || db.Drafts.Any(d => d.Id == p.DraftId && d.ProjectId == project)))
+            .Select(p => p.PublishedAt)
+            .ToListAsync();
+        var jobDates = await db.PublishJobs
+            .Where(j => j.OwnerId == uid && j.Status == PublishJobStatus.Succeeded && j.FinishedAt != null
+                        && (project == null || db.Drafts.Any(d => d.Id == j.DraftId && d.ProjectId == project)))
+            .Select(j => j.FinishedAt!.Value)
+            .ToListAsync();
+        var blogDates = await db.Drafts
+            .Where(d => d.OwnerId == uid && d.BlogPublishedAt != null && (project == null || d.ProjectId == project))
+            .Select(d => d.BlogPublishedAt!.Value)
+            .ToListAsync();
+        return [.. channelDates, .. jobDates, .. blogDates];
     }
 }
 

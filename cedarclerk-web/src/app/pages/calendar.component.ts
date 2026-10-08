@@ -6,7 +6,7 @@ import { LocaleService } from '../core/i18n/locale.service';
 import { PostsService, ScheduledPost } from '../core/posts.service';
 import { CalendarService } from '../core/calendar.service';
 import { QueueService, QueueSlot } from '../core/queue.service';
-import { PublishService } from '../core/publish.service';
+import { PublishEvent, PublishService } from '../core/publish.service';
 import { DraftsService, DraftMeta } from '../core/drafts.service';
 import { httpErrorMessage } from '../core/http-error.util';
 import { IconComponent } from '../shared/icon.component';
@@ -19,18 +19,19 @@ import { seriesColor } from '../bench/worktop/growth-chart.component';
 import { dayInZone, displayTimeZone, partsInZone, timeInZone, wallClockToInstant } from '../core/display-time';
 
 // ADR-244: the server stores and serves UTC only; this page groups, labels and edits in the
-// account's display timezone. Month and Week are two projections over the same tickets (T-322).
+// account's display timezone. Month and Week are two projections over the same tickets (T-322):
+// what is scheduled, what a queue slot will fill, and what already went out.
 type CalendarView = 'month' | 'week';
 
 export interface CalendarTicket {
-    kind: 'post' | 'slot';
+    kind: 'post' | 'slot' | 'published';
     /** Local calendar day, yyyy-MM-dd. */
     day: string;
     /** Local wall-clock HH:mm. */
     time: string;
     title: string;
     network: string;
-    /** ScheduledPost id for a post ticket; QueueSlot id for a slot occurrence. */
+    /** ScheduledPost id for a post ticket; QueueSlot id for a slot occurrence; a derived key for a publication. */
     id: string;
     draftId?: string;
     status?: ScheduledPost['status'];
@@ -104,6 +105,7 @@ export class CalendarComponent implements OnInit {
     loading = signal(true);
     error = signal('');
     scheduled = signal<ScheduledPost[]>([]);
+    published = signal<PublishEvent[]>([]);
     slots = signal<QueueSlot[]>([]);
     view = signal<CalendarView>('month');
     /** A civil day in the account zone, represented by UTC fields only. */
@@ -115,9 +117,11 @@ export class CalendarComponent implements OnInit {
     async ngOnInit() {
         this.loading.set(true);
         try {
-            const [posts, slots] = await Promise.allSettled([this.postsApi.listScheduled(this.project), this.queueApi.list()]);
+            const [posts, slots, events] = await Promise.allSettled([
+                this.postsApi.listScheduled(this.project), this.queueApi.list(), this.publishApi.events(this.project)]);
             if (posts.status === 'fulfilled') this.scheduled.set(posts.value);
             else this.error.set(httpErrorMessage(posts.reason, this.t().calendar.loadFailed));
+            if (events.status === 'fulfilled') this.published.set(events.value.events);
             // Slots 404 until the server lane lands — the board still renders without them.
             if (slots.status === 'fulfilled') this.slots.set(slots.value);
         } finally {
@@ -164,6 +168,31 @@ export class CalendarComponent implements OnInit {
                 id: p.id,
                 draftId: p.draftId,
                 status: p.status,
+                sortKey: at.toISOString(),
+            };
+            byDay.set(day, [...(byDay.get(day) ?? []), ticket]);
+        }
+        return byDay;
+    });
+
+    /**
+     * What went out without a schedule. A send a Sent scheduled post already stands for is left
+     * to that ticket, so one publication is one chip.
+     */
+    private publishedTickets = computed<Map<string, CalendarTicket[]>>(() => {
+        const byDay = new Map<string, CalendarTicket[]>();
+        for (const event of this.published()) {
+            if (event.scheduled) continue;
+            const at = utcDate(event.publishedAt);
+            const day = dayInZone(at);
+            const ticket: CalendarTicket = {
+                kind: 'published',
+                day,
+                time: timeInZone(at),
+                title: event.draftTitle,
+                network: event.network,
+                id: `${event.draftId}:${event.network}:${event.publishedAt}`,
+                draftId: event.draftId,
                 sortKey: at.toISOString(),
             };
             byDay.set(day, [...(byDay.get(day) ?? []), ticket]);
@@ -235,10 +264,11 @@ export class CalendarComponent implements OnInit {
         const today = dayInZone(new Date());
         const posts = this.postTickets();
         const slots = this.slotTickets();
+        const published = this.publishedTickets();
         const out: CalendarCell[] = [];
         for (let d = new Date(start); d <= end; d = addCivilDays(d, 1)) {
             const day = civilDay(d);
-            const tickets = [...(posts.get(day) ?? []), ...(slots.get(day) ?? [])]
+            const tickets = [...(posts.get(day) ?? []), ...(slots.get(day) ?? []), ...(published.get(day) ?? [])]
                 .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
             out.push({
                 day,
@@ -263,10 +293,17 @@ export class CalendarComponent implements OnInit {
     visibleTickets = computed(() => this.cells().flatMap(cell => cell.tickets));
     visiblePosts = computed(() => this.visibleTickets().filter(ticket => ticket.kind === 'post'));
     isVisiblePeriodEmpty = computed(() => this.visibleTickets().length === 0);
-    isEmptyBoard = computed(() => !this.scheduled().length && !this.slots().length);
+    isEmptyBoard = computed(() => !this.scheduled().length && !this.slots().length && !this.published().length);
 
     /** Posts still to go out in the period the header names. */
     pendingCount = computed(() => this.visiblePosts().filter(ticket => ticket.status === 'Pending').length);
+
+    /** Publications in the period: direct ones, and scheduled posts that were sent. */
+    publishedCount = computed(() => this.visibleTickets().filter(ticket => this.isPublished(ticket)).length);
+
+    isPublished(ticket: CalendarTicket): boolean {
+        return ticket.kind === 'published' || (ticket.kind === 'post' && ticket.status === 'Sent');
+    }
 
     /** Unfilled slot occurrences in the cells the person can currently see. */
     openSlotCount = computed(() =>
@@ -276,6 +313,7 @@ export class CalendarComponent implements OnInit {
     headerMeta = computed<HeaderMeta[]>(() => {
         const meta: HeaderMeta[] = this.legendNetworks().map(n => ({ text: this.networkLabel(n), swatch: networkColor(n) }));
         meta.push({ text: this.t().calendar.scheduledCount(this.pendingCount()) });
+        if (this.publishedCount()) meta.push({ text: this.t().calendar.publishedCount(this.publishedCount()) });
         if (this.openSlotCount()) meta.push({ text: this.t().calendar.openSlots(this.openSlotCount()) });
         meta.push({ text: this.t().calendar.timeZone(displayTimeZone()) });
         return meta;
@@ -306,7 +344,7 @@ export class CalendarComponent implements OnInit {
 
     /** Networks actually on the board, for the legend. */
     legendNetworks = computed(() => {
-        const seen = new Set(this.visiblePosts().map(ticket => ticket.network));
+        const seen = new Set(this.visibleTickets().filter(ticket => ticket.kind !== 'slot').map(ticket => ticket.network));
         return ['telegram', 'bluesky', 'discord', 'x', 'linkedin', 'blog'].filter(n => seen.has(n));
     });
 
@@ -365,7 +403,7 @@ export class CalendarComponent implements OnInit {
         if (ticket.kind === 'slot') return;
         if (ticket.status === 'Pending') {
             this.openRescheduleDialog(ticket);
-        } else if (ticket.status === 'Sent') {
+        } else if (this.isPublished(ticket)) {
             this.router.navigate(['/posts'], { queryParams: { draft: ticket.draftId } });
         } else if (ticket.draftId) {
             this.router.navigate(['/editor'], { queryParams: { draft: ticket.draftId } });

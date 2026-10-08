@@ -44,10 +44,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 
 **Wave 4 — projects (ADR-318, ADR-319)** — done 08.10.2026.
 
-**Wave 5 — publishing (ADR-316, ADR-317)**
-- [ ] T-418 Publishing Manager per `UI_Prototypes/Publishing_Manager.png` — rename, two panes, filter chips, Overview/Publishing/Engagement/Details tabs, next-step hint, Telegram activity from `ChannelPost.PublishedAt` (Posts 1–2) #publishing #ui P1
-- [ ] T-419 `/metrics` and `/forms` as pages — StatsComponent with its own header and CSV, Forms extracted from the manager, redirects from `/stats` and `?tab=` (Metrics 1, Forms 1) #publishing #ui P1
-- [ ] T-420 Calendar shows published posts — directly published documents appear (from `ChannelPost`/`PublishJob`/`BlogPublishedAt`), scheduled ones styled distinctly from published (Calendar 1–2) #publishing #ui P2
+**Wave 5 — publishing (ADR-316, ADR-317)** — done 08.10.2026.
 
 **Wave 6 — assets**
 - [ ] T-421 Asset viewer: grid left, preview + properties right; visual pass (Assets 1, 3) #assets #ui P2

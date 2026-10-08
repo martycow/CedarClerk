@@ -58,15 +58,17 @@
                                             </div>
                                         } @else {
                                             <button type="button" class="chip"
-                                                    [class.is-sent]="ticket.status === 'Sent'"
+                                                    [class.is-scheduled]="ticket.status === 'Pending'"
+                                                    [class.is-published]="isPublished(ticket)"
                                                     [class.is-failed]="ticket.status === 'Failed'"
                                                     [class.is-dragging]="draggingId() === ticket.id"
                                                     [draggable]="ticket.status === 'Pending'"
                                                     (dragstart)="onDragStart(ticket, $event)" (dragend)="onDragEnd()"
                                                     (click)="openTicket(ticket)"
                                                     [attr.aria-label]="ticket.status === 'Pending' ? t().calendar.rescheduleTicketTitle(ticket.title, ticket.time) : null"
-                                                    [title]="ticket.status === 'Pending' ? t().calendar.rescheduleTicketTitle(ticket.title, ticket.time) : networkLabel(ticket.network) + ' · ' + ticket.title + ' · ' + ticket.time">
+                                                    [title]="ticket.status === 'Pending' ? t().calendar.rescheduleTicketTitle(ticket.title, ticket.time) : isPublished(ticket) ? t().calendar.publishedTicketTitle(networkLabel(ticket.network), ticket.title, ticket.time) : networkLabel(ticket.network) + ' · ' + ticket.title + ' · ' + ticket.time">
                                                 <app-icon [name]="networkIcon(ticket.network)" size="xs"></app-icon>
+                                                @if (isPublished(ticket)) { <app-icon class="chip-done" name="check" size="xs"></app-icon> }
                                                 <span class="chip-text">{{ ticket.time }} {{ ticket.title }}</span>
                                             </button>
                                         }

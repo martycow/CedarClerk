@@ -665,6 +665,12 @@ public static class PublishEndpoints
             return Results.Ok(new { posts = await PublishedPosts.LatestAsync(db, uid) });
         });
 
+        group.MapGet("/events", async (Guid? project, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            return Results.Ok(new { events = await PublishedPosts.EventsAsync(db, uid, project) });
+        });
+
         // ── The author's own text per network and language (T-087, ADR-077) ──────────────────
         group.MapGet("/texts/{draftId:guid}", async (Guid draftId, ClaimsPrincipal user, CedarDbContext db) =>
         {

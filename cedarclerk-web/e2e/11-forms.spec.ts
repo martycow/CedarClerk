@@ -29,11 +29,11 @@ test('a form preset can be created and listed', async ({ context }) => {
     expect(list.some((p: any) => p.name === 'Smoke preset')).toBeTruthy();
 });
 
-test('the forms tab of the Posts Manager renders the preset', async ({ page, context }) => {
+test('the Forms page renders the preset', async ({ page, context }) => {
     await context.request.post('/api/form-presets', {
         data: { name: 'Visible preset', formJson: JSON.stringify(FORM) },
     });
-    await page.goto('/posts?tab=forms');
+    await page.goto('/forms');
     await expect(page.locator('.post-card', { hasText: 'Visible preset' })).toBeVisible();
 });
 

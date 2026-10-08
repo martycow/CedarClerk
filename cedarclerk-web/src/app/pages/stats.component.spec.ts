@@ -80,14 +80,16 @@ class ApiStub {
     ];
     available = AVAILABLE;
     calls: { days: number; sources: string[] }[] = [];
+    projects: (string | null | undefined)[] = [];
     fail = false;
 
     list() { return Promise.resolve(this.channels as never); }
 
     /** Answers the way the server does: only selected sources with readings get a series, over
      *  the window their first days allow. */
-    series(days: number, sources: readonly string[]): Promise<StatsSeries> {
+    series(days: number, sources: readonly string[], project?: string | null): Promise<StatsSeries> {
         this.calls.push({ days, sources: [...sources] });
+        this.projects.push(project);
         if (this.fail) return Promise.reject(new Error('down'));
         const wantsDevlog = sources.includes(DEVLOG_ID);
         const wantsBsky = sources.includes(BSKY_ID) && this.available.includes(BSKY);
@@ -110,12 +112,13 @@ class ApiStub {
         });
     }
 
-    seriesCsvUrl(days: number, sources: readonly string[]) {
-        return `/api/stats/series.csv?days=${days}&sources=${sources.join(',')}`;
+    seriesCsvUrl(days: number, sources: readonly string[], project?: string | null) {
+        return `/api/stats/series.csv?days=${days}&sources=${sources.join(',')}${project ? `&project=${project}` : ''}`;
     }
 
     // The streak card and the invite-links shelf ask these on init, best-effort.
-    publishingStats() {
+    publishingStats(project?: string | null) {
+        this.projects.push(project);
         return Promise.resolve({ currentStreakWeeks: 2, longestStreakWeeks: 5, weeks: [] } as never);
     }
 
@@ -133,7 +136,7 @@ class ApiStub {
 const utcDay = (n: number) => new Date(Date.UTC(
     new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - n)).toISOString().slice(0, 10) + 'T00:00:00';
 
-describe('stats screen (Posts Manager tab)', () => {
+describe('metrics page', () => {
     let fixture: ComponentFixture<StatsComponent>;
     let api: ApiStub;
     const page = () => fixture.componentInstance;
@@ -535,9 +538,18 @@ describe('stats screen (Posts Manager tab)', () => {
         ]);
     });
 
-    // T-243 — the same matrix as a file, from the chart card's own header.
+    // ADR-316 §1 — a page of its own: the name in its header, and the CSV as the header's action.
+    it('is the Metrics page, with the CSV export as its header action', () => {
+        expect(el().querySelector('.page')?.getAttribute('data-layout')).toBe('operational');
+        expect(el().querySelector('app-page-header .page-title')?.textContent?.trim()).toBe(en.stats.crumb);
+        expect(el().querySelectorAll('app-page-header .page-actions a.export-csv').length).toBe(1);
+        expect(el().querySelectorAll('a.export-csv').length).toBe(1);
+        expect(el().querySelector('.stats-scroll .stats-tab')).not.toBeNull();
+    });
+
+    // T-243 — the same matrix as a file.
     it('links the CSV export to the drawn selection and drops the address when nothing is drawn', async () => {
-        const link = () => el().querySelector('.chart-panel .card-head a.export-csv') as HTMLAnchorElement;
+        const link = () => el().querySelector('app-page-header a.export-csv') as HTMLAnchorElement;
         expect(link().getAttribute('href')).toBe(`/api/stats/series.csv?days=90&sources=${BLOG_ID},${DEVLOG_ID},${QUIET_ID}`);
         expect(link().hasAttribute('download')).toBe(true);
         expect(link().getAttribute('aria-disabled')).toBeNull();
@@ -582,7 +594,7 @@ describe('stats screen (Posts Manager tab)', () => {
     });
 });
 
-describe('stats manager route restoration', () => {
+describe('metrics route restoration', () => {
     it('restores the full working view before the collection is shown', async () => {
         const api = new ApiStub();
         TestBed.configureTestingModule({
@@ -632,5 +644,26 @@ describe('stats manager route restoration', () => {
         expect(page.inviteState()).toBe('revoked');
         expect(page.inviteSortKey()).toBe('net');
         expect(page.inviteSortDirection()).toBe('asc');
+    });
+
+    // ADR-322 — the open project reaches every request that is derived from documents.
+    it('passes the open project to the series, the streak and the CSV', async () => {
+        const api = new ApiStub();
+        TestBed.configureTestingModule({
+            providers: [
+                provideRouter([]),
+                { provide: ChannelsService, useValue: api },
+                { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ project: 'p1' }) } } },
+            ],
+        });
+        const scoped = TestBed.createComponent(StatsComponent);
+        scoped.detectChanges();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await scoped.whenStable();
+        scoped.detectChanges();
+
+        expect(api.projects.length).toBeGreaterThan(1);
+        expect(api.projects.every(project => project === 'p1')).toBe(true);
+        expect(scoped.componentInstance.csvUrl()).toContain('&project=p1');
     });
 });

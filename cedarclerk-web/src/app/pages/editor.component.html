@@ -737,10 +737,9 @@
                     </label>
                     <p class="hint-bubble"><app-icon name="info" size="sm"></app-icon>{{ t().editor.exportModal.disableCopyHint }}</p>
 
-                    <!--Design review (Claude Design, 28.07.2026) — "the form lives in three places at
-                    once" (Forms defines it, Posts assigns it, here re-picks it). app-form-ref is the
-                    same shared shape used on the Posts tab, always pointing back to Forms — same
-                    component, this page's own already-translated wording.-->
+                    <!--The form lives in three places (Forms defines it, the Publishing Manager
+                    assigns it, this tab re-picks it); app-form-ref is the one shape for the
+                    reference and always links back to /forms.-->
                     <app-form-ref
                         [regForm]="regForm()" [presets]="formPresets()" [languages]="formLanguages()"
                         [fieldLabel]="t().manager.forms.postForm"
@@ -751,7 +750,6 @@
                         [noPresetsLabel]="t().editor.exportModal.noPresets"
                         [noPresetsSavedLabel]="t().editor.exportModal.noPresetsSaved"
                         [createLabel]="t().editor.exportModal.createPreset" [manageLabel]="t().editor.exportModal.editInManager"
-                        [manageRoute]="['/posts']" [manageQueryParams]="{ tab: 'forms' }"
                         (pick)="pickFormPreset($event)">
                     </app-form-ref>
 

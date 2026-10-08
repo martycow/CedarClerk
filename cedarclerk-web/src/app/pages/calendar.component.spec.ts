@@ -3,7 +3,8 @@ import { CalendarComponent, networkColor } from './calendar.component';
 import { PostsService, ScheduledPost } from '../core/posts.service';
 import { CalendarService } from '../core/calendar.service';
 import { QueueService, QueueSlot } from '../core/queue.service';
-import { PublishService } from '../core/publish.service';
+import { PublishEvent, PublishService } from '../core/publish.service';
+import { Router } from '@angular/router';
 import { DraftsService } from '../core/drafts.service';
 import { dayInZone, setDisplayTimeZone, timeInZone, wallClockToInstant } from '../core/display-time';
 
@@ -19,6 +20,7 @@ function utcOfAccount(day: number, hour: number): { iso: string; day: string } {
 
 const PENDING = utcOfAccount(10, 18);
 const SENT = utcOfAccount(3, 12);
+const DIRECT = utcOfAccount(7, 9);
 
 function post(overrides: Partial<ScheduledPost>): ScheduledPost {
     return {
@@ -48,7 +50,20 @@ class QueueStub {
     list() { return Promise.resolve(this.slots); }
 }
 
-class PublishStub { networks() { return Promise.resolve([]); } }
+function event(overrides: Partial<PublishEvent>): PublishEvent {
+    return {
+        draftId: 'd9', draftTitle: 'Mac Mini M6', network: 'telegram', targetName: 'Devlog',
+        publishedAt: DIRECT.iso, publicUrl: 'https://t.me/devlog/9', partCount: 1, scheduled: false,
+        ...overrides,
+    };
+}
+
+class PublishStub {
+    // One direct publication, and the send the Sent schedule above already stands for.
+    list: PublishEvent[] = [event({}), event({ draftId: 'd1', draftTitle: 'Devlog #43', publishedAt: SENT.iso, network: 'bluesky', scheduled: true })];
+    networks() { return Promise.resolve([]); }
+    events() { return Promise.resolve({ events: this.list }); }
+}
 class DraftsStub { list() { return Promise.resolve([]); } }
 
 describe('content calendar', () => {
@@ -85,6 +100,34 @@ describe('content calendar', () => {
         expect(cell.tickets.find(t => t.id === 'p1')!.time).toBe('18:00');
     });
 
+    // T-420 — a document published without a schedule is on the calendar on the day it went out.
+    it('draws a directly published post on its day, and a scheduled send once', () => {
+        const direct = page().cells().find(c => c.day === DIRECT.day)!.tickets;
+        expect(direct.map(t => [t.kind, t.title, t.time])).toEqual([['published', 'Mac Mini M6', '09:00']]);
+
+        const sentDay = page().cells().find(c => c.day === SENT.day)!.tickets;
+        expect(sentDay.map(t => t.kind)).toEqual(['post']);
+        expect(page().publishedCount()).toBe(2);
+        expect(page().headerMeta().map(m => m.text)).toContain(page().t().calendar.publishedCount(2));
+    });
+
+    it('styles scheduled and published chips differently and marks the published one beyond colour', async () => {
+        const root = fixture.nativeElement as HTMLElement;
+        const chips = [...root.querySelectorAll<HTMLButtonElement>('button.chip')];
+        const scheduled = chips.find(chip => chip.classList.contains('is-scheduled'))!;
+        const published = chips.filter(chip => chip.classList.contains('is-published'));
+
+        expect(scheduled.textContent).toContain('Devlog #43');
+        expect(scheduled.querySelector('.chip-done')).toBeNull();
+        expect(scheduled.getAttribute('draggable')).toBe('true');
+        expect(published.length).toBe(2);
+        expect(published.every(chip => chip.querySelector('.chip-done') && chip.getAttribute('draggable') === 'false')).toBe(true);
+
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        published.find(chip => chip.textContent?.includes('Mac Mini M6'))!.click();
+        expect(navigate).toHaveBeenCalledWith(['/posts'], { queryParams: { draft: 'd9' } });
+    });
+
     it('covers the month with full Monday-to-Sunday weeks', () => {
         const cells = page().cells();
         expect(cells.length % 7).toBe(0);
@@ -119,7 +162,7 @@ describe('content calendar', () => {
     it('opens rescheduling from a pending ticket full hit area and writes the chosen account time', async () => {
         const root = fixture.nativeElement as HTMLElement;
         const ticket = [...root.querySelectorAll<HTMLButtonElement>('button.chip')]
-            .find(button => !button.classList.contains('is-sent') && button.textContent?.includes('Devlog #43'))!;
+            .find(button => !button.classList.contains('is-published') && button.textContent?.includes('Devlog #43'))!;
         expect(ticket.getAttribute('aria-label')).toContain(page().t().calendar.rescheduleAction);
 
         ticket.click();
@@ -252,6 +295,10 @@ describe('content calendar', () => {
     it('uses the global zero-state copy only when the whole calendar is empty', async () => {
         page().scheduled.set([]);
         page().slots.set([]);
+        await settle();
+        // A published post alone keeps the board from being empty.
+        expect(page().isEmptyBoard()).toBe(false);
+        page().published.set([]);
         await settle();
 
         const empty = (fixture.nativeElement as HTMLElement).querySelector('.cal-card app-empty-state')!;

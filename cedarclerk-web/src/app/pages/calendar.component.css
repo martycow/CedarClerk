@@ -162,8 +162,14 @@ button.chip[draggable="true"] {
     text-overflow: ellipsis;
 }
 
-/* Sent chips fade; failed ones carry the danger ink instead. */
-.chip.is-sent { opacity: .55; cursor: pointer; }
+/* Scheduled is outlined on the accent wash; published is the ok wash with a check mark, so the
+   two never rest on colour alone. Failed carries the danger ink. */
+.chip.is-scheduled { border-color: var(--abord); }
+
+.chip.is-published {
+    background: var(--ok-soft);
+    color: var(--ok);
+}
 
 .chip.is-failed {
     border-color: var(--danger);

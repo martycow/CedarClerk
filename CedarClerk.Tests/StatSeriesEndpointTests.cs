@@ -117,6 +117,25 @@ public class StatSeriesEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task A_project_keeps_the_readings_and_narrows_the_publish_days_to_its_documents()
+    {
+        using var scope = _services.CreatePlatformScope();
+        var db = scope.ServiceProvider.GetRequiredService<CedarDbContext>();
+        var project = new Project { OwnerId = "o1", Name = "Game" };
+        db.Projects.Add(project);
+        var inside = new Draft { OwnerId = "o1", Title = "Inside", ProjectId = project.Id };
+        db.Drafts.Add(inside);
+        db.ChannelPosts.Add(new ChannelPost { OwnerId = "o1", ChannelId = _ownChannel, DraftId = inside.Id, TelegramMessageId = 2, PublishedAt = Day(8) });
+        await db.SaveChangesAsync();
+
+        var result = await StatSeriesEndpoints.BuildAsync(db, "o1", 7, [$"channel:{_ownChannel}"], Now, project.Id);
+
+        var series = Assert.Single(result.Response.Series);
+        Assert.Equal([112, 112, 112, 112, 120, 120, 120], series.Values[StatMetrics.MemberCount]!);
+        Assert.Equal([D(8)], series.PublishDays);
+    }
+
+    [Fact]
     public async Task The_youngest_selected_source_shortens_the_window_for_every_series()
     {
         var result = await BuildAsync("o1", 30, "blog", $"channel:{_ownChannel}", $"target:{_target}");

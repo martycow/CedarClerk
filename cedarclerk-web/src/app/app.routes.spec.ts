@@ -2,10 +2,9 @@ import { runInInjectionContext, Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Route, Router } from '@angular/router';
 import { routes } from './app.routes';
+import { projectScopeGuard } from './core/project-scope.guard';
+import { retiredManagerTabGuard } from './core/retired-manager-tab.guard';
 
-// The old form was the string 'posts?tab=stats', which the router reads as one path segment: the
-// redirect resolved and the tab silently did not (ADR-148). Asserting the parsed query is the only
-// thing that tells the two apart — the path is '/posts' either way.
 describe('app routes', () => {
     function find(path: string): Route {
         const shell = routes.find(r => Array.isArray(r.children) && r.children.some(c => c.path === path));
@@ -14,18 +13,27 @@ describe('app routes', () => {
         return route;
     }
 
-    it('sends an old /stats bookmark to the manager with its tab still set', () => {
+    // ADR-316 — the redirect is a function so the bookmark's own query reaches the page with it.
+    it('sends an old /stats bookmark to /metrics with its query intact', () => {
         TestBed.configureTestingModule({ providers: [provideRouter([])] });
         const redirect = find('stats').redirectTo;
         expect(typeof redirect).toBe('function');
 
         const injector = TestBed.inject(Injector);
-        const tree = runInInjectionContext(injector, () => (redirect as any)({}));
+        const tree = runInInjectionContext(injector, () => (redirect as any)({ queryParams: { statsDays: '30' } }));
         const router = TestBed.inject(Router);
         const parsed = router.parseUrl(router.serializeUrl(tree));
 
-        expect(parsed.root.children['primary'].segments.map(s => s.path)).toEqual(['posts']);
-        expect(parsed.queryParams['tab']).toBe('stats');
+        expect(parsed.root.children['primary'].segments.map(s => s.path)).toEqual(['metrics']);
+        expect(parsed.queryParams['statsDays']).toBe('30');
+    });
+
+    it('gives Metrics and Forms their own project-scoped routes and takes the retired tabs off /posts', () => {
+        expect(find('metrics').canActivate).toContain(projectScopeGuard);
+        expect(find('forms').canActivate).toContain(projectScopeGuard);
+        expect(find('posts').canActivate).toContain(retiredManagerTabGuard);
+        expect(find('posts').canActivate!.indexOf(retiredManagerTabGuard))
+            .toBeLessThan(find('posts').canActivate!.indexOf(projectScopeGuard));
     });
 
     // The desktop-app page answers a visitor and a signed-in user alike, so it stands beside the

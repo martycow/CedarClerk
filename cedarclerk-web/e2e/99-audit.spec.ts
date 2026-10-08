@@ -131,7 +131,7 @@ test('@audit save-guard dialog', async ({ page, context }) => {
     await shot(page, '30-save-guard');
 });
 
-test('@audit posts manager tabs', async ({ page, context }) => {
+test('@audit publishing manager, forms and metrics', async ({ page, context }) => {
     const id = await createDraft(context, 'Пост для менеджера', ['Тело поста.']);
     await context.request.post(`/api/drafts/${id}/publish-blog`, { data: {} });
 
@@ -140,7 +140,7 @@ test('@audit posts manager tabs', async ({ page, context }) => {
     await page.locator('.post-card').first().click();
     await shot(page, '41-posts-selected');
 
-    await page.goto('/posts?tab=forms');
+    await page.goto('/forms');
     await shot(page, '42-forms-empty');
 
     await context.request.post('/api/form-presets', {
@@ -158,11 +158,11 @@ test('@audit posts manager tabs', async ({ page, context }) => {
             }),
         },
     });
-    await page.goto('/posts?tab=forms');
+    await page.goto('/forms');
     await page.locator('.post-card').first().click();
     await shot(page, '43-forms-editor');
 
-    await page.goto('/posts?tab=stats');
+    await page.goto('/metrics');
     await shot(page, '44-stats');
 });
 

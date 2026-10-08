@@ -26,32 +26,30 @@ test('search narrows the post list', async ({ page, context }) => {
     await expect(page.locator('.post-card', { hasText: 'Other manager post' })).toHaveCount(0);
 });
 
-test('the active manager collection survives reload', async ({ page }) => {
+test('the list filter survives reload', async ({ page, context }) => {
+    await createDraft(context, 'Unpublished manager post');
     await page.goto('/posts');
-    const tabs = page.getByRole('tablist', { name: 'Manager sections' });
 
-    await tabs.getByRole('tab', { name: 'Stats' }).click();
-    await expect(page).toHaveURL(/[?&]tab=stats(?:&|$)/);
+    await page.getByRole('group', { name: 'State' }).getByRole('button', { name: 'Drafts' }).click();
+    await expect(page).toHaveURL(/[?&]status=draft(?:&|$)/);
     await page.reload();
-    await expect(page.getByRole('tab', { name: 'Stats' })).toHaveAttribute('aria-selected', 'true');
-
-    await page.getByRole('tab', { name: 'Forms' }).click();
-    await expect(page).toHaveURL(/[?&]tab=forms(?:&|$)/);
-    await page.reload();
-    await expect(page.getByRole('tab', { name: 'Forms' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('button', { name: 'Drafts' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-// N7 folded /comments and /stats into this page; the old paths stay as redirects because they are
-// what any existing bookmark points at.
-test('the retired /stats and /comments routes still resolve', async ({ page }) => {
+// ADR-316 — Metrics and Forms are pages; the old paths and the old ?tab= bookmarks redirect.
+test('the retired routes and manager tabs still resolve', async ({ page }) => {
     await page.goto('/stats');
-    await expect(page).toHaveURL(/\/posts/);
+    await expect(page).toHaveURL(/\/metrics/);
+    await page.goto('/posts?tab=stats');
+    await expect(page).toHaveURL(/\/metrics/);
+    await page.goto('/posts?tab=forms');
+    await expect(page).toHaveURL(/\/forms/);
     await page.goto('/comments');
     await expect(page).toHaveURL(/\/posts/);
 });
 
 // ADR-097 — the audience split. Reads through the whole path on purpose: a blog page fetched with
-// Cloudflare's country header has to become a row on the stats tab, which is the only thing that
+// Cloudflare's country header has to become a row on the Metrics page, which is the only thing that
 // proves the header is being read at all (nothing else in the app touches CF-IPCountry).
 test('a blog view with a country header shows up in the audience breakdown', async ({ page, context }) => {
     const id = await createDraft(context, 'Audience post', ['Read from somewhere.']);
@@ -64,8 +62,7 @@ test('a blog view with a country header shows up in the audience breakdown', asy
     });
     expect(view.ok(), `blog view failed: ${view.status()}`).toBeTruthy();
 
-    await page.goto('/posts');
-    await page.locator('.manager-tabs button', { hasText: 'Stats' }).click();
+    await page.goto('/metrics');
 
     // The breakdown lives in the audience card (T-222): two lists under two headings, country
     // first, so the row a language would also match is still read out of the right one.

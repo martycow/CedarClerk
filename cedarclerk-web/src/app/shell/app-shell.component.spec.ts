@@ -130,7 +130,7 @@ describe('app shell', () => {
         expect(fixture.componentInstance.mode()).toBe('full');
     });
 
-    it('counts unread feedback on Posts, and draws nothing at zero', () => {
+    it('counts unread feedback on Publishing, and draws nothing at zero', () => {
         const feedback = TestBed.inject(CommentsService);
         expect(el().querySelectorAll('app-sidebar .side-count').length).toBe(0);
 
@@ -139,7 +139,7 @@ describe('app shell', () => {
         fixture.detectChanges();
         const count = el().querySelector('app-sidebar .side-count')!;
         expect(count.textContent!.trim()).toBe('3');
-        expect(count.closest('a.side-item')!.querySelector('.side-text')!.textContent!.trim()).toBe('Posts');
+        expect(count.closest('a.side-item')!.querySelector('.side-text')!.textContent!.trim()).toBe('Publishing');
 
         feedback.newComments.set(0);
         feedback.newReactions.set(0);
@@ -152,7 +152,7 @@ describe('app shell', () => {
     });
 
     it('lists the account-wide screens while the module is off, in their groups', () => {
-        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Glossary', 'Presets', 'AI operations']);
+        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Publishing', 'Metrics', 'Forms', 'Glossary', 'Presets', 'AI operations']);
         expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship', 'Library']);
         expect(el().querySelector('app-menu-bar app-project-switcher')).not.toBeNull();
     });
@@ -196,9 +196,11 @@ describe('app shell', () => {
         await go('/calendar');
         expect(lit()).toBe('Calendar');
         await go('/posts');
-        expect(lit()).toBe('Posts');
-        await go('/posts?tab=stats');
-        expect(lit()).toBe('Posts');
+        expect(lit()).toBe('Publishing');
+        await go('/metrics');
+        expect(lit()).toBe('Metrics');
+        await go('/forms');
+        expect(lit()).toBe('Forms');
         await go('/settings');
         expect(lit()).toBeUndefined();
         await go('/projects');
@@ -233,11 +235,13 @@ describe('app shell', () => {
         expect(labels()).toEqual([
             'Documents', 'Assets', 'Canvas', 'Dialogues', 'Site',
             'Tasks', 'Planner', 'Calendar',
-            'Builds', 'Posts',
+            'Builds', 'Publishing', 'Metrics', 'Forms',
             'Glossary', 'Presets', 'AI operations',
         ]);
         expect(items().find(a => a.textContent?.includes('Tasks'))!.getAttribute('href')).toBe('/projects/p1/tasks');
-        expect(items().find(a => a.textContent?.includes('Posts'))!.getAttribute('href')).toBe('/posts?project=p1');
+        expect(items().find(a => a.textContent?.includes('Publishing'))!.getAttribute('href')).toBe('/posts?project=p1');
+        expect(items().find(a => a.textContent?.includes('Metrics'))!.getAttribute('href')).toBe('/metrics?project=p1');
+        expect(items().find(a => a.textContent?.includes('Forms'))!.getAttribute('href')).toBe('/forms?project=p1');
         expect(items().find(a => a.textContent?.includes('Calendar'))!.getAttribute('href')).toBe('/calendar?project=p1');
     });
 

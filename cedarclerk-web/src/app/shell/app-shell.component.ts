@@ -39,6 +39,8 @@ const NAV_PREFIXES: readonly (readonly [string, string])[] = [
     ['assets', '/library'],
     ['calendar', '/calendar'],
     ['posts', '/posts'],
+    ['metrics', '/metrics'],
+    ['forms', '/forms'],
     ['settings', '/settings'],
     ['glossary', '/glossary'],
     ['presets', '/presets'],
@@ -307,6 +309,9 @@ export class AppShellComponent implements OnDestroy {
         const calendar: NavItem = { id: 'calendar', label: t.calendar, icon: 'calendar-blank', link: '/calendar' };
         const posts: NavItem = { id: 'posts', label: t.posts, icon: 'paper-plane-tilt', link: '/posts',
             count: count(this.alerts()), countTitle: this.t().editor.newBadge };
+        // ADR-316: Metrics and Forms are pages of their own, beside Publishing in Ship.
+        const metrics: NavItem = { id: 'metrics', label: t.metrics, icon: 'chart-bar', link: '/metrics' };
+        const forms: NavItem = { id: 'forms', label: t.forms, icon: 'clipboard-text', link: '/forms' };
         // An own project is one the account's own list holds; the access answer only ever
         // narrows that (a member), so a project still in flight draws its owner's wall rather
         // than nothing — an empty sidebar was the bug this replaces.
@@ -321,7 +326,7 @@ export class AppShellComponent implements OnDestroy {
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts' });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: '/library' });
             plan.push(calendar);
-            ship.push(posts);
+            ship.push(posts, metrics, forms);
         } else if (!this.projectOpen()) {
             // The hub: pick a project first.
         } else if (!own && role !== null) {
@@ -331,6 +336,8 @@ export class AppShellComponent implements OnDestroy {
         } else {
             calendar.queryParams = { project: open };
             posts.queryParams = { project: open };
+            metrics.queryParams = { project: open };
+            forms.queryParams = { project: open };
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts', queryParams: { project: open }, count: count(summary?.documentCount) });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: ['/projects', open, 'assets'], count: count(summary?.assetCount) });
             write.push({ id: 'canvas', label: t.canvas, icon: 'squares-four', link: ['/projects', open, 'canvas'] });
@@ -340,7 +347,7 @@ export class AppShellComponent implements OnDestroy {
             plan.push({ id: 'planner', label: t.planner, icon: 'flag', link: ['/projects', open, 'planner'] });
             plan.push(calendar);
             ship.push({ id: 'builds', label: t.builds, icon: 'cube', link: ['/projects', open, 'builds'] });
-            ship.push(posts);
+            ship.push(posts, metrics, forms);
         }
         const admin: NavItem[] = this.auth.isAdmin()
             ? [{ id: 'admin', label: t.admin, icon: 'shield-check', link: '/admin' }]

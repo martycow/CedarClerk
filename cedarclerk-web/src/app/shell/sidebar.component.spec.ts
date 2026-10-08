@@ -12,7 +12,7 @@ const GROUPS: NavGroup[] = [
     ] },
     { id: 'plan', label: 'Plan', items: [] },
     { id: 'ship', label: 'Ship', items: [
-        { id: 'metrics', label: 'Metrics', icon: 'chart-bar', link: '/posts', queryParams: { tab: 'stats' }, count: 0 },
+        { id: 'metrics', label: 'Metrics', icon: 'chart-bar', link: '/metrics', count: 0 },
     ] },
 ];
 @Component({
@@ -82,7 +82,7 @@ describe('SidebarComponent', () => {
 
     it('carries a query on the item that needs one', () => {
         const h = mount();
-        expect(h.items().find(a => a.textContent?.includes('Metrics'))!.getAttribute('href')).toBe('/posts?tab=stats');
+        expect(h.items().find(a => a.textContent?.includes('Metrics'))!.getAttribute('href')).toBe('/metrics');
     });
 
     it('shows the bell dot only while something is unread', () => {

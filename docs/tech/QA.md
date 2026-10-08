@@ -312,7 +312,7 @@ The full risk list is `docs/tech/DESKTOP.md` §Risks. The checks that need a rea
 
 Once each, no rush: DeepL's uk/be/ka refusal with a clear message; the translate-all modal; tag rename
 and delete; audit paging past page one; the emoji panel; the paragraph-mark toggle; the two form field
-types on a real gate; the Posts Manager submission modal and "mark all as read"; the Appearance panel's
+types on a real gate; the Forms submission modal and "mark all as read"; the Appearance panel's
 Apply-gated autosave; folder delete.
 
 ## Destructive confirmation and narrow layouts
