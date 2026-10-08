@@ -25,7 +25,7 @@ Pipeline: `CedarToTelegramBlocksRenderer` (Core, → `RichBlockModel`) → `Tele
 - Photo tag is `<img>` / `InputRichBlockPhoto`, **never `<photo>`** (silently dropped).
 - 10.3 pieces in use: `InputRichBlockButtons` (CTA rows from `Draft.CtaButtonsJson`, wire-level only, never stored), `InputRichBlockExpandableBlockQuotation` (paragraph-only). **Not yet used:** `InputRichBlockDocument`, `RichMessageButton`, `rich_message` in `editEphemeralMessageText`.
 - Empty `Slideshow`/`Collage` → `RICH_MESSAGE_CONTENT_REQUIRED`; the renderer drops them (ADR-019).
-- `CedarToTelegramHtmlRenderer`/`MarkdownRenderer` are legacy, not used for sending. `ExportRequest.Format`/`ScheduledPost.Format` are vestigial (cleanup candidate).
+- `CedarToTelegramHtmlRenderer`/`MarkdownRenderer` are legacy, not used for sending.
 - `SendRichMessageDraft` works only in **private chats** — no channel "progressive reveal".
 
 ## 3. Media delivery

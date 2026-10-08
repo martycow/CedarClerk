@@ -9,7 +9,7 @@ Eight reports from one tester, fixed on `fix/issues-1-8`:
 - **#3, #5, #7** The Telegram preview shows what the send path sends (ADR-313): one message unless the author chose a thread, a drawn "Show more" fold, Telegram's own light/dark palette following the theme toggle, photos at natural aspect ratio, real bullets, numbers and checkboxes.
 - **#4** "Send preview to me" replaces the test-channel button (ADR-315); it sends to the author's own chat with the bot and records nothing. Telegram has no bot scheduling API, so the queue stays ours.
 - **#6** The blog preview header has no RSS link and no navigating identity link, so the sandboxed frame can no longer be blanked.
-- **#8** The emoji modal keeps its Favorites and adds the full Unicode set behind "All emoji", lazy and self-hosted (ADR-314). Flag glyphs on Windows come from a polyfill in the app only; the blog is not covered (T-395).
+- **#8** The emoji modal keeps its Favorites and adds the full Unicode set behind "All emoji", lazy and self-hosted (ADR-314). Flag glyphs on Windows come from a polyfill in the app only; the blog is not covered (T-431).
 
 Validation: front-end specs for every touched area pass here. **The C# changes and C# tests could not be built or run in this environment (no .NET SDK reachable); run `dotnet test` before merging.** Not committed, not deployed.
 

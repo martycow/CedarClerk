@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-09-05
+last_verified: 2026-10-08
 source_of_truth_for: the only list of open tasks and questions (T-xxx, Q-xx)
 guard: none
 ---
@@ -28,6 +28,71 @@ of it has been opened by a person** — the live-verification rows in `docs/task
 real gate, and the ones this sprint added are listed there.
 
 - [ ] T-356 Dialogue editor verdict — unfinished and unclear why a regular blogger needs it; decide its fate #product #decision P3
+
+## Sprint v0.26 — the 0.25.1 review
+
+Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in parentheses). Decisions taken 08.10.2026 are ADR-316…325. Order: wave 0 → 1–2 → 3–6 and 9 → 7–8.
+
+**Wave 0 — bugs**
+- [ ] T-396 Login dark mode: door chrome invisible — `.door` paints `--text` (#241E13) on dark `--canvas` (#251F13), so the title, RU/EN, theme toggle and footer vanish; give the door chrome its own ink token. Fix inventory row 252 (Login 3) #bug #auth #ui P1
+- [ ] T-397 Asset library pager arrows do nothing — the constructor effect in `media-library.component.ts:106-110` tracks `skip()` through `load()` and resets it to 0; wrap the call in `untracked()` and add a spec (Assets 2) #bug #assets P1
+- [ ] T-399 Edit Task footer: move Mark done away from Save — Delete · Archive · Mark done on the left, Save on the right (Edit Task 1) #ui #tasks P2
+- [ ] T-400 Planner: "No sprint" card goes last, below finished sprints (Planner 1) #ui #tasks P3
+- [ ] T-401 UI-INVENTORY: rows 133/410 vs ~402 disagree on the provider row on Register — reconcile with the code #docs P3
+
+**Wave 1 — sign-in and registration (ADR-325)**
+- [ ] T-402 Register rework — new non-cow title, drop the invite-only line and the "cannot be changed" hint, placeholders `USERNAME`/`CEDAR_CLERK_CODE`, password confirmation (reuse reset's `mismatch`), live validation on every field, optional avatar via `POST /api/auth/avatar` after creation (Register 1–3, 5–8, 11) #auth #ui P1
+- [ ] T-403 Field limits on the server — password 8–32 with letter+digit+symbol (custom validator, Identity upper/lower off), account name ≤16 in `Usernames`, invite code ≤32 on `InviteCode` + migration; existing data stays valid (Register 4, 9, 10) #auth #backend P1
+- [ ] T-404 Login: remove the motto, keep Terms · Privacy (Login 4) #auth #ui P2
+- [ ] T-405 Discord sign-in in production — code is wired; set `Cedar:Auth:Discord:*` in `data.conf` and register `https://<host>/signin-discord` in the Discord portal, then sign in for real (Login 2) #auth #operations P1
+
+**Wave 2 — shell (ADR-322, ADR-324)**
+- [ ] T-406 Top bar order — clickable logo → Projects Hub, name + version, project switcher, sidebar toggle (moved from the sidebar head), menus; Fullscreen and Log out at the right end; drop File › Sign out (Top Bar 1–2, Profile Popup 2) #ui #shell P1
+- [ ] T-407 Account popover and sidebar foot — popover shows name, email, avatar, plan, credits + Settings and Log out; Send feedback becomes an icon button beside the avatar; Admin moves into the sidebar (Profile Popup 1, 3; Side Bar 2) #ui #shell P1
+- [ ] T-408 Project-scoped workspace — Documents, Assets, Calendar, Publishing, Metrics, Forms only with a project selected and filtered to it; routes without a project redirect to the hub; scheduled posts, queue slots and stats filter by project (Side Bar 1) #ui #backend P1
+- [ ] T-409 Projects Hub naming and banner — rename "Projects" to "Projects Hub" everywhere; replace `project-banner.jpg` with a minimal default pattern (Projects Hub 1–2) #ui P2
+
+**Wave 3 — theme and public pages (ADR-321)**
+- [ ] T-410 One theme dropdown — Light / Dark / System; `ThemeService` stores `system`; replaces the five door/app toggles and Settings › Appearance's two-way switch (General 1) #ui #design P1
+- [ ] T-411 Shared public control cluster — language + theme + font settings, modelled on the blog's `Aa` menu, on landing, Discovery and the personal blog (Landing 2, Discovery 1) #ui #blog #growth P1
+- [ ] T-412 Discovery dark palette + header links to the landing and login (Discovery 1–2) #ui #discovery P2
+- [ ] T-413 Landing: Explore tools as button grid left / detail right on hover or click; Discovery link styled as a primary destination (Landing 1, 3) #ui #growth P2
+
+**Wave 4 — projects (ADR-318, ADR-319)**
+- [ ] T-414 New project dialog per `UI_Prototypes/New_project.png` — description, logo and banner upload, "Start without documents", live preview card (New project 1–2) #ui #projects P1
+- [ ] T-415 Project banner on the server — `Project.BannerUrl` + migration instead of `localStorage`; upload lives in Project Settings; Customize keeps layout only (Project Settings 1) #projects #backend P1
+- [ ] T-416 Empty projects and deletable Personal — remove `LastDocumentRefusal`/`ProjectNeedsOneDocument`, empty states on every project screen, Personal deletable with a typed-name confirmation listing counts, errors shown inside the dialog (Project Settings 2) #projects #backend P1
+- [ ] T-417 Project analytics panel — latest growth, audience, views, likes from existing `DraftStatSnapshot`, `ChannelMemberDaily`, `BlogStatSnapshot`, `BlogSubscriber`, reactions; short summary only (Project Analytics 1) #stats #ui P2
+
+**Wave 5 — publishing (ADR-316, ADR-317)**
+- [ ] T-418 Publishing Manager per `UI_Prototypes/Publishing_Manager.png` — rename, two panes, filter chips, Overview/Publishing/Engagement/Details tabs, next-step hint, Telegram activity from `ChannelPost.PublishedAt` (Posts 1–2) #publishing #ui P1
+- [ ] T-419 `/metrics` and `/forms` as pages — StatsComponent with its own header and CSV, Forms extracted from the manager, redirects from `/stats` and `?tab=` (Metrics 1, Forms 1) #publishing #ui P1
+- [ ] T-420 Calendar shows published posts — directly published documents appear (from `ChannelPost`/`PublishJob`/`BlogPublishedAt`), scheduled ones styled distinctly from published (Calendar 1–2) #publishing #ui P2
+
+**Wave 6 — assets**
+- [ ] T-421 Asset viewer: grid left, preview + properties right; visual pass (Assets 1, 3) #assets #ui P2
+- [ ] T-422 Asset origin is legible — replace "No project / Uploaded / On disk" with clear scope labels and a per-file "from" line; add the terms to `TERMINOLOGY.md` (Assets 5) #assets #ui P2
+- [ ] T-423 Downloads page with OS detection — On disk's download button opens it; installers per OS (Assets 4) #desktop #ui P2
+
+**Wave 7 — glossary (ADR-320)**
+- [ ] T-424 Glossary entry model — `GlossaryEntry` + per-language rows with localized name, spellings, description; migration grouping by `SourceTermId`; renderers and editor lookup rewritten; one editor form (Glossary 1) #glossary #backend P2
+- [ ] T-425 Glossary AI — auto-translate names and spellings into selected languages; auto-description from the term and/or image (provider image input, credit price in BUSINESS.md) (Glossary 2–3) #glossary #ai P2
+
+**Wave 8 — landing builder (ADR-323)**
+- [ ] T-426 Landing block model and migration — sections → typed blocks, per-item hide, language maps with added languages, current content migrated unchanged, feature list as data (Admin Panel 1–2) #growth #backend P2
+- [ ] T-427 Admin › Landing block editor — add/order/hide sections and blocks, per-block properties, per-language text, live preview (Admin Panel 1–2) #growth #admin #ui P2
+
+**Wave 9 — Writer (ADR-326; mockup `Docs_CedarClerk/Reviews/ChatGPT Image Oct 8, 2026, 08_53_49 AM.png`)**
+- [ ] T-432 Writer toolbar: one fixed row + "More ▾" — undo/redo, block type, B/I/U, link, lists, table; the rest grouped in More; remove toolbar customization (Settings editor, presets, `ToolbarLayoutService`), keep `ToolbarLayoutJson` as a vestigial column #editor #ui P1
+- [ ] T-433 Slash command menu — `/` in the body opens a filterable list of every block and inline command; "Insert with /" hint in the toolbar #editor P1
+- [ ] T-434 Writer frame header — breadcrumb "Project / Documents / Title", "All changes saved" + last-edited date on the right; tabs left-aligned with an underline on the active one #editor #ui P2
+- [ ] T-435 Writer Properties panel — header with collapse, Document | Selection switch that auto-jumps to Selection, Organize (Type, Folder, Series, Tags), Languages chips + hint, collapsible Publishing/Structure/Glossary/Advanced with summaries, protected-fields footer; slug/location/backlinks into Advanced; one panel, the shell rail does not repeat it (editor half of T-390) #editor #ui P1
+- [ ] T-436 Writer polish — footer reads "N words · saved N min ago"; sidebar head gets the "Workspace" label; sidebar counts cap at "99+" #editor #ui P3
+
+**Needs discussion**
+- [ ] T-428 Queue: keep, clarify or remove — weekly per-destination send slots that `FillQueueSlotsJob` fills nightly from evergreen drafts by category (Calendar 3) #publishing #decision P3
+- [ ] T-429 Builds rethink — today a `Build` entity with tasks and "Make changelog"; decide what replaces it (Builds 1) #indiedev #decision P3
+- [ ] T-430 Skill Points research — paid per-upgrade skill tree vs. the current tiers + credit wallet; fit with `docs/product/BUSINESS.md` (Ideas 1) #billing #decision P3
 
 ## New features
 
@@ -195,7 +260,7 @@ and the realtime path has only ever run on one machine with two browser contexts
 - [ ] T-136 Split `Draft`'s publishing fields into their own table — the accepted price of ADR-102. With `DocumentType`, `Draft` has ~35 columns, and `BlogSlug`, `IsBlogPublished`, `WatermarkText`, `LastTelegram*`, `DisableCopy` mean nothing for a `design` document — they silently sit as nulls. Splitting into `Draft` + `DraftPublishing` fixes that at the cost of a join on every document read, so it is not done now. Revisit when document types visibly outnumber posts #techdebt #phase13 P3
 - [ ] T-146 Vestigial `ApplicationUser.RemoteUserId` column — left over from ADR-108 after ADR-117: the `UpstreamAuth` code is fully deleted, the column deliberately untouched. Dropping a column in SQLite = rebuilding `AspNetUsers`, and Identity touches that table on EVERY authorized request (the `no such column` incident in `.claude/rules/ef-migrations.md`). Zero win against nonzero risk on a live database — remove only together with the next migration-chain collapse, when tables get rebuilt anyway #techdebt P3
 
-- [ ] T-395 Blog flag emoji on Windows Chrome/Edge — the editor picker applies the flags polyfill (ADR-314) but the public blog does not, so a reader there sees letters #blog #emoji P3
+- [ ] T-431 Blog flag emoji on Windows Chrome/Edge — the editor picker applies the flags polyfill (ADR-314) but the public blog does not, so a reader there sees letters #blog #emoji P3
 
 ## Deferred (a deliberate "not now")
 
@@ -204,6 +269,7 @@ and the realtime path has only ever run on one machine with two browser contexts
 | Pro Plus signature tier | Three signature tiers before a user base is extra complexity |
 | Emoji as a Header Slot | Unclear value |
 | AI translation of comments | Waits for the AI credit metering system |
+| T-398 Documents page layout defects (0.25.1 review, Documents 1) — folder menus without a background, overlapping state badges, buttons in a grid | Owner: not now (08.10.2026) |
 | A general "redesign" | Cancelled by ADR-070: no direction, no UI inventory, no tests — all three became Phase 11 preconditions. For an unstructured restyle, "split into concrete pains" still applies |
 
 ## Open questions (need Marty)
