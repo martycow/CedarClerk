@@ -9,7 +9,7 @@ public static class Consts
     // Bump this before every deploy. Two consecutive builds once both called themselves 0.20.0,
     // so the health check's version match proved nothing and the swap had to be confirmed by an
     // endpoint's status code instead.
-    public const string CurrentVersion = "0.25.0";
+    public const string CurrentVersion = "0.25.1";
     public const string DataDirectoryKey = "CEDAR_DATA_DIR";
     public const string DbFileName = "cedar.db";
 
