@@ -1,8 +1,5 @@
 <div class="door">
-    <app-button class="theme-toggle" variant="paper" size="sm" title="Toggle theme"
-                (clicked)="theme.toggle()">
-        <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" size="xs" />
-    </app-button>
+    <app-theme-menu class="theme-toggle" />
 
     <section class="card download-card" data-surface="paper">
         <div class="dl-header">

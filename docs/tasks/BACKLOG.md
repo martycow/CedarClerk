@@ -40,11 +40,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 
 **Wave 2 — shell (ADR-322, ADR-324)** — done 08.10.2026.
 
-**Wave 3 — theme and public pages (ADR-321)**
-- [ ] T-410 One theme dropdown — Light / Dark / System; `ThemeService` stores `system`; replaces the five door/app toggles and Settings › Appearance's two-way switch (General 1) #ui #design P1
-- [ ] T-411 Shared public control cluster — language + theme + font settings, modelled on the blog's `Aa` menu, on landing, Discovery and the personal blog (Landing 2, Discovery 1) #ui #blog #growth P1
-- [ ] T-412 Discovery dark palette + header links to the landing and login (Discovery 1–2) #ui #discovery P2
-- [ ] T-413 Landing: Explore tools as button grid left / detail right on hover or click; Discovery link styled as a primary destination (Landing 1, 3) #ui #growth P2
+**Wave 3 — theme and public pages (ADR-321)** — done 08.10.2026.
 
 **Wave 4 — projects (ADR-318, ADR-319)**
 - [ ] T-414 New project dialog per `UI_Prototypes/New_project.png` — description, logo and banner upload, "Start without documents", live preview card (New project 1–2) #ui #projects P1

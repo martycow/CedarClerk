@@ -397,8 +397,8 @@ export class AppShellComponent implements OnDestroy {
             },
             {
                 id: 'view.theme', group: 'view', label: labels.toggleTheme, icon: 'moon',
-                checked: () => this.appearance.prefs().theme === 'dark',
-                run: () => this.setPref({ theme: this.appearance.prefs().theme === 'dark' ? 'light' : 'dark' }),
+                checked: () => this.appearance.paintedTheme() === 'dark',
+                run: () => this.setPref({ theme: this.appearance.paintedTheme() === 'dark' ? 'light' : 'dark' }),
             },
             { id: 'view.calendar', group: 'view', label: labels.calendar, icon: 'calendar-blank', separatorBefore: true, run: go('/calendar') },
             { id: 'view.posts', group: 'view', label: labels.posts, icon: 'paper-plane-tilt', run: go('/posts') },

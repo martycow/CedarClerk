@@ -24,6 +24,7 @@ describe('AppearanceService', () => {
     const saveAppearancePrefs = vi.fn(async (json: string) => { storedJson.set(json); });
     const theme = {
         theme: themeValue,
+        mode: themeValue,
         set: vi.fn((value: Theme) => {
             themeValue.set(value);
             localStorage.setItem(THEME_STORAGE_KEY, value);

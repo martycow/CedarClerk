@@ -103,6 +103,9 @@ public static class DiscoveryTexts
     public static string OpenDiscovery(bool english) =>
         english ? "Open Discovery" : "Открыть Discovery";
 
+    public static string Home(bool english) =>
+        english ? "Home" : "Главная";
+
     public static string Other(bool english) =>
         english ? "Other" : "Другое";
 

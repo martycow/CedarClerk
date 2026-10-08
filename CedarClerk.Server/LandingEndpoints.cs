@@ -170,9 +170,12 @@ public static class LandingEndpoints
     // string every one of them would have to be doubled. Same Replace-a-placeholder shape as
     // BlogEndpoints' shell, for the same reason.
     private const string Css = """
-            :root { color-scheme: light; {{LIGHT_TOKENS}} }
+            :root { color-scheme: light dark; {{LIGHT_TOKENS}} }
             @media (prefers-color-scheme: dark) { :root { {{DARK_TOKENS}} } }
+            :root[data-theme="light"] { {{LIGHT_TOKENS}} }
+            :root[data-theme="dark"] { {{DARK_TOKENS}} }
             {{FONT_FACES}}
+            {{PC_CSS}}
             * { box-sizing: border-box; }
             html { scroll-behavior: smooth; scroll-padding-top: 100px; }
             body { margin: 0; background: var(--sheet); color: var(--text); font: var(--fs-19)/1.5 var(--font-sans); }
@@ -194,9 +197,6 @@ public static class LandingEndpoints
             .rail-nav { display: flex; gap: var(--space-5); }
             .rail-nav a { font-size: var(--fs-16); text-decoration: none; color: var(--text); }
             .rail-nav a:hover { text-decoration: underline; }
-            .lang { display: flex; gap: var(--space-1); }
-            .lang a { padding: var(--space-2); font-size: var(--fs-13); text-decoration: none; color: var(--text); border-radius: var(--radius-sm); }
-            .lang [aria-current] { background: var(--asoft); font-weight: 700; }
             .btn { display: inline-flex; justify-content: center; align-items: center; gap: var(--space-2); min-height: 48px; padding: var(--space-3) var(--space-5); border: 1px solid var(--accent); border-radius: var(--radius-md); font: 600 var(--fs-17)/1.2 var(--font-sans); text-decoration: none; cursor: pointer; }
             .btn-sm { min-height: 44px; padding: var(--space-2) var(--space-4); font-size: var(--fs-15); }
             .btn-pine { background: var(--accent); color: var(--text-on-pine); }
@@ -244,15 +244,19 @@ public static class LandingEndpoints
             .benefit svg { flex-shrink: 0; color: var(--accent); }
             .benefit h3 { font-size: var(--fs-21); }
             .benefit p { margin-top: var(--space-2); font-size: var(--fs-16); color: var(--t2); }
-            .tools { margin-top: var(--space-6); border-bottom: 1px solid var(--border); }
-            .tools>summary, .comparison-toggle>summary { font-weight: 600; padding: var(--space-4) 0; }
-            .features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-4) 0 var(--space-6); align-items: start; }
-            .feature { padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--paper-bright); }
-            .feature-head { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; list-style: none; }
-            .feature-head b { flex: 1; }
-            .feature-head svg { flex-shrink: 0; color: var(--accent); }
-            .feature-detail { padding-top: var(--space-4); font-size: var(--fs-17); }
-            .feature-detail img { margin-top: var(--space-4); width: 100%; }
+            .comparison-toggle>summary { font-weight: 600; padding: var(--space-4) 0; }
+            .tools { margin-top: var(--space-6); padding-bottom: var(--space-6); border-bottom: 1px solid var(--border); }
+            .tools>h3 { margin-bottom: var(--space-4); }
+            .tools-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-5); align-items: start; }
+            .tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+            .tool-btn { display: flex; align-items: center; gap: var(--space-2); min-height: 56px; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--paper-bright); color: var(--text); font: 600 var(--fs-16)/1.25 var(--font-sans); text-align: left; }
+            .tool-btn svg { flex-shrink: 0; color: var(--accent); }
+            .tool-btn:hover { border-color: var(--accent); }
+            .tool-btn[aria-selected="true"] { border-color: var(--accent); background: var(--asoft); color: var(--accent); }
+            .tool-detail { position: sticky; top: 100px; padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--paper-bright); }
+            .tool-panel p { margin-top: var(--space-2); font-size: var(--fs-17); }
+            .tool-panel img { margin-top: var(--space-4); width: 100%; }
+            .rail-nav a.nav-discovery { padding: var(--space-1) var(--space-3); border: 1px solid var(--accent); border-radius: var(--radius-md); background: var(--asoft); color: var(--accent); font-weight: 700; }
             .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); align-items: stretch; }
             .plan { padding: var(--space-6); background: var(--paper-bright); border: 1px solid var(--border); border-radius: var(--radius-md); }
             .plan-head b { font: 600 var(--fs-27) var(--font-display); }
@@ -321,10 +325,10 @@ public static class LandingEndpoints
             }
             @media (max-width: 540px) {
                 .wrap { padding-inline: var(--space-4); } .rail { gap: var(--space-2); } .login-link { display: none; }
-                .rail-name { font-size: var(--fs-21); } .lang a { min-height: 44px; display: grid; place-items: center; }
+                .rail-name { font-size: var(--fs-21); } .pc-lang a { min-height: 44px; }
                 h1 { font-size: calc(var(--fs-21) * 2); } .hero-sub { font-size: var(--fs-21); }
                 .waitlist { flex-direction: column; } .hero-shot { margin-top: var(--space-6); }
-                .examples { padding: var(--space-5); } .gallery, .plans, .shelves, .features { grid-template-columns: 1fr; }
+                .examples { padding: var(--space-5); } .gallery, .plans, .shelves, .tools-layout { grid-template-columns: 1fr; } .tool-detail { position: static; }
                 .benefits { padding: var(--space-5); } .plan { padding: var(--space-5); }
                 .discover-minis { grid-template-columns: 1fr; } .discover-empty { grid-template-columns: 1fr; }
                 .ruler { gap: var(--space-4); padding: var(--space-5) var(--space-4); }
@@ -337,18 +341,24 @@ public static class LandingEndpoints
     // an interpolated raw string every one of those braces would need escaping.
     private const string WaitlistJs = """
         document.querySelectorAll('.mobile-menu a').forEach(link => link.addEventListener('click', () => link.closest('details').open = false));
-        for (const card of document.querySelectorAll('.feature')) {
-            card.addEventListener('pointerenter', event => {
-                if (event.pointerType === 'mouse' && !card.open) { card.open = true; card.dataset.hover = 'true'; }
+        const toolTabs = [...document.querySelectorAll('.tool-btn')];
+        const showTool = tab => toolTabs.forEach(t => {
+            const on = t === tab;
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.tabIndex = on ? 0 : -1;
+            document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+        });
+        toolTabs.forEach((tab, i) => {
+            tab.addEventListener('click', () => showTool(tab));
+            tab.addEventListener('focus', () => showTool(tab));
+            tab.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') showTool(tab); });
+            tab.addEventListener('keydown', event => {
+                const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+                if (!step) return;
+                event.preventDefault();
+                toolTabs[(i + step + toolTabs.length) % toolTabs.length].focus();
             });
-            card.addEventListener('pointerleave', () => {
-                if (card.dataset.hover && !card.contains(document.activeElement)) card.open = false;
-                delete card.dataset.hover;
-            });
-            card.querySelector('summary').addEventListener('click', event => {
-                if (card.dataset.hover) { event.preventDefault(); delete card.dataset.hover; }
-            });
-        }
+        });
         const dialog = document.getElementById('waitlist-dialog');
         const original = document.getElementById('waitlist-form');
         if (dialog && original) {
@@ -542,20 +552,23 @@ public static class LandingEndpoints
         if (c.ShowFeatures) nav.Add($"""<a href="#features">{LandingTexts.HowItWorks.Pick(ru)}</a>""");
         if (c.ShowShots || c.ShowcaseBlog is not null) nav.Add($"""<a href="#examples">{LandingTexts.Examples.Pick(ru)}</a>""");
         if (c.ShowPricing) nav.Add($"""<a href="#pricing">{LandingTexts.Pricing(ru)}</a>""");
-        nav.Add($"""<a href="/discovery">Discovery</a>""");
+        nav.Add($"""<a class="nav-discovery" href="/discovery">Discovery</a>""");
 
         var check = Icons.Svg("check", 15);
 
         string[] screens = ["project", "glossary", "canvas", "presets", "editor", "publishing", "publishing", "publishing", "editor", "posts", "tasks", "library", "builds", "calendar", "appearance", "publishing"];
-        var featureCards = string.Join("", features.Select((f, index) => $"""
-            <details class="feature">
-                <summary class="feature-head">{Icons.Svg(f.Icon, 32)}<b>{E(f.Title)}</b><span aria-hidden="true">+</span></summary>
-                <div class="feature-detail"><p>{E(f.Body)}</p>
-                    <a href="/assets/review/{screens[index]}.png">
-                        <img src="/assets/review/{screens[index]}.png" alt="{E(LandingTexts.ViewScreen.Pick(ru))}" loading="lazy" width="1057" height="891">
-                    </a>
-                </div>
-            </details>
+        // ADR-321 / T-413 — a grid of tool buttons on the left and one detail pane on the right;
+        // hovering, focusing or clicking a button shows its tool. Without a script the first shows.
+        var toolButtons = string.Join("", features.Select((f, index) => $"""
+            <button type="button" class="tool-btn" role="tab" id="tool-tab-{index}" aria-controls="tool-panel-{index}" aria-selected="{(index == 0 ? "true" : "false")}" tabindex="{(index == 0 ? "0" : "-1")}">{Icons.Svg(f.Icon, 24)}<span>{E(f.Title)}</span></button>
+            """));
+        var toolPanels = string.Join("", features.Select((f, index) => $"""
+            <div class="tool-panel" role="tabpanel" id="tool-panel-{index}" aria-labelledby="tool-tab-{index}"{(index == 0 ? "" : " hidden")}>
+                <h3>{E(f.Title)}</h3><p>{E(f.Body)}</p>
+                <a href="/assets/review/{screens[index]}.png">
+                    <img src="/assets/review/{screens[index]}.png" alt="{E(LandingTexts.ViewScreen.Pick(ru))}" loading="lazy" width="1057" height="891">
+                </a>
+            </div>
             """));
         var comparison = $"""
             <div class="plan-comparison"><table>
@@ -675,10 +688,12 @@ public static class LandingEndpoints
             <link rel="canonical" href="{Consts.URLs.MainHost}/">
             <link rel="alternate" hreflang="en" href="{Consts.URLs.MainHost}/?lang=en">
             <link rel="alternate" hreflang="ru" href="{Consts.URLs.MainHost}/?lang=ru">
+            {PublicControls.HeadScript}
             <style>{Css
                 .Replace("{{LIGHT_TOKENS}}", lightTokens)
                 .Replace("{{DARK_TOKENS}}", darkTokens)
-                .Replace("{{FONT_FACES}}", DesignTokens.FontFaces)}</style>
+                .Replace("{{FONT_FACES}}", DesignTokens.FontFaces)
+                .Replace("{{PC_CSS}}", PublicControls.Css + PublicControls.PageCss)}</style>
             </head>
             <body>
 
@@ -687,12 +702,7 @@ public static class LandingEndpoints
                 <span class="rail-chip">{LandingTexts.InviteOnlyBeta(ru)}</span>
                 <span class="spacer"></span>
                 <nav class="rail-nav" aria-label="{LandingTexts.OnThisPage.Pick(ru)}">{string.Join("", nav)}</nav>
-                <!--Two links rather than a script: the page is server-rendered, and a language is a
-                different document, not a different state of this one.-->
-                <div class="lang">
-                    <a href="?lang=ru"{(ru ? """ aria-current="true" """ : "")}>RU</a>
-                    <a href="?lang=en"{(ru ? "" : """ aria-current="true" """)}>EN</a>
-                </div>
+                <div class="pc-controls">{PublicControls.LanguageSwitch(ru, "?lang=ru", "?lang=en")}{PublicControls.MenuHtml(ru ? "ru" : "en")}</div>
                 <a class="btn btn-paper btn-sm login-link" href="/login">{LandingTexts.LogIn(ru)}</a>
                 <a class="btn btn-pine btn-sm" href="#waitlist" data-waitlist>{LandingTexts.JoinTheWaitlist(ru)}</a>
                 <details class="mobile-menu"><summary>{LandingTexts.Menu.Pick(ru)}</summary><nav aria-label="{LandingTexts.OnThisPage.Pick(ru)}">{string.Join("", nav)}<a href="#waitlist" data-waitlist>{LandingTexts.JoinTheWaitlist(ru)}</a></nav></details>
@@ -744,7 +754,10 @@ public static class LandingEndpoints
                     <div class="benefit">{Icons.Svg("timer", 32)}<div><h3>{LandingTexts.Scheduler(ru)}</h3><p>{LandingTexts.SchedulerDescription(ru)}</p></div></div>
                     <div class="benefit">{Icons.Svg("download-simple", 32)}<div><h3>{LandingTexts.TheTextsStayYours(ru)}</h3><p>{LandingTexts.ExportDescription(ru)}</p></div></div>
                 </div>
-                <details class="tools"><summary>{LandingTexts.AllTools.Pick(ru)} · {features.Length}</summary><div class="features">{featureCards}</div></details>
+                <section class="tools" aria-labelledby="tools-title">
+                    <h3 id="tools-title">{LandingTexts.AllTools.Pick(ru)} · {features.Length}</h3>
+                    <div class="tools-layout"><div class="tool-grid" role="tablist" aria-orientation="vertical" aria-labelledby="tools-title">{toolButtons}</div><div class="tool-detail">{toolPanels}</div></div>
+                </section>
                 """ : "")}
                 {(c.ShowPricing ? $"""
                 <section id="pricing">
@@ -778,6 +791,7 @@ public static class LandingEndpoints
                 <a href="/login">{LandingTexts.LogIn(ru)}</a>
             </footer>
             <script>{WaitlistScript(ru)}</script>
+            {PublicControls.Script}
             {(analyticsKey is null ? "" : ConsentBlock(ru, analyticsKey, analyticsHost))}
             </body>
             </html>

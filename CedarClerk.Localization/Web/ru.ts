@@ -3024,6 +3024,7 @@ export const ru: Dict = {
             themeLabel: 'Тема',
             light: 'Светлая',
             dark: 'Тёмная',
+            themeSystem: 'Системная',
             sidebarLabel: 'Сайдбар',
             sidebarExpanded: 'Развёрнутый',
             sidebarCompact: 'Компактный',

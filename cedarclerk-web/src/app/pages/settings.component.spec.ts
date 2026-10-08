@@ -111,7 +111,7 @@ describe('settings', () => {
         expect(root.querySelector('.settings-body')?.classList.contains('has-index')).toBe(true);
         expect(root.querySelector('#sec-language')).not.toBeNull();
         expect(root.querySelector('#sec-appearance app-appearance-panel')).not.toBeNull();
-        expect(root.querySelector(`[role="group"][aria-label="${locale.t().settings.appearance.themeLabel}"]`)).not.toBeNull();
+        expect(root.querySelector('#sec-appearance app-theme-menu')).not.toBeNull();
         expect(root.querySelector(`[role="group"][aria-label="${locale.t().settings.appearance.sidebarLabel}"]`)).not.toBeNull();
         expect(root.querySelectorAll('#sec-appearance input[type="checkbox"]')).toHaveLength(6);
     });

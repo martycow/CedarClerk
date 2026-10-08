@@ -3127,6 +3127,7 @@ export const en = {
             themeLabel: 'Theme',
             light: 'Light',
             dark: 'Dark',
+            themeSystem: 'System',
             sidebarLabel: 'Sidebar',
             sidebarExpanded: 'Expanded',
             sidebarCompact: 'Compact',

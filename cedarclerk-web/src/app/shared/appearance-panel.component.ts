@@ -1,3 +1,4 @@
+import { ThemeMenuComponent } from './theme-menu.component';
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import {
     ACCENT_MIN_CONTRAST, ACCENT_PRESETS, AppearancePrefs, AppearanceService, MAX_TABLE_SIZE,
@@ -16,7 +17,7 @@ const APPEARANCE_COMMIT_DEBOUNCE_MS = 600;
 
 @Component({
     selector: 'app-appearance-panel',
-    imports: [IconComponent, LeafTagComponent, SelectComponent],
+    imports: [IconComponent, LeafTagComponent, SelectComponent, ThemeMenuComponent],
     templateUrl: 'appearance-panel.component.html',
     styleUrls: ['appearance-panel.component.css'],
 })
@@ -57,7 +58,7 @@ export class AppearancePanelComponent implements OnDestroy {
     // The swatch shows the tone the theme will actually paint, not the preset's day hex — night
     // derives its own (ADR-141), and a swatch that ignores that advertises a colour you cannot get.
     swatchHex(preset: { hex: string; night: string }): string {
-        return this.appearance.prefs().theme === 'dark' ? preset.night : preset.hex;
+        return this.appearance.paintedTheme() === 'dark' ? preset.night : preset.hex;
     }
 
     isActivePreset(hex: string): boolean {
@@ -77,13 +78,13 @@ export class AppearancePanelComponent implements OnDestroy {
 
     pickAccentPreset(hex: string) {
         this.accentRefused.set(null);
-        this.previewAndSave(this.appearance.prefs().theme === 'dark' ? { accentDark: hex } : { accentLight: hex });
+        this.previewAndSave(this.appearance.paintedTheme() === 'dark' ? { accentDark: hex } : { accentLight: hex });
     }
 
     // Gated before it is previewed: an accent that fails the floor on this theme's paper is never
     // painted, and the message says by how much rather than only that it was refused.
     setCustomAccent(hex: string) {
-        const ratio = accentContrast(hex, this.appearance.prefs().theme);
+        const ratio = accentContrast(hex, this.appearance.paintedTheme());
         if (ratio < ACCENT_MIN_CONTRAST) {
             this.accentRefused.set(this.t().settings.appearance.accentRefused(ratio.toFixed(1)));
             return;
@@ -94,10 +95,6 @@ export class AppearancePanelComponent implements OnDestroy {
     pickAreaPreset(value: BenchSelectValue) {
         if (value === 'custom' || typeof value !== 'string') return;
         this.previewAndSave(areaPresetPatch(value as AreaPresetId, this.appearance.prefs()));
-    }
-
-    setTheme(value: AppearancePrefs['theme']) {
-        this.previewAndSave({ theme: value });
     }
 
     setSidebarMode(value: AppearancePrefs['sidebarMode']) {

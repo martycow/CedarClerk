@@ -1,12 +1,12 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from './auth.service';
-import { Theme, ThemeService } from './theme.service';
+import { Theme, ThemeMode, ThemeService, isThemeMode } from './theme.service';
 
 export type SidebarMode = 'full' | 'rail';
 export const SIDEBAR_MODE_STORAGE_KEY = 'cedar-sidebar-mode';
 
 export interface AppearancePrefs {
-    theme: Theme;
+    theme: ThemeMode;
     sidebarMode: SidebarMode;
     accentLight: string;
     accentDark: string;
@@ -98,7 +98,7 @@ export function resolveAccent(hex: string, theme: Theme): string {
 }
 
 export const DEFAULT_APPEARANCE: AppearancePrefs = {
-    theme: 'light',
+    theme: 'system',
     sidebarMode: 'full',
     accentLight: BENCH_ACCENT.hex,
     accentDark: BENCH_ACCENT.hex,
@@ -144,6 +144,8 @@ export const TYPEFACE_STACK: Record<AppearancePrefs['typeface'], string> = {
 export class AppearanceService {
     private auth = inject(AuthService);
     private theme = inject(ThemeService);
+    /** The theme painted now, with `system` resolved — what accent contrast is measured against. */
+    readonly paintedTheme = this.theme.theme;
     readonly prefs = signal<AppearancePrefs>(this.bootstrapDefaults());
     readonly dirty = signal(false);
     private loadedOwner: string | null | undefined;
@@ -167,7 +169,7 @@ export class AppearanceService {
         // the app is actually showing.
         const merged = {
             ...stored,
-            theme: stored.theme === 'dark' ? 'dark' as const : 'light' as const,
+            theme: isThemeMode(stored.theme) ? stored.theme : 'system' as const,
             sidebarMode: stored.sidebarMode === 'rail' ? 'rail' as const : 'full' as const,
             accentLight: storedAccent(String(stored.accentLight), 'light'),
             accentDark: storedAccent(String(stored.accentDark), 'dark'),
@@ -219,7 +221,7 @@ export class AppearanceService {
         } catch {
             // The expanded sidebar is the safe signed-out fallback when storage is unavailable.
         }
-        return { ...DEFAULT_APPEARANCE, theme: this.theme.theme(), sidebarMode };
+        return { ...DEFAULT_APPEARANCE, theme: this.theme.mode(), sidebarMode };
     }
 
     private applyVisuals(p: AppearancePrefs) {

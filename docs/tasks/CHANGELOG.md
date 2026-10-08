@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-08 — 0.25.1 review, wave 3: theme and public pages (ADR-321)
+
+- **T-410** One colour-mode control, `app-theme-menu`: a dropdown of Light / Dark / System toggle buttons on login, register, recovery, onboarding, download, the legal pages and Settings › Appearance. `ThemeService` stores the mode; `system` follows the OS live. The account appearance JSON accepts `system`.
+- **T-411** `PublicControls` (server) renders one set of reader controls — RU/EN plus the `Aa` menu (theme, text size, typeface) — on the landing, Discovery and the personal blog; the blog's own copies of the menu, its CSS and its scripts moved there. The landing switches dark tokens on `data-theme` as well as the OS setting.
+- **T-412** Discovery has a dark mode: the wall goes dark and text standing on it takes `--wood-ink`, while paper surfaces keep paper ink. Its header gains a Home link to the landing next to Sign in.
+- **T-413** Landing: "Explore all tools" is a button grid on the left and a detail pane on the right (hover, focus, click or arrow keys); Discovery is a highlighted button in the nav.
+
+Validation: `dotnet test` 2084 passed; front-end specs pass (theme menu spec added); landing and Discovery checked by eye in both themes on a local bot-off server.
+
 ## 2026-10-08 — 0.25.1 review, wave 2: shell (ADR-322, ADR-324)
 
 - **T-406** Top bar: the logo and name (version beneath) link to the Projects Hub; the sidebar toggle moved from the sidebar head to the top bar after the project switcher; Fullscreen and Log out sit at the right end. File › Sign out is gone; Help › About replaces the popover's About.

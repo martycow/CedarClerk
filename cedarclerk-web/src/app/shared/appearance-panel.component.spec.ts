@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppearanceService, ACCENT_PRESETS, DEFAULT_APPEARANCE } from '../core/appearance.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -9,6 +9,7 @@ describe('AppearancePanelComponent', () => {
         const prefs = signal({ ...DEFAULT_APPEARANCE });
         const appearance = {
             prefs,
+            paintedTheme: computed(() => prefs().theme === 'dark' ? 'dark' : 'light'),
             dirty: signal(false),
             preview: vi.fn(),
             commit: vi.fn().mockResolvedValue(undefined),
@@ -49,9 +50,7 @@ describe('AppearancePanelComponent', () => {
         expect(buttons()[0].querySelector('.ap-accent-check')).toBeNull();
         expect(buttons()[1].querySelector('.ap-accent-check')).toBeTruthy();
 
-        fixture.componentInstance.setTheme('dark');
         fixture.componentInstance.setSidebarMode('rail');
-        expect(appearance.preview).toHaveBeenCalledWith({ theme: 'dark' });
         expect(appearance.preview).toHaveBeenCalledWith({ sidebarMode: 'rail' });
     });
 
@@ -59,6 +58,7 @@ describe('AppearancePanelComponent', () => {
         const prefs = signal({ ...DEFAULT_APPEARANCE, ...overrides });
         const appearance = {
             prefs,
+            paintedTheme: computed(() => prefs().theme === 'dark' ? 'dark' : 'light'),
             dirty: signal(false),
             preview: vi.fn((patch: Partial<typeof DEFAULT_APPEARANCE>) => prefs.update(p => ({ ...p, ...patch }))),
             commit: vi.fn().mockResolvedValue(undefined),
@@ -91,7 +91,7 @@ describe('AppearancePanelComponent', () => {
         expect(root.querySelector('.ap-accent-custom')?.classList.contains('on')).toBe(true);
         expect(root.querySelectorAll('button.ap-accent[aria-pressed="true"]')).toHaveLength(0);
 
-        fixture.componentInstance.setTheme('dark');
+        appearance.prefs.update(p => ({ ...p, theme: 'dark' }));
         fixture.componentInstance.setCustomAccent('#7E7E7E');
         expect(appearance.preview).not.toHaveBeenCalledWith({ accentDark: '#7E7E7E' });
         expect(fixture.componentInstance.accentRefused()).toContain('3:1');

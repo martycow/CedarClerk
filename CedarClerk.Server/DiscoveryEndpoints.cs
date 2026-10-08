@@ -278,6 +278,7 @@ public static class DiscoveryEndpoints
             : $"""<a class="start" href="/welcome#waitlist">{DiscoveryTexts.StartPublishing(!ru)}</a>""";
 
         var light = DesignTokens.Declarations(DesignTokens.Light, DesignTokens.MaterialsLight);
+        var dark = DesignTokens.Declarations(DesignTokens.Dark, DesignTokens.MaterialsDark);
         var title = DiscoveryTexts.DiscoveryIndependentProjectsAndBlogsCedarClerk(!ru);
         var description = settings.Intro.Pick(ru);
 
@@ -292,16 +293,18 @@ public static class DiscoveryEndpoints
                 <link rel="canonical" href="{Consts.URLs.MainHost}/discovery">
                 <link rel="alternate" hreflang="en" href="{Consts.URLs.MainHost}/discovery?lang=en">
                 <link rel="alternate" hreflang="ru" href="{Consts.URLs.MainHost}/discovery?lang=ru">
-                <style>{Css.Replace("{{LIGHT_TOKENS}}", light).Replace("{{FONT_FACES}}", DesignTokens.FontFaces)}</style>
+                {PublicControls.HeadScript}
+                <style>{Css.Replace("{{LIGHT_TOKENS}}", light).Replace("{{DARK_TOKENS}}", dark).Replace("{{FONT_FACES}}", DesignTokens.FontFaces).Replace("{{PC_CSS}}", PublicControls.Css + PublicControls.PageCss)}</style>
             </head>
             <body>
                 <header class="topbar">
                     <a class="brand" href="/welcome"><img src="/favicon.png" alt=""><span>Cedar Clerk</span></a>
                     <nav class="main-nav" aria-label="{DiscoveryTexts.PrimaryNavigation(!ru)}">
+                        <a href="/welcome?lang={(ru ? "ru" : "en")}">{DiscoveryTexts.Home(!ru)}</a>
                         <a class="active" href="/discovery?lang={(ru ? "ru" : "en")}" aria-current="page">Discovery</a>
                         {categoriesNav}
                     </nav>
-                    <div class="lang"><a href="/discovery?lang=ru{currentStateQuery}"{(ru ? " aria-current=\"page\"" : "")}>RU</a><a href="/discovery?lang=en{currentStateQuery}"{(!ru ? " aria-current=\"page\"" : "")}>EN</a></div>
+                    <div class="pc-controls">{PublicControls.LanguageSwitch(ru, "/discovery?lang=ru" + currentStateQuery, "/discovery?lang=en" + currentStateQuery)}{PublicControls.MenuHtml(ru ? "ru" : "en")}</div>
                     <a class="sign" href="/login">{DiscoveryTexts.SignIn(!ru)}</a>
                     {startPublishing}
                 </header>
@@ -336,6 +339,7 @@ public static class DiscoveryEndpoints
                 """ : Disabled(ru))}
 
                 <footer><div class="wrap footer-inner"><a class="brand" href="/welcome"><img src="/favicon.png" alt=""><span>Cedar Clerk</span></a><span>{DiscoveryTexts.PublishingForIndependentMakers(!ru)}</span><span class="grow"></span><a href="/terms">{DiscoveryTexts.Terms(!ru)}</a><a href="/privacy">{DiscoveryTexts.Privacy(!ru)}</a></div></footer>
+                {PublicControls.Script}
             </body></html>
             """;
     }
@@ -510,8 +514,19 @@ public static class DiscoveryEndpoints
     };
 
     private const string Css = """
-        :root { color-scheme: light; {{LIGHT_TOKENS}} }
+        :root { color-scheme: light dark; {{LIGHT_TOKENS}} }
+        @media (prefers-color-scheme: dark) { :root { {{DARK_TOKENS}} } }
+        :root[data-theme="light"] { {{LIGHT_TOKENS}} }
+        :root[data-theme="dark"] { {{DARK_TOKENS}} }
+        /* ADR-321 — dark Discovery. The page stands on the bare wall, which at night is dark while
+           paper stays cream, so text on the wall takes the wall's ink and text on a paper surface
+           keeps the paper's: the same two polarities the app shell carries (ADR-141). */
+        :root { --paper-ink: var(--text); --paper-ink-2: var(--t2); --paper-ink-3: var(--t3); }
+        :root[data-theme="dark"] body { --text: var(--wood-ink); --t2: var(--wood-ink-soft); --t3: var(--wood-ink-soft); }
+        @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { --text: var(--wood-ink); --t2: var(--wood-ink-soft); --t3: var(--wood-ink-soft); } }
+        :is(.topbar, .search input, .project-card.featured, .segments a[aria-current], .stage-empty-action, .reading-menu) { --text: var(--paper-ink); --t2: var(--paper-ink-2); --t3: var(--paper-ink-3); color: var(--text); }
         {{FONT_FACES}}
+        {{PC_CSS}}
         * { box-sizing: border-box; }
         .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
         html { scroll-behavior: smooth; }
@@ -531,9 +546,7 @@ public static class DiscoveryEndpoints
         .search label { color:var(--brass); font:700 11px var(--font-sans); white-space:nowrap; }
         .search input { width:100%; height:38px; border:var(--border-paper); border-radius:var(--radius-field); background:var(--sheet); color:var(--text); padding:0 12px; font:inherit; font-size:13px; box-shadow:var(--shadow-field-inset); }
         .search input:focus-visible,.segments a:focus-visible,.shuffle:focus-visible,.stage-empty-action:focus-visible,.start:focus-visible { outline:2px solid var(--focus-halo); outline-offset:2px; }
-        .lang { display:flex; gap:2px; margin-left:auto; font:11px var(--font-mono); }
-        .lang a { padding:5px 6px; text-decoration:none; border-radius:var(--radius-stamp); color:var(--t2); }
-        .lang a[aria-current] { background:var(--asoft); color:var(--accent); }
+        .topbar .pc-controls { margin-left:auto; }
         .sign { font-size:13px; text-decoration:none; white-space:nowrap; }
         .start { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:8px 15px; color:var(--text-on-pine); background:var(--grad-pine); border:1px solid var(--pine-deep); border-radius:var(--radius-plaque); font-weight:700; font-size:13px; text-decoration:none; box-shadow:var(--shadow-pine-btn); white-space:nowrap; }
         .stage { display:grid; grid-template-columns:minmax(0,1fr); background:var(--pine-deep); color:var(--text-on-pine); min-height:330px; }

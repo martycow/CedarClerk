@@ -223,7 +223,7 @@ public class DiscoveryTests
         var headerEnd = body.IndexOf("</header>", StringComparison.Ordinal);
         Assert.InRange(headerEnd, 0, controlsStart - 1);
         Assert.DoesNotContain("class=\"search\"", body[..headerEnd]);
-        Assert.Contains("/discovery?lang=ru&type=projects&category=games&q=Mosslight", body[..headerEnd]);
+        Assert.Contains("/discovery?lang=ru&amp;type=projects&amp;category=games&amp;q=Mosslight", body[..headerEnd]);
     }
 
     [Fact]

@@ -2,7 +2,7 @@ import { LocationInputComponent } from '../shared/location-input.component';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { ThemeService } from '../core/theme.service';
+import { ThemeMenuComponent } from '../shared/theme-menu.component';
 import { LocaleService } from '../core/i18n/locale.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { LangSwitchComponent } from '../shared/lang-switch.component';
@@ -15,7 +15,7 @@ import { InputComponent } from '../bench/forms/input.component';
 // auth.guard.ts routes every account without a display name to this door.
 @Component({
     selector: 'app-onboarding',
-    imports: [LocationInputComponent,
+    imports: [ThemeMenuComponent, LocationInputComponent,
         CedarLogoComponent, LangSwitchComponent,
         ButtonComponent, InputComponent, IconComponent,
     ],
@@ -24,7 +24,6 @@ import { InputComponent } from '../bench/forms/input.component';
 })
 export class OnboardingComponent {
     auth = inject(AuthService);
-    theme = inject(ThemeService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     t = inject(LocaleService).t;

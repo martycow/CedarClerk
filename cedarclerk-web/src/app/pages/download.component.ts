@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LocaleService } from '../core/i18n/locale.service';
-import { ThemeService } from '../core/theme.service';
+import { ThemeMenuComponent } from '../shared/theme-menu.component';
 import { ButtonComponent } from '../bench/forms/button.component';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { IconComponent } from '../shared/icon.component';
@@ -12,11 +12,10 @@ import { IconComponent } from '../shared/icon.component';
 // server's GET /downloads/latest redirect, not an SPA route.
 @Component({
     selector: 'app-download',
-    imports: [RouterLink, ButtonComponent, CedarLogoComponent, IconComponent],
+    imports: [ThemeMenuComponent, RouterLink, ButtonComponent, CedarLogoComponent, IconComponent],
     templateUrl: 'download.component.html',
     styleUrl: 'download.component.css',
 })
 export class DownloadComponent {
-    protected readonly theme = inject(ThemeService);
     protected readonly t = inject(LocaleService).t;
 }

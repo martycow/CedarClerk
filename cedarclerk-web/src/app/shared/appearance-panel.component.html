@@ -4,10 +4,7 @@
         <p class="ap-group">{{ t().settings.appearance.groupInterface }}</p>
         <div class="ap-field">
             <label>{{ t().settings.appearance.themeLabel }}</label>
-            <div class="ap-leaves" role="group" [attr.aria-label]="t().settings.appearance.themeLabel">
-                <app-leaf-tag interactive [state]="appearance.prefs().theme === 'light' ? 'active' : 'idle'" (activated)="setTheme('light')">{{ t().settings.appearance.light }}</app-leaf-tag>
-                <app-leaf-tag interactive [state]="appearance.prefs().theme === 'dark' ? 'active' : 'idle'" (activated)="setTheme('dark')">{{ t().settings.appearance.dark }}</app-leaf-tag>
-            </div>
+            <app-theme-menu labelled placement="right-start" />
         </div>
 
         <div class="ap-field">
