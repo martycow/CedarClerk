@@ -52,16 +52,17 @@ public class GlossaryUsageTests : IDisposable
         return draft;
     }
 
-    private GlossaryTerm SeedTerm(string ownerId, string term, string aliases = "",
+    private GlossaryEntryLanguage SeedTerm(string ownerId, string term, string aliases = "",
         Guid? projectId = null, string language = Languages.Russian, DateTime? createdAt = null)
     {
-        var row = new GlossaryTerm
+        var entry = new GlossaryEntry { OwnerId = ownerId, Name = term, Description = "d", ProjectId = projectId };
+        var row = new GlossaryEntryLanguage
         {
-            OwnerId = ownerId, Term = term, Description = "d", Aliases = aliases,
-            ProjectId = projectId, Language = language,
+            OwnerId = ownerId, Entry = entry, Language = language, LocalizedName = term,
+            SpellingsJson = GlossaryEntries.SerializeSpellings(aliases.Split(',')),
             CreatedAt = createdAt ?? DateTime.UtcNow,
         };
-        db.GlossaryTerms.Add(row);
+        db.GlossaryEntryLanguages.Add(row);
         db.SaveChanges();
         return row;
     }
@@ -124,7 +125,7 @@ public class GlossaryUsageTests : IDisposable
         await GlossaryUsage.SyncForTermAsync(db, OwnerA, term.Id);
         Assert.Empty(Rows(OwnerA));
 
-        db.GlossaryTerms.Single(t => t.Id == term.Id).Term = "Unity";
+        db.GlossaryEntryLanguages.Single(t => t.Id == term.Id).LocalizedName = "Unity";
         await db.SaveChangesAsync();
         await GlossaryUsage.SyncForTermAsync(db, OwnerA, term.Id);
 
@@ -251,8 +252,9 @@ public class GlossaryUsageTests : IDisposable
         Assert.False(counts.ContainsKey(theirs.Id));
     }
 
-    private static GlossaryUsage.TermRow Row(GlossaryTerm term) =>
-        new(term.Id, term.Term, term.Aliases, term.IsCaseSensitive, term.Language, term.ProjectId, term.CreatedAt);
+    private static GlossaryUsage.TermRow Row(GlossaryEntryLanguage term) =>
+        new(term.Id, term.LocalizedName, GlossaryEntries.ParseSpellings(term.SpellingsJson),
+            term.Entry!.IsCaseSensitive, term.Language, term.Entry.ProjectId, term.CreatedAt);
 
     // ADR-238 clause 13 — the note beside the count and the count itself must name the same winner,
     // which is the only reason the tiebreak has to be a total order.
@@ -333,7 +335,7 @@ public class GlossaryShadowTests
 {
     private static GlossaryUsage.TermRow Term(string term, string aliases = "", Guid? projectId = null,
         bool caseSensitive = false, string language = Languages.Russian, int createdDay = 1, Guid? id = null) =>
-        new(id ?? Guid.NewGuid(), term, aliases, caseSensitive, language, projectId,
+        new(id ?? Guid.NewGuid(), term, GlossaryEntries.CleanSpellings(aliases.Split(',')), caseSensitive, language, projectId,
             new DateTime(2026, 1, createdDay));
 
     [Fact]

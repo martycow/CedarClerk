@@ -19,7 +19,7 @@ public static class CedarToBlogHtmlRenderer
         // Idea #11 - glossary terms to mark in body text, and which ones already have been.
         // The set lives on the context rather than per text node so "first occurrence only"
         // holds across the whole page.
-        public IReadOnlyList<GlossaryEntry> Glossary { get; init; } = [];
+        public IReadOnlyList<GlossaryMatchTerm> Glossary { get; init; } = [];
         // Suppressed inside code and inside links: a term in a code sample is code, and a
         // <span> tooltip nested in an <a> gives the reader two different things one click apart.
         public int SuppressGlossaryDepth;
@@ -36,7 +36,7 @@ public static class CedarToBlogHtmlRenderer
     // "en"/"ru" only, matching CedarClerk.Localization.Languages — Core stays free of a project
     // reference to Localization, so the caller (BlogEndpoints) passes the plain language code.
     public static string Render(string cedarJson, string mediaBaseUrl, string lang = "ru",
-        IReadOnlyList<GlossaryEntry>? glossary = null,
+        IReadOnlyList<GlossaryMatchTerm>? glossary = null,
         IReadOnlyDictionary<Guid, string>? wikiTargets = null,
         string? timeZoneId = null)
     {

@@ -34,6 +34,11 @@ public static partial class ErrorMessages
     public static string DescriptionRequired => T("A description is required");
     public static string HandleAndAppPasswordRequired => T("A handle and an app password are required");
     public static string TermRequired => T("A term is required");
+    public static string GlossaryLanguageRequired => T("Pick at least one language for the term");
+    public static string AiDescribeProPlus => T("AI descriptions need Pro and are paid in credits.");
+    public static string AiDescribeNoProvider => T("AI descriptions are not available with the configured provider");
+    public static string AiDescriptionUnusable => T("The description came back unusable — try again");
+    public static string GlossaryImageUnusable => T("AI cannot read this image: use a JPEG, PNG, GIF or WebP of 3 MB at most");
     public static string AiEditProPlus => T("AI editing needs Pro and is paid in credits.");
     public static string AiEditNotConfigured => T("AI editing is not configured");
     public static string AppearancePrefsTooLarge => T("Appearance preferences are too large");
@@ -102,7 +107,6 @@ public static partial class ErrorMessages
     public static string FormHasNoText => T("The form has no text to translate yet");
     public static string FormAlreadyInLanguage => T("The form is already written in this language");
     public static string ServiceMustBeHttps => T("The service address must be an https:// URL");
-    public static string TermAlreadyInLanguage => T("The term is already in this language");
     public static string ThirdSlotIsPro => T("The third header slot is a Pro feature. Upgrade to use it.");
     public static string TranslationUnusable => T("The translation came back unusable — try again");
     public static string TelegramAlreadyLinked => T("This Telegram account is already linked to another Cedar Clerk account");
@@ -400,6 +404,7 @@ public static partial class ErrorMessages
     public static string TagTooLong(int max) => T("Tag is too long ({0} characters maximum)", [max]);
     public static string TitleTooLong(int max) => T("Title is too long ({0} characters maximum)", [max]);
     public static string UnsupportedLanguage(string? lang) => T("Unsupported language: {0}", [lang]);
+    public static string GlossaryLanguageRepeated(string language) => T("Language listed twice: {0}", [language]);
     public static string UnsupportedTranslationLanguage(string lang) => T("Unsupported translation language: {0}", [lang]);
     public static string UnknownAiEditKind(string kind) => T("Unknown AI edit kind: {0}", [kind]);
     public static string NoVersionToEditYet(string lang) => T("No {0} version to edit yet", [lang]);

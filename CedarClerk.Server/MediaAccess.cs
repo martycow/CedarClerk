@@ -182,7 +182,8 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
             else gated[reference.Id] = [draftId];
         }
 
-        var glossary = await db.GlossaryTerms.AsNoTracking().Where(t => t.OwnerId == ownerId).ToListAsync(ct);
+        var glossary = await GlossaryEntries.RowsAsync(
+            db.GlossaryEntryLanguages.Where(l => l.OwnerId == ownerId), ct);
         var exclusions = await db.DraftGlossaryExclusions.AsNoTracking()
             .Where(x => x.OwnerId == ownerId).ToListAsync(ct);
 
@@ -193,7 +194,7 @@ public sealed class MediaVisibilityIndex(IServiceScopeFactory scopes, TimeProvid
 
             var excluded = exclusions.Where(x => x.DraftId == draftId && x.Language == language)
                 .Select(x => x.GlossaryTermId).ToHashSet();
-            var terms = GlossaryEndpoints.Entries(glossary.Where(t => t.Language == language &&
+            var terms = GlossaryEntries.MatchTerms(glossary.Where(t => t.Language == language &&
                 (t.ProjectId == null || t.ProjectId == projectId) && !excluded.Contains(t.Id)));
             if (!terms.Any(t => t.ImageUrl is not null)) return;
             string html;

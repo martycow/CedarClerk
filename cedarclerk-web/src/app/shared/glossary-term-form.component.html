@@ -1,0 +1,116 @@
+<label class="form-field">
+    <span class="form-field-label">{{ t().glossary.name }}</span>
+    <input class="chat-input" name="glossary-name" [(ngModel)]="name" maxlength="80"
+           [placeholder]="t().glossary.termPlaceholder">
+</label>
+
+<div class="form-field">
+    <label class="form-field-label" for="glossary-description">{{ t().glossary.description }}</label>
+    <textarea id="glossary-description" class="chat-input" rows="3" [(ngModel)]="description" maxlength="1000"
+              [placeholder]="t().glossary.descriptionPlaceholder"></textarea>
+    <div class="ai-row">
+        <app-button class="ai-describe" variant="paper" size="sm" (clicked)="aiDescribe()" [disabled]="!canAiDescribe()">
+            @if (describing()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+            @else if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
+            @else { <app-icon name="sparkle" size="sm"></app-icon> }
+            {{ t().glossary.aiDescribe }}
+        </app-button>
+        <span class="field-hint-inline">
+            {{ imageUrl() ? t().glossary.aiDescribeHintImage(describeCost()) : t().glossary.aiDescribeHint(describeCost()) }}
+        </span>
+    </div>
+</div>
+
+<label class="term-case-toggle">
+    <input type="checkbox" name="glossary-case" [checked]="caseSensitive()"
+           (change)="caseSensitive.set($any($event.target).checked)">
+    <span>
+        {{ t().glossary.caseSensitive }}
+        <span class="field-hint-inline">{{ t().glossary.caseSensitiveHint }}</span>
+    </span>
+</label>
+
+<div class="form-field">
+    <span class="form-field-label">{{ t().glossary.image }}</span>
+    @if (imageUrl(); as url) {
+    <div class="term-image-row">
+        <img [src]="url" alt="">
+        <app-button class="image-remove" variant="paper" size="sm" [title]="t().common.delete" (clicked)="imageUrl.set(null)">
+            <app-icon name="x" size="sm" [label]="t().common.delete"></app-icon>
+        </app-button>
+    </div>
+    }
+    <app-button class="image-pick" variant="paper" size="sm" (clicked)="pickingImage.set(true)">
+        <app-icon name="image" size="sm"></app-icon>
+        {{ imageUrl() ? t().glossary.replaceImage : t().glossary.addImage }}
+    </app-button>
+</div>
+
+<!--A document is matched against the row of its own language only, so the languages ticked here
+are the languages the term exists in.-->
+<div class="form-field">
+    <span class="form-field-label">{{ t().glossary.languages }}</span>
+    <div class="lang-picks" role="group" [attr.aria-label]="t().glossary.languages">
+        @for (l of contentLanguages; track l) {
+        <label class="lang-pick" [class.is-on]="hasLanguage(l)" [class.is-locked]="languageLocked(l)" [title]="endonymOf(l)">
+            <input type="checkbox" [checked]="hasLanguage(l)" [disabled]="languageLocked(l)"
+                   [attr.data-language]="l" (change)="toggleLanguage(l)">
+            <span>{{ l.toUpperCase() }}</span>
+            @if (languageLocked(l)) { <app-plan-lock tier="pro" /> }
+        </label>
+        }
+    </div>
+    <p class="field-hint-inline">{{ t().glossary.languagesHint }}</p>
+    <div class="ai-row">
+        <app-button class="ai-translate" variant="paper" size="sm" (clicked)="aiTranslate()" [disabled]="!canAiTranslate()">
+            @if (translatingLang()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+            @else if (!auth.hasAiPlan()) { <app-plan-lock tier="pro" /> }
+            @else { <app-icon name="translate" size="sm"></app-icon> }
+            {{ t().glossary.aiTranslate }}
+        </app-button>
+        <span class="field-hint-inline">{{ t().glossary.aiTranslateHint(cost.text) }}</span>
+    </div>
+    @if (aiError()) { <p class="channel-error" role="alert">{{ aiError() }}</p> }
+</div>
+
+@for (row of languages(); track row.language) {
+<fieldset class="term-lang" [attr.data-language]="row.language">
+    <legend>
+        {{ row.language.toUpperCase() }} · {{ endonymOf(row.language) }}
+        @if (translatingLang() === row.language) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+    </legend>
+    <div class="form-row-2">
+        <label class="form-field">
+            <span class="form-field-label">{{ t().glossary.localizedName }}</span>
+            <input class="chat-input" data-field="name" [(ngModel)]="row.localizedName"
+                   maxlength="80" [placeholder]="name || t().glossary.termPlaceholder">
+        </label>
+        <label class="form-field">
+            <span class="form-field-label">{{ t().glossary.aliases }}</span>
+            <input class="chat-input" data-field="spellings" [(ngModel)]="row.spellings"
+                   maxlength="400" [placeholder]="t().glossary.aliasesPlaceholder">
+        </label>
+    </div>
+    <!--Proposes the Russian forms of the term. They land in the field above, where the author
+    reads them and deletes what is wrong: a suffix rule may suggest, never decide.-->
+    @if (canSuggest(row)) {
+    <app-button class="suggest" variant="paper" size="sm" (clicked)="suggestForms(row)" [disabled]="suggestingFor() === row.language">
+        @if (suggestingFor() === row.language) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
+        @else { <app-icon name="sparkle" size="sm"></app-icon> }
+        {{ t().glossary.suggestForms }}
+    </app-button>
+    @if (suggestedNothingFor() === row.language) { <p class="field-hint-inline">{{ t().glossary.suggestNothing }}</p> }
+    }
+    <label class="form-field">
+        <span class="form-field-label">{{ t().glossary.localizedDescription }}</span>
+        <textarea class="chat-input" rows="2" data-field="description"
+                  [(ngModel)]="row.localizedDescription" maxlength="1000"
+                  [placeholder]="t().glossary.localizedDescriptionPlaceholder"></textarea>
+    </label>
+</fieldset>
+}
+<p class="field-hint-inline">{{ t().glossary.aliasesHint }}</p>
+
+@if (pickingImage()) {
+<app-media-picker [imagesOnly]="true" (picked)="pickedImage($event)" (closed)="pickingImage.set(false)" />
+}

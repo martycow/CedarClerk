@@ -11,7 +11,7 @@ namespace CedarClerk.Server.Translation;
 // DeepLTranslationProvider already used). The model never sees or reproduces TipTap JSON
 // structure, which is what used to make large documents slow and prone to truncated/malformed
 // output. OpenAiTranslationProvider intentionally still uses the old whole-document approach.
-public class AnthropicTranslationProvider(string apiKey, string model) : ITranslationProvider, ITextsTranslationProvider
+public class AnthropicTranslationProvider(string apiKey, string model) : ITranslationProvider, ITextsTranslationProvider, IGlossaryAiProvider
 {
     public string Name => "anthropic";
 
@@ -145,6 +145,103 @@ public class AnthropicTranslationProvider(string apiKey, string model) : ITransl
             result[nonBlankIndices[i]] = translated[i];
 
         return result;
+    }
+
+    private const int GlossaryTermsPerCall = 40;
+
+    public async Task<IReadOnlyList<GlossaryTermTranslation>> TranslateTermsAsync(
+        IReadOnlyList<GlossaryTermSource> terms, string targetLanguage, CancellationToken ct)
+    {
+        var result = new List<GlossaryTermTranslation>(terms.Count);
+        foreach (var chunk in terms.Chunk(GlossaryTermsPerCall))
+        {
+            var prompt = GlossaryAiPromptGenerator.BuildTranslate(chunk, targetLanguage);
+            result.AddRange(await CompleteAsync(prompt,
+                text => GlossaryAiPromptGenerator.ParseTranslate(text, chunk.Length), ct));
+        }
+        return result;
+    }
+
+    public Task<string> DescribeTermAsync(string term, string language, AiImage? image, CancellationToken ct)
+    {
+        var prompt = GlossaryAiPromptGenerator.BuildDescribe(term, language, image is not null);
+        MessageParamContent content = image is null
+            ? prompt
+            : new List<ContentBlockParam>
+            {
+                new ImageBlockParam
+                {
+                    Source = new Base64ImageSource
+                    {
+                        Data = Convert.ToBase64String(image.Bytes),
+                        MediaType = image.MediaType switch
+                        {
+                            "image/png" => MediaType.ImagePng,
+                            "image/gif" => MediaType.ImageGif,
+                            "image/webp" => MediaType.ImageWebP,
+                            _ => MediaType.ImageJpeg,
+                        },
+                    },
+                },
+                new TextBlockParam { Text = prompt },
+            };
+        return CompleteAsync(content, GlossaryAiPromptGenerator.ParseDescribe, ct);
+    }
+
+    private async Task<T> CompleteAsync<T>(MessageParamContent content, Func<string, T> parse, CancellationToken ct)
+    {
+        var client = new AnthropicClient
+        {
+            ApiKey = apiKey,
+            Timeout = Consts.Anthropic.ChunkRequestTimeout,
+            MaxRetries = 0,
+        };
+
+        var delay = TimeSpan.FromSeconds(2);
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                var response = await client.Messages.Create(new MessageCreateParams
+                {
+                    Model = model,
+                    MaxTokens = Consts.Anthropic.MaxOutputTokens,
+                    Messages = [new() { Role = Role.User, Content = content }],
+                }, cancellationToken: ct);
+
+                return parse(string.Concat(response.Content
+                    .Select(b => b.Value)
+                    .OfType<TextBlock>()
+                    .Select(b => b.Text)));
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                throw new TranslationException($"Anthropic didn't respond within {Consts.Anthropic.ChunkRequestTimeout.TotalSeconds:0}s — try again");
+            }
+            catch (AnthropicServiceException ex) when (attempt < MaxAttempts
+                && ex.ErrorType is ErrorType.OverloadedError or ErrorType.RateLimitError)
+            {
+                await Task.Delay(delay, ct);
+                delay *= 2;
+            }
+            catch (TranslationException) when (attempt < MaxAttempts)
+            {
+                await Task.Delay(delay, ct);
+                delay *= 2;
+            }
+            catch (TranslationException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new TranslationException($"Anthropic API request failed: {ex.Message}", ex);
+            }
+        }
     }
 
     // Groups items into chunks that never split a single string across two chunks — a chunk closes

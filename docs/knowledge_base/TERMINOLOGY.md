@@ -10,7 +10,7 @@ guard: none
 A glossary of project terms — things that can't be googled, because the meaning is local to this project.
 Extracted from the code and the live docs on 18.08.2026 (five parallel passes + a merge); every term is
 confirmed against a source. General technical words (SQLite, OAuth) are not included here. The reader-facing
-post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not this file.
+post glossary is a different thing: it's a blog feature (`GlossaryEntry`), not this file.
 
 ## Document and publishing
 
@@ -74,9 +74,10 @@ post glossary is a different thing: it's a blog feature (`GlossaryTerm`), not th
 | header slots | слоты шапки | Up to 3 configurable subheading elements (byline/URL/location/date/length/read time/word count/views); the third is Pro | `Core/HeaderSlotRenderer.cs` |
 | cross-link | кросс-ссылка | Mutual links between a post's surfaces ("Watch on Telegram" ↔ "Read on the blog"), with owner-facing text that is localizable (I15) | `Consts.CrossLinks` |
 | press kit page | пресс-кит | `/games/{slug}/press` — a press page rendered from the showcase plus five optional press fields, with a downloadable press-pack zip; self-updating because it is a renderer over existing data, not a maintained document | UI-INVENTORY §Blog surfaces, CHANGELOG 29.08 |
-| user glossary | пользовательский глоссарий | `GlossaryTerm` — the owner's own terms (per-owner, per-language, with case-form aliases), highlighted in the blog with a tooltip; only on first occurrence | `Core/GlossaryScanner.cs` |
+| user glossary | пользовательский глоссарий | The owner's own terms, highlighted in the blog with a tooltip at every eligible occurrence. A `GlossaryEntry` holds what every language shares — name, description, image, case-sensitive flag, project scope (ADR-320) | `GlossaryEntries.cs`, `Core/GlossaryScanner.cs` |
+| glossary language row | языковая строка термина | `GlossaryEntryLanguage` — an entry as one content language spells it: localized name, other spellings (a list), localized description. A blank name or description reads as the entry's own. A document is matched against the rows of its own language only, so an entry with no row for a language does not exist there. `DraftGlossaryExclusion.GlossaryTermId` and `GlossaryTermUsage.GlossaryTermId` hold this row's id; "term" in those names, in `GlossaryMatchTerm` and in the UI means one entry in one language | `Entities.cs`, ADR-320 |
 | GlossaryTermUsage | использование термина | One row per (term, draft) pair that actually matched, written when either half changes — a draft save rescans that draft, a term write rescans that term. A pair at zero has no row rather than a row holding `0`. The scan runs on plain text and ignores `DraftGlossaryExclusion`: an exclusion is a publishing decision, and "where is this term used" is a question about the text. The field is `usedInDrafts`, never `usedInPosts` — since ADR-102 a post is one `DocumentType` of six | `Entities.cs`, `GlossaryUsage.cs`, ADR-238 |
-| shadowed term | перекрытый термин | Two terms of one owner and language whose spellings intersect compete for the same position, and `CountHits` credits exactly one — project-scoped before global (ADR-112), then `CreatedAt`, then `Id`. The loser carries `shadowedByTermId` naming the winner, because a bare `0` on it would read as "appears nowhere", and those two readings call for opposite actions. Two terms in *different* projects can never meet, so they never collide; spellings are compared case-insensitively unless **both** terms are case-sensitive | `GlossaryEndpoints.cs`, ADR-238 clause 13 |
+| shadowed term | перекрытый термин | Two terms of one owner and language whose spellings intersect compete for the same position, and `CountHits` credits exactly one — project-scoped before global (ADR-112), then `CreatedAt`, then `Id`. The loser carries `shadowedByTermId` naming the winner, because a bare `0` on it would read as "appears nowhere", and those two readings call for opposite actions. Two terms in *different* projects can never meet, so they never collide; spellings are compared case-insensitively unless **both** terms are case-sensitive | `GlossaryUsage.cs`, ADR-238 clause 13 |
 
 ## Tenancy and hosts
 

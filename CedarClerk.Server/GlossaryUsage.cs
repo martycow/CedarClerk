@@ -7,7 +7,7 @@ namespace CedarClerk.Server;
 /// ADR-238 — keeps <see cref="GlossaryTermUsage"/> in step with the text and with the terms.
 ///
 /// A usage row is a fact about a pair, and both halves move on their own: a document is edited, and
-/// a term's aliases are edited. So there are two entry points and they meet in the middle. Both are
+/// a term's spellings are edited. So there are two entry points and they meet in the middle. Both are
 /// called *after* the caller has saved its own change and both save their own — the scan reads the
 /// stored document, which an unsaved edit is not yet part of.
 ///
@@ -41,10 +41,10 @@ public static class GlossaryUsage
         // shadow) cannot stand in for the canonical body.
         texts[draft.PrimaryLanguage] = PlainText(draft.CedarJson);
 
-        var terms = await db.GlossaryTerms.AsNoTracking()
-            .Where(t => t.OwnerId == ownerId && (t.ProjectId == null || t.ProjectId == draft.ProjectId))
-            .Select(t => new TermRow(t.Id, t.Term, t.Aliases, t.IsCaseSensitive, t.Language, t.ProjectId, t.CreatedAt))
-            .ToListAsync();
+        var terms = (await GlossaryEntries.RowsAsync(db.GlossaryEntryLanguages
+                .Where(l => l.OwnerId == ownerId
+                            && (l.Entry!.ProjectId == null || l.Entry.ProjectId == draft.ProjectId))))
+            .Select(r => r.ToTermRow()).ToList();
 
         var hits = new List<(Guid TermId, Guid DraftId, int Occurrences)>();
         foreach (var group in terms.GroupBy(t => t.Language))
@@ -73,10 +73,9 @@ public static class GlossaryUsage
     {
         if (termIds.Count == 0) return;
 
-        var terms = await db.GlossaryTerms.AsNoTracking()
-            .Where(t => t.OwnerId == ownerId && termIds.Contains(t.Id))
-            .Select(t => new TermRow(t.Id, t.Term, t.Aliases, t.IsCaseSensitive, t.Language, t.ProjectId, t.CreatedAt))
-            .ToListAsync();
+        var terms = (await GlossaryEntries.RowsAsync(db.GlossaryEntryLanguages
+                .Where(l => l.OwnerId == ownerId && termIds.Contains(l.Id))))
+            .Select(r => r.ToTermRow()).ToList();
         if (terms.Count == 0) return;
 
         var drafts = await db.Drafts.AsNoTracking()
@@ -129,7 +128,7 @@ public static class GlossaryUsage
         return rows.ToDictionary(r => r.TermId, r => r.Drafts);
     }
 
-    public record TermRow(Guid Id, string Term, string Aliases, bool IsCaseSensitive, string Language,
+    public record TermRow(Guid Id, string Term, IReadOnlyList<string> Spellings, bool IsCaseSensitive, string Language,
         Guid? ProjectId, DateTime CreatedAt);
 
     /// <summary>
@@ -186,7 +185,7 @@ public static class GlossaryUsage
     }
 
     private static IEnumerable<string> Spellings(TermRow row) =>
-        row.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        row.Spellings.Select(s => s.Trim())
             .Prepend(row.Term.Trim())
             .Where(s => s.Length > 0);
 
@@ -198,10 +197,8 @@ public static class GlossaryUsage
             if (counts[i] > 0) yield return (rows[i].Id, counts[i]);
     }
 
-    private static GlossaryEntry Entry(TermRow row) =>
-        new(row.Term, "", null,
-            row.Aliases.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            row.IsCaseSensitive);
+    private static GlossaryMatchTerm Entry(TermRow row) =>
+        new(row.Term, "", null, row.Spellings, row.IsCaseSensitive);
 
     private static string PlainText(string cedarJson) =>
         string.Join('\n', CedarPlainText.Paragraphs(cedarJson));

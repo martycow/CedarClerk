@@ -177,11 +177,11 @@ checks are shaped by.
   (`proplus-monthly` in the ledger); a trial payment lands none. The 21st call in a day answers 429
   whatever the balance.
 - **Language paywall.** On Free the editor's `+` menu locks everything but EN/JA, the glossary form's
-  locked options are disabled *and* labeled, and a direct API `PUT` of a new RU translation answers
+  locked language ticks are disabled *and* wear the lock, and a direct API `PUT` of a new RU translation answers
   403 — an existing RU translation stays editable. On Pro everything unlocks.
 - **Plan locks by eye.** On Free: silver locks on the signature field and Save and on slot 3; gold
   locks on every AI control (settings translate buttons, editor retranslate / translate-all /
-  auto-translate, right-click AI entries, both glossary translate buttons, the form preset language
+  auto-translate, right-click AI entries, the glossary's Translate all and the entry form's two AI buttons, the form preset language
   chip). Every locked button is inert. On Pro the signature unlocks while AI stays gold; on Pro+
   nothing wears a lock.
 - **Payment providers.** Each active processor takes a real payment and the credits or plan land.

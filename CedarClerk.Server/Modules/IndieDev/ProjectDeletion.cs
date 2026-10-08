@@ -52,7 +52,7 @@ public static class ProjectDeletion
     {
         var drafts = db.Drafts.Where(d => d.ProjectId == id && d.OwnerId == ownerId);
         var assets = db.Assets.Where(a => a.ProjectId == id && a.OwnerId == ownerId);
-        var terms = db.GlossaryTerms.Where(t => t.ProjectId == id && t.OwnerId == ownerId);
+        var terms = db.GlossaryEntries.Where(t => t.ProjectId == id && t.OwnerId == ownerId);
         // ADR-319 — Personal comes back only when there is something to put in it.
         if (!await drafts.AnyAsync() && !await assets.AnyAsync() && !await terms.AnyAsync()) return;
 
@@ -110,7 +110,7 @@ public static class ProjectDeletion
             db.Assets.Remove(asset);
         }
 
-        await db.GlossaryTerms.Where(t => t.ProjectId == id && t.OwnerId == ownerId)
+        await db.GlossaryEntries.Where(t => t.ProjectId == id && t.OwnerId == ownerId)
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.ProjectId, (Guid?)null));
         await db.SaveChangesAsync();
         return files;

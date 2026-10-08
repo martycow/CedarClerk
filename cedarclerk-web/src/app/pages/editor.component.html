@@ -1929,7 +1929,7 @@
         <app-icon modal-icon name="book-bookmark" size="sm"></app-icon>
         <span modal-title>{{ t().glossary.newTerm }}</span>
         <app-glossary-term-form #termForm
-            [initialTerm]="draft.term" [initialLanguage]="draft.language">
+            [initialName]="draft.term" [initialLanguage]="draft.language">
         </app-glossary-term-form>
         @if (termError()) { <p class="channel-error">{{ termError() }}</p> }
         <app-button modal-actions variant="paper" (clicked)="termDraft.set(null)">{{ t().common.cancel }}</app-button>

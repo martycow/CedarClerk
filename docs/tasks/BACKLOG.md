@@ -48,9 +48,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 
 **Wave 6 — assets** — done 08.10.2026.
 
-**Wave 7 — glossary (ADR-320)**
-- [ ] T-424 Glossary entry model — `GlossaryEntry` + per-language rows with localized name, spellings, description; migration grouping by `SourceTermId`; renderers and editor lookup rewritten; one editor form (Glossary 1) #glossary #backend P2
-- [ ] T-425 Glossary AI — auto-translate names and spellings into selected languages; auto-description from the term and/or image (provider image input, credit price in BUSINESS.md) (Glossary 2–3) #glossary #ai P2
+**Wave 7 — glossary (ADR-320)** — done 08.10.2026.
 
 **Wave 8 — landing builder (ADR-323)**
 - [ ] T-426 Landing block model and migration — sections → typed blocks, per-item hide, language maps with added languages, current content migrated unchanged, feature list as data (Admin Panel 1–2) #growth #backend P2
@@ -64,6 +62,8 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 - [ ] T-436 Writer polish — footer reads "N words · saved N min ago"; sidebar head gets the "Workspace" label; sidebar counts cap at "99+" #editor #ui P3
 
 **Needs discussion**
+- [ ] T-438 Confirm the credit price of an AI glossary description from an image — ADR-320 leaves the vision call's price to `docs/product/BUSINESS.md`; it shipped at a provisional 2 credits (`CreditPacks.AiImageDescribeCost`), against 1 for a description from the name alone. Confirm or change the number #glossary #billing #decision P2
+- [ ] T-440 Glossary import and export — ADR-320 says they are "rewritten against the new shape", but the glossary has never had either. Decide whether one is wanted, and its file format #glossary #decision P3
 - [ ] T-437 Queue slots and project scope — ADR-322 scopes the calendar's scheduled posts by project, but `QueueSlot` belongs to a destination, not a project, so slots still show account-wide. Settle with T-428 #publishing #decision P3
 - [ ] T-428 Queue: keep, clarify or remove — weekly per-destination send slots that `FillQueueSlotsJob` fills nightly from evergreen drafts by category (Calendar 3) #publishing #decision P3
 - [ ] T-429 Builds rethink — today a `Build` entity with tasks and "Make changelog"; decide what replaces it (Builds 1) #indiedev #decision P3
@@ -220,6 +220,7 @@ and the realtime path has only ever run on one machine with two browser contexts
 
 ## Tech debt
 
+- [ ] T-439 Drop the `GlossaryTerms` table — the `GlossaryEntries` migration copied it into `GlossaryEntry` / `GlossaryEntryLanguage` and left it in place as the rollback source (`LegacyGlossaryTerm`; nothing reads it, account deletion clears it). Once production has run on the new tables and a nightly backup holds them, remove the entity and drop the table in a migration of its own #glossary #backend P3
 - [ ] T-395 Project modules, steps 14a/14b (ADR-293) — the sidebar still hardcodes its sections and ignores the `modules` map (14a); Settings gets a toggle per module (14b). Data and write path (`PUT /api/projects/{id}/modules`) exist #indiedev #ui P2
 - [ ] T-393 Cross-platform operations CLI in Rust + Ratatui — replaces the removed MooTool `cedar` (ADR-304). Must run on macOS (primary), Linux and Windows with no PowerShell dependency. Scope: run locally with the bot forced off (`LocalNoBot`, whitespace token, `--no-launch-profile`, `wwwroot` created), test (backend + frontend + smoke), build (web + portable server), deploy (master-only, clean tree, version tag, upload → stop → swap `app`/`app.prev` → start → health check, `LIVE`/`LIVE-PREV` tags), rollback, status, bounded logs, backup verify (`data/backups`, `cedar-*.db.gz`). Port `Scripts/e2e.ps1` into it or to bash #cli #infra P1
 - [ ] T-376 SECURITY.md gaps G1–G16 into board rows — `docs/tech/SECURITY.md` §Gaps lists sixteen candidate rows with tags and priorities (rate limiting, the proxy chain, `Cookie.SecurePolicy`, security headers, the two state-changing GETs, upload sniffing, the upload ceiling, the PayPal webhook, the visitor-hash salt, reaction kinds, the member cap, tracked-link abuse, R2 encryption, a dependency-audit phase, EF log level, a root `SECURITY.md`). Triage them into rows here — the P1 ones (G1–G3) before registration opens — and delete this umbrella when the last one has its own ID #security P1

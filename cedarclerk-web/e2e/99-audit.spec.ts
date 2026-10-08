@@ -228,7 +228,10 @@ test('@audit settings, glossary, admin', async ({ page, context }) => {
     await page.goto('/glossary');
     await shot(page, '52-glossary-empty');
     await context.request.post('/api/glossary', {
-        data: { term: 'Кедр', description: 'Хвойное дерево, давшее имя проекту.', aliases: 'кедра,кедру', language: 'ru' },
+        data: {
+            name: 'Кедр', description: 'Хвойное дерево, давшее имя проекту.',
+            languages: [{ language: 'ru', localizedName: '', spellings: ['кедра', 'кедру'], localizedDescription: '' }],
+        },
     });
     await page.goto('/glossary');
     await shot(page, '53-glossary-term');

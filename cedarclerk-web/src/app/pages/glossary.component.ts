@@ -1,8 +1,8 @@
-import { Component, OnDestroy, OnInit, effect, inject, signal, untracked } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { LocaleService } from '../core/i18n/locale.service';
-import { GlossaryService, GlossaryTerm, GlossaryTermInput } from '../core/glossary.service';
+import { GlossaryEntry, GlossaryEntryInput, GlossaryService, GlossaryTerm, glossaryTerms } from '../core/glossary.service';
 import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
 import { httpErrorMessage } from '../core/http-error.util';
@@ -21,8 +21,8 @@ import { EmptyStateComponent } from '../shell/empty-state.component';
 import { AppCommand, CommandRelease, CommandsService } from '../core/commands.service';
 import { WorkspaceContextService, WorkspaceProperty } from '../core/workspace-context.service';
 
-// Idea #11 — the glossary page. A term is defined once here and explained wherever it turns up on
-// the blog; nothing is scanned or marked in the editor, since the ask was for the published page.
+// The glossary page. An entry is defined once here and explained wherever it turns up on the blog.
+// The sheet lists it per language, because that is how it is matched (ADR-320).
 @Component({
     selector: 'app-glossary',
     imports: [
@@ -42,8 +42,8 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     private readonly commands = inject(CommandsService);
     private commandRelease?: CommandRelease;
 
-    // ADR-301 clause 4/5 — T-386. The glossary's two translate runs are real AI, so this screen
-    // registers them and the rail's AI panel offers them against the term the list has selected.
+    // ADR-301 clause 4/5 — the whole-language translate run is real AI, so this screen registers
+    // it with the rail's AI panel. The per-entry AI actions live in the entry form.
     constructor() {
         effect(() => {
             const term = this.selectedTerm();
@@ -55,7 +55,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
             const properties: WorkspaceProperty[] = [
                 { label: c.language, value: term.language || this.primaryLanguage },
                 { label: c.scope, value: this.scopeName(term) },
-                { label: c.aliases, value: term.aliases || c.none },
+                { label: c.aliases, value: term.spellings.join(', ') || c.none },
                 { label: c.usedIn, value: c.documentCount(term.usedInDrafts ?? 0) },
                 // The spelling is the key every document's wikilink and every match is found by;
                 // rewriting it silently unlinks the term everywhere it is used.
@@ -100,15 +100,6 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         const ready = () => this.auth.hasAiPlan() && !this.translatingLang();
         return [
             {
-                id: 'glossary.ai.translate', group: 'tools', label: this.t().glossary.translate,
-                icon: 'translate', ai: true,
-                enabled: () => ready() && !!this.selectedTerm(),
-                run: () => {
-                    const term = this.selectedTerm();
-                    if (term) this.openTranslate(term);
-                },
-            },
-            {
                 id: 'glossary.ai.translateAll', group: 'tools', label: this.t().glossary.translateAll,
                 icon: 'translate', ai: true, enabled: ready, run: () => this.openTranslateAll(),
             },
@@ -119,7 +110,10 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     readonly primaryLanguage = DEFAULT_PRIMARY_LANGUAGE;
     readonly endonymOf = endonymOf;
 
-    terms = signal<GlossaryTerm[]>([]);
+    entries = signal<GlossaryEntry[]>([]);
+    /** Every entry in every language it has — the rows the sheet lists and the scanner matches. */
+    terms = computed<GlossaryTerm[]>(() =>
+        glossaryTerms(this.entries()).sort((a, b) => a.term.localeCompare(b.term)));
     /**
      * T-125 — which scope is being looked at: null = everything, '' = global only, an id = that
      * project (its own terms plus the global ones, the same set its documents render with).
@@ -131,17 +125,11 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     busy = signal(false);
     deleteConfirmId = signal<string | null>(null);
 
-    // null = the "new term" form, otherwise the id being edited. One form either way: a separate
-    // create dialog and edit pane would be the same six fields twice.
+    // null = the "new term" form, otherwise the row the form was opened from. One form either
+    // way, and it edits the whole entry: every language of it, not only the row that was clicked.
     selectedId = signal<string | null>(null);
     editing = signal(false);
-
-    editTerm = '';
-    editDescription = '';
-    editAliases = '';
-    editImageUrl = signal<string | null>(null);
-    editLanguage = signal<string>(DEFAULT_PRIMARY_LANGUAGE);
-    editCaseSensitive = signal(false);
+    editEntry = signal<GlossaryEntry | null>(null);
 
     // The term whose tooltip is being previewed, and which language version of it is on screen.
     // Separate from `selectedId` on purpose: previewing is reading, editing is writing, and the
@@ -156,7 +144,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
 
     async ngOnInit() {
         try {
-            this.terms.set(await this.api.list());
+            this.entries.set(await this.api.list());
             // Only when the module is on: with it off there are no projects, and the scope row
             // has nothing to offer beyond "global", which is the only scope that exists there.
             if (this.auth.indieDev()) {
@@ -213,10 +201,8 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     }
 
     groupLanguages(term: GlossaryTerm): string[] {
-        const root = term.sourceTermId ?? term.id;
-        const group = this.terms().filter(t => (t.sourceTermId ?? t.id) === root);
         return this.contentLanguages.filter(language =>
-            group.some(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === language));
+            term.entry.languages.some(row => row.language === language));
     }
 
     scopeCount(scope: string | null): number {
@@ -245,24 +231,14 @@ export class GlossaryComponent implements OnInit, OnDestroy {
 
     startNew() {
         this.selectedId.set(null);
-        this.editTerm = '';
-        this.editDescription = '';
-        this.editAliases = '';
-        this.editImageUrl.set(null);
-        this.editLanguage.set(this.languageFilter());
-        this.editCaseSensitive.set(false);
+        this.editEntry.set(null);
         this.editing.set(true);
         this.error.set('');
     }
 
     startEdit(term: GlossaryTerm) {
         this.selectedId.set(term.id);
-        this.editTerm = term.term;
-        this.editDescription = term.description;
-        this.editAliases = term.aliases;
-        this.editImageUrl.set(term.imageUrl);
-        this.editLanguage.set(term.language || DEFAULT_PRIMARY_LANGUAGE);
-        this.editCaseSensitive.set(term.isCaseSensitive);
+        this.editEntry.set(term.entry);
         this.editing.set(true);
         this.error.set('');
     }
@@ -270,28 +246,31 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     cancelEdit() {
         this.editing.set(false);
         this.selectedId.set(null);
+        this.editEntry.set(null);
     }
 
     // The values come from the shared form component rather than from fields on this page —
-    // the page still owns which row is being written and what happens after.
-    async save(input: GlossaryTermInput) {
-        if (this.busy() || !input.term || !input.description) return;
+    // the page still owns which entry is being written and what happens after.
+    async save(input: GlossaryEntryInput) {
+        if (this.busy() || !input.name || !input.description || !input.languages.length) return;
         this.busy.set(true);
         this.error.set('');
         try {
-            const id = this.selectedId();
-            if (id) {
-                const saved = await this.api.update(id, input);
-                this.terms.update(list => list.map(t => t.id === id ? saved : t));
+            const entry = this.editEntry();
+            if (entry) {
+                const saved = await this.api.update(entry.id, input);
+                this.entries.update(list => list.map(e => e.id === entry.id ? saved : e));
             } else {
                 // The scope selector doubles as "where this one goes" — the hint under it says so,
                 // because a filter that silently decides a property would be a trap.
                 const created = await this.api.create({ ...input, projectId: this.newTermScope() });
-                this.terms.update(list => [...list, created].sort((a, b) => a.term.localeCompare(b.term)));
+                this.entries.update(list => [...list, created]);
             }
-            this.selectLanguage(input.language);
-            this.editing.set(false);
-            this.selectedId.set(null);
+            // The entry may have just left the language on screen; follow it rather than show
+            // a list it is no longer in.
+            if (!input.languages.some(row => row.language === this.languageFilter()))
+                this.selectLanguage(input.languages[0].language);
+            this.cancelEdit();
             void this.refreshTerms();
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().glossary.saveFailed));
@@ -305,16 +284,18 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         return id ? this.terms().find(t => t.id === id) ?? null : null;
     }
 
+    // Deleting removes the entry, so every language of it goes with the row that was clicked.
     async confirmDelete() {
-        const id = this.deleteConfirmId();
+        const target = this.deleteTarget();
         this.deleteConfirmId.set(null);
-        if (!id) return;
+        if (!target) return;
+        const entryId = target.entry.id;
         this.busy.set(true);
         try {
-            await this.api.remove(id);
-            this.terms.update(list => list.filter(t => t.id !== id));
-            if (this.selectedId() === id) this.cancelEdit();
-            if (this.previewId() === id) this.closePreview();
+            await this.api.remove(entryId);
+            if (this.editEntry()?.id === entryId) this.cancelEdit();
+            if (this.previewTerm()?.entry.id === entryId) this.closePreview();
+            this.entries.update(list => list.filter(e => e.id !== entryId));
             // Deleting a term can hand its spelling back to whichever one it was shadowing.
             void this.refreshTerms();
         } catch (e) {
@@ -325,30 +306,12 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     }
 
     aliasList(term: GlossaryTerm): string[] {
-        return term.aliases.split(',').map(a => a.trim()).filter(a => a.length > 0);
+        return term.spellings;
     }
 
-    // ADR-061 — "selected languages" is a frontend loop: one /translate call per checked
-    // language, sequentially, so quota use and errors stay per-language.
-    translateFor = signal<GlossaryTerm | null>(null);
     translateSelection = signal<Set<string>>(new Set());
     translatingLang = signal<string | null>(null);
     translateError = signal('');
-
-    translateTargets(term: GlossaryTerm): string[] {
-        return this.contentLanguages.filter(l => l !== (term.language || DEFAULT_PRIMARY_LANGUAGE));
-    }
-
-    openTranslate(term: GlossaryTerm) {
-        this.translateFor.set(term);
-        this.translateSelection.set(new Set());
-        this.translateError.set('');
-    }
-
-    closeTranslate() {
-        if (this.translatingLang()) return;
-        this.translateFor.set(null);
-    }
 
     toggleTranslateLang(lang: string) {
         this.translateSelection.update(s => {
@@ -362,33 +325,8 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         return this.translateSelection().size > 0 && !this.translatingLang();
     }
 
-    async runTranslate() {
-        const source = this.translateFor();
-        if (!source || !this.canTranslate()) return;
-        this.translateError.set('');
-        const langs = this.contentLanguages.filter(l => this.translateSelection().has(l));
-        for (const lang of langs) {
-            this.translatingLang.set(lang);
-            try {
-                const saved = await this.api.translate(source.id, lang);
-                this.terms.update(list => list.some(t => t.id === saved.id)
-                    ? list.map(t => t.id === saved.id ? saved : t)
-                    : [...list, saved].sort((a, b) => a.term.localeCompare(b.term)));
-                this.toggleTranslateLang(lang);
-            } catch (e) {
-                // Stop on the first failure; the untouched languages stay checked for a retry.
-                this.translateError.set(httpErrorMessage(e, this.t().glossary.translateFailed));
-                this.translatingLang.set(null);
-                return;
-            }
-        }
-        this.translatingLang.set(null);
-        this.translateFor.set(null);
-    }
-
-    // ADR-062 — the whole-language sweep. Reuses the per-term modal's selection/progress/error
-    // signals (only one of the two modals is ever open) but calls the batch endpoint, so each
-    // checked language costs one AI call regardless of how many terms there are.
+    // The whole-language sweep: one call per checked language, each costing one credit however
+    // many entries it fills in.
     translateAllOpen = signal(false);
 
     translateAllTargets(): string[] {
@@ -414,12 +352,8 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         for (const lang of langs) {
             this.translatingLang.set(lang);
             try {
-                const { terms } = await this.api.translateAll(source, lang);
-                this.terms.update(list => {
-                    const byId = new Map(list.map(t => [t.id, t]));
-                    for (const t of terms) byId.set(t.id, t);
-                    return [...byId.values()].sort((a, b) => a.term.localeCompare(b.term));
-                });
+                await this.api.translateAll(source, lang);
+                await this.refreshTerms();
                 this.toggleTranslateLang(lang);
             } catch (e) {
                 // Stop on the first failure; the untouched languages stay checked for a retry.
@@ -435,8 +369,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     // ─── Preview ──────────────────────────────────────────────────────────────
     // The point is to see the real tooltip, not a description in a form field: the blog renders
     // the term as a heading, the description under it and an optional image, and that is what this
-    // reproduces. The language switcher walks the translation group rather than the whole list,
-    // which is why GlossaryTerm.sourceTermId exists.
+    // reproduces. The language switcher walks the languages of the entry.
 
     openPreview(term: GlossaryTerm) {
         this.previewId.set(term.id);
@@ -447,14 +380,13 @@ export class GlossaryComponent implements OnInit, OnDestroy {
         this.previewId.set(null);
     }
 
-    /** Every language version of the previewed term, including itself, in content-language order. */
+    /** Every language of the previewed entry, including the one clicked, in content-language order. */
     previewGroup(): GlossaryTerm[] {
         const current = this.terms().find(t => t.id === this.previewId());
         if (!current) return [];
-        const root = current.sourceTermId ?? current.id;
-        const group = this.terms().filter(t => (t.sourceTermId ?? t.id) === root);
+        const group = this.terms().filter(t => t.entry.id === current.entry.id);
         return this.contentLanguages
-            .map(l => group.find(t => (t.language || DEFAULT_PRIMARY_LANGUAGE) === l))
+            .map(l => group.find(t => t.language === l))
             .filter((t): t is GlossaryTerm => !!t);
     }
 
@@ -535,7 +467,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
 
     /** Absent until the list endpoint has been read: no other response carries the count. */
     usageKnown(term: GlossaryTerm): boolean {
-        return term.usedInDrafts !== undefined;
+        return term.usedInDrafts != null;
     }
 
     /**
@@ -573,7 +505,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
      */
     private async refreshTerms() {
         try {
-            this.terms.set(await this.api.list());
+            this.entries.set(await this.api.list());
         } catch {
             // The merged list still stands; the counts catch up on the next load.
         }
@@ -585,7 +517,7 @@ export class GlossaryComponent implements OnInit, OnDestroy {
     }
 
     projectsWithTerms(): number {
-        const ids = new Set(this.terms().map(t => t.projectId).filter((id): id is string => !!id));
+        const ids = new Set(this.entries().map(t => t.projectId).filter((id): id is string => !!id));
         return ids.size;
     }
 }

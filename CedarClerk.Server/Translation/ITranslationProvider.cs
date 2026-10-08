@@ -25,3 +25,21 @@ public interface ITextsTranslationProvider
 {
     Task<IReadOnlyList<string>> TranslateTextsAsync(IReadOnlyList<string> texts, string targetLanguage, CancellationToken ct);
 }
+
+public record AiImage(string MediaType, byte[] Bytes);
+
+public record GlossaryTermSource(string Name, string Description);
+
+public record GlossaryTermTranslation(string Name, IReadOnlyList<string> Spellings, string Description);
+
+// ADR-320 — the two glossary calls an LLM can make and a plain translation API cannot: a term
+// translated together with the word forms its new language inflects it into, and a description
+// written from the term and, when there is one, its picture. A provider without it gets a 501.
+public interface IGlossaryAiProvider
+{
+    /// <summary>One translation per input at the same index.</summary>
+    Task<IReadOnlyList<GlossaryTermTranslation>> TranslateTermsAsync(
+        IReadOnlyList<GlossaryTermSource> terms, string targetLanguage, CancellationToken ct);
+
+    Task<string> DescribeTermAsync(string term, string language, AiImage? image, CancellationToken ct);
+}

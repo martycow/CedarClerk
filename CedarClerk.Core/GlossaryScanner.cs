@@ -5,7 +5,7 @@ namespace CedarClerk.Core;
 // Aliases exist because Russian inflects — "рендерер" appears as "рендерера", "рендереру" — and
 // listing forms beats guessing at per-language stemming. IsCaseSensitive is for terms where the
 // casing IS the meaning ("IT" the industry against "it"), and covers the aliases too.
-public sealed record GlossaryEntry(string Term, string Description, string? ImageUrl, IReadOnlyList<string> Aliases, bool IsCaseSensitive = false);
+public sealed record GlossaryMatchTerm(string Term, string Description, string? ImageUrl, IReadOnlyList<string> Aliases, bool IsCaseSensitive = false);
 
 // Idea #11 — wraps glossary terms in rendered text so the blog page can show a description on hover.
 // Two rules are the whole reason this is a separate, tested unit:
@@ -19,7 +19,7 @@ public static class GlossaryScanner
     /// <summary>
     /// Wraps every eligible occurrence of a glossary term in <paramref name="escapedText"/>.
     /// </summary>
-    public static string Mark(string escapedText, IReadOnlyList<GlossaryEntry> glossary)
+    public static string Mark(string escapedText, IReadOnlyList<GlossaryMatchTerm> glossary)
     {
         if (glossary.Count == 0 || escapedText.Length == 0) return escapedText;
 
@@ -75,11 +75,11 @@ public static class GlossaryScanner
     /// How many times each entry occurs in <paramref name="plainText"/>, parallel to the input list.
     /// </summary>
     /// <remarks>
-    /// Parallel array rather than a dictionary because <see cref="GlossaryEntry"/> carries no id and
+    /// Parallel array rather than a dictionary because <see cref="GlossaryMatchTerm"/> carries no id and
     /// the same word is a separate term in each language and each project. The input is plain text,
     /// so — unlike <see cref="Mark"/> — "&amp;amp;" is five letters here and is matched as such.
     /// </remarks>
-    public static int[] CountHits(string plainText, IReadOnlyList<GlossaryEntry> glossary)
+    public static int[] CountHits(string plainText, IReadOnlyList<GlossaryMatchTerm> glossary)
     {
         var counts = new int[glossary.Count];
         if (glossary.Count == 0 || plainText.Length == 0) return counts;
@@ -114,7 +114,7 @@ public static class GlossaryScanner
         return counts;
     }
 
-    private static void AppendMarked(StringBuilder sb, string matchedText, GlossaryEntry entry)
+    private static void AppendMarked(StringBuilder sb, string matchedText, GlossaryMatchTerm entry)
     {
         sb.Append("<span class=\"glossary-term\" tabindex=\"0\" data-term=\"")
           .Append(EscapeAttr(entry.Term))

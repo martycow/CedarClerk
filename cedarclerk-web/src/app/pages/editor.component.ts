@@ -31,7 +31,7 @@ import { ButtonComponent } from '../bench/forms/button.component';
 import { PlanLockComponent } from '../shared/plan-lock.component';
 import { LocationInputComponent } from '../shared/location-input.component';
 import { LanguageMenuComponent } from '../shared/language-menu.component';
-import { DraftGlossaryTerm, GlossaryService, GlossaryTermInput } from '../core/glossary.service';
+import { DraftGlossaryTerm, GlossaryEntryInput, GlossaryService } from '../core/glossary.service';
 import { NgTemplateOutlet } from '@angular/common';
 import { PostsService, PostFormat, CompressionLevel, UpdatePreview, PreflightLanguage } from '../core/posts.service';
 import { PublishService, PublishAccount, PublishCapabilities, PublishJob, ThreadPart } from '../core/publish.service';
@@ -1542,7 +1542,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
         this.termDraft.set({ term, language: this.lang() });
     }
 
-    async saveTerm(input: GlossaryTermInput) {
+    async saveTerm(input: GlossaryEntryInput) {
         if (this.termBusy()) return;
         this.termBusy.set(true);
         this.termError.set('');

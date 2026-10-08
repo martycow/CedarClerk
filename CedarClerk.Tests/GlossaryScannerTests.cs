@@ -7,10 +7,10 @@ namespace CedarClerk.Tests;
 // the escaping.
 public class GlossaryScannerTests
 {
-    private static GlossaryEntry Entry(string term, string desc = "A description", string? img = null, params string[] aliases) =>
+    private static GlossaryMatchTerm Entry(string term, string desc = "A description", string? img = null, params string[] aliases) =>
         new(term, desc, img, aliases);
 
-    private static string Mark(string text, params GlossaryEntry[] entries) =>
+    private static string Mark(string text, params GlossaryMatchTerm[] entries) =>
         GlossaryScanner.Mark(text, entries);
 
     [Fact]
@@ -136,7 +136,7 @@ public class GlossaryScannerTests
     // Marty, 01.08.2026: a per-term "case sensitive" switch. Off by default, because a term at the
     // start of a sentence is the same term — which is what the existing tests above assert. On,
     // the casing IS the meaning: "IT" the industry against "it" the pronoun.
-    private static GlossaryEntry CaseSensitive(string term, params string[] aliases) =>
+    private static GlossaryMatchTerm CaseSensitive(string term, params string[] aliases) =>
         new(term, "A description", null, aliases, IsCaseSensitive: true);
 
     [Fact]
@@ -174,10 +174,10 @@ public class GlossaryScannerTests
 // each language and each project.
 public class GlossaryCountHitsTests
 {
-    private static GlossaryEntry Entry(string term, params string[] aliases) =>
+    private static GlossaryMatchTerm Entry(string term, params string[] aliases) =>
         new(term, "A description", null, aliases);
 
-    private static int[] Count(string text, params GlossaryEntry[] entries) =>
+    private static int[] Count(string text, params GlossaryMatchTerm[] entries) =>
         GlossaryScanner.CountHits(text, entries);
 
     [Fact]
@@ -221,7 +221,7 @@ public class GlossaryCountHitsTests
     [Fact]
     public void A_case_sensitive_term_counts_only_its_own_spelling()
     {
-        var it = new GlossaryEntry("IT", "d", null, [], IsCaseSensitive: true);
+        var it = new GlossaryMatchTerm("IT", "d", null, [], IsCaseSensitive: true);
         Assert.Equal([1], GlossaryScanner.CountHits("IT is not it", [it]));
     }
 
@@ -263,7 +263,7 @@ public class GlossaryCountHitsTests
 // The renderer half: a term must not be marked where marking it would be wrong.
 public class GlossaryRendererTests
 {
-    private static readonly GlossaryEntry[] Glossary = [new("Unity", "A game engine", null, [])];
+    private static readonly GlossaryMatchTerm[] Glossary = [new("Unity", "A game engine", null, [])];
 
     private static string Render(string cedarJson) =>
         CedarToBlogHtmlRenderer.Render(cedarJson, "https://blog.test", "ru", Glossary);

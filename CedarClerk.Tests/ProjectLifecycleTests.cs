@@ -137,7 +137,7 @@ public class ProjectLifecycleTests : IDisposable
             new Asset { OwnerId = Owner, ProjectId = personalId, FileName = "gone.png", LocalPath = "gone.png", TelegramLocalPath = "gone.tg.jpg" },
             new Asset { OwnerId = Owner, ProjectId = personalId, FileName = "kept.png", LocalPath = "kept.png" },
             new Asset { OwnerId = Owner, ProjectId = other.Id, FileName = "other.png", LocalPath = "other.png" });
-        db.GlossaryTerms.Add(new GlossaryTerm { OwnerId = Owner, ProjectId = personalId, Term = "Cedar" });
+        db.GlossaryEntries.Add(new GlossaryEntry { OwnerId = Owner, ProjectId = personalId, Name = "Cedar" });
         await db.SaveChangesAsync();
         Assert.Equal(new ProjectDeletion.Counts(1, 2), await ProjectDeletion.CountsAsync(db, Owner, personalId));
 
@@ -154,7 +154,7 @@ public class ProjectLifecycleTests : IDisposable
         Assert.Null(assets[0].ProjectId);
         Assert.Null((await db.Projects.SingleAsync()).CoverUrl);
         Assert.Null((await db.Projects.SingleAsync()).BannerUrl);
-        Assert.Null((await db.GlossaryTerms.SingleAsync()).ProjectId);
+        Assert.Null((await db.GlossaryEntries.SingleAsync()).ProjectId);
     }
 
     [Fact]

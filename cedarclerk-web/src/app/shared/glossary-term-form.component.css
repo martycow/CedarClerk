@@ -1,6 +1,11 @@
-/* Copied from glossary.component.css so the shared form renders identically wherever it is
-   used (Marty: "the menu must be exactly the one in Glossary"). Angular's view encapsulation
-   means a component cannot inherit another's scoped rules; this is the price of that. */
+/* Angular's view encapsulation means a component cannot inherit another's scoped rules, so the
+   shared form carries its own. */
+
+:host {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
 
 .chat-input {
     width: 100%;
@@ -8,8 +13,8 @@
 
 .form-row-2 {
     display: grid;
-    grid-template-columns: 1fr 140px;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-2);
 }
 
 .form-field {
@@ -25,36 +30,68 @@
     align-self: flex-start;
 }
 
-/* A <label> around a hidden file input: a button cannot open a file dialog, so this wears the
-   paper face of app-button rather than becoming one. */
 .image-pick {
+    align-self: flex-start;
+}
+
+.ai-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.lang-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.lang-pick {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    align-self: flex-start;
-    box-sizing: border-box;
+    gap: var(--space-1);
     min-height: var(--hit-target);
-    padding: var(--space-1) var(--space-3);
-    border: 1px solid rgba(110, 86, 50, .4);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--border);
     border-radius: var(--radius-plaque);
     background: var(--sheet);
-    box-shadow: var(--shadow-paper-sm);
     color: var(--t2);
-    font-family: var(--font-sans);
     font-size: var(--fs-ui);
     font-weight: 600;
-    line-height: 1.2;
     cursor: pointer;
 }
 
-.image-pick:hover {
-    background: var(--surface);
-    color: var(--text);
+.lang-pick.is-on {
+    border-color: var(--abord);
+    background: var(--asoft);
+    color: var(--accent);
 }
 
-.image-pick:active {
-    transform: translateY(1px);
+.lang-pick.is-locked {
+    cursor: default;
+    color: var(--t3);
+}
+
+.term-lang {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.term-lang legend {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-1);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    color: var(--t2);
 }
 
 .field-hint-inline {

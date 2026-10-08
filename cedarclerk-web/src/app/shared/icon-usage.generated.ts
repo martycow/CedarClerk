@@ -203,7 +203,7 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/stats.component.html",
             "shared/debug-console.component.html",
             "shared/folder-picker.component.html",
-            "shared/glossary-term-form.component.ts",
+            "shared/glossary-term-form.component.html",
             "shared/modal.component.html",
             "shared/project-members-panel.component.html",
             "shared/publish-matrix.component.ts",
@@ -229,7 +229,7 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/posts-manager.component.html",
             "pages/project-assets.component.html",
             "pages/settings.component.html",
-            "shared/glossary-term-form.component.ts",
+            "shared/glossary-term-form.component.html",
             "shared/media-picker.component.html"
         ]
     },
@@ -475,7 +475,7 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/project-showcase.component.html",
             "pages/project.component.html",
             "pages/projects.component.html",
-            "shared/glossary-term-form.component.ts"
+            "shared/glossary-term-form.component.html"
         ]
     },
     {
@@ -492,20 +492,6 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/project-canvas.component.html",
             "pages/project.component.html",
             "shell/app-shell.component.ts"
-        ]
-    },
-    {
-        "icon": "translate",
-        "count": 8,
-        "labels": [
-            "t().glossary.translate",
-            "triggerTitle()"
-        ],
-        "files": [
-            "pages/glossary.component.html",
-            "pages/project-dialogue.component.html",
-            "pages/settings.component.html",
-            "shared/language-menu.component.ts"
         ]
     },
     {
@@ -535,6 +521,32 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/calendar.component.html",
             "pages/editor.component.html",
             "shell/inspector-rail.component.ts"
+        ]
+    },
+    {
+        "icon": "sparkle",
+        "count": 7,
+        "labels": [
+            "t().editor.ai.fixDocument",
+            "t().editor.ai.schizoDocument"
+        ],
+        "files": [
+            "pages/editor.component.html",
+            "shared/glossary-term-form.component.html"
+        ]
+    },
+    {
+        "icon": "translate",
+        "count": 7,
+        "labels": [
+            "triggerTitle()"
+        ],
+        "files": [
+            "pages/glossary.component.html",
+            "pages/project-dialogue.component.html",
+            "pages/settings.component.html",
+            "shared/glossary-term-form.component.html",
+            "shared/language-menu.component.ts"
         ]
     },
     {
@@ -583,18 +595,6 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/project.component.html",
             "shared/document-outline.component.ts",
             "shell/document-frame.component.ts"
-        ]
-    },
-    {
-        "icon": "sparkle",
-        "count": 6,
-        "labels": [
-            "t().editor.ai.fixDocument",
-            "t().editor.ai.schizoDocument"
-        ],
-        "files": [
-            "pages/editor.component.html",
-            "shared/glossary-term-form.component.ts"
         ]
     },
     {

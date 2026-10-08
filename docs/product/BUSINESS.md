@@ -101,6 +101,7 @@ $1 trial; the table below was approved by Marty whole). The live tier compositio
 | X posts | credits (1) | credits (1) | credits (1) |
 | AI: document translate / edit | — | credits (2) | credits (2), **30/mo included** |
 | AI: small calls (glossary, forms, profile) | — | credits (1) | credits (1), from the same 30 |
+| AI: glossary description from an image | — | credits (2), **provisional** — T-438 | credits (2), from the same 30 |
 
 Mechanics: `SubscriptionPlan.TryChargeAiAsync` = the 20/day ceiling (kept as an abuse guard,
 T-352) + a wallet charge; Pro+ receives `CreditPacks.ProPlusMonthlyCredits` (30) with every

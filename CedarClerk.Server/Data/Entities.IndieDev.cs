@@ -46,7 +46,7 @@ public class Project
 
     /// <summary>
     /// A /media/... path from the ordinary asset upload — same whitelist, same quota, same public
-    /// serving as ApplicationUser.AvatarUrl and GlossaryTerm.ImageUrl. Null = no cover.
+    /// serving as ApplicationUser.AvatarUrl and GlossaryEntry.ImageUrl. Null = no cover.
     /// </summary>
     public string? CoverUrl { get; set; }
 

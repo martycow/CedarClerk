@@ -20,6 +20,10 @@ public static class CreditPacks
     public const int AiTranslateCost = 2;
     public const int AiSmallCost = 1;
 
+    // ADR-320 — a glossary description written from the entry's image. A vision call costs more
+    // than a text one, so it is priced apart from the small calls.
+    public const int AiImageDescribeCost = 2;
+
     /// <summary>Credits granted with every successful Pro+ subscription payment.</summary>
     public const int ProPlusMonthlyCredits = 30;
 

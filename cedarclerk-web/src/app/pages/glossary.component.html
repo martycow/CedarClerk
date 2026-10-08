@@ -74,13 +74,10 @@
                 in place of the card being edited, so editing the last term of a long glossary does
                 not mean scrolling up to fields with no visible connection to the row they belong to.
                 The fields themselves are the shared app-glossary-term-form, which the editor's
-                create-from-selection modal uses too.-->
+                create-from-selection modal uses too. It edits the whole entry, every language of it.-->
                 <ng-template #termForm>
                     <div class="term-form">
-                        <app-glossary-term-form #form
-                            [initialTerm]="editTerm" [initialDescription]="editDescription"
-                            [initialAliases]="editAliases" [initialImageUrl]="editImageUrl()"
-                            [initialLanguage]="editLanguage()" [initialCaseSensitive]="editCaseSensitive()">
+                        <app-glossary-term-form #form [entry]="editEntry()" [initialLanguage]="languageFilter()">
                         </app-glossary-term-form>
                         <div class="form-actions">
                             <app-button variant="paper" size="sm" (clicked)="cancelEdit()">{{ t().common.cancel }}</app-button>
@@ -120,13 +117,6 @@
                                 <span class="spacer"></span>
                                 <button class="mini" (click)="startEdit(term); $event.stopPropagation()" [title]="t().common.edit" [attr.aria-label]="t().common.edit">
                                     <app-icon name="pencil-simple" size="sm"></app-icon>
-                                </button>
-                                <button class="mini" (click)="openTranslate(term); $event.stopPropagation()"
-                                        [disabled]="!auth.hasAiPlan()"
-                                        [title]="auth.hasAiPlan() ? t().glossary.translate : t().planLock.pro"
-                                        [attr.aria-label]="t().glossary.translate">
-                                    @if (auth.hasAiPlan()) { <app-icon name="translate" size="sm"></app-icon> }
-                                    @else { <app-plan-lock tier="pro" /> }
                                 </button>
                                 <button class="mini-remove" (click)="deleteConfirmId.set(term.id); $event.stopPropagation()" [title]="t().common.delete" [attr.aria-label]="t().common.delete">
                                     <app-icon name="trash" size="sm"></app-icon>
@@ -226,31 +216,6 @@
             </div>
         </aside>
     </div>
-
-    @if (translateFor(); as term) {
-    <app-modal (closed)="closeTranslate()">
-        <app-icon modal-icon name="translate" size="sm"></app-icon>
-        <span modal-title>{{ t().glossary.translateTitle(term.term) }}</span>
-        <p>{{ t().glossary.translateBody }}</p>
-        <div class="lang-check-list">
-            @for (l of translateTargets(term); track l) {
-            <label class="lang-check">
-                <input type="checkbox" [checked]="translateSelection().has(l)"
-                       [disabled]="translatingLang() !== null" (change)="toggleTranslateLang(l)">
-                <span>{{ l.toUpperCase() }} · {{ endonymOf(l) }}</span>
-                @if (translatingLang() === l) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-            </label>
-            }
-        </div>
-        @if (translateError()) { <p class="error-box">{{ translateError() }}</p> }
-        <app-button modal-actions variant="paper" (clicked)="closeTranslate()"
-                    [disabled]="translatingLang() !== null">{{ t().common.cancel }}</app-button>
-        <app-button modal-actions variant="pine" (clicked)="runTranslate()" [disabled]="!canTranslate()">
-            @if (translatingLang()) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
-            {{ t().glossary.translateRun }}
-        </app-button>
-    </app-modal>
-    }
 
     @if (translateAllOpen()) {
     <app-modal (closed)="closeTranslateAll()">

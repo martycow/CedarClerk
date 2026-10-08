@@ -43,7 +43,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<Series> Series => Set<Series>();
     public DbSet<DocumentLink> DocumentLinks => Set<DocumentLink>();
-    public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
+    public DbSet<GlossaryEntry> GlossaryEntries => Set<GlossaryEntry>();
+    public DbSet<GlossaryEntryLanguage> GlossaryEntryLanguages => Set<GlossaryEntryLanguage>();
+    public DbSet<LegacyGlossaryTerm> LegacyGlossaryTerms => Set<LegacyGlossaryTerm>();
     public DbSet<DraftGlossaryExclusion> DraftGlossaryExclusions => Set<DraftGlossaryExclusion>();
     public DbSet<GlossaryTermUsage> GlossaryTermUsages => Set<GlossaryTermUsage>();
     public DbSet<DraftStatSeen> DraftStatSeens => Set<DraftStatSeen>();
@@ -339,7 +341,15 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         // version string: two builds called 0.4.2 in one project is a typo, not a plan.
         builder.Entity<Build>().HasIndex(b => new { b.ProjectId, b.Version }).IsUnique();
         // T-125 — a document renders with global terms plus its project's, so both are one query.
-        builder.Entity<GlossaryTerm>().HasIndex(t => new { t.OwnerId, t.ProjectId, t.Language });
+        builder.Entity<GlossaryEntry>().HasIndex(e => new { e.OwnerId, e.ProjectId });
+        builder.Entity<GlossaryEntry>()
+            .HasMany(e => e.Languages).WithOne(l => l.Entry).HasForeignKey(l => l.EntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+        // One row per language is what lets the entry form show a language once.
+        builder.Entity<GlossaryEntryLanguage>().HasIndex(l => new { l.EntryId, l.Language }).IsUnique();
+        builder.Entity<GlossaryEntryLanguage>().HasIndex(l => new { l.OwnerId, l.Language });
+        builder.Entity<LegacyGlossaryTerm>().ToTable("GlossaryTerms");
+        builder.Entity<LegacyGlossaryTerm>().HasIndex(t => new { t.OwnerId, t.ProjectId, t.Language });
         builder.Entity<DraftGlossaryExclusion>()
             .HasIndex(x => new { x.DraftId, x.GlossaryTermId, x.Language })
             .IsUnique();
@@ -479,7 +489,9 @@ public class CedarDbContext(DbContextOptions<CedarDbContext> options, TenantProv
         builder.Entity<Folder>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<FormPreset>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<GameTask>().HasQueryFilter(e => e.OwnerId == TenantId);
-        builder.Entity<GlossaryTerm>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<GlossaryEntry>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<GlossaryEntryLanguage>().HasQueryFilter(e => e.OwnerId == TenantId);
+        builder.Entity<LegacyGlossaryTerm>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<GlossaryTermUsage>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Payment>().HasQueryFilter(e => e.OwnerId == TenantId);
         builder.Entity<Project>().HasQueryFilter(e => e.OwnerId == TenantId);

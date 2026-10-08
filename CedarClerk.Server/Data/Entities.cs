@@ -527,45 +527,68 @@ public class FormPreset
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-// Idea #11 — a term the owner defines once and has explained wherever it appears on the blog.
-// Per-owner, and per content language: the same word needs a different explanation depending on
-// which language's version of a post the reader is on, and a Russian description under an English
-// article would be worse than no tooltip at all.
-public class GlossaryTerm
+// ADR-320 — one term the owner defines once and has explained wherever it appears on the blog.
+// What is the same in every language lives here; what a reader of one language sees lives on
+// GlossaryEntryLanguage.
+public class GlossaryEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    // A /media/... path from the ordinary asset upload, exactly like ApplicationUser.AvatarUrl —
+    // same whitelist, same quota, same public serving, no second pipeline.
+    public string? ImageUrl { get; set; }
+    /// <summary>
+    /// Off by default — a term at the start of a sentence is the same term. On where the casing is
+    /// the meaning: "IT" the industry against "it" the pronoun.
+    /// </summary>
+    public bool IsCaseSensitive { get; set; }
+    /// <summary>
+    /// ADR-112 — the project this entry belongs to, or null for a global one. A plain scalar with
+    /// no FK, like <c>Draft.ProjectId</c>. A document sees global entries plus its own project's.
+    /// </summary>
+    public Guid? ProjectId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public List<GlossaryEntryLanguage> Languages { get; set; } = [];
+}
+
+// ADR-320 — an entry as one content language spells it. A document is matched against the rows of
+// its own language only, so an entry with no row for a language does not exist there.
+// DraftGlossaryExclusion and GlossaryTermUsage point at this row's Id, not at the entry's.
+public class GlossaryEntryLanguage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerId { get; set; } = default!;
+    public Guid EntryId { get; set; }
+    public GlossaryEntry? Entry { get; set; }
+    public string Language { get; set; } = Languages.Russian;
+    /// <summary>Blank means the entry's own <see cref="GlossaryEntry.Name"/>.</summary>
+    public string LocalizedName { get; set; } = "";
+    // A JSON array of other spellings. Russian inflects, so "рендерер" shows up as "рендерера"
+    // and "рендереру"; listing the forms beats guessing at per-language stemming rules.
+    public string SpellingsJson { get; set; } = "[]";
+    /// <summary>Blank means the entry's own <see cref="GlossaryEntry.Description"/>.</summary>
+    public string LocalizedDescription { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+// The row-per-language table ADR-320 replaced. The migration copied it into GlossaryEntry and
+// GlossaryEntryLanguage and left it in place as the rollback source; nothing reads it at runtime
+// and account deletion still clears it.
+public class LegacyGlossaryTerm
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string OwnerId { get; set; } = default!;
     public string Term { get; set; } = "";
     public string Description { get; set; } = "";
-    // Comma-separated other spellings. Russian inflects, so "рендерер" shows up as "рендерера"
-    // and "рендереру"; listing the forms beats guessing at per-language stemming rules.
     public string Aliases { get; set; } = "";
-    // A /media/... path from the ordinary asset upload, exactly like ApplicationUser.AvatarUrl —
-    // same whitelist, same quota, same public serving, no second pipeline.
     public string? ImageUrl { get; set; }
     public string Language { get; set; } = Languages.Russian;
-    /// <summary>
-    /// Off by default — a term at the start of a sentence is the same term. On where the casing is
-    /// the meaning, which is the case Marty asked for: "IT" the industry against "it" the pronoun.
-    /// </summary>
     public bool IsCaseSensitive { get; set; }
-    /// <summary>
-    /// The term this one was translated from — the *root* of the group, not the immediate source,
-    /// so every language version of one idea shares a single value. Null on a hand-written term,
-    /// which is then its own root. Added 01.08.2026 so the glossary's preview can switch languages:
-    /// translations are separate rows keyed by translated text (ADR-061) and nothing connected them,
-    /// so "show me this term in English" had no answer. Existing translated rows stay unlinked —
-    /// nothing recorded where they came from, and guessing by text would link the wrong pairs.
-    /// </summary>
     public Guid? SourceTermId { get; set; }
-    /// <summary>
-    /// T-125 (ADR-112) — the project this term belongs to, or null for a global one. A plain
-    /// scalar with no FK, like <c>Draft.ProjectId</c>.
-    ///
-    /// A document sees global terms **plus** its own project's: "Unity" is global, "the ferry" is
-    /// about one game, and an article about that game needs both. A project's term never shows up
-    /// outside it — otherwise "local" would mean nothing.
-    /// </summary>
     public Guid? ProjectId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -573,6 +596,7 @@ public class GlossaryTerm
 
 // ADR-197 — one local publishing exception. A term remains in the owner's glossary, but this
 // document-language pair can deliberately omit it without changing any other document.
+// GlossaryTermId is a GlossaryEntryLanguage.Id.
 public class DraftGlossaryExclusion
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -584,7 +608,8 @@ public class DraftGlossaryExclusion
 
 // ADR-238 — where a term is actually used, recorded when the text changes and when the term does.
 // A pair with no occurrences has no row at all: the count reads rows, and a stored zero would be a
-// second way to say "nowhere" that every query would then have to exclude.
+// second way to say "nowhere" that every query would then have to exclude. GlossaryTermId is a
+// GlossaryEntryLanguage.Id.
 public class GlossaryTermUsage
 {
     public Guid Id { get; set; } = Guid.NewGuid();

@@ -697,12 +697,13 @@ public class MediaOwnershipTests : IDisposable
     {
         var picture = Guid.NewGuid();
         Seed(picture, OwnerB);
-        var term = new GlossaryTerm { OwnerId = OwnerB, Term = "Cedar", Language = "en",
-            ImageUrl = $"/media/asset_{picture}.jpg" };
+        var term = new GlossaryEntryLanguage { OwnerId = OwnerB, Language = "en", LocalizedName = "Cedar",
+            Entry = new GlossaryEntry { OwnerId = OwnerB, Name = "Cedar", Description = "A tree",
+                ImageUrl = $"/media/asset_{picture}.jpg" } };
         var post = new Draft { OwnerId = OwnerB, Title = "Glossary", BlogSlug = "glossary",
             IsBlogPublished = true, IsPrivate = isPrivate, PrimaryLanguage = "en",
             CedarJson = """{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Cedar"}]}]}""" };
-        db.GlossaryTerms.Add(term);
+        db.GlossaryEntryLanguages.Add(term);
         db.Drafts.Add(post);
         if (excluded) db.DraftGlossaryExclusions.Add(new DraftGlossaryExclusion {
             OwnerId = OwnerB, DraftId = post.Id, GlossaryTermId = term.Id, Language = "en" });
