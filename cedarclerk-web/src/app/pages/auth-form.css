@@ -16,3 +16,12 @@ a { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
 .username-note.ok { color: var(--ok); }
 .username-note.bad { color: var(--danger); }
 .success-note { background: var(--ok-soft); color: var(--ok); padding: var(--space-4); font-size: var(--fs-body); line-height: 1.6; }
+.field-note { margin: calc(-1 * var(--space-4)) 0 var(--space-4); font-size: var(--fs-meta); line-height: 1.5; }
+.field-note.bad { color: var(--danger); }
+.avatar-field { margin-bottom: var(--space-5); }
+.avatar-label { display: block; margin-bottom: var(--space-2); font-size: var(--fs-meta); color: var(--field-label-ink, var(--t2)); }
+.avatar-row { display: flex; align-items: center; gap: var(--space-3); }
+.avatar-preview { width: var(--hit-touch); height: var(--hit-touch); border-radius: 50%; object-fit: cover; border: 1px solid var(--border-strong); }
+.avatar-pick { display: inline-flex; align-items: center; min-height: var(--hit-touch); padding: 0 var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); color: var(--accent); font-size: var(--fs-ui); font-weight: 600; cursor: pointer; }
+.avatar-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.avatar-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }

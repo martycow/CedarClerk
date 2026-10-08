@@ -335,6 +335,7 @@ public static class Consts
 
         // Short enough to type from a message, long enough not to be guessed off a public page.
         public const int MinInviteCodeLength = 6;
+        public const int MaxInviteCodeLength = 32;
     }
 
     // The reader-facing headline, separate from the draft's own name. Far longer than the 64-char

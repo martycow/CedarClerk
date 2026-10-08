@@ -19,8 +19,6 @@ using PostHog;
 using PostHog.Config;
 using Quartz;
 
-const int passwordRequiredLength = 8;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 210 * 1024 * 1024);
@@ -123,9 +121,16 @@ if (builder.Configuration[Consts.ExternalAuth.GoogleClientIdCfg] is { Length: > 
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        options.Password.RequiredLength = passwordRequiredLength;
+        // ADR-325: PasswordRule is the whole policy, so Identity's own character-class rules are off.
+        options.Password.RequiredLength = PasswordRule.MinLength;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireDigit = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredUniqueChars = 1;
         options.User.RequireUniqueEmail = true;
     })
+    .AddPasswordValidator<PasswordRule>()
     .AddEntityFrameworkStores<CedarDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();

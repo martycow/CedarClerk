@@ -451,6 +451,8 @@ public static partial class AdminEndpoints
             var value = req.Code?.Trim() ?? "";
             if (value.Length < Consts.Admin.MinInviteCodeLength)
                 return Results.BadRequest(new { error = ErrorMessages.InviteCodeTooShort(Consts.Admin.MinInviteCodeLength) });
+            if (value.Length > Consts.Admin.MaxInviteCodeLength)
+                return Results.BadRequest(new { error = ErrorMessages.InviteCodeTooLong(Consts.Admin.MaxInviteCodeLength) });
             if (await db.InviteCodes.AnyAsync(c => c.Code.ToLower() == value.ToLower()))
                 return Results.BadRequest(new { error = ErrorMessages.InviteCodeExists });
 

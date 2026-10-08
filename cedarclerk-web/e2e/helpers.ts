@@ -35,9 +35,11 @@ export async function pinEnglish(context: BrowserContext) {
 }
 
 export async function registerAccount(context: BrowserContext, email: string, password = 'E2e-passw0rd!') {
-    // Registration takes a username since the tenant-blog work — it becomes the blog's address,
-    // so it obeys subdomain rules: latin letters, digits and inner hyphens only.
-    const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+    // The username becomes the blog's address: latin letters, digits and inner hyphens, at most
+    // 16 (ADR-325). Test emails carry a timestamp and run longer, so the name is a hash of the email.
+    let hash = 0;
+    for (const ch of email) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    const username = `e2e${hash.toString(36)}${email.length.toString(36)}`.slice(0, 16);
     const res = await context.request.post('/api/auth/register', {
         data: { email, password, inviteCode: INVITE_CODE, username },
     });

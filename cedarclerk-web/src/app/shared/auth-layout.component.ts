@@ -28,7 +28,6 @@ import { LangSwitchComponent } from './lang-switch.component';
                 </div>
             </main>
             <footer class="door-footer">
-                <p>{{ t().login.tagline }}</p>
                 <nav><a routerLink="/terms">{{ t().authLayout.legalTerms }}</a><span aria-hidden="true">·</span><a routerLink="/privacy">{{ t().authLayout.legalPrivacy }}</a></nav>
             </footer>
         </div>
@@ -45,7 +44,6 @@ import { LangSwitchComponent } from './lang-switch.component';
             --fs-ui: var(--auth-body-size); --fs-meta: var(--auth-meta-size); --border-field: 1px solid var(--auth-border); --field-label-ink: var(--auth-soft-ink); --shadow-field-inset: none; --sheet: var(--auth-sheet); --surface: var(--auth-field); --paper-bright: var(--auth-field); --text: var(--auth-ink); --t2: var(--auth-soft-ink); --ink-3: var(--auth-soft-ink); --border: var(--auth-border); --border-strong: var(--auth-border); --paper-edge: var(--auth-border); --accent: var(--auth-pine); --pine: var(--auth-pine); --pine-deep: var(--auth-pine-hover); --text-on-pine: var(--auth-forest-ink); --field-label-transform: none; --field-label-spacing: normal; --hit-target: var(--hit-touch); }
         .door-footer { text-align: center; padding: var(--space-3) var(--space-4) var(--space-8); }
         .door-footer::before { content: ''; display: block; width: var(--space-8); border-top: 1px solid currentColor; margin: 0 auto var(--space-5); opacity: .65; }
-        .door-footer p { font-family: var(--font-serif); font-size: var(--auth-slogan-size); font-weight: 400; margin: 0 0 var(--space-4); }
         nav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-3); font-size: var(--auth-meta-size); }
         nav a { color: inherit; text-decoration: none; padding: var(--space-2) 0; }
         nav a:hover { text-decoration: underline; }

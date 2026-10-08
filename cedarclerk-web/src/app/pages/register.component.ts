@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnalyticsService } from '../core/analytics.service';
+import { AssetsService } from '../core/assets.service';
 import { AuthService } from '../core/auth.service';
 import { VersionService } from '../core/version.service';
 import { LocaleService } from '../core/i18n/locale.service';
@@ -21,8 +22,14 @@ export class RegisterComponent {
     /** Consts.URLs.TenantHost — where <name> becomes an address. */
     private static readonly TenantHost = 'cedarclerk.app';
     private static readonly CheckDebounceMs = 400;
+    // ADR-325; the server enforces the same numbers (Usernames.MaxNewLength, PasswordRule, Consts.Admin).
+    static readonly UsernameMax = 16;
+    static readonly InviteMax = 32;
+    static readonly PasswordMax = 32;
+    private static readonly EmailShape = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     private auth = inject(AuthService);
+    private assets = inject(AssetsService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
     // T-121 follow-up — the desktop shell has no invite codes and nowhere to get one, so the field
@@ -32,11 +39,58 @@ export class RegisterComponent {
     private analytics = inject(AnalyticsService);
     t = this.locale.t;
 
-    email = '';
-    password = '';
-    inviteCode = '';
+    readonly limits = RegisterComponent;
+    email = signal('');
+    password = signal('');
+    confirm = signal('');
+    inviteCode = signal('');
     busy = signal(false);
     error = signal('');
+    /** Errors stay quiet until a field has been typed into or a submit was attempted. */
+    private attempted = signal(false);
+
+    avatarFile = signal<File | null>(null);
+    avatarPreview = signal<string | null>(null);
+
+    emailError = computed(() => (this.attempted() || this.email()) && !RegisterComponent.EmailShape.test(this.email().trim())
+        ? this.t().register.emailInvalid : '');
+    passwordError = computed(() => (this.attempted() || this.password()) && !RegisterComponent.passwordOk(this.password())
+        ? this.t().register.passwordWeak : '');
+    confirmError = computed(() => (this.attempted() || this.confirm()) && this.confirm() !== this.password()
+        ? this.t().register.mismatch : '');
+    inviteError = computed(() => this.attempted() && this.needsInviteCode() && !this.inviteCode().trim()
+        ? this.t().register.inviteRequired : '');
+    usernameError = computed(() => this.attempted() && !this.username() ? this.t().register.usernameInvalid : '');
+
+    needsInviteCode = computed(() => !this.version.openRegistration() && !this.invitedToken);
+
+    /** Mirrors PasswordRule.IsSatisfied on the server. */
+    static passwordOk(p: string): boolean {
+        return p.length >= 8 && p.length <= RegisterComponent.PasswordMax
+            && /\p{L}/u.test(p) && /\p{N}/u.test(p) && /[^\p{L}\p{N}\s]/u.test(p);
+    }
+
+    private valid(): boolean {
+        return !this.emailError() && !this.passwordError() && !this.confirmError() && !this.inviteError()
+            && !this.usernameError() && this.usernameTone() !== 'bad';
+    }
+
+    onAvatarPicked(ev: Event) {
+        const input = ev.target as HTMLInputElement;
+        const file = input.files?.[0] ?? null;
+        input.value = '';
+        this.clearAvatar();
+        if (!file) return;
+        this.avatarFile.set(file);
+        this.avatarPreview.set(URL.createObjectURL(file));
+    }
+
+    clearAvatar() {
+        const url = this.avatarPreview();
+        if (url) URL.revokeObjectURL(url);
+        this.avatarFile.set(null);
+        this.avatarPreview.set(null);
+    }
 
     /**
      * T-304 — an invitation is its own way in. Registration is gated by an invite code, and a
@@ -90,7 +144,7 @@ export class RegisterComponent {
     // The same shape Usernames.IsValidFormat accepts, so what can be typed is what can be
     // registered. The server still decides; this only keeps the address preview honest.
     onUsernameInput(raw: string) {
-        const name = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+        const name = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, RegisterComponent.UsernameMax);
         this.username.set(name);
         clearTimeout(this.checkTimer);
         if (!name) { this.usernameState.set('idle'); return; }
@@ -107,13 +161,15 @@ export class RegisterComponent {
 
     async submit() {
         if (this.busy()) return;
+        this.attempted.set(true);
+        if (!this.valid()) return;
         // The one funnel step the server cannot see: signup_completed is written when the account
         // exists, so without this the people who tried and were refused are invisible, and that
         // gap is the whole point of measuring registration (docs/product/METRICS.md).
         this.analytics.capture('signup_started', { invited: this.invitedToken !== null });
         this.busy.set(true);
         this.error.set('');
-        const result = await this.auth.register(this.email, this.password, this.invitedToken ?? this.inviteCode, this.username());
+        const result = await this.auth.register(this.email().trim(), this.password(), this.invitedToken ?? this.inviteCode().trim(), this.username());
         this.busy.set(false);
         if (result.ok) {
             // I1: the language picked on this screen becomes the account's own setting, so
@@ -121,6 +177,11 @@ export class RegisterComponent {
             // is visibly in that language. Best-effort — a failure here must not block signup,
             // and localStorage already carries the choice regardless.
             try { await this.auth.saveUiLanguage(this.locale.uiLang()); } catch { /* ignore */ }
+            // Optional and after the fact: the account exists either way, and Settings can add it later.
+            const avatar = this.avatarFile();
+            if (avatar) {
+                try { await this.auth.saveAvatar((await this.assets.upload(avatar)).url); } catch { /* ignore */ }
+            }
             // Somebody who arrived holding an invitation goes back to it, not to a blank editor.
             this.router.navigateByUrl(this.returnUrl() || '/editor');
         } else {

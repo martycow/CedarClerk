@@ -35,10 +35,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 
 **Wave 0 — bugs** — done 08.10.2026 (CHANGELOG); T-398 deferred.
 
-**Wave 1 — sign-in and registration (ADR-325)**
-- [ ] T-402 Register rework — new non-cow title, drop the invite-only line and the "cannot be changed" hint, placeholders `USERNAME`/`CEDAR_CLERK_CODE`, password confirmation (reuse reset's `mismatch`), live validation on every field, optional avatar via `POST /api/auth/avatar` after creation (Register 1–3, 5–8, 11) #auth #ui P1
-- [ ] T-403 Field limits on the server — password 8–32 with letter+digit+symbol (custom validator, Identity upper/lower off), account name ≤16 in `Usernames`, invite code ≤32 on `InviteCode` + migration; existing data stays valid (Register 4, 9, 10) #auth #backend P1
-- [ ] T-404 Login: remove the motto, keep Terms · Privacy (Login 4) #auth #ui P2
+**Wave 1 — sign-in and registration (ADR-325)** — done 08.10.2026 except T-405, which needs the owner's Discord credentials.
 - [ ] T-405 Discord sign-in in production — code is wired; set `Cedar:Auth:Discord:*` in `data.conf` and register `https://<host>/signin-discord` in the Discord portal, then sign in for real (Login 2) #auth #operations P1
 
 **Wave 2 — shell (ADR-322, ADR-324)**

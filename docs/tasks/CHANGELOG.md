@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-08 — 0.25.1 review, wave 1: sign-in and registration (ADR-325)
+
+- **T-402** Register: title "Create your account" with no invite-only line; no "cannot be changed" hint; placeholders `USERNAME` and `CEDAR_CLERK_CODE`; a Repeat password field; live per-field validation (email, password rule, match, invite code) that blocks the submit; an optional avatar uploaded after the account exists.
+- **T-403** Server rules: `PasswordRule` (8–32, a letter, a digit and a symbol; Identity's case rules off) for registration, reset and change; new account names at most 16 (`Usernames.MaxNewLength`; older longer names still resolve as hosts); admin-created invite codes at most 32. Error messages in all nine languages; the reset page's requirement text matches.
+- **T-404** The auth footer drops the motto; Terms · Privacy stay.
+- The e2e helper derives a 16-character username from the test email.
+
+Validation: `dotnet test` 2083 passed before the inventory edit, plus the inventory and localization guards after it; register, external-auth and touched specs pass; `npm run build` clean.
+
 ## 2026-10-08 — 0.25.1 review, wave 0: bugs
 
 - **T-396** The login, register and recovery pages are readable in dark mode: the page chrome (brand, RU/EN, theme toggle, footer) used the paper ink on the dark wall and now uses `--wood-ink`, the wall's own ink.

@@ -185,7 +185,7 @@ public static partial class ErrorMessages
     public static string LandingBadFileName => T("There is no such file here.");
     public static string ShowcaseSlugEmpty => T("The slug came out empty — use latin letters or digits.");
     public static string UsernameRequired => T("Pick a name — it becomes the address of your blog.");
-    public static string UsernameInvalid => T("A name may hold only latin letters, digits and inner hyphens — up to 63 characters, and some names are reserved.");
+    public static string UsernameInvalid => T("A name may hold only latin letters, digits and inner hyphens — up to 16 characters, and some names are reserved.");
     public static string UsernameTaken(string username) => T("'{0}' is already taken — pick another name.", [username]);
     public static string BuildDownloadUrlInvalid => T("A download link has to start with http:// or https://.");
     public static string BuildPublicNeedsUrl => T("Offering a build for download needs a link to it.");
@@ -386,6 +386,8 @@ public static partial class ErrorMessages
     // endpoints state the same way is one message with the number as its argument.
     public static string UnknownTier(string tier) => T("Unknown tier '{0}'", [tier]);
     public static string InviteCodeTooShort(int min) => T("Code must be at least {0} characters", [min]);
+    public static string InviteCodeTooLong(int max) => T("Code must be at most {0} characters", [max]);
+    public static string PasswordRule(int min, int max) => T("Password must be {0}–{1} characters with at least one letter, one digit and one symbol", [min, max]);
     public static string UnsupportedFileType(string contentType) => T("Unsupported type: {0}", [contentType]);
     public static string FileTooLarge(long maxMb) => T("File is too large ({0}MB maximum)", [maxMb]);
     public static string StorageLimitExceeded(long limitMb) => T("Storage limit of your plan ({0}MB) exceeded. Upgrade for more.", [limitMb]);

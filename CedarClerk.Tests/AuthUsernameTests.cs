@@ -60,13 +60,17 @@ public class AuthUsernameTests
     }
 
     [Fact]
-    public async Task Sixty_four_characters_is_one_too_many()
+    public async Task Seventeen_characters_is_one_too_many_for_a_new_name()
     {
         using var db = Database();
 
-        Assert.Equal(UsernameVerdict.Free, await AuthEndpoints.VerdictAsync(db, new string('a', 63)));
-        Assert.Equal(UsernameVerdict.Invalid, await AuthEndpoints.VerdictAsync(db, new string('a', 64)));
+        Assert.Equal(UsernameVerdict.Free, await AuthEndpoints.VerdictAsync(db, new string('a', 16)));
+        Assert.Equal(UsernameVerdict.Invalid, await AuthEndpoints.VerdictAsync(db, new string('a', 17)));
     }
+
+    [Fact]
+    public void An_older_name_longer_than_sixteen_still_resolves_as_a_host() =>
+        Assert.True(Usernames.IsValidFormat(new string('a', 63)));
 
     [Theory]
     [InlineData("admin")]

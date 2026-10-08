@@ -61,7 +61,7 @@ export class ExternalCompleteComponent {
 
     // Same normalisation as /register, so what can be typed is what can be registered.
     onUsernameInput(raw: string) {
-        const name = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+        const name = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 16);
         this.username.set(name);
         clearTimeout(this.checkTimer);
         if (!name) { this.usernameState.set('idle'); return; }

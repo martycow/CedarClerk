@@ -1,36 +1,42 @@
 <app-auth-layout>
     <section class="card auth-card" data-surface="paper">
-        <form (submit)="$event.preventDefault(); submit()">
+        <form (submit)="$event.preventDefault(); submit()" novalidate>
         <div class="auth-header">
             <h1 class="auth-title">{{ t().register.title }}</h1>
-            <!-- "Invite-only, ask Marty for a code" is true of the hosted server and nonsense in
-                 the desktop app, where there is nobody to ask and no code to be given. -->
-            <div class="auth-tagline">
-                @if (version.openRegistration()) {
-                    {{ t().register.taglineLocal }}
-                } @else {
-                    {{ t().register.tagline }}<br>{{ t().register.taglineAsk }}
-                }
-            </div>
+            <!-- The desktop app keeps its account on this machine, and says so. -->
+            @if (version.openRegistration()) {
+            <div class="auth-tagline">{{ t().register.taglineLocal }}</div>
+            }
         </div>
-
 
         <app-input inputId="cc-reg-email" type="email" [label]="t().register.email"
                    placeholder="you@example.com" autocomplete="username"
-                   [value]="email" (valueChange)="email = $any($event) ?? ''" />
+                   [value]="email()" (valueChange)="email.set($any($event) ?? '')" />
+        @if (emailError(); as e) { <p class="field-note bad" role="alert">{{ e }}</p> }
+
         <app-input inputId="cc-reg-pass" type="password" revealable [label]="t().register.password"
-                   [placeholder]="t().register.passwordPlaceholder" autocomplete="new-password"
-                   [value]="password" (valueChange)="password = $any($event) ?? ''" />
-        <!--A name is a public address the moment it is taken, and there is no rename yet — hence
-        the live preview under the field rather than a confirmation after the fact.-->
+                   [placeholder]="t().register.passwordPlaceholder" [hint]="t().register.passwordHint"
+                   autocomplete="new-password" [maxlength]="limits.PasswordMax"
+                   [value]="password()" (valueChange)="password.set($any($event) ?? '')" />
+        @if (passwordError(); as e) { <p class="field-note bad" role="alert">{{ e }}</p> }
+
+        <app-input inputId="cc-reg-confirm" type="password" revealable [label]="t().register.confirmPassword"
+                   autocomplete="new-password" [maxlength]="limits.PasswordMax"
+                   [value]="confirm()" (valueChange)="confirm.set($any($event) ?? '')" />
+        @if (confirmError(); as e) { <p class="field-note bad" role="alert">{{ e }}</p> }
+
+        <!--A name is a public address the moment it is taken — hence the live preview under the field
+        rather than a confirmation after the fact.-->
         <div class="username-field">
             <app-input inputId="cc-reg-username" [label]="t().register.username"
-                       placeholder="alexwriter" autocomplete="off"
+                       placeholder="USERNAME" autocomplete="off" [maxlength]="limits.UsernameMax"
                        [hint]="t().register.usernameHint(blogHost())"
                        [value]="username()" (valueChange)="onUsernameInput($any($event) ?? '')" />
             @if (usernameNote()) {
             <div class="username-note" [class.ok]="usernameTone() === 'ok'"
                  [class.bad]="usernameTone() === 'bad'">{{ usernameNote() }}</div>
+            } @else if (usernameError(); as e) {
+            <div class="username-note bad" role="alert">{{ e }}</div>
             }
         </div>
 
@@ -43,10 +49,26 @@
         <!--Enter submits, as it did on the field this replaces: the event bubbles from the field
         to this host.-->
         <app-input class="invite" inputId="cc-reg-invite" [label]="t().register.inviteCode"
-                   placeholder="CEDAR-MOO-0" autocomplete="off"
-                   [value]="inviteCode" (valueChange)="inviteCode = $any($event) ?? ''" />
+                   placeholder="CEDAR_CLERK_CODE" autocomplete="off" [maxlength]="limits.InviteMax"
+                   [value]="inviteCode()" (valueChange)="inviteCode.set($any($event) ?? '')" />
+        @if (inviteError(); as e) { <p class="field-note bad" role="alert">{{ e }}</p> }
         }
         }
+
+        <div class="avatar-field">
+            <span class="avatar-label">{{ t().register.avatar }} <span class="muted">· {{ t().register.avatarOptional }}</span></span>
+            <div class="avatar-row">
+                @if (avatarPreview(); as src) {
+                <img class="avatar-preview" [src]="src" alt="" />
+                <app-button variant="paper" type="button" (clicked)="clearAvatar()">{{ t().register.avatarRemove }}</app-button>
+                } @else {
+                <label class="avatar-pick">
+                    <input type="file" accept="image/*" (change)="onAvatarPicked($event)" />
+                    {{ t().register.avatarPick }}
+                </label>
+                }
+            </div>
+        </div>
 
         @if (error()) {
         <div class="field-error">{{ error() }}</div>

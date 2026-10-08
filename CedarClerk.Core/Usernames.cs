@@ -19,6 +19,9 @@ public static class Usernames
 {
     public const int MaxLength = 63;
 
+    /// <summary>ADR-325: a name taken from now on is at most 16; older, longer names still resolve as hosts.</summary>
+    public const int MaxNewLength = 16;
+
     /// <summary>Canonical spelling. A hostname is case-insensitive, so case is not an error.</summary>
     public static string? Normalize(string? name)
     {
@@ -50,7 +53,7 @@ public static class Usernames
     {
         var normalized = Normalize(name);
         if (normalized is null) return UsernameVerdict.Missing;
-        if (!IsValidFormat(normalized)) return UsernameVerdict.Invalid;
+        if (!IsValidFormat(normalized) || normalized.Length > MaxNewLength) return UsernameVerdict.Invalid;
         return IsReserved(normalized) ? UsernameVerdict.Reserved : UsernameVerdict.Free;
     }
 
