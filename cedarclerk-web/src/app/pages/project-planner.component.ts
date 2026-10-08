@@ -47,7 +47,7 @@ const STATUS_TONES: Record<GameTask['status'], StampTone> = {
 // stretch is a paper card, and a task on it is the same luggage tag the hub and the board hang —
 // one object, one drawing of it.
 //
-// Order is current → planned → No sprint → finished, and finished sprints collapse. Nothing is
+// Order is current → planned → finished → No sprint, and finished sprints collapse. Nothing is
 // hidden by collapsing: an unfinished task in a sprint whose days ran out still appears, because
 // pretending work vanished with the date is the one thing this screen must not do.
 @Component({
@@ -109,10 +109,7 @@ export class ProjectPlannerComponent {
         return [{ text: this.t().projects.planner.sub(this.sprints().length, this.openCount()) }];
     });
 
-    /**
-     * The screen, in order. "No sprint" sits between what is planned and what has finished: it is
-     * the pile work comes out of, so it belongs next to the future, not after the past.
-     */
+    /** The screen, in order. "No sprint" is the last card, below every sprint (owner's 0.25.1 review). */
     groups = computed<SprintGroup[]>(() => {
         const tasks = this.tasks();
         const byId = new Map<string, GameTask[]>();
@@ -128,12 +125,12 @@ export class ProjectPlannerComponent {
             .filter(s => s.state !== 'finished')
             .map(s => ({ sprint: s, tasks: byId.get(s.id) ?? [] }));
 
-        const unplanned = tasks.filter(t => !t.sprintId);
-        if (unplanned.length) groups.push({ sprint: null, tasks: unplanned });
-
         groups.push(...sprints
             .filter(s => s.state === 'finished')
             .map(s => ({ sprint: s, tasks: byId.get(s.id) ?? [] })));
+
+        const unplanned = tasks.filter(t => !t.sprintId);
+        if (unplanned.length) groups.push({ sprint: null, tasks: unplanned });
 
         return groups;
     });

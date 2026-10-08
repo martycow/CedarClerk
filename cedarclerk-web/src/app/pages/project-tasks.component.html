@@ -342,12 +342,12 @@
             <app-button variant="paper" [disabled]="busy()" (clicked)="toggleArchived(task)">
                 {{ task.archivedAt ? t().projects.tasks.unarchive : t().projects.tasks.archive }}
             </app-button>
-            <span class="spacer"></span>
-            <app-button variant="paper" [disabled]="busy()" (clicked)="saveEdits(task)">
-                {{ t().projects.tasks.save }}
-            </app-button>
-            <app-button variant="pine" [disabled]="busy()" (clicked)="toggleDone(task)">
+            <app-button variant="paper" [disabled]="busy()" (clicked)="toggleDone(task)">
                 {{ draftStatus() === 'done' ? t().projects.tasks.reopen : t().projects.tasks.markDone }}
+            </app-button>
+            <span class="spacer"></span>
+            <app-button variant="pine" [disabled]="busy()" (clicked)="saveEdits(task)">
+                {{ t().projects.tasks.save }}
             </app-button>
         </div>
     </app-modal>

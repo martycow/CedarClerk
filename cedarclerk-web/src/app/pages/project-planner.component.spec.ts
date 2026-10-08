@@ -99,11 +99,10 @@ describe('project planner', () => {
 
     beforeEach(create);
 
-    // Current → planned → the pile → finished. The pile sits next to the future because that is
-    // where work comes out of, and a finished sprint is the only one that collapses.
+    // Current → planned → finished → the pile; a finished sprint is the only one that collapses.
     it('stacks the stretches in the order the screen is read in', () => {
         expect(cardNames())
-            .toEqual(['Autumn build', 'Winter build', 'Spring build', t.planner.noSprint, 'Summer build']);
+            .toEqual(['Autumn build', 'Winter build', 'Spring build', 'Summer build', t.planner.noSprint]);
     });
 
     it('uses the operational split and omits the no-sprint paper when there is no pile', () => {

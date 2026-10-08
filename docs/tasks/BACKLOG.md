@@ -33,12 +33,7 @@ real gate, and the ones this sprint added are listed there.
 
 Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in parentheses). Decisions taken 08.10.2026 are ADR-316…325. Order: wave 0 → 1–2 → 3–6 and 9 → 7–8.
 
-**Wave 0 — bugs**
-- [ ] T-396 Login dark mode: door chrome invisible — `.door` paints `--text` (#241E13) on dark `--canvas` (#251F13), so the title, RU/EN, theme toggle and footer vanish; give the door chrome its own ink token. Fix inventory row 252 (Login 3) #bug #auth #ui P1
-- [ ] T-397 Asset library pager arrows do nothing — the constructor effect in `media-library.component.ts:106-110` tracks `skip()` through `load()` and resets it to 0; wrap the call in `untracked()` and add a spec (Assets 2) #bug #assets P1
-- [ ] T-399 Edit Task footer: move Mark done away from Save — Delete · Archive · Mark done on the left, Save on the right (Edit Task 1) #ui #tasks P2
-- [ ] T-400 Planner: "No sprint" card goes last, below finished sprints (Planner 1) #ui #tasks P3
-- [ ] T-401 UI-INVENTORY: rows 133/410 vs ~402 disagree on the provider row on Register — reconcile with the code #docs P3
+**Wave 0 — bugs** — done 08.10.2026 (CHANGELOG); T-398 deferred.
 
 **Wave 1 — sign-in and registration (ADR-325)**
 - [ ] T-402 Register rework — new non-cow title, drop the invite-only line and the "cannot be changed" hint, placeholders `USERNAME`/`CEDAR_CLERK_CODE`, password confirmation (reuse reset's `mismatch`), live validation on every field, optional avatar via `POST /api/auth/avatar` after creation (Register 1–3, 5–8, 11) #auth #ui P1

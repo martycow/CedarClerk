@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-08 — 0.25.1 review, wave 0: bugs
+
+- **T-396** The login, register and recovery pages are readable in dark mode: the page chrome (brand, RU/EN, theme toggle, footer) used the paper ink on the dark wall and now uses `--wood-ink`, the wall's own ink.
+- **T-397** The asset library's pager arrows work. The reload effect tracked `skip()` through `load()` and reset every page turn to page one; the call is now `untracked`, and a spec pins the page turn.
+- **T-399** The task editor's footer keeps Mark done / Reopen on the left beside Archive; Save is the primary on the right.
+- **T-400** The Planner's "No sprint" card is the last card, below finished sprints.
+- **T-401** UI-INVENTORY: the provider row is login-only, matching the code.
+
+Validation: the touched front-end specs pass; `check:contrast` 0 failing. On Node 26 the front-end specs need `NODE_OPTIONS=--no-experimental-webstorage`, because Node's own `localStorage` shadows jsdom's.
+
 ## 2026-10-07 — Issues #1–#8 (ADR-313, ADR-314, ADR-315)
 
 Eight reports from one tester, fixed on `fix/issues-1-8`:

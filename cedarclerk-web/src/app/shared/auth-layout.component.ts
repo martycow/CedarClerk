@@ -35,9 +35,9 @@ import { LangSwitchComponent } from './lang-switch.component';
     `,
     styles: [`
         :host { display: block; font-family: var(--font-sans); }
-        .door { position: relative; isolation: isolate; min-height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column; background: var(--canvas); color: var(--text); }
+        .door { position: relative; isolation: isolate; min-height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column; background: var(--canvas); color: var(--wood-ink); }
         .door-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-5) var(--space-8); }
-        .brand-home { display: flex; align-items: center; gap: var(--space-3); color: var(--text); font-size: var(--fs-title); font-weight: 600; text-decoration: none; }
+        .brand-home { display: flex; align-items: center; gap: var(--space-3); color: inherit; font-size: var(--fs-title); font-weight: 600; text-decoration: none; }
         .door-controls { display: flex; align-items: center; gap: var(--space-3); }
         .theme-toggle { display: grid; place-items: center; width: var(--hit-touch); height: var(--hit-touch); padding: 0; border: 0; border-left: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
         .auth-layout { width: 100%; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; flex: 1; padding: var(--space-5) var(--space-4); }

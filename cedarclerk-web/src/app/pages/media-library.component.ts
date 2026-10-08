@@ -1,4 +1,4 @@
-import { Component, OnDestroy, booleanAttribute, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, OnDestroy, booleanAttribute, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { AssetsService, LibraryAsset, LibraryKind, LibraryPage, LibrarySort } from '../core/assets.service';
 import { ProjectsService, ProjectSummary } from '../core/projects.service';
 import { AuthService } from '../core/auth.service';
@@ -103,10 +103,14 @@ export class MediaLibraryComponent implements OnDestroy {
         }
         // A pinned instance reloads when the project it is pinned to changes; the page's own
         // instance pins nothing and this settles once.
+        // untracked: load() reads skip() and the filters, and tracking them here reset every pager
+        // click back to page one.
         effect(() => {
             this.pinnedProject();
-            this.skip.set(0);
-            void this.load();
+            untracked(() => {
+                this.skip.set(0);
+                void this.load();
+            });
         });
 
         // ADR-301 clause 4 — T-386. Only the page publishes: this component is also mounted inside

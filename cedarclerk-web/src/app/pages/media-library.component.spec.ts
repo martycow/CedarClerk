@@ -222,4 +222,18 @@ describe('media library', () => {
         expect(fixture.componentInstance.page()?.items.map(item => item.id)).toEqual(['latest']);
         expect(fixture.componentInstance.loadError()).toBeNull();
     });
+
+    it('the forward arrow moves to the next page and stays there', async () => {
+        const many = Array.from({ length: 60 }, (_, i) => asset(`p${i}`, 'image/png'));
+        await create({ ...PAGE, items: many, total: 77 });
+        api.queries = [];
+
+        fixture.componentInstance.pageForward();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(fixture.componentInstance.skip()).toBe(60);
+        expect(api.queries.map(q => q.skip)).toEqual([60]);
+    });
 });
