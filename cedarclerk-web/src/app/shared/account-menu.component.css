@@ -91,14 +91,23 @@
     min-width: 0;
 }
 
+.who-name {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    color: var(--text);
+}
+
 .who-email {
     max-width: 190px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: var(--fs-meta);
-    font-weight: 600;
-    color: var(--text);
+    color: var(--t2);
 }
 
 .who-plan {

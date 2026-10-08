@@ -111,7 +111,7 @@ export class ProjectComponent {
     readonly widths: readonly OverviewWidth[] = ['narrow', 'wide', 'full'];
     readonly overviewPanels = computed(() => this.overviewLayout().panels.filter(panel =>
         (this.planningEnabled() || panel.id !== 'planning') && (this.customizing() || !panel.hidden)));
-    readonly bannerUrl = computed(() => this.overviewLayout().bannerUrl ?? '/images/project-banner.jpg');
+    readonly bannerUrl = computed(() => this.overviewLayout().bannerUrl ?? null);
     readonly publishedCount = computed(() => this.documents().filter(doc => doc.isBlogPublished && !doc.isArchived).length);
     readonly authoredLinks = computed(() => (this.project()?.showcaseLinks ?? '').split('\n').flatMap(line => {
         const separator = line.indexOf('|');

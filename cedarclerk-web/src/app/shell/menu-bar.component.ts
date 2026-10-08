@@ -65,7 +65,7 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
                     }
                 </div>
             }
-        </div></div>
+        </div><span class="bar-spacer"></span><ng-content select="[bar-end]" /></div>
     `,
     styles: [`
         :host { display: block; }
@@ -82,6 +82,7 @@ const GROUP_ICONS: Record<CommandGroup, IconName> = {
         }
 
         .menus { display: flex; align-items: stretch; }
+        .bar-spacer { flex: 1; }
         .menu { position: relative; display: flex; }
 
         .top {

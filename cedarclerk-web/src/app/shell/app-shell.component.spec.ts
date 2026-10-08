@@ -157,21 +157,21 @@ describe('app shell', () => {
         expect(el().querySelector('app-menu-bar app-project-switcher')).not.toBeNull();
     });
 
-    it('draws the account-wide screens on the hub until a project has been opened, and the hub as the card', async () => {
+    it('draws only the library on the hub, where no project is open, and the hub as the card', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         fixture.detectChanges();
         await go('/projects');
-        expect(labels()).toEqual(['Documents', 'Assets', 'Calendar', 'Posts', 'Glossary', 'Presets', 'AI operations']);
-        expect(groupLabels()).toEqual(['Write', 'Plan', 'Ship', 'Library']);
+        expect(labels()).toEqual(['Glossary', 'Presets', 'AI operations']);
+        expect(groupLabels()).toEqual(['Library']);
         const card = el().querySelector('app-menu-bar app-project-switcher .side-project') as HTMLButtonElement;
         expect(card.tagName).toBe('BUTTON');
-        expect(card.querySelector('.side-project-name')!.textContent!.trim()).toBe('All projects');
+        expect(card.querySelector('.side-project-name')!.textContent!.trim()).toBe('Projects Hub');
         expect(card.querySelector('app-cedar-logo')).toBeNull();
         card.click();
         fixture.detectChanges();
         expect([...el().querySelectorAll('app-menu-bar .side-project-item')].map(menuText))
-            .toEqual(['All projects', 'Manage teams']);
-        expect(el().querySelector('.side-project-item.is-on')?.textContent).toContain('All projects');
+            .toEqual(['Projects Hub', 'Manage teams']);
+        expect(el().querySelector('.side-project-item.is-on')?.textContent).toContain('Projects Hub');
     });
 
     it('keeps both workspace doors after the first project arrives', async () => {
@@ -180,7 +180,7 @@ describe('app shell', () => {
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }]);
 
         const entries = [...el().querySelectorAll('app-menu-bar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
-        expect(entries.map(menuText)).toEqual(['Cedar Quest', 'All projects', 'Manage teams']);
+        expect(entries.map(menuText)).toEqual(['Cedar Quest', 'Projects Hub', 'Manage teams']);
         expect(entries.map(entry => entry.getAttribute('href'))).toEqual(['/projects/p1', '/projects', '/teams']);
     });
 
@@ -226,7 +226,7 @@ describe('app shell', () => {
 
     it('adds the complete project set after a project has been opened', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
-        await go('/drafts');
+        await go('/projects');
         expect(labels()).not.toContain('Tasks');
 
         await go('/projects/p1/planner');
@@ -237,10 +237,11 @@ describe('app shell', () => {
             'Glossary', 'Presets', 'AI operations',
         ]);
         expect(items().find(a => a.textContent?.includes('Tasks'))!.getAttribute('href')).toBe('/projects/p1/tasks');
-        expect(items().find(a => a.textContent?.includes('Posts'))!.getAttribute('href')).toBe('/posts');
+        expect(items().find(a => a.textContent?.includes('Posts'))!.getAttribute('href')).toBe('/posts?project=p1');
+        expect(items().find(a => a.textContent?.includes('Calendar'))!.getAttribute('href')).toBe('/calendar?project=p1');
     });
 
-    it('draws a member the canvas and the account-wide screens only', async () => {
+    it('draws a member the canvas and the library only', async () => {
         TestBed.inject(AuthService).indieDev.set(true);
         await router.navigateByUrl('/projects/p1/canvas');
         fixture.detectChanges();
@@ -249,7 +250,7 @@ describe('app shell', () => {
             .flush({ role: 'editor', canWrite: true, archived: false });
         await fixture.whenStable();
         fixture.detectChanges();
-        expect(labels()).toEqual(['Canvas', 'Calendar', 'Posts', 'Glossary', 'Presets', 'AI operations']);
+        expect(labels()).toEqual(['Canvas', 'Glossary', 'Presets', 'AI operations']);
     });
 
     it('draws the counts the project list already holds, and never a zero', async () => {
@@ -284,14 +285,14 @@ describe('app shell', () => {
         expect(card.tagName).toBe('BUTTON');
         expect(card.querySelector('.side-project-name')!.textContent!.trim()).toBe('…');
         expect([...el().querySelectorAll('app-menu-bar app-project-switcher .side-project-item')].map(menuText))
-            .toEqual(['All projects', 'Manage teams']);
+            .toEqual(['Projects Hub', 'Manage teams']);
 
         await flushProjects([{ id: 'p1', name: 'Cedar Quest' }, { id: 'p2', name: 'Second' }]);
         expect(card.tagName).toBe('BUTTON');
         expect(card.getAttribute('aria-haspopup')).toBe('true');
 
         const entries = [...el().querySelectorAll('app-menu-bar app-project-switcher .side-project-item')] as HTMLAnchorElement[];
-        expect(entries.map(menuText)).toEqual(['Cedar Quest', 'Second', 'All projects', 'Manage teams']);
+        expect(entries.map(menuText)).toEqual(['Cedar Quest', 'Second', 'Projects Hub', 'Manage teams']);
         expect(entries.map(a => a.getAttribute('href'))).toEqual(['/projects/p1', '/projects/p2', '/projects', '/teams']);
     });
 
@@ -348,39 +349,29 @@ describe('app shell', () => {
             .toEqual(['/projects/p1/canvas', '/projects/p2/canvas', '/projects', '/teams']);
     });
 
-    it('keeps the brand as identity so the switcher is the only projects door', () => {
-        const brand = el().querySelector('app-menu-bar .app-brand') as HTMLElement;
-        expect(brand.tagName).toBe('DIV');
+    it('makes the brand a link to the Projects Hub, with the sidebar toggle after the switcher', () => {
+        const bar = el().querySelector('app-menu-bar .bar') as HTMLElement;
+        const brand = bar.querySelector('a.app-brand') as HTMLAnchorElement;
+        expect(brand.getAttribute('href')).toBe('/projects');
         expect(brand.textContent).toContain('Cedar Clerk');
-        expect(el().querySelector('app-menu-bar a.app-brand')).toBeNull();
+        const order = [...bar.children].map(c => c.tagName.toLowerCase() + (c.tagName.startsWith('APP-') || !c.classList.length ? '' : '.' + c.classList[0]));
+        expect(order.slice(0, 4)).toEqual(['a.app-brand', 'app-project-switcher', 'button.bar-icon', 'div.menus']);
+        expect(el().querySelector('app-sidebar .side-toggle')).toBeNull();
     });
 
-    it('puts Admin in the account menu and nowhere in the navigation', () => {
+    it('puts Admin in the sidebar for an admin and leaves it out of the account menu', () => {
+        expect(labels()).not.toContain('Admin');
         TestBed.inject(AuthService).isAdmin.set(true);
         fixture.detectChanges();
-        expect(labels()).not.toContain('Admin');
-        const menu = openAccountMenu().map(menuText);
-        expect(menu).toContain('Admin');
-        expect(menu).not.toContain('Style guide');
-        expect(menu).not.toContain('Icons');
+        expect(labels()).toContain('Admin');
+        expect(openAccountMenu().map(menuText)).not.toContain('Admin');
     });
 
-    it('keeps one Settings door in the compact account menu', () => {
-        const entries = openAccountMenu();
-        const menu = entries.map(menuText);
-        expect(menu[0]).toBe('Settings');
-        expect(menu.filter(item => item === 'Settings')).toHaveLength(1);
-        expect(menu).not.toContain('Glossary');
-        expect(menu).not.toContain('Presets');
-        expect(labels()).toContain('Glossary');
-        expect(menu).not.toContain('Appearance');
-        expect(menu.some(m => m.includes('Toggle theme'))).toBe(false);
-        expect(menu).toContain('Fullscreen');
-        expect(menu.some(m => m.includes('Debug console'))).toBe(false);
-        expect(menu.at(-1)).toBe('Log out');
-        expect(menu).not.toContain('Documents');
-        const about = entries.find(i => menuText(i).includes('About')) as HTMLAnchorElement;
-        expect(about.getAttribute('href')).toBe('/welcome');
+    it('keeps the account menu to Settings and Log out under the identity', () => {
+        const menu = openAccountMenu().map(menuText);
+        expect(menu).toEqual(['Settings', 'Log out']);
+        expect(el().querySelector('app-account-menu .who-email')).toBeTruthy();
+        expect(el().querySelector('app-account-menu .who-name')).toBeTruthy();
     });
 
     it('gives the account menu side placement in full and rail modes, with semantics and focus return', async () => {
@@ -470,7 +461,7 @@ describe('app shell', () => {
         popover.close();
     });
 
-    it('offers Fullscreen as a transient account action and closes the popover before requesting it', async () => {
+    it('puts Fullscreen and Log out at the right end of the top bar', async () => {
         const original = Object.getOwnPropertyDescriptor(document.documentElement, 'requestFullscreen');
         const requestFullscreen = vi.fn().mockResolvedValue(undefined);
         Object.defineProperty(document.documentElement, 'requestFullscreen', {
@@ -479,12 +470,11 @@ describe('app shell', () => {
         });
 
         try {
-            menuItem('Fullscreen').click();
-            fixture.detectChanges();
+            const end = el().querySelector('app-menu-bar .bar-end') as HTMLElement;
+            expect(end.querySelector('.bar-logout')?.textContent).toContain('Log out');
+            (end.querySelector('.bar-icon') as HTMLButtonElement).click();
             await Promise.resolve();
-
             expect(requestFullscreen).toHaveBeenCalledOnce();
-            expect(el().querySelector('app-account-menu .popover-panel')).toBeNull();
         } finally {
             if (original) Object.defineProperty(document.documentElement, 'requestFullscreen', original);
             else Reflect.deleteProperty(document.documentElement, 'requestFullscreen');
@@ -493,14 +483,14 @@ describe('app shell', () => {
 
     // ADR-239 clause 11 — the console is an overlay: shut by default, opened from the menu or the
     // shortcut, and reserving no height on the shell while shut.
-    it('keeps the console shut, and toggles it from the menu and from Ctrl+`', () => {
+    it('keeps the console shut, and toggles it from Ctrl+`', () => {
         const overlays = TestBed.inject(OverlayCoordinatorService);
         TestBed.inject(AuthService).isAdmin.set(true);
         fixture.detectChanges();
         expect(overlays.active()).toBeNull();
         expect(el().querySelector('.console-overlay')).toBeNull();
 
-        menuItem('Debug console').click();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: '`', ctrlKey: true, bubbles: true }));
         fixture.detectChanges();
         expect(overlays.active()).toBe('debug');
         expect(el().querySelector('.console-overlay[role="dialog"]')).toBeTruthy();
@@ -575,11 +565,12 @@ describe('app shell', () => {
         expect(document.activeElement).toBe(trigger);
     });
 
-    it('closes the account popover before opening Feedback', () => {
-        menuItem('Send feedback').click();
+    it('opens Feedback from the button beside the avatar', () => {
+        const button = el().querySelector('app-sidebar .side-user button.side-bell') as HTMLButtonElement;
+        expect(button.getAttribute('aria-label')).toBe('Send feedback');
+        button.click();
         fixture.detectChanges();
 
-        expect(el().querySelector('app-account-menu .popover-panel')).toBeNull();
         expect(el().querySelector('app-feedback-panel [aria-modal="true"]')).toBeTruthy();
         expect(el().querySelectorAll('[aria-modal="true"]').length).toBe(1);
     });

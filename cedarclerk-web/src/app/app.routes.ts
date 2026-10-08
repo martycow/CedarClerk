@@ -4,6 +4,7 @@ import { authGuard, onboardingGuard } from './core/auth.guard';
 import { adminGuard } from './core/admin.guard';
 import { guestGuard } from './core/guest.guard';
 import { indieDevGuard } from './core/indiedev.guard';
+import { projectScopeGuard } from './core/project-scope.guard';
 
 // T-092 — every route is lazy (`loadComponent`), and the router preloads them all in the
 // background once the app has booted (see app.config.ts). The measurement behind that: with the
@@ -67,7 +68,7 @@ export const routes: Routes = [
             {
                 path: 'drafts',
                 loadComponent: () => import('./pages/drafts.component').then(m => m.DraftsPageComponent),
-                canActivate: [authGuard],
+                canActivate: [authGuard, projectScopeGuard],
             },
             {
                 path: 'settings',
@@ -77,14 +78,14 @@ export const routes: Routes = [
             {
                 path: 'posts',
                 loadComponent: () => import('./pages/posts-manager.component').then(m => m.PostsManagerComponent),
-                canActivate: [authGuard],
+                canActivate: [authGuard, projectScopeGuard],
             },
             // Wave 2 item 9 — the content calendar: scheduled sends and queue slots as a month
             // board, between documents and posts on the rail.
             {
                 path: 'calendar',
                 loadComponent: () => import('./pages/calendar.component').then(m => m.CalendarComponent),
-                canActivate: [authGuard],
+                canActivate: [authGuard, projectScopeGuard],
             },
             {
                 path: 'glossary',
@@ -109,7 +110,8 @@ export const routes: Routes = [
                 // route + dev proxy), and the dev proxy forwards the whole prefix to the backend.
                 path: 'library',
                 loadComponent: () => import('./pages/media-library.component').then(m => m.MediaLibraryComponent),
-                canActivate: [authGuard],
+                canActivate: [authGuard, projectScopeGuard],
+                data: { projectHome: 'assets' },
             },
             // Phase 13 — the indie-gamedev module (ADR-101). indieDevGuard already covers signed-in, the
             // same way adminGuard does; with the flag off it redirects to /drafts rather than 404-ing,

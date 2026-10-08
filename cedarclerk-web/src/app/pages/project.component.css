@@ -27,6 +27,14 @@
   object-fit: cover;
   object-position: center 55%;
 }
+/* The default banner: a quiet diagonal hatch in the paper's own tones, no illustration (ADR-324). */
+.banner-pattern {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(--alt);
+  background-image: repeating-linear-gradient(135deg, var(--border) 0 1px, transparent 1px 14px);
+}
 .project-identity {
   display: flex;
   align-items: flex-start;

@@ -109,8 +109,8 @@ export class PostsService {
             }));
     }
 
-    listScheduled() {
-        return firstValueFrom(this.http.get<ScheduledPost[]>('/api/posts/scheduled'));
+    listScheduled(project?: string | null) {
+        return firstValueFrom(this.http.get<ScheduledPost[]>('/api/posts/scheduled', { params: project ? { project } : {} }));
     }
 
     cancelScheduled(id: string) {

@@ -99,6 +99,8 @@ export class CalendarComponent implements OnInit {
     private publishApi = inject(PublishService);
     private draftsApi = inject(DraftsService);
     private router = inject(Router);
+    /** ADR-322: the open project's documents only; absent with the projects module off. */
+    private readonly project = this.router.parseUrl(this.router.url).queryParamMap.get('project');
     loading = signal(true);
     error = signal('');
     scheduled = signal<ScheduledPost[]>([]);
@@ -113,7 +115,7 @@ export class CalendarComponent implements OnInit {
     async ngOnInit() {
         this.loading.set(true);
         try {
-            const [posts, slots] = await Promise.allSettled([this.postsApi.listScheduled(), this.queueApi.list()]);
+            const [posts, slots] = await Promise.allSettled([this.postsApi.listScheduled(this.project), this.queueApi.list()]);
             if (posts.status === 'fulfilled') this.scheduled.set(posts.value);
             else this.error.set(httpErrorMessage(posts.reason, this.t().calendar.loadFailed));
             // Slots 404 until the server lane lands — the board still renders without them.
@@ -483,7 +485,7 @@ export class CalendarComponent implements OnInit {
             await this.postsApi.schedule(
                 draft.id, instant.toISOString(), draft.primaryLanguage,
                 { targetId: this.scheduleTargetId });
-            this.scheduled.set(await this.postsApi.listScheduled());
+            this.scheduled.set(await this.postsApi.listScheduled(this.project));
             this.scheduleOpen.set(false);
         } catch (e) {
             this.scheduleError.set(httpErrorMessage(e, this.t().calendar.scheduleFailed));

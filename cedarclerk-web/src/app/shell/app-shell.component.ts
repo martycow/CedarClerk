@@ -1,7 +1,8 @@
 import { VersionService } from '../core/version.service';
 import { CedarLogoComponent } from '../shared/cedar-logo.component';
 import { ChangeDetectionStrategy, Component, HostListener, OnDestroy, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { IconComponent } from '../shared/icon.component';
 import { AuthService } from '../core/auth.service';
 import { AppearanceService } from '../core/appearance.service';
 import { AppCommand, CommandRelease, CommandsService } from '../core/commands.service';
@@ -15,6 +16,7 @@ import { ProjectSummary, ProjectsService } from '../core/projects.service';
 import { CommandPaletteComponent } from '../shared/command-palette.component';
 import { DebugConsoleComponent } from '../shared/debug-console.component';
 import { FeedbackPanelComponent } from '../shared/feedback-panel.component';
+import { FeedbackFormService } from '../core/feedback-form.service';
 import { SearchOverlayComponent } from '../shared/search-overlay.component';
 import { InspectorRailComponent } from './inspector-rail.component';
 import { ProjectSwitcherComponent } from './project-switcher.component';
@@ -42,6 +44,7 @@ const NAV_PREFIXES: readonly (readonly [string, string])[] = [
     ['presets', '/presets'],
     ['ai', '/ai'],
     ['teams', '/teams'],
+    ['admin', '/admin'],
 ];
 
 /** Child screens the switcher carries across a project change; deeper paths fold to the child. */
@@ -63,7 +66,7 @@ function matches(path: string, pattern: string): boolean {
     selector: 'app-shell',
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
-        RouterOutlet, SidebarComponent, FeedbackPanelComponent, CedarLogoComponent,
+        RouterOutlet, RouterLink, IconComponent, SidebarComponent, FeedbackPanelComponent, CedarLogoComponent,
         SearchOverlayComponent, DebugConsoleComponent,
         MenuBarComponent, InspectorRailComponent, CommandPaletteComponent, ProjectSwitcherComponent,
     ],
@@ -74,19 +77,34 @@ function matches(path: string, pattern: string): boolean {
     template: `
         <div class="shell" [class.is-rail]="mode() === 'rail'">
             <app-menu-bar>
-                <div class="app-brand">
+                <a class="app-brand" routerLink="/projects" [attr.aria-label]="t().shell.allProjects">
                     <app-cedar-logo [size]="28" />
                     <span class="app-name">{{ t().shell.brand }}
                         @if (version.version(); as value) { <small class="app-version">v{{ value }}</small> }
                     </span>
-                </div>
+                </a>
                 <app-project-switcher [project]="project()" [projects]="switcher()" variant="inline"
                     [hint]="t().shell.switchProject" [fallbackName]="t().shell.allProjects" />
+                <button type="button" class="bar-icon" [attr.aria-label]="t().shell.commands.toggleSidebar"
+                        [attr.title]="t().shell.commands.toggleSidebar" [attr.aria-expanded]="mode() === 'full'"
+                        (click)="toggleSidebar()">
+                    <app-icon name="layout" size="sm" />
+                </button>
+                <div bar-end class="bar-end">
+                    <button type="button" class="bar-icon" [attr.aria-label]="fullscreenLabel()" [attr.title]="fullscreenLabel()"
+                            (click)="toggleFullscreen()">
+                        <app-icon [name]="isFullscreen() ? 'arrows-in-simple' : 'arrows-out-simple'" size="sm" />
+                    </button>
+                    <button type="button" class="bar-logout" (click)="auth.logout()">
+                        <app-icon name="sign-out" size="sm" /><span>{{ t().editor.logout }}</span>
+                    </button>
+                </div>
             </app-menu-bar>
             <div class="workspace-row">
-                <app-sidebar [toggleLabel]="t().shell.commands.toggleSidebar" (toggled)="toggleSidebar()" [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
+                <app-sidebar [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
                              [project]="project()" [projects]="switcher()" [projectHint]="t().shell.switchProject"
                              [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
+                             [feedbackLabel]="t().feedbackForm.title" (feedback)="feedbackForm.openForm()"
                              [brand]="t().shell.brand" [brandLabel]="t().shell.logoLabel"
                              [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts" />
                 <main class="body" data-surface="paper">
@@ -103,7 +121,13 @@ function matches(path: string, pattern: string): boolean {
     `,
     styles: [`
         :host { display: block; }
-        .app-brand { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-3); flex: none; }
+        .app-brand { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-3); flex: none; border-radius: var(--radius-sm); color: inherit; text-decoration: none; }
+        .app-brand:hover { background: var(--hover); }
+        .app-brand:focus-visible, .bar-icon:focus-visible, .bar-logout:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+        .bar-icon, .bar-logout { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); flex: none; align-self: center; min-width: var(--hit-chrome); min-height: var(--hit-chrome); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: inherit; font: inherit; font-size: var(--fs-ui); cursor: pointer; }
+        .bar-icon:hover, .bar-logout:hover { background: var(--hover); }
+        .bar-end { display: flex; align-items: center; gap: var(--space-1); padding-right: var(--space-2); }
+        @media (max-width: 640px) { .bar-logout span { display: none; } }
         .app-name { display: flex; flex-direction: column; font-family: var(--font-sans); font-size: var(--text-chrome); font-weight: 700; white-space: nowrap; }
         .app-version { font-size: var(--text-chrome-sm); color: var(--t2); font-weight: 400; }
 
@@ -155,6 +179,7 @@ export class AppShellComponent implements OnDestroy {
     private readonly overlays = inject(OverlayCoordinatorService);
     private readonly appearance = inject(AppearanceService);
     private readonly commands = inject(CommandsService);
+    protected readonly feedbackForm = inject(FeedbackFormService);
 
     protected readonly auth = inject(AuthService);
     protected readonly t = inject(LocaleService).t;
@@ -170,6 +195,26 @@ export class AppShellComponent implements OnDestroy {
     private readonly path = computed(() => this.url().split('?')[0].split('#')[0]);
 
     private readonly phoneViewport = signal(window.innerWidth <= 640);
+    protected readonly isFullscreen = signal(!!document.fullscreenElement);
+
+    protected fullscreenLabel(): string {
+        return this.isFullscreen() ? this.t().editor.exitFullscreen : this.t().editor.enterFullscreen;
+    }
+
+    protected async toggleFullscreen(): Promise<void> {
+        try {
+            if (document.fullscreenElement) await document.exitFullscreen();
+            else await document.documentElement.requestFullscreen();
+        } catch {
+            // A browser or desktop policy may refuse fullscreen; the current shell stays usable.
+        }
+    }
+
+    @HostListener('document:fullscreenchange')
+    onFullscreenChange(): void {
+        this.isFullscreen.set(!!document.fullscreenElement);
+    }
+
     toggleSidebar() { this.setPref({ sidebarMode: this.appearance.prefs().sidebarMode === 'rail' ? 'full' : 'rail' }); }
     readonly mode = computed(() => this.phoneViewport() ? 'rail' : this.appearance.prefs().sidebarMode);
 
@@ -271,19 +316,21 @@ export class AppShellComponent implements OnDestroy {
             { id: 'presets', label: this.t().presets.crumb, icon: 'squares-four', link: '/presets' },
             { id: 'ai', label: this.t().ai.crumb, icon: 'sparkle', link: '/ai' },
         ];
-        if (!this.auth.indieDev() || !this.projectOpen()) {
+        // ADR-322: with the module on, the workspace screens exist only inside an own project.
+        if (!this.auth.indieDev()) {
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts' });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: '/library' });
             plan.push(calendar);
             ship.push(posts);
+        } else if (!this.projectOpen()) {
+            // The hub: pick a project first.
         } else if (!own && role !== null) {
             write.push({ id: 'canvas', label: t.canvas, icon: 'squares-four', link: ['/projects', open, 'canvas'] });
-            plan.push(calendar);
-            ship.push(posts);
         } else if (!own) {
-            plan.push(calendar);
-            ship.push(posts);
+            // Access still in flight for a project that is not in the account's list.
         } else {
+            calendar.queryParams = { project: open };
+            posts.queryParams = { project: open };
             write.push({ id: 'documents', label: t.documents, icon: 'file-text', link: '/drafts', queryParams: { project: open }, count: count(summary?.documentCount) });
             write.push({ id: 'assets', label: t.assets, icon: 'images', link: ['/projects', open, 'assets'], count: count(summary?.assetCount) });
             write.push({ id: 'canvas', label: t.canvas, icon: 'squares-four', link: ['/projects', open, 'canvas'] });
@@ -295,11 +342,15 @@ export class AppShellComponent implements OnDestroy {
             ship.push({ id: 'builds', label: t.builds, icon: 'cube', link: ['/projects', open, 'builds'] });
             ship.push(posts);
         }
+        const admin: NavItem[] = this.auth.isAdmin()
+            ? [{ id: 'admin', label: t.admin, icon: 'shield-check', link: '/admin' }]
+            : [];
         return [
             { id: 'write', label: t.groupWrite, items: write },
             { id: 'plan', label: t.groupPlan, items: plan },
             { id: 'ship', label: t.groupShip, items: ship },
             { id: 'library', label: t.groupLibrary, items: library },
+            { id: 'admin', label: t.developer, items: admin },
         ];
     });
 
@@ -327,10 +378,6 @@ export class AppShellComponent implements OnDestroy {
             {
                 id: 'file.download', group: 'file', label: labels.download, icon: 'download-simple',
                 separatorBefore: true, run: go('/download'),
-            },
-            {
-                id: 'file.signOut', group: 'file', label: labels.signOut, icon: 'sign-out',
-                separatorBefore: true, run: () => void this.auth.logout(),
             },
             {
                 id: 'edit.search', group: 'edit', label: labels.search, icon: 'magnifying-glass',
@@ -367,6 +414,7 @@ export class AppShellComponent implements OnDestroy {
             },
             { id: 'help.terms', group: 'help', label: labels.terms, icon: 'info', run: go('/terms') },
             { id: 'help.privacy', group: 'help', label: labels.privacy, icon: 'shield-check', run: go('/privacy') },
+            { id: 'help.about', group: 'help', label: this.t().shell.aboutLanding, icon: 'tree-evergreen', separatorBefore: true, run: () => { window.location.href = '/welcome'; } },
         ];
         if (this.auth.isAdmin()) {
             commands.push(

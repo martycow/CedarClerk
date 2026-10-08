@@ -21,14 +21,20 @@ public static class ScheduledPostEndpoints
     // Wave 2 item 9 — drag-reschedule on the calendar. Body carries the one thing that moves.
     public record RescheduleRequest(DateTime ScheduledAtUtc);
 
+    /// <summary>The owner's scheduled posts, narrowed to one project's documents when one is named.</summary>
+    public static IQueryable<ScheduledPost> Owned(CedarDbContext db, string uid, Guid? project) =>
+        db.ScheduledPosts.Where(p => p.OwnerId == uid
+            && (project == null || db.Drafts.Any(d => d.Id == p.DraftId && d.ProjectId == project)));
+
     public static void MapScheduledPostEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/posts/scheduled").RequireAuthorization();
 
-        group.MapGet("/", async (ClaimsPrincipal user, CedarDbContext db) =>
+        // ADR-322: the calendar is project-scoped, so it asks for one project's documents.
+        group.MapGet("/", async (Guid? project, ClaimsPrincipal user, CedarDbContext db) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var posts = await db.ScheduledPosts.Where(p => p.OwnerId == uid)
+            var posts = await Owned(db, uid, project)
                 .OrderBy(p => p.ScheduledAtUtc)
                 .Join(db.Drafts, p => p.DraftId, d => d.Id, (p, d) => new
                 {

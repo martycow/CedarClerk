@@ -38,11 +38,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 **Wave 1 — sign-in and registration (ADR-325)** — done 08.10.2026 except T-405, which needs the owner's Discord credentials.
 - [ ] T-405 Discord sign-in in production — code is wired; set `Cedar:Auth:Discord:*` in `data.conf` and register `https://<host>/signin-discord` in the Discord portal, then sign in for real (Login 2) #auth #operations P1
 
-**Wave 2 — shell (ADR-322, ADR-324)**
-- [ ] T-406 Top bar order — clickable logo → Projects Hub, name + version, project switcher, sidebar toggle (moved from the sidebar head), menus; Fullscreen and Log out at the right end; drop File › Sign out (Top Bar 1–2, Profile Popup 2) #ui #shell P1
-- [ ] T-407 Account popover and sidebar foot — popover shows name, email, avatar, plan, credits + Settings and Log out; Send feedback becomes an icon button beside the avatar; Admin moves into the sidebar (Profile Popup 1, 3; Side Bar 2) #ui #shell P1
-- [ ] T-408 Project-scoped workspace — Documents, Assets, Calendar, Publishing, Metrics, Forms only with a project selected and filtered to it; routes without a project redirect to the hub; scheduled posts, queue slots and stats filter by project (Side Bar 1) #ui #backend P1
-- [ ] T-409 Projects Hub naming and banner — rename "Projects" to "Projects Hub" everywhere; replace `project-banner.jpg` with a minimal default pattern (Projects Hub 1–2) #ui P2
+**Wave 2 — shell (ADR-322, ADR-324)** — done 08.10.2026.
 
 **Wave 3 — theme and public pages (ADR-321)**
 - [ ] T-410 One theme dropdown — Light / Dark / System; `ThemeService` stores `system`; replaces the five door/app toggles and Settings › Appearance's two-way switch (General 1) #ui #design P1
@@ -82,6 +78,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 - [ ] T-436 Writer polish — footer reads "N words · saved N min ago"; sidebar head gets the "Workspace" label; sidebar counts cap at "99+" #editor #ui P3
 
 **Needs discussion**
+- [ ] T-437 Queue slots and project scope — ADR-322 scopes the calendar's scheduled posts by project, but `QueueSlot` belongs to a destination, not a project, so slots still show account-wide. Settle with T-428 #publishing #decision P3
 - [ ] T-428 Queue: keep, clarify or remove — weekly per-destination send slots that `FillQueueSlotsJob` fills nightly from evergreen drafts by category (Calendar 3) #publishing #decision P3
 - [ ] T-429 Builds rethink — today a `Build` entity with tasks and "Make changelog"; decide what replaces it (Builds 1) #indiedev #decision P3
 - [ ] T-430 Skill Points research — paid per-upgrade skill tree vs. the current tiers + credit wallet; fit with `docs/product/BUSINESS.md` (Ideas 1) #billing #decision P3

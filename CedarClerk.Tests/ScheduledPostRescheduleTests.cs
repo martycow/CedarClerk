@@ -86,4 +86,27 @@ public class ScheduledPostRescheduleTests
         Assert.Equal(StatusCodes.Status404NotFound, status);
         Assert.Equal(OldDate, db.ScheduledPosts.Single(p => p.Id == id).ScheduledAtUtc);
     }
+
+    [Fact]
+    public async Task The_calendar_list_narrows_to_one_projects_documents()
+    {
+        using var connection = SharedDatabase();
+        var mine = Guid.NewGuid();
+        var other = Guid.NewGuid();
+        using (var seed = Open(connection))
+        {
+            var inMine = new Draft { OwnerId = A, Title = "in", ProjectId = mine };
+            var inOther = new Draft { OwnerId = A, Title = "out", ProjectId = other };
+            seed.Drafts.AddRange(inMine, inOther);
+            seed.ScheduledPosts.Add(new ScheduledPost { OwnerId = A, DraftId = inMine.Id, ChatId = "-1", ScheduledAtUtc = OldDate, Status = "Pending" });
+            seed.ScheduledPosts.Add(new ScheduledPost { OwnerId = A, DraftId = inOther.Id, ChatId = "-1", ScheduledAtUtc = OldDate, Status = "Pending" });
+            seed.SaveChanges();
+        }
+
+        using var db = Open(connection);
+        Assert.Equal(2, await ScheduledPostEndpoints.Owned(db, A, null).CountAsync());
+        var scoped = await ScheduledPostEndpoints.Owned(db, A, mine).ToListAsync();
+        Assert.Single(scoped);
+        Assert.Equal(0, await ScheduledPostEndpoints.Owned(db, B, mine).CountAsync());
+    }
 }

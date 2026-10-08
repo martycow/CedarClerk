@@ -4,7 +4,7 @@
   } @else if (loading()) {
     <p class="hint" role="status">{{ t().projects.loading }}</p>
   } @else if (project(); as p) {
-    <div class="project-banner"><img [src]="bannerUrl()" alt="" /></div>
+    <div class="project-banner">@if (bannerUrl(); as src) { <img [src]="src" alt="" /> } @else { <span class="banner-pattern" aria-hidden="true"></span> }</div>
     <section class="project-identity">
       <button
         class="project-logo"

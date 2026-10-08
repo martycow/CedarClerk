@@ -163,7 +163,8 @@ describe('project hub', () => {
     });
 
     it('shows the separate project banner, identity and description without a duplicate resume card', () => {
-        expect(el().querySelector('.project-banner img')?.getAttribute('src')).toBe('/images/project-banner.jpg');
+        expect(el().querySelector('.project-banner img')).toBeNull();
+        expect(el().querySelector('.project-banner .banner-pattern')).toBeTruthy();
         expect(el().querySelector('.project-description')?.textContent).toBe(DETAIL.description);
         expect(el().querySelector('.resume')).toBeNull();
         expect(el().querySelectorAll('.overview-panel').length).toBe(5);
@@ -456,12 +457,12 @@ describe('project hub', () => {
         expect(c.bannerUrl()).toBe('/media/banner.png');
         TestBed.inject(AuthService).userId.set('other-account');
         await c.load('p1');
-        expect(c.bannerUrl()).toBe('/images/project-banner.jpg');
+        expect(c.bannerUrl()).toBeNull();
         TestBed.inject(AuthService).userId.set('test-account');
         await c.load('p1');
         c.resetLayout();
         expect(c.overviewLayout().panels.every(p => !p.hidden)).toBe(true);
-        expect(c.bannerUrl()).toBe('/images/project-banner.jpg');
+        expect(c.bannerUrl()).toBeNull();
     });
 
     it('leaves the current layout usable and reports unavailable browser storage', () => {

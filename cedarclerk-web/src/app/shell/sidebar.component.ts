@@ -21,7 +21,7 @@ export interface NavItem {
 }
 
 export interface NavGroup {
-    id: 'write' | 'plan' | 'ship' | 'library';
+    id: 'write' | 'plan' | 'ship' | 'library' | 'admin';
     label: string;
     items: readonly NavItem[];
 }
@@ -45,10 +45,6 @@ export interface SidebarUser {
         '[class.is-rail]': "mode() === 'rail'",
     },
     template: `
-        <div class="side-head">
-            @if (toggleLabel()) { <button type="button" class="side-toggle" [attr.aria-label]="toggleLabel()" [attr.aria-expanded]="mode() === 'full'" (click)="toggled.emit()"><app-icon [name]="mode() === 'full' ? 'caret-left' : 'caret-right'" size="sm" /></button> }
-        </div>
-
         <nav class="side-nav" [attr.aria-label]="navLabel() || null">
             @for (group of groups(); track group.id) {
                 @if (group.items.length) {
@@ -65,6 +61,12 @@ export interface SidebarUser {
 
         <div class="side-user">
             <app-account-menu [face]="mode() === 'full' ? 'row' : 'avatar'" />
+            @if (feedbackLabel()) {
+            <button type="button" class="side-bell" [attr.title]="feedbackLabel()" [attr.aria-label]="feedbackLabel()"
+                    (click)="feedback.emit()">
+                <app-icon name="chat-teardrop-dots" size="sm" />
+            </button>
+            }
             <a class="side-bell" routerLink="/posts" [attr.title]="alertsTitle() || null"
                [attr.aria-label]="alertsTitle() || null">
                 <app-icon name="chat-teardrop" size="sm" />
@@ -102,17 +104,7 @@ export interface SidebarUser {
 
         .side-group + .side-group { border-top: 1px solid var(--border); padding-top: var(--space-3); }
 
-        .side-head {
-            display: flex;
-            align-items: center;
-            flex: none;
-            box-sizing: border-box;
-            min-height: var(--hit-touch);
-            justify-content: flex-end;
-            padding: 0 var(--space-2) 0 var(--space-4);
-        }
 
-        .side-toggle { display: grid; place-items: center; min-width: var(--hit-chrome); min-height: var(--hit-chrome); border: 0; background: transparent; color: var(--text); cursor: pointer; }
 
 
 
@@ -121,7 +113,7 @@ export interface SidebarUser {
             flex: 1;
             flex-direction: column;
             min-height: 0;
-            padding: 0 var(--space-3) var(--space-3);
+            padding: var(--space-3) var(--space-3);
             overflow: hidden auto;
             overscroll-behavior: contain;
         }
@@ -201,6 +193,7 @@ export interface SidebarUser {
         }
 
         .side-bell:hover { background: var(--hover); color: var(--text); }
+        button.side-bell { border: 0; background: transparent; cursor: pointer; }
 
         .side-dot {
             position: absolute;
@@ -213,7 +206,6 @@ export interface SidebarUser {
         }
 
         :host(.is-rail) { width: var(--sidebar-rail-w); }
-        :host(.is-rail) .side-head { justify-content: center; gap: var(--space-1); padding: 0 var(--space-2); }
         :host(.is-rail) .side-nav { align-items: center; padding: var(--space-3) 0; }
         :host(.is-rail) .side-group { align-items: center; gap: var(--space-1); }
         :host(.is-rail) .side-group + .side-group { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--border); }
@@ -253,8 +245,8 @@ export class SidebarComponent {
     readonly allProjectsLabel = input('');
     readonly alertsTitle = input('');
     readonly picked = output<string>();
-    readonly toggleLabel = input('');
-    readonly toggled = output<void>();
+    readonly feedbackLabel = input('');
+    readonly feedback = output<void>();
 
     countOf(item: NavItem): string {
         return indexTabBadgeLabel(item.count);

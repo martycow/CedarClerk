@@ -50,7 +50,7 @@ export const en = {
         screens: 'Screens',
         more: 'More',
         switchProject: 'Switch project',
-        allProjects: 'All projects',
+        allProjects: 'Projects Hub',
         manageTeams: 'Manage teams',
         hub: 'Hub',
         text: 'Text',
@@ -572,7 +572,7 @@ export const en = {
         title: 'Projects Hub',
         // The board itself, when a panel or a list is named after what it holds rather than after
         // the screen the reader is on.
-        shelfTitle: 'Projects',
+        shelfTitle: 'Projects Hub',
         // Plural forms differ per language, so these are functions — see the note on drafts below.
         sub: (total: number, active: number) => `${total} ${total === 1 ? 'project' : 'projects'} · ${active} active`,
         activeCount: (n: number) => `${n} active`,
@@ -645,7 +645,7 @@ export const en = {
             resume: 'Continue',
             open: 'Open',
             modules: 'Modules',
-            allProjects: 'All projects',
+            allProjects: 'Projects Hub',
             today: 'Today',
             documentsPanel: 'Documents',
             noDocuments: 'No documents yet.',

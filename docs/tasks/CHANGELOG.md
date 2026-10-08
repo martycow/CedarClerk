@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-08 — 0.25.1 review, wave 2: shell (ADR-322, ADR-324)
+
+- **T-406** Top bar: the logo and name (version beneath) link to the Projects Hub; the sidebar toggle moved from the sidebar head to the top bar after the project switcher; Fullscreen and Log out sit at the right end. File › Sign out is gone; Help › About replaces the popover's About.
+- **T-407** The account popover shows name, email, avatar, plan and credits with Settings and Log out only. Send feedback is an icon button beside the avatar; Admin is a sidebar entry for admins.
+- **T-408** With the projects module on, Documents, Assets, Calendar and Posts appear only inside an open project. `projectScopeGuard` completes their URLs from the open project (`/library` → the project's Assets) or sends them to the hub. `GET /api/posts/scheduled?project=` narrows the calendar. Queue slots stay account-wide (T-437).
+- **T-409** "Projects" is the "Projects Hub" (EN/RU); the project overview's default banner is a hatch pattern, and `project-banner.jpg` is deleted.
+
+Validation: `dotnet test` (scheduled-post filter test added); front-end 855+ specs; `npm run build` clean.
+
 ## 2026-10-08 — 0.25.1 review, wave 1: sign-in and registration (ADR-325)
 
 - **T-402** Register: title "Create your account" with no invite-only line; no "cannot be changed" hint; placeholders `USERNAME` and `CEDAR_CLERK_CODE`; a Repeat password field; live per-field validation (email, password rule, match, invite code) that blocks the submit; an optional avatar uploaded after the account exists.
