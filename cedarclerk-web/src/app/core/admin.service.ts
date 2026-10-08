@@ -130,66 +130,106 @@ export interface AdminAuditEntry {
     createdAt: string;
 }
 
-// The landing page's editable half (ADR-215). The page's structure, prices and feature list stay in
-// the server's code; these are the strings and lists no test can check.
+// The landing as ADR-323 stores it: sections of typed blocks, every text a language map.
 export interface LandingTextPair {
     en: string | null;
     ru: string | null;
 }
 
-export interface LandingShot {
-    file: string;
-    caption: LandingTextPair;
+export type LandingTextMap = Record<string, string>;
+
+export interface LandingFeature {
+    id: string;
+    icon: string;
+    title: LandingTextMap;
+    body: LandingTextMap;
+    shot: string | null;
 }
 
-/** `mark` is done | doing | next — which glyph and which colour the column's items take. */
-export interface LandingRoadmapColumn {
-    title: LandingTextPair;
-    mark: string;
-    items: LandingTextPair[];
+export interface LandingItem {
+    text: Record<string, LandingTextMap>;
+    icon: string | null;
+    file: string | null;
+    /** done | doing | next — which glyph a board column's entries take. */
+    mark: string | null;
+    entries: LandingTextMap[];
 }
 
-export interface LandingStoryStep {
-    when: LandingTextPair;
-    title: LandingTextPair;
-    text: LandingTextPair;
+export interface LandingBlock {
+    id: string;
+    type: string;
+    style: string | null;
+    hidden: boolean;
+    text: Record<string, LandingTextMap>;
+    items: LandingItem[];
+    options: Record<string, boolean>;
+    url: string | null;
+    image: string | null;
 }
 
-export interface LandingEditorialField {
-    key: string;
-    label: LandingTextPair;
-    default: LandingTextPair;
+export interface LandingSection {
+    id: string;
+    layout: string;
+    anchor: string | null;
+    hidden: boolean;
+    nav: LandingTextMap;
+    label: LandingTextMap;
+    blocks: LandingBlock[];
+}
+
+export interface LandingDocument {
+    languages: string[];
+    showcaseBlog: string | null;
+    features: LandingFeature[];
+    sections: LandingSection[];
+}
+
+export interface LandingStyleSpec {
+    id: string;
+    fields: string[];
+    itemFields: string[];
+    icons: boolean;
+    files: boolean;
+    marks: boolean;
+    entries: boolean;
+    image: boolean;
+    url: boolean;
+}
+
+export interface LandingBlockSpec {
+    type: string;
+    styles: LandingStyleSpec[];
+    required: string[];
+    requiredItem: string[];
+    options: string[];
+    single: boolean;
+}
+
+export interface LandingSchema {
+    layouts: string[];
+    blocks: LandingBlockSpec[];
+    marks: string[];
+    requiredLanguages: string[];
+    languages: { code: string; endonym: string }[];
+    tokens: string[];
 }
 
 export interface AdminLanding {
-    editorial?: Record<string, LandingTextPair>;
-    editorialFields?: LandingEditorialField[];
-    kickerEn: string | null;
-    kickerRu: string | null;
-    heroTitleEn: string | null;
-    heroTitleRu: string | null;
-    heroSubEn: string | null;
-    heroSubRu: string | null;
-    proofEn: string | null;
-    proofRu: string | null;
-    noteEn: string | null;
-    noteRu: string | null;
-    showcaseBlog: string | null;
-    showShots: boolean;
-    showFeatures: boolean;
-    showPricing: boolean;
-    showRoadmap: boolean;
-    showStory: boolean;
-    showDownload: boolean;
-    shots: LandingShot[];
-    roadmap: LandingRoadmapColumn[];
-    story: LandingStoryStep[];
-    /** What the page falls back to when a field is left blank — shown as the field's placeholder. */
-    defaults: { kicker: LandingTextPair; heroTitle: LandingTextPair; heroSub: LandingTextPair };
+    document: LandingDocument;
+    /** False while the page is still read from the pre-block columns. */
+    stored: boolean;
+    schema: LandingSchema;
     configuredShowcaseBlog: string | null;
-    /** Every image actually on disk, including any the current list no longer points at. */
+    /** Every image actually on disk, including any the document no longer points at. */
     files: string[];
     waitlist: number;
+}
+
+export interface LandingPreview {
+    html: string;
+    language: string;
+    /** Why this document would be refused on save, or null. */
+    problem: string | null;
 }
 
 export interface AdminDiscovery {
@@ -329,8 +369,12 @@ export class AdminService {
     // The whole page in one PUT, not a field at a time: the sections, the copy and the lists are
     // read together to draw one page, and half-saving them is how a headline ends up describing a
     // section that was switched off.
-    saveLanding(body: Omit<AdminLanding, 'defaults' | 'configuredShowcaseBlog' | 'files' | 'waitlist' | 'editorialFields'>) {
-        return firstValueFrom(this.http.put('/api/admin/landing', body));
+    saveLanding(document: LandingDocument) {
+        return firstValueFrom(this.http.put('/api/admin/landing', { document }));
+    }
+
+    previewLanding(document: LandingDocument, language: string) {
+        return firstValueFrom(this.http.post<LandingPreview>('/api/admin/landing/preview', { document, language }));
     }
 
     uploadLandingShot(file: File) {

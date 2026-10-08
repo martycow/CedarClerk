@@ -1,0 +1,319 @@
+@if (showSkeleton()) {
+<app-skeleton [count]="4" />
+} @else if (doc(); as D) {
+@let L = t().admin.landing;
+<div class="le-bar">
+    <div class="le-langs" role="group" [attr.aria-label]="L.language">
+        @for (code of D.languages; track code) {
+        <button type="button" class="le-lang" [attr.aria-pressed]="lang() === code" (click)="setLanguage(code)">{{ code.toUpperCase() }}</button>
+        }
+    </div>
+    @if (addableLanguages().length) {
+    <select class="le-add-language" [(ngModel)]="newLanguage" [attr.aria-label]="L.addLanguage">
+        <option value="">{{ L.addLanguage }}</option>
+        @for (o of addableLanguages(); track o.code) { <option [value]="o.code">{{ o.endonym }}</option> }
+    </select>
+    <app-button variant="paper" size="sm" data-act="add-language" [disabled]="!newLanguage" (clicked)="addLanguage()">{{ L.add }}</app-button>
+    }
+    @if (!isRequiredLanguage(lang())) {
+    <app-button variant="paper" size="sm" data-act="remove-language" (clicked)="removeLanguage(lang())">{{ L.removeLanguage(lang().toUpperCase()) }}</app-button>
+    }
+    <span class="spacer"></span>
+    <a class="le-open" href="/welcome" target="_blank" rel="noopener">{{ L.preview }} &rarr;</a>
+    @if (saved()) { <span class="chip">{{ L.saved }}</span> }
+    @else if (dirty()) { <span class="chip">{{ L.unsaved }}</span> }
+    <app-button variant="pine" size="sm" data-act="save" [disabled]="busy()" (clicked)="save()">{{ L.save }}</app-button>
+</div>
+<p class="field-hint-inline">{{ L.intro }}</p>
+@if (!data()?.stored) { <p class="field-hint-inline">{{ L.notStored }}</p> }
+@if (error()) { <p class="le-problem" role="alert">{{ error() }}</p> }
+<p class="le-live" role="status" aria-live="polite">{{ announcement() }}</p>
+
+<div class="le-grid">
+<div class="le-edit">
+    <h2 class="label">{{ L.sections }}</h2>
+    <p class="field-hint-inline">{{ L.sectionsHint }}</p>
+
+    @for (section of D.sections; track section.id; let si = $index) {
+    <section class="le-section" [class.is-hidden]="section.hidden" [attr.data-section]="section.id">
+        <div class="le-head">
+            <span class="le-title" tabindex="0" role="group" [attr.aria-label]="L.sectionN(si + 1, name('layouts', section.layout))"
+                  [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'" (keydown)="moveKey($event, D.sections, si)">
+                {{ L.sectionN(si + 1, name('layouts', section.layout)) }}
+                @if (section.hidden) { <span class="chip">{{ L.hidden }}</span> }
+            </span>
+            <span class="spacer"></span>
+            <app-button variant="paper" size="sm" [attr.data-move]="'s-' + section.id + '-up'" [disabled]="si === 0"
+                        [title]="L.moveUp" (clicked)="move(D.sections, si, -1, 's-' + section.id)">{{ L.up }}</app-button>
+            <app-button variant="paper" size="sm" [attr.data-move]="'s-' + section.id + '-down'" [disabled]="si === D.sections.length - 1"
+                        [title]="L.moveDown" (clicked)="move(D.sections, si, 1, 's-' + section.id)">{{ L.down }}</app-button>
+            <app-button variant="paper" size="sm" data-act="hide-section" (clicked)="toggle(section)">{{ section.hidden ? L.show : L.hide }}</app-button>
+            <app-button variant="paper" size="sm" data-act="remove-section" (clicked)="remove(D.sections, si)">{{ L.remove }}</app-button>
+        </div>
+        <div class="le-props">
+            <label class="le-field">
+                <span>{{ L.layout }}</span>
+                <select [(ngModel)]="section.layout" (ngModelChange)="changed()">
+                    @for (layout of schema()?.layouts ?? []; track layout) { <option [value]="layout">{{ name('layouts', layout) }}</option> }
+                </select>
+            </label>
+            <label class="le-field">
+                <span>{{ L.anchor }}</span>
+                <input [ngModel]="section.anchor ?? ''" (ngModelChange)="section.anchor = blank($event); changed()" maxlength="40" placeholder="pricing">
+            </label>
+            <label class="le-field">
+                <span>{{ L.navLabel }} <span class="le-code">{{ lang().toUpperCase() }}</span></span>
+                <input [ngModel]="value(section.nav)" (ngModelChange)="setValue(section.nav, $event)" maxlength="80">
+                @if (missing(section.nav, false).length) { <span class="le-missing">{{ L.missing(missing(section.nav, false).join(', ')) }}</span> }
+            </label>
+            <label class="le-field">
+                <span>{{ L.ariaLabel }} <span class="le-code">{{ lang().toUpperCase() }}</span></span>
+                <input [ngModel]="value(section.label)" (ngModelChange)="setValue(section.label, $event)" maxlength="160">
+                @if (missing(section.label, false).length) { <span class="le-missing">{{ L.missing(missing(section.label, false).join(', ')) }}</span> }
+            </label>
+        </div>
+
+        @for (block of section.blocks; track block.id; let bi = $index) {
+        @let S = style(block);
+        @let P = spec(block);
+        <div class="le-block" [class.is-hidden]="block.hidden" [attr.data-block]="block.id">
+            <div class="le-head">
+                <span class="le-title" tabindex="0" role="group" [attr.aria-label]="name('blockTypes', block.type)"
+                      [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'" (keydown)="moveKey($event, section.blocks, bi)">
+                    {{ name('blockTypes', block.type) }}
+                    @if (block.hidden) { <span class="chip">{{ L.hidden }}</span> }
+                </span>
+                @if ((P?.styles?.length ?? 0) > 1) {
+                <select class="le-style" [ngModel]="block.style" (ngModelChange)="setStyle(block, $event)" [attr.aria-label]="L.style">
+                    @for (option of P!.styles; track option.id) { <option [value]="option.id">{{ name('styles', option.id) }}</option> }
+                </select>
+                }
+                <span class="spacer"></span>
+                <app-button variant="paper" size="sm" [attr.data-move]="'b-' + block.id + '-up'" [disabled]="bi === 0"
+                            [title]="L.moveUp" (clicked)="move(section.blocks, bi, -1, 'b-' + block.id)">{{ L.up }}</app-button>
+                <app-button variant="paper" size="sm" [attr.data-move]="'b-' + block.id + '-down'" [disabled]="bi === section.blocks.length - 1"
+                            [title]="L.moveDown" (clicked)="move(section.blocks, bi, 1, 'b-' + block.id)">{{ L.down }}</app-button>
+                <app-button variant="paper" size="sm" data-act="hide-block" (clicked)="toggle(block)">{{ block.hidden ? L.show : L.hide }}</app-button>
+                <app-button variant="paper" size="sm" data-act="remove-block" (clicked)="remove(section.blocks, bi)">{{ L.remove }}</app-button>
+            </div>
+
+            @if (block.type === 'pricing') { <p class="field-hint-inline">{{ L.pricingHint }}</p> }
+            @if (block.type === 'discovery') { <p class="field-hint-inline">{{ L.discoveryHint }}</p> }
+            @if (block.type === 'tools') { <p class="field-hint-inline">{{ L.toolsHint }}</p> }
+            @if (block.type === 'social') { <p class="field-hint-inline">{{ L.socialHint }}</p> }
+
+            @for (key of S?.fields ?? []; track key) {
+            <label class="le-field wide">
+                <span>{{ name('fields', key) }} <span class="le-code">{{ lang().toUpperCase() }}</span>
+                    @if (P?.required?.includes(key)) { <span class="le-required">{{ L.required }}</span> }</span>
+                <textarea rows="2" [attr.data-field]="key" [ngModel]="field(block, key)" (ngModelChange)="setField(block, key, $event)" maxlength="2000"></textarea>
+                @if (block.type === 'text' && block.style === 'hero' && key === 'title') { <span class="field-hint-inline">{{ L.heroTitleHint }}</span> }
+                @if (missing(block.text[key], P?.required?.includes(key) ?? false).length) {
+                <span class="le-missing">{{ L.missing(missing(block.text[key], P?.required?.includes(key) ?? false).join(', ')) }}</span>
+                }
+            </label>
+            }
+
+            @if (S?.url) {
+            <label class="le-field wide">
+                <span>{{ L.link }}</span>
+                <input [ngModel]="block.url ?? ''" (ngModelChange)="block.url = blank($event); changed()" maxlength="300" placeholder="https://">
+                <span class="field-hint-inline">{{ L.linkHint }}</span>
+            </label>
+            }
+            @if (S?.image) {
+            <label class="le-field wide">
+                <span>{{ L.image }}</span>
+                <select [ngModel]="block.image ?? ''" (ngModelChange)="block.image = blank($event); changed()">
+                    <option value="">{{ L.noImage }}</option>
+                    @for (file of fileChoices(block.image); track file) { <option [value]="file">{{ file }}</option> }
+                </select>
+            </label>
+            }
+            @for (option of P?.options ?? []; track option) {
+            <label class="le-check">
+                <input type="checkbox" [ngModel]="!!block.options[option]" (ngModelChange)="setOption(block, option, $event)">
+                {{ name('options', option) }}
+            </label>
+            }
+
+            @if ((S?.itemFields?.length ?? 0) > 0 || S?.files) {
+            <div class="le-items">
+                @for (item of block.items; track $index; let ii = $index) {
+                <div class="le-item">
+                    <div class="le-head">
+                        <span class="muted">{{ L.itemN(ii + 1) }}</span>
+                        <span class="spacer"></span>
+                        <app-button variant="paper" size="sm" [disabled]="ii === 0" [title]="L.moveUp" (clicked)="move(block.items, ii, -1)">{{ L.up }}</app-button>
+                        <app-button variant="paper" size="sm" [disabled]="ii === block.items.length - 1" [title]="L.moveDown" (clicked)="move(block.items, ii, 1)">{{ L.down }}</app-button>
+                        <app-button variant="paper" size="sm" (clicked)="remove(block.items, ii)">{{ L.remove }}</app-button>
+                    </div>
+                    @if (S?.files) {
+                    <div class="le-file">
+                        @if (item.file) { <img [src]="fileUrl(item.file)" alt=""> }
+                        <select [ngModel]="item.file ?? ''" (ngModelChange)="item.file = blank($event); changed()" [attr.aria-label]="L.image">
+                            @for (file of fileChoices(item.file); track file) { <option [value]="file">{{ file }}</option> }
+                        </select>
+                    </div>
+                    }
+                    @if (S?.icons) {
+                    <label class="le-field">
+                        <span>{{ L.icon }}</span>
+                        <span class="le-icon-pick">
+                            <app-icon [name]="$any(item.icon ?? 'check')" size="md" />
+                            <select [ngModel]="item.icon" (ngModelChange)="item.icon = $event; changed()">
+                                @for (icon of iconNames; track icon) { <option [value]="icon">{{ icon }}</option> }
+                            </select>
+                        </span>
+                    </label>
+                    }
+                    @if (S?.marks) {
+                    <label class="le-field">
+                        <span>{{ L.mark }}</span>
+                        <select [ngModel]="item.mark" (ngModelChange)="item.mark = $event; changed()">
+                            @for (mark of schema()?.marks ?? []; track mark) { <option [value]="mark">{{ name('marks', mark) }}</option> }
+                        </select>
+                    </label>
+                    }
+                    @for (key of S?.itemFields ?? []; track key) {
+                    <label class="le-field wide">
+                        <span>{{ name('fields', key) }} <span class="le-code">{{ lang().toUpperCase() }}</span>
+                            @if (P?.requiredItem?.includes(key)) { <span class="le-required">{{ L.required }}</span> }</span>
+                        <textarea rows="2" [ngModel]="field(item, key)" (ngModelChange)="setField(item, key, $event)" maxlength="2000"></textarea>
+                        @if (missing(item.text[key], P?.requiredItem?.includes(key) ?? false).length) {
+                        <span class="le-missing">{{ L.missing(missing(item.text[key], P?.requiredItem?.includes(key) ?? false).join(', ')) }}</span>
+                        }
+                    </label>
+                    }
+                    @if (S?.entries) {
+                    <label class="le-field wide">
+                        <span>{{ L.entries }} <span class="le-code">{{ lang().toUpperCase() }}</span></span>
+                        <textarea rows="4" [ngModel]="entries(item)" (ngModelChange)="setEntries(item, $event)"></textarea>
+                    </label>
+                    }
+                </div>
+                }
+                @if (S?.files) {
+                <div class="le-add">
+                    <select #pick [attr.aria-label]="L.image">
+                        @for (file of data()?.files ?? []; track file) { <option [value]="file">{{ file }}</option> }
+                    </select>
+                    <app-button variant="paper" size="sm" [disabled]="!(data()?.files?.length)" (clicked)="addItem(block, pick.value)">{{ L.addImage }}</app-button>
+                </div>
+                } @else {
+                <app-button variant="paper" size="sm" data-act="add-item" (clicked)="addItem(block)">{{ L.addItem }}</app-button>
+                }
+            </div>
+            }
+        </div>
+        }
+
+        <div class="le-add">
+            <select [(ngModel)]="newBlockType[section.id]" [attr.aria-label]="L.blockType">
+                <option [ngValue]="undefined" disabled>{{ L.blockType }}</option>
+                @for (type of addableTypes(); track type.type) { <option [value]="type.type">{{ name('blockTypes', type.type) }}</option> }
+            </select>
+            <app-button variant="paper" size="sm" data-act="add-block" [disabled]="!newBlockType[section.id]" (clicked)="addBlock(section)">{{ L.addBlock }}</app-button>
+        </div>
+    </section>
+    }
+
+    <div class="le-add">
+        <select [(ngModel)]="newLayout" [attr.aria-label]="L.layout">
+            @for (layout of schema()?.layouts ?? []; track layout) { <option [value]="layout">{{ name('layouts', layout) }}</option> }
+        </select>
+        <app-button variant="paper" size="sm" data-act="add-section" (clicked)="addSection()">{{ L.addSection }}</app-button>
+    </div>
+
+    <h2 class="label le-heading">{{ L.features }}</h2>
+    <p class="field-hint-inline">{{ L.featuresHint(schema()?.tokens?.join(' ') ?? '') }}</p>
+    @for (feature of D.features; track feature.id; let fi = $index) {
+    <div class="le-item" [attr.data-feature]="feature.id">
+        <div class="le-head">
+            <span class="le-title" tabindex="0" role="group" [attr.aria-label]="L.featureN(fi + 1)"
+                  [attr.aria-keyshortcuts]="'Alt+ArrowUp Alt+ArrowDown'" (keydown)="moveKey($event, D.features, fi)">
+                <app-icon [name]="$any(feature.icon)" size="md" /> {{ value(feature.title) || L.featureN(fi + 1) }}
+            </span>
+            <span class="spacer"></span>
+            <app-button variant="paper" size="sm" [attr.data-move]="'f-' + feature.id + '-up'" [disabled]="fi === 0"
+                        [title]="L.moveUp" (clicked)="move(D.features, fi, -1, 'f-' + feature.id)">{{ L.up }}</app-button>
+            <app-button variant="paper" size="sm" [attr.data-move]="'f-' + feature.id + '-down'" [disabled]="fi === D.features.length - 1"
+                        [title]="L.moveDown" (clicked)="move(D.features, fi, 1, 'f-' + feature.id)">{{ L.down }}</app-button>
+            <app-button variant="paper" size="sm" (clicked)="remove(D.features, fi)">{{ L.remove }}</app-button>
+        </div>
+        <div class="le-props">
+            <label class="le-field">
+                <span>{{ L.icon }}</span>
+                <select [ngModel]="feature.icon" (ngModelChange)="feature.icon = $event; changed()">
+                    @for (icon of iconNames; track icon) { <option [value]="icon">{{ icon }}</option> }
+                </select>
+            </label>
+            <label class="le-field">
+                <span>{{ L.screenshot }}</span>
+                <select [ngModel]="feature.shot ?? ''" (ngModelChange)="feature.shot = blank($event); changed()">
+                    <option value="">{{ L.noImage }}</option>
+                    @for (file of fileChoices(feature.shot); track file) { <option [value]="file">{{ file }}</option> }
+                </select>
+            </label>
+        </div>
+        <label class="le-field wide">
+            <span>{{ name('fields', 'title') }} <span class="le-code">{{ lang().toUpperCase() }}</span> <span class="le-required">{{ L.required }}</span></span>
+            <input [ngModel]="value(feature.title)" (ngModelChange)="setValue(feature.title, $event)" maxlength="200">
+            @if (missing(feature.title, true).length) { <span class="le-missing">{{ L.missing(missing(feature.title, true).join(', ')) }}</span> }
+        </label>
+        <label class="le-field wide">
+            <span>{{ name('fields', 'body') }} <span class="le-code">{{ lang().toUpperCase() }}</span> <span class="le-required">{{ L.required }}</span></span>
+            <textarea rows="2" [ngModel]="value(feature.body)" (ngModelChange)="setValue(feature.body, $event)" maxlength="2000"></textarea>
+            @if (missing(feature.body, true).length) { <span class="le-missing">{{ L.missing(missing(feature.body, true).join(', ')) }}</span> }
+        </label>
+    </div>
+    }
+    <app-button variant="paper" size="sm" data-act="add-feature" (clicked)="addFeature()">{{ L.addFeature }}</app-button>
+
+    <h2 class="label le-heading">{{ L.page }}</h2>
+    <label class="le-field wide">
+        <span>{{ L.showcase }}</span>
+        <input [ngModel]="D.showcaseBlog ?? ''" (ngModelChange)="D.showcaseBlog = blank($event); changed()" maxlength="120" placeholder="notes.cedarclerk.app">
+        <span class="field-hint-inline">{{ data()?.configuredShowcaseBlog ? L.configuredShowcase(data()!.configuredShowcaseBlog!) : L.noConfiguredShowcase }}</span>
+    </label>
+
+    <h2 class="label le-heading">{{ L.files }}</h2>
+    <p class="field-hint-inline">{{ L.filesHint }}</p>
+    <label class="le-upload">
+        <input type="file" accept="image/png,image/jpeg,image/webp" (change)="upload($event)" [disabled]="busy()">
+        <span>{{ L.upload }}</span>
+    </label>
+    <div class="le-files">
+        @for (file of data()?.files ?? []; track file) {
+        <div class="le-file">
+            <img [src]="fileUrl(file)" alt="">
+            <span class="muted">{{ file }}</span>
+            @if (!isUsed(file)) { <span class="chip">{{ L.unused }}</span> }
+            <app-button variant="paper" size="sm" [disabled]="busy()" (clicked)="deleteFile(file)">{{ L.deleteFile }}</app-button>
+        </div>
+        }
+    </div>
+</div>
+
+<aside class="le-preview" [attr.aria-label]="L.livePreview">
+    <div class="le-head">
+        <h2 class="label">{{ L.livePreview }} · {{ lang().toUpperCase() }}</h2>
+        <span class="spacer"></span>
+        <div class="le-langs" role="group" [attr.aria-label]="L.previewWidth">
+            <button type="button" class="le-lang" [attr.aria-pressed]="previewWidth() === 'desktop'" (click)="previewWidth.set('desktop')">{{ L.desktop }}</button>
+            <button type="button" class="le-lang" [attr.aria-pressed]="previewWidth() === 'phone'" (click)="previewWidth.set('phone')">{{ L.phone }}</button>
+        </div>
+        <app-button variant="paper" size="sm" data-act="refresh-preview" [disabled]="previewBusy()" (clicked)="refreshPreview()">{{ L.refresh }}</app-button>
+    </div>
+    @if (problem()) { <p class="le-problem" role="status">{{ L.wouldNotSave(problem()!) }}</p> }
+    <div class="le-frame-box" #frameBox [attr.aria-busy]="previewBusy()">
+        @if (previewHtml(); as html) {
+        <iframe class="le-frame" sandbox="allow-same-origin" [srcdoc]="html" [title]="L.livePreview"
+                [style.width.px]="previewWidths[previewWidth()]"
+                [style.height.%]="100 / previewScale()"
+                [style.transform]="'scale(' + previewScale() + ')'"></iframe>
+        }
+    </div>
+</aside>
+</div>
+}

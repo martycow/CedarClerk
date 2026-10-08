@@ -69,6 +69,11 @@ public static class PublicControls
     public static string LanguageSwitch(bool ru, string ruHref, string enHref) =>
         $"""<div class="pc-lang" role="group" aria-label="{(ru ? "Язык" : "Language")}"><a href="{System.Net.WebUtility.HtmlEncode(ruHref)}"{(ru ? " aria-current=\"true\"" : "")}>RU</a><a href="{System.Net.WebUtility.HtmlEncode(enHref)}"{(ru ? "" : " aria-current=\"true\"")}>EN</a></div>""";
 
+    /// <summary>The same control for a page that carries more than the two languages.</summary>
+    public static string LanguageSwitch(string current, IReadOnlyList<string> languages, Func<string, string> href) =>
+        $"""<div class="pc-lang" role="group" aria-label="{(current == "ru" ? "Язык" : "Language")}">{string.Join("", languages.Select(l =>
+            $"""<a href="{System.Net.WebUtility.HtmlEncode(href(l))}"{(l == current ? " aria-current=\"true\"" : "")}>{l.ToUpperInvariant()}</a>"""))}</div>""";
+
     /// <summary>Size and face for pages that are not a blog post: the blog maps them onto its own reading column.</summary>
     public const string PageCss = """
         :root[data-read="s"] body { zoom: .94; }

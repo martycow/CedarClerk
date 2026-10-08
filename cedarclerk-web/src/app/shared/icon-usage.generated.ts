@@ -14,7 +14,7 @@ export interface IconUsageRow {
 export const ICON_USAGE: IconUsageRow[] = [
     {
         "icon": "(dynamic)",
-        "count": 62,
+        "count": 64,
         "labels": [
             "a.fileName",
             "a.relativePath",
@@ -63,6 +63,7 @@ export const ICON_USAGE: IconUsageRow[] = [
             "pages/editor-preview/state-tag.component.ts",
             "pages/editor-publish/destination-card.component.ts",
             "pages/editor.component.html",
+            "pages/landing-editor.component.html",
             "pages/media-library.component.html",
             "pages/posts-manager.component.html",
             "pages/presets.component.html",
@@ -598,22 +599,6 @@ export const ICON_USAGE: IconUsageRow[] = [
         ]
     },
     {
-        "icon": "arrow-up",
-        "count": 5,
-        "labels": [
-            "t().drafts.tree.moveUp",
-            "t().projects.canvas.bringToFront",
-            "t().projects.showcase.moveUp"
-        ],
-        "files": [
-            "pages/admin.component.html",
-            "pages/drafts.component.html",
-            "pages/project-canvas.component.html",
-            "pages/project-showcase.component.html",
-            "pages/project.component.html"
-        ]
-    },
-    {
         "icon": "folder-open",
         "count": 5,
         "labels": [],
@@ -636,15 +621,16 @@ export const ICON_USAGE: IconUsageRow[] = [
         ]
     },
     {
-        "icon": "arrow-down",
+        "icon": "arrow-up",
         "count": 4,
         "labels": [
-            "t().drafts.tree.moveDown",
-            "t().projects.showcase.moveDown"
+            "t().drafts.tree.moveUp",
+            "t().projects.canvas.bringToFront",
+            "t().projects.showcase.moveUp"
         ],
         "files": [
-            "pages/admin.component.html",
             "pages/drafts.component.html",
+            "pages/project-canvas.component.html",
             "pages/project-showcase.component.html",
             "pages/project.component.html"
         ]
@@ -687,6 +673,19 @@ export const ICON_USAGE: IconUsageRow[] = [
         "files": [
             "pages/drafts.component.html",
             "pages/projects.component.html"
+        ]
+    },
+    {
+        "icon": "arrow-down",
+        "count": 3,
+        "labels": [
+            "t().drafts.tree.moveDown",
+            "t().projects.showcase.moveDown"
+        ],
+        "files": [
+            "pages/drafts.component.html",
+            "pages/project-showcase.component.html",
+            "pages/project.component.html"
         ]
     },
     {

@@ -75,15 +75,10 @@ const WAITLIST: AdminWaitlistEntry[] = [
     { id: 'wait-b', email: 'boris@example.test', language: 'ru', createdAt: '2026-08-02T09:00:00' },
 ];
 const LANDING: AdminLanding = {
-    kickerEn: null, kickerRu: null, heroTitleEn: null, heroTitleRu: null, heroSubEn: null, heroSubRu: null,
-    proofEn: null, proofRu: null, noteEn: null, noteRu: null, showcaseBlog: null,
-    showShots: false, showFeatures: false, showPricing: false, showRoadmap: false, showStory: false,
-    showDownload: false, shots: [], roadmap: [], story: [], configuredShowcaseBlog: null, files: [], waitlist: 0,
-    defaults: {
-        kicker: { en: null, ru: null },
-        heroTitle: { en: null, ru: null },
-        heroSub: { en: null, ru: null },
-    },
+    document: { languages: ['en', 'ru'], showcaseBlog: null, features: [], sections: [] },
+    stored: true,
+    schema: { layouts: ['stack'], blocks: [], marks: [], requiredLanguages: ['en', 'ru'], languages: [], tokens: [] },
+    configuredShowcaseBlog: null, files: [], waitlist: 3,
 };
 
 class FakeAdmin {
@@ -113,14 +108,9 @@ class FakeAdmin {
             total: this.paymentTotal ?? payments.length,
         };
     }
-    landingData = structuredClone(LANDING);
-    landingSave: Record<string, unknown> | null = null;
-    async landing() { return structuredClone(this.landingData); }
-    async waitlist() { return []; }
-    async saveLanding(body: Record<string, unknown>) {
-        this.landingSave = body;
-        this.landingData = { ...this.landingData, ...body } as AdminLanding;
-    }
+    async landing() { return structuredClone(LANDING); }
+    async waitlist() { return structuredClone(WAITLIST); }
+    async previewLanding() { return { html: '<!doctype html><title>preview</title>', language: 'en', problem: null }; }
     async usage() { return structuredClone(USAGE); }
 }
 
@@ -150,27 +140,16 @@ describe('admin panel — the per-user modal (T-257)', () => {
 
     afterEach(() => vi.useRealTimers());
 
-    it('loads and saves bilingual landing copy without replacing screenshot settings', async () => {
-        const api = TestBed.inject(AdminService) as unknown as FakeAdmin;
-        api.landingData = {
-            ...structuredClone(LANDING), showShots: true,
-            shots: [{ file: 'uploaded.png', caption: { en: 'Product', ru: 'Продукт' } }],
-            editorial: { closingTitle: { en: 'Saved heading', ru: null } },
-            editorialFields: [{ key: 'closingTitle', label: { en: 'Closing', ru: 'Приглашение' },
-                default: { en: 'Default heading', ru: 'Заголовок' } }],
-        };
+    it('mounts the landing block editor, takes the waitlist badge from it and still lists the waitlist', async () => {
         const component = fixture.componentInstance;
-        await component.loadLanding();
-        component.tab.set('landing');
+        component.setTab('landing');
         fixture.detectChanges();
-        expect(component.editorialFields[0].en).toBe('Saved heading');
-        expect(el().querySelector('#landing-closingTitle-ru')?.getAttribute('placeholder')).toBe('Заголовок');
-        component.editorialFields[0].ru = '  Новый заголовок  ';
-        await component.saveLanding();
-        expect(api.landingSave?.['editorial']).toEqual({ closingTitle: { en: 'Saved heading', ru: 'Новый заголовок' } });
-        expect(api.landingSave?.['shots']).toEqual(api.landingData.shots);
-        expect(api.landingSave?.['showShots']).toBe(true);
-        expect(component.editorialFields[0].ru).toBe('Новый заголовок');
+        await settle(fixture);
+        fixture.detectChanges();
+        expect(el().querySelector('app-landing-editor')).not.toBeNull();
+        expect(component.landing()?.waitlist).toBe(3);
+        expect(component.sectionTabs().find(tab => tab.id === 'landing')?.badge).toBe(3);
+        expect(el().querySelectorAll('.waitlist-row:not(.head)').length).toBe(WAITLIST.length);
     });
 
     it('the card list carries no inline form, and a card opens the account modal', () => {

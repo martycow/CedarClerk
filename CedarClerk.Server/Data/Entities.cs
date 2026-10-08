@@ -1462,6 +1462,12 @@ public class LandingSettings
     public string? StoryJson { get; set; }
     public string? EditorialJson { get; set; }
 
+    /// <summary>
+    /// ADR-323 — the landing as sections of blocks. Null until an admin first saves from the block
+    /// editor; until then <see cref="LandingDocument.FromLegacy"/> reads the columns above.
+    /// </summary>
+    public string? DocumentJson { get; set; }
+
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 

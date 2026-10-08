@@ -9,7 +9,7 @@ namespace CedarClerk.Server;
 /// <summary>Where the landing's uploaded screenshots live. Injected, like <see cref="MediaPaths"/>.</summary>
 public record LandingPaths(string Dir);
 
-// The landing tab of the admin panel (ADR-215). Same file split as Entities.IndieDev.cs: a second
+// The landing tab of the admin panel (ADR-215, ADR-323). Same file split as Entities.IndieDev.cs: a second
 // file rather than a second class, so these routes are inside the group's admin gate by
 // construction and cannot be added outside it by accident.
 public static partial class AdminEndpoints
@@ -25,55 +25,29 @@ public static partial class AdminEndpoints
         ["image/webp"] = ".webp",
     };
 
-    public record LandingSaveRequest(
-        string? KickerEn, string? KickerRu,
-        string? HeroTitleEn, string? HeroTitleRu,
-        string? HeroSubEn, string? HeroSubRu,
-        string? ProofEn, string? ProofRu,
-        string? NoteEn, string? NoteRu,
-        string? ShowcaseBlog,
-        bool ShowShots, bool ShowFeatures, bool ShowPricing, bool ShowRoadmap, bool ShowStory,
-        // Nullable so an editor build that predates the field cannot reset it by omission.
-        bool? ShowDownload,
-        List<LandingShot>? Shots,
-        List<LandingRoadmapColumn>? Roadmap,
-        List<LandingStoryStep>? Story,
-        Dictionary<string, LandingText>? Editorial = null);
+    public record LandingSaveRequest(LandingDocument? Document);
+
+    public record LandingPreviewRequest(LandingDocument? Document, string? Language);
 
     private static void MapLandingAdmin(RouteGroupBuilder group)
     {
-        // One read for the whole tab: the stored row, whatever is actually on disk, and how many
-        // people are waiting. Three requests to draw one screen is three chances to draw half of it.
+        // One read for the whole tab: the document, what a block may be, whatever is actually on
+        // disk, and how many people are waiting.
         group.MapGet("/landing", async (CedarDbContext db, LandingPaths paths, IConfiguration cfg) =>
         {
             var row = await db.LandingSettings.AsNoTracking().FirstOrDefaultAsync();
-            var content = LandingContent.From(row, cfg[Consts.General.ShowcaseBlogCfg]);
             return Results.Ok(new
             {
-                row?.KickerEn, row?.KickerRu,
-                row?.HeroTitleEn, row?.HeroTitleRu,
-                row?.HeroSubEn, row?.HeroSubRu,
-                row?.ProofEn, row?.ProofRu,
-                row?.NoteEn, row?.NoteRu,
-                row?.ShowcaseBlog,
-                content.ShowShots,
-                content.ShowFeatures,
-                content.ShowPricing,
-                content.ShowRoadmap,
-                content.ShowStory,
-                content.ShowDownload,
-                content.Shots,
-                content.Roadmap,
-                content.Story,
-                Editorial = LandingContent.ReadEditorial(row?.EditorialJson),
-                EditorialFields = LandingTexts.EditorialFields.Select(f => new { f.Key, f.Label, f.Default }),
-                // What the placeholders would say if the fields above stay empty, so the editor can
-                // show them as placeholders rather than making the admin guess what "empty" means.
-                Defaults = new
+                Document = LandingDocument.FromRow(row, cfg[Consts.General.ShowcaseBlogCfg]),
+                Stored = LandingDocument.IsStored(row),
+                Schema = new
                 {
-                    Kicker = LandingTexts.Kicker,
-                    HeroTitle = LandingTexts.HeroTitle,
-                    HeroSub = LandingTexts.HeroSub,
+                    Layouts = LandingLayouts.All,
+                    Blocks = LandingBlocks.All,
+                    LandingDocument.Marks,
+                    LandingDocument.RequiredLanguages,
+                    Languages = Languages.UiLanguages.Select(code => new { Code = code, Endonym = Languages.EndonymOf(code) }),
+                    Tokens = new[] { LandingDocument.LanguagesToken, LandingDocument.NetworksToken },
                 },
                 // The configured fallback, shown when the override is blank — otherwise an empty
                 // field reads as "no showcase blog" while the footer still carries a link.
@@ -85,46 +59,9 @@ public static partial class AdminEndpoints
 
         group.MapPut("/landing", async (LandingSaveRequest req, ClaimsPrincipal principal,
             UserManager<ApplicationUser> users, CedarDbContext db) =>
-        {
-            var actor = (await users.GetUserAsync(principal))!;
-            var row = await db.LandingSettings.FirstOrDefaultAsync();
-            if (row is null)
-            {
-                row = new LandingSettings();
-                db.LandingSettings.Add(row);
-            }
+            await SaveLandingAsync(req.Document, (await users.GetUserAsync(principal))!, db));
 
-            row.KickerEn = Trim(req.KickerEn);
-            row.KickerRu = Trim(req.KickerRu);
-            row.HeroTitleEn = Trim(req.HeroTitleEn);
-            row.HeroTitleRu = Trim(req.HeroTitleRu);
-            row.HeroSubEn = Trim(req.HeroSubEn);
-            row.HeroSubRu = Trim(req.HeroSubRu);
-            row.ProofEn = Trim(req.ProofEn);
-            row.ProofRu = Trim(req.ProofRu);
-            row.NoteEn = Trim(req.NoteEn);
-            row.NoteRu = Trim(req.NoteRu);
-            row.ShowcaseBlog = Trim(req.ShowcaseBlog);
-            row.ShowShots = req.ShowShots;
-            row.ShowFeatures = req.ShowFeatures;
-            row.ShowPricing = req.ShowPricing;
-            row.ShowRoadmap = req.ShowRoadmap;
-            row.ShowStory = req.ShowStory;
-            row.ShowDownload = req.ShowDownload ?? row.ShowDownload;
-            row.ShotsJson = LandingContent.Serialize(req.Shots ?? []);
-            row.RoadmapJson = LandingContent.Serialize(req.Roadmap ?? []);
-            row.StoryJson = LandingContent.Serialize(req.Story ?? []);
-            if (req.Editorial is not null)
-                row.EditorialJson = LandingContent.SerializeEditorial(req.Editorial);
-            row.UpdatedAt = DateTime.UtcNow;
-
-            // The landing is the one page a stranger sees, and it is now editable from a form.
-            // "Who changed the front door, and when" belongs in the same journal as everything else
-            // that can be changed from this panel.
-            Audit(db, actor, "landing", details: $"{req.Shots?.Count ?? 0} shots");
-            await db.SaveChangesAsync();
-            return Results.Ok();
-        });
+        group.MapPost("/landing/preview", PreviewLandingAsync);
 
         // The uploaded file keeps a name of the server's making. A screenshot arrives called
         // whatever the maintainer's screenshot tool called it, and that name goes straight into a
@@ -172,6 +109,54 @@ public static partial class AdminEndpoints
     }
 
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>
+    /// Stores the document and nothing else: the fixed columns it replaced are left exactly as
+    /// they were, so a rollback to a build that still reads them finds the page it last drew.
+    /// </summary>
+    public static async Task<IResult> SaveLandingAsync(LandingDocument? document, ApplicationUser actor, CedarDbContext db)
+    {
+        if (document is null) return Results.BadRequest(new { error = ErrorMessages.LandingDocumentInvalid });
+        if (document.Normalize().Validate() is { } problem) return Results.BadRequest(new { error = problem });
+
+        var row = await db.LandingSettings.FirstOrDefaultAsync();
+        if (row is null)
+        {
+            row = new LandingSettings();
+            db.LandingSettings.Add(row);
+        }
+        row.DocumentJson = document.Serialize();
+        row.UpdatedAt = DateTime.UtcNow;
+
+        // "Who changed the front door, and when" belongs in the same journal as everything else
+        // that can be changed from this panel.
+        Audit(db, actor, "landing",
+            details: $"{document.Sections.Count} sections, {document.Sections.Sum(s => s.Blocks.Count)} blocks");
+        await db.SaveChangesAsync();
+        return Results.Ok();
+    }
+
+    /// <summary>
+    /// The page an unsaved document would be, from the renderer the public page uses. A document
+    /// that would not save is still drawn — the renderer escapes and drops what it will not show —
+    /// and the reason it would not save travels beside it.
+    /// </summary>
+    public static async Task<IResult> PreviewLandingAsync(LandingPreviewRequest req, HttpResponse response,
+        CedarDbContext db, IConfiguration cfg)
+    {
+        response.Headers.CacheControl = "private, no-store";
+        if (req.Document is null) return Results.BadRequest(new { error = ErrorMessages.LandingDocumentInvalid });
+        var document = req.Document.Normalize();
+        if (document.Serialize().Length > LandingDocument.MaxBytes)
+            return Results.BadRequest(new { error = ErrorMessages.LandingDocumentTooLarge(LandingDocument.MaxBytes / 1024) });
+
+        var language = LandingRenderer.ChooseLanguage(req.Language, null, document.Languages);
+        var html = LandingRenderer.Render(language, document, await DiscoveryEndpoints.LoadAsync(db, cfg),
+            cfg[Consts.General.ShowcaseBlogCfg], analyticsKey: null, Consts.Analytics.DefaultHost);
+        // The preview is framed without scripts or navigation, so a link in it opens nothing.
+        html = html.Replace("<head>", "<head>\n<base target=\"_blank\">");
+        return Results.Ok(new { Html = html, Language = language, Problem = document.Validate() });
+    }
 
     private static List<string> UploadedFiles(LandingPaths paths) =>
         !Directory.Exists(paths.Dir)

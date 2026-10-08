@@ -187,6 +187,14 @@ public static partial class ErrorMessages
     public static string LandingImageUnsupported(string contentType) => T("That format does not belong here: {0}. A screenshot is PNG, JPEG or WebP.", [contentType]);
     public static string LandingImageTooLarge(long maxMb) => T("The file is too large — {0}MB at most.", [maxMb]);
     public static string LandingBadFileName => T("There is no such file here.");
+    public static string LandingDocumentInvalid => T("The landing document could not be read.");
+    public static string LandingDocumentTooLarge(int maxKb) => T("The landing document is too large — {0} KB at most.", [maxKb]);
+    public static string LandingValueUnknown(string path, string value) => T("Unknown value “{1}” at {0}.", [path, value]);
+    public static string LandingTextRequired(string path, string language) => T("Text is required at {0} for {1}.", [path, language]);
+    public static string LandingTextTooLong(string path, int maxChars) => T("The text at {0} is too long — {1} characters at most.", [path, maxChars]);
+    public static string LandingUrlInvalid(string path) => T("The address at {0} is not allowed here.", [path]);
+    public static string LandingIdInvalid(string path) => T("The id at {0} is missing, malformed or repeated.", [path]);
+    public static string LandingTooMany(string path, int max) => T("Too many entries at {0} — {1} at most.", [path, max]);
     public static string ShowcaseSlugEmpty => T("The slug came out empty — use latin letters or digits.");
     public static string UsernameRequired => T("Pick a name — it becomes the address of your blog.");
     public static string UsernameInvalid => T("A name may hold only latin letters, digits and inner hyphens — up to 16 characters, and some names are reserved.");

@@ -15,14 +15,9 @@ public record LandingRoadmapColumn(LandingText Title, string Mark, List<LandingT
 public record LandingStoryStep(LandingText When, LandingText Title, LandingText Text);
 
 /// <summary>
-/// Everything the landing draws, with the maintainer's edits already folded into the defaults
-/// (ADR-215).
-///
-/// The split is deliberate. Numbers, plans and the feature list are <b>code</b> — they are claims
-/// the product has to keep, and <see cref="PlanLimitations"/> moving without this page moving is
-/// how a pricing page starts lying. The headline, the note in the margin, the screenshots, the
-/// roadmap and the story are <b>data</b> — no test can check them, and they are the half that has
-/// to sound like a person.
+/// The pre-block landing row with its code defaults folded in (ADR-215). Nothing draws from this
+/// any more: <see cref="LandingDocument.FromLegacy"/> reads it to turn a row nobody has saved since
+/// ADR-323 into the document that draws the same page.
 /// </summary>
 public sealed class LandingContent
 {

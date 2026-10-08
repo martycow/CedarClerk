@@ -50,9 +50,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 
 **Wave 7 — glossary (ADR-320)** — done 08.10.2026.
 
-**Wave 8 — landing builder (ADR-323)**
-- [ ] T-426 Landing block model and migration — sections → typed blocks, per-item hide, language maps with added languages, current content migrated unchanged, feature list as data (Admin Panel 1–2) #growth #backend P2
-- [ ] T-427 Admin › Landing block editor — add/order/hide sections and blocks, per-block properties, per-language text, live preview (Admin Panel 1–2) #growth #admin #ui P2
+**Wave 8 — landing builder (ADR-323)** — done 08.10.2026.
 
 **Wave 9 — Writer (ADR-326; mockup `Docs_CedarClerk/Reviews/ChatGPT Image Oct 8, 2026, 08_53_49 AM.png`)**
 - [ ] T-432 Writer toolbar: one fixed row + "More ▾" — undo/redo, block type, B/I/U, link, lists, table; the rest grouped in More; remove toolbar customization (Settings editor, presets, `ToolbarLayoutService`), keep `ToolbarLayoutJson` as a vestigial column #editor #ui P1
@@ -220,6 +218,7 @@ and the realtime path has only ever run on one machine with two browser contexts
 
 ## Tech debt
 
+- [ ] T-441 Drop the vestigial `LandingSettings` columns — ADR-323 left the fixed En/Ru columns, the six section flags and `ShotsJson` / `RoadmapJson` / `StoryJson` / `EditorialJson` in place; `LandingDocument.FromLegacy` still reads them for a row nobody has saved from the block editor. Before dropping: store the converted document for any row whose `DocumentJson` is null, then remove the columns, `LandingContent`, `LegacyLandingRenderer` and `LandingEquivalenceTests` together, once the release is past the point of rolling back #growth #backend #cleanup P3
 - [ ] T-439 Drop the `GlossaryTerms` table — the `GlossaryEntries` migration copied it into `GlossaryEntry` / `GlossaryEntryLanguage` and left it in place as the rollback source (`LegacyGlossaryTerm`; nothing reads it, account deletion clears it). Once production has run on the new tables and a nightly backup holds them, remove the entity and drop the table in a migration of its own #glossary #backend P3
 - [ ] T-395 Project modules, steps 14a/14b (ADR-293) — the sidebar still hardcodes its sections and ignores the `modules` map (14a); Settings gets a toggle per module (14b). Data and write path (`PUT /api/projects/{id}/modules`) exist #indiedev #ui P2
 - [ ] T-393 Cross-platform operations CLI in Rust + Ratatui — replaces the removed MooTool `cedar` (ADR-304). Must run on macOS (primary), Linux and Windows with no PowerShell dependency. Scope: run locally with the bot forced off (`LocalNoBot`, whitespace token, `--no-launch-profile`, `wwwroot` created), test (backend + frontend + smoke), build (web + portable server), deploy (master-only, clean tree, version tag, upload → stop → swap `app`/`app.prev` → start → health check, `LIVE`/`LIVE-PREV` tags), rollback, status, bounded logs, backup verify (`data/backups`, `cedar-*.db.gz`). Port `Scripts/e2e.ps1` into it or to bash #cli #infra P1

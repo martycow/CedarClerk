@@ -406,16 +406,12 @@
     min-width: 8em;
 }
 
-/* ---------- Landing (ADR-215) ---------- */
-/* The tab is one scroll of six sections rather than six panels, so the headings are the only thing
-   separating them. */
+/* ---------- Landing and Discovery ---------- */
 h2.label { margin: 0 0 10px; }
 .landing-section-title { margin-top: var(--space-5); }
 
-.landing-card-head select { width: auto; max-width: 180px; }
-
-/* Every field on this tab is a pair, because every string on the landing is one — the language
-   chip in front of the box is what stops a two-column form from needing two column headers. */
+/* Every Discovery copy field is an EN/RU pair — the language chip in front of the box is what
+   stops a two-column form from needing two column headers. */
 .landing-bar {
     display: flex;
     align-items: center;
@@ -477,97 +473,4 @@ h2.label { margin: 0 0 10px; }
 .lf-pair textarea {
     resize: vertical;
     font: inherit;
-}
-
-.landing-upload {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-    font-size: var(--dens-fs);
-}
-
-.shot-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.shot-row {
-    display: grid;
-    grid-template-columns: 128px minmax(0, 1fr);
-    gap: 12px;
-    align-items: start;
-    padding: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-}
-
-.shot-row img {
-    display: block;
-    width: 100%;
-    height: 76px;
-    object-fit: cover;
-    object-position: top;
-    border: 1px solid var(--paper-edge);
-}
-
-.shot-actions {
-    grid-column: 2;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-}
-
-/* An uploaded file the page no longer points at: shown small, because the only thing left to
-   decide about it is whether to keep paying disk for it. */
-.orphan-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 6px 0 8px;
-}
-
-.orphan {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.orphan img {
-    width: 64px;
-    height: 40px;
-    object-fit: cover;
-    border: 1px solid var(--paper-edge);
-}
-
-.landing-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.landing-card {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-}
-
-.landing-card-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.landing-card > label {
-    font-size: var(--fs-meta);
 }

@@ -145,7 +145,7 @@ public static class DiscoveryEndpoints
             projectItems.Count + blogItems.Count);
     }
 
-    internal static string RenderLandingPreview(bool ru, Snapshot snapshot)
+    public static string RenderLandingPreview(bool ru, Snapshot snapshot)
     {
         if (!snapshot.Settings.Enabled) return "";
 
