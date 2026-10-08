@@ -1107,7 +1107,6 @@ public class ScheduledPost
     public string? Error { get; set; }
     public int? MessageId { get; set; }
     public string OwnerId { get; set; } = default!;
-    public string Format { get; set; } = Consts.ContentTypes.Markdown;
     public string Language { get; set; } = Languages.Russian;
 
     /// <summary>

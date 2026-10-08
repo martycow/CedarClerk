@@ -31,7 +31,7 @@ public class PublishDueScheduledPostsJob(CedarDbContext db, TenantProvider tenan
             var result = post.TargetId is { } targetId
                 ? await PostEndpoints.PublishToTargetAsync(post.DraftId, targetId, post.OwnerId, db, targets, post.Language, logger,
                     silent: post.Silent, pin: post.PinAfterSend)
-                : await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, targets, post.Format, post.Language, logger,
+                : await PostEndpoints.PublishAsync(post.DraftId, post.ChatId, post.OwnerId, db, targets, post.Language, logger,
                     silent: post.Silent, pin: post.PinAfterSend);
             if (result.Success)
             {

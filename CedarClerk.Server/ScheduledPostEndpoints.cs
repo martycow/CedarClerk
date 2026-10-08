@@ -15,7 +15,7 @@ public static class ScheduledPostEndpoints
     // caller still sends. Exactly one of the two identifies the destination, and either way the
     // stored row ends up carrying a TargetId.
     public record ScheduleRequest(Guid DraftId, DateTime ScheduledAtUtc, string? ChatId = null,
-        Guid? TargetId = null, string Format = Consts.ContentTypes.Markdown, string? Language = null,
+        Guid? TargetId = null, string? Language = null,
         bool Silent = false, bool Pin = false);
 
     // Wave 2 item 9 — drag-reschedule on the calendar. Body carries the one thing that moves.
@@ -33,7 +33,7 @@ public static class ScheduledPostEndpoints
                 .Join(db.Drafts, p => p.DraftId, d => d.Id, (p, d) => new
                 {
                     p.Id, p.DraftId, DraftTitle = d.Title, p.ChatId, p.TargetId, p.Network, p.ScheduledAtUtc,
-                    p.Status, p.Error, p.MessageId, p.Format, p.Language, p.SlotId, p.Silent, p.PinAfterSend,
+                    p.Status, p.Error, p.MessageId, p.Language, p.SlotId, p.Silent, p.PinAfterSend,
                 })
                 .ToListAsync();
 
@@ -50,7 +50,7 @@ public static class ScheduledPostEndpoints
                 return new
                 {
                     p.Id, p.DraftId, p.DraftTitle, p.ChatId, p.TargetId, p.Network, p.ScheduledAtUtc,
-                    p.Status, p.Error, p.MessageId, p.Format, p.Language, p.SlotId, p.Silent, p.PinAfterSend,
+                    p.Status, p.Error, p.MessageId, p.Language, p.SlotId, p.Silent, p.PinAfterSend,
                     ChannelTitle = channel?.Title,
                     TargetName = channel?.Title
                         ?? (p.TargetId is { } tid && targetNames.TryGetValue(tid, out var name) ? name : null),
@@ -114,7 +114,6 @@ public static class ScheduledPostEndpoints
                 Network = network,
                 ScheduledAtUtc = req.ScheduledAtUtc,
                 OwnerId = uid,
-                Format = req.Format,
                 Language = language,
                 Silent = req.Silent,
                 PinAfterSend = req.Pin,

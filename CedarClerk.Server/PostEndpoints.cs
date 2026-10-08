@@ -3,8 +3,6 @@ using CedarClerk.Core;
 using CedarClerk.Localization;
 using CedarClerk.Server.Publishing;
 using Microsoft.EntityFrameworkCore;
-using Telegram.Bot;
-using Telegram.Bot.Types;
 
 namespace CedarClerk.Server;
 
@@ -12,7 +10,7 @@ public static class PostEndpoints
 { 
     // Language is nullable rather than defaulting to a literal: which language a draft "is" became
     // a per-draft property in ADR-064, so the default has to be resolved against the draft itself.
-    public record ExportRequest(Guid DraftId, string ChatId, string Format = Consts.ContentTypes.Markdown, string? Language = null, string CompressionLevel = "standard", string? ConfirmedFingerprint = null, bool Silent = false, bool Pin = false);
+    public record ExportRequest(Guid DraftId, string ChatId, string? Language = null, string CompressionLevel = "standard", string? ConfirmedFingerprint = null, bool Silent = false, bool Pin = false);
     public record PublishTargetRequest(Guid DraftId, Guid TargetId, string? Language = null);
     public record ValidateRequest(Guid DraftId, string Network, string? Language = null);
     public record UpdatePreviewRequest(Guid DraftId, string Kind, string? ChatId = null, string? Language = null);
@@ -78,7 +76,6 @@ public static class PostEndpoints
         string ownerId,
         CedarDbContext db,
         IEnumerable<IPublishTarget> targets,
-        string format = Consts.ContentTypes.Markdown,
         string? language = null,
         ILogger? logger = null,
         string compressionLevel = "standard",
@@ -430,7 +427,7 @@ public static class PostEndpoints
                 var fresh = await DraftRevisionService.PreviewAsync(db, guarded, language, DraftRevisionService.Kinds.Telegram, req.ChatId);
                 return Results.Json(new { error = ErrorMessages.PublishConfirmationStale, preview = fresh }, statusCode: StatusCodes.Status409Conflict);
             }
-            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, targets, req.Format, req.Language, logger, req.CompressionLevel, silent: req.Silent, pin: req.Pin);
+            var result = await PublishAsync(req.DraftId, req.ChatId, uid, db, targets, req.Language, logger, req.CompressionLevel, silent: req.Silent, pin: req.Pin);
             
             return result.Success ? 
                 Results.Ok(new { messageId = result.MessageId, chatId = req.ChatId }) : 
