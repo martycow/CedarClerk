@@ -524,7 +524,7 @@ public static class DiscoveryEndpoints
         :root { --paper-ink: var(--text); --paper-ink-2: var(--t2); --paper-ink-3: var(--t3); }
         :root[data-theme="dark"] body { --text: var(--wood-ink); --t2: var(--wood-ink-soft); --t3: var(--wood-ink-soft); }
         @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { --text: var(--wood-ink); --t2: var(--wood-ink-soft); --t3: var(--wood-ink-soft); } }
-        :is(.topbar, .search input, .project-card.featured, .segments a[aria-current], .stage-empty-action, .reading-menu) { --text: var(--paper-ink); --t2: var(--paper-ink-2); --t3: var(--paper-ink-3); color: var(--text); }
+        :is(.topbar, .search input, .project-card.featured, .segments a[aria-current], .stage-empty-action, .reading-menu) { --text: var(--paper-ink, currentColor); --t2: var(--paper-ink-2, currentColor); --t3: var(--paper-ink-3, currentColor); color: var(--text); }
         {{FONT_FACES}}
         {{PC_CSS}}
         * { box-sizing: border-box; }
