@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-08 — Imported media answers its owner
+
+- `/media` found a file's owner by the GUID in its name alone. The two package imports (`.cedar` / markdown with images) named each file `asset_{new GUID}` and let the `Asset` row take a different `Id`, so every imported picture had no owner and answered **404 to everyone, its owner included**, while being on disk and in the library. `MediaOwnerIndex` now matches the row by `Id`, `LocalPath` or `TelegramLocalPath`; existing rows need no data fix. Both imports now name the file after the row.
+- Known remaining edge: the `_tg.jpg` derivative of such an older imported file carries the row's `Id`, not the name the post references, so a stranger fetching the derivative (URL fallback to Telegram) is still refused. `file_id` delivery is unaffected.
+
+Validation: `MediaOwnershipTests.A_file_whose_name_does_not_carry_its_row_id_is_found_by_its_name` added; `dotnet test` still to run locally (written in an environment without the .NET SDK).
+
 ## 2026-10-08 — Discovery contrast contract
 
 - Discovery's page-local `--paper-ink*` aliases carry a fallback, so `npm run check:contrast` no longer counts them as tokens the server is not served (ADR-137). The dark-mode rule itself is unchanged.

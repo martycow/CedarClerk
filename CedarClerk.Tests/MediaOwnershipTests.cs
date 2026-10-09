@@ -332,6 +332,36 @@ public class MediaOwnershipTests : IDisposable
         Assert.Equal(StatusCodes.Status200OK, owner.Response.StatusCode);
     }
 
+    // Package imports used to name the file with one GUID and give the row another. The owner's own
+    // library then answered 404 for every imported picture, because the owner was looked up by the
+    // GUID in the name alone (08.10.2026).
+    [Fact]
+    public async Task A_file_whose_name_does_not_carry_its_row_id_is_found_by_its_name()
+    {
+        var nameId = Guid.NewGuid();
+        var fileName = $"asset_{nameId}.jpg";
+        db.Assets.Add(new Asset
+        {
+            OwnerId = OwnerA,
+            FileName = "image 98.png",
+            ContentType = "image/jpeg",
+            SizeBytes = Bytes.Length,
+            LocalPath = fileName,
+        });
+        db.SaveChanges();
+        File.WriteAllBytes(Path.Combine(mediaDir, fileName), Bytes);
+
+        var owner = await GetAsync($"/media/{fileName}", blogOwner: null,
+            prepare: c => c.Request.Headers[SignedInAs.Header] = OwnerA);
+        var stranger = await GetAsync($"/media/{fileName}", blogOwner: null,
+            prepare: c => c.Request.Headers[SignedInAs.Header] = OwnerB);
+        var foreignBlog = await GetAsync($"/media/{fileName}", OwnerB);
+
+        Assert.Equal(StatusCodes.Status200OK, owner.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, stranger.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, foreignBlog.Response.StatusCode);
+    }
+
     [Fact]
     public async Task A_file_with_no_row_behind_it_is_not_found()
     {
@@ -410,7 +440,7 @@ public class MediaOwnershipTests : IDisposable
         services.AddScoped<TenantProvider>();
         var scopes = new RecordingScopes(services.BuildServiceProvider());
 
-        var owner = await new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia()).OwnerOfAsync(new MediaRef(MediaRefKind.AssetOriginal, assetB));
+        var owner = await new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia()).OwnerOfAsync(new MediaRef(MediaRefKind.AssetOriginal, assetB), $"asset_{assetB}.jpg");
 
         Assert.Equal(OwnerB, owner);
         Assert.True(scopes.Opened?.IsPlatform);

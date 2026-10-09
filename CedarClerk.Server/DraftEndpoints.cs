@@ -1751,11 +1751,15 @@ public static class DraftEndpoints
                     return Results.BadRequest(new { error = ErrorMessages.PackageAssetTooLarge(originalName) });
 
                 var bytes = ImageMetadataStripper.Strip(rawBytes, contentType);
-                var newName = $"asset_{Guid.NewGuid()}{ext}";
+                // The file is named after the row (as AssetEndpoints does), not a GUID of its own:
+                // /media finds a file's owner by the GUID in its name.
+                var assetId = Guid.NewGuid();
+                var newName = $"asset_{assetId}{ext}";
                 await File.WriteAllBytesAsync(Path.Combine(media.Dir, newName), bytes);
 
                 db.Assets.Add(new Asset
                 {
+                    Id = assetId,
                     FileName = originalName,
                     ContentType = contentType,
                     SizeBytes = bytes.Length,
@@ -1914,11 +1918,15 @@ public static class DraftEndpoints
             var pathRewrites = new Dictionary<string, string>();
             foreach (var (originalName, bytes, contentType, ext) in pending)
             {
-                var newName = $"asset_{Guid.NewGuid()}{ext}";
+                // The file is named after the row (as AssetEndpoints does), not a GUID of its own:
+                // /media finds a file's owner by the GUID in its name.
+                var assetId = Guid.NewGuid();
+                var newName = $"asset_{assetId}{ext}";
                 await File.WriteAllBytesAsync(Path.Combine(media.Dir, newName), bytes);
 
                 db.Assets.Add(new Asset
                 {
+                    Id = assetId,
                     FileName = originalName,
                     ContentType = contentType,
                     SizeBytes = bytes.Length,

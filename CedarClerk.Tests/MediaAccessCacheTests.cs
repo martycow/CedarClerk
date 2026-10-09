@@ -169,12 +169,12 @@ public class MediaAccessCacheTests : IDisposable
         var index = new MediaOwnerIndex(scopes, new TenantOwnerCache.ForMedia(clock));
         var missing = new MediaRef(MediaRefKind.AssetOriginal, Guid.NewGuid());
 
-        Assert.Null(await index.OwnerOfAsync(missing));
-        Assert.Null(await index.OwnerOfAsync(missing));
+        Assert.Null(await index.OwnerOfAsync(missing, $"asset_{missing.Id}.jpg"));
+        Assert.Null(await index.OwnerOfAsync(missing, $"asset_{missing.Id}.jpg"));
         Assert.Equal(1, scopes.Opened);
 
         clock.Advance(TenantOwnerCache.MissLifetime + TimeSpan.FromSeconds(1));
-        Assert.Null(await index.OwnerOfAsync(missing));
+        Assert.Null(await index.OwnerOfAsync(missing, $"asset_{missing.Id}.jpg"));
 
         Assert.Equal(2, scopes.Opened);
     }
@@ -186,7 +186,7 @@ public class MediaAccessCacheTests : IDisposable
         var reference = new MediaRef(MediaRefKind.AssetOriginal, asset);
 
         for (var i = 0; i < 25; i++)
-            Assert.Equal(Owner, await index.OwnerOfAsync(reference));
+            Assert.Equal(Owner, await index.OwnerOfAsync(reference, $"asset_{asset}.jpg"));
 
         Assert.Equal(1, scopes.Opened);
     }

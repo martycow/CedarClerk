@@ -70,13 +70,21 @@ public static class MediaFileNames
 public sealed class MediaOwnerIndex(IServiceScopeFactory scopes, TenantOwnerCache.ForMedia owners)
 {
 
-    public ValueTask<string?> OwnerOfAsync(MediaRef reference, CancellationToken ct = default) =>
-        owners.GetAsync(Key(reference), token => LoadAsync(reference, token), ct);
+    /// <param name="fileName">
+    /// The name as requested, relative to the media directory. An asset is found by it as well as
+    /// by the GUID inside it: the two package imports used to name the file with a fresh GUID and
+    /// let the row take another, so for those rows the name is the only thing that matches
+    /// (08.10.2026 — most of a project's files answered 404 to their own owner).
+    /// </param>
+    public ValueTask<string?> OwnerOfAsync(MediaRef reference, string fileName, CancellationToken ct = default) =>
+        owners.GetAsync(Key(reference, fileName), token => LoadAsync(reference, fileName, token), ct);
 
-    private static string Key(MediaRef reference) =>
-        (reference.Kind == MediaRefKind.ChannelAvatar ? "channel:" : "asset:") + reference.Id.ToString("N");
+    private static string Key(MediaRef reference, string fileName) =>
+        reference.Kind == MediaRefKind.ChannelAvatar
+            ? "channel:" + reference.Id.ToString("N")
+            : "asset:" + fileName;
 
-    private async Task<string?> LoadAsync(MediaRef reference, CancellationToken ct)
+    private async Task<string?> LoadAsync(MediaRef reference, string fileName, CancellationToken ct)
     {
         // A platform scope, not the request's own context: under the tenant filter every foreign
         // file would resolve to "no owner", which fails closed and would therefore never be noticed.
@@ -85,7 +93,9 @@ public sealed class MediaOwnerIndex(IServiceScopeFactory scopes, TenantOwnerCach
 
         var ownerId = reference.Kind == MediaRefKind.ChannelAvatar
             ? await db.Channels.Where(c => c.Id == reference.Id).Select(c => c.OwnerId).FirstOrDefaultAsync(ct)
-            : await db.Assets.Where(a => a.Id == reference.Id).Select(a => a.OwnerId).FirstOrDefaultAsync(ct);
+            : await db.Assets
+                .Where(a => a.Id == reference.Id || a.LocalPath == fileName || a.TelegramLocalPath == fileName)
+                .Select(a => a.OwnerId).FirstOrDefaultAsync(ct);
 
         return string.IsNullOrEmpty(ownerId) ? null : ownerId;
     }
@@ -290,13 +300,14 @@ public sealed class MediaOwnershipMiddleware(RequestDelegate next)
         }
 
         // 404 rather than 403 throughout: a 403 confirms the file exists for somebody else.
-        if (!MediaFileNames.TryParse(remainder.Value?.TrimStart('/') ?? "", out var reference))
+        var fileName = remainder.Value?.TrimStart('/') ?? "";
+        if (!MediaFileNames.TryParse(fileName, out var reference))
         {
             NotFound(ctx);
             return;
         }
 
-        var ownerId = await owners.OwnerOfAsync(reference, ctx.RequestAborted);
+        var ownerId = await owners.OwnerOfAsync(reference, fileName, ctx.RequestAborted);
         if (ownerId is null)
         {
             NotFound(ctx);
