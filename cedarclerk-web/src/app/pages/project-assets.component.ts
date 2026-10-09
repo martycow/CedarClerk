@@ -10,7 +10,7 @@ import { httpErrorMessage } from '../core/http-error.util';
 import { formatInZone } from '../core/display-time';
 import {
     ASSET_KINDS,
-    ASSET_KIND_ICONS,
+    assetIcon,
     AssetDetail,
     AssetEntry,
     AssetIndexService,
@@ -76,7 +76,7 @@ export class ProjectAssetsComponent implements OnDestroy {
     t = inject(LocaleService).t;
 
     readonly kinds = ASSET_KINDS;
-    readonly kindIcons = ASSET_KIND_ICONS;
+    readonly iconOf = assetIcon;
     readonly bytes = formatBytes;
     readonly duration = formatDuration;
     readonly desktop = desktopBridge();
@@ -687,7 +687,15 @@ export class ProjectAssetsComponent implements OnDestroy {
             // A file the agent cannot find needs no push: the row is already marked, or it will be by
             // the next sweep. Pushing a "still here" record for a file that is gone is the one wrong
             // thing this button could do.
-            if (answer?.file) await this.api.pushOne(id, answer.file);
+            if (answer?.file) {
+                await this.api.pushOne(id, answer.file);
+                // The run-wide pass is the only other place a preview is made, and a single file
+                // should not need a whole folder walked to get its picture.
+                if (asset.canHaveThumbnail && this.desktop) {
+                    const stored = await this.sync.uploadPreview(id, root, this.desktop, asset);
+                    if (stored) this.thumbFailed.update(set => { const next = new Set(set); next.delete(asset.id); return next; });
+                }
+            }
             const detail = await this.api.get(id, asset.id);
             if (id === this.projectId() && asset.id === this.selected()?.id) this.selected.set(detail);
             await this.reloadList();

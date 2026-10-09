@@ -294,6 +294,23 @@ describe('project tasks', () => {
         expect(component.creating()).toBe(false);
     });
 
+    it('offers the sprint in the new-task modal and opens on the sprint the board is filtered to', async () => {
+        const component = fixture.componentInstance;
+        component.startCreating();
+        fixture.detectChanges();
+        expect(el().querySelector('#new-task-sprint')).toBeTruthy();
+        expect(component.newSprintId()).toBe('');
+        component.newTitle.set('No sprint yet');
+        await component.create();
+        expect(tasksApi.created[0]).not.toHaveProperty('sprintId');
+
+        component.sprintFilter.set(SPRINT.id);
+        component.startCreating();
+        component.newTitle.set('Sprint work');
+        await component.create();
+        expect(tasksApi.created[1]).toEqual(expect.objectContaining({ title: 'Sprint work', sprintId: SPRINT.id }));
+    });
+
     it('names the edit card and gives the public-roadmap choice the full field grid', () => {
         const component = fixture.componentInstance;
         component.openTaskId.set('t1');

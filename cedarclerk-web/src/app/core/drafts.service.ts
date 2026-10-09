@@ -324,8 +324,13 @@ export class DraftsService {
         return firstValueFrom(this.http.get<DraftFull>(`/api/drafts/${id}`)); 
     }
 
-    create(title: string, cedarJson: string, projectId?: string | null) {
-        return firstValueFrom(this.http.post<{ id: string }>('/api/drafts', { title, cedarJson, projectId }));
+    create(title: string, cedarJson: string, projectId?: string | null,
+           options: { language?: string; documentType?: string } = {}) {
+        return firstValueFrom(this.http.post<{ id: string }>('/api/drafts', { title, cedarJson, projectId, ...options }));
+    }
+
+    duplicate(id: string, title: string) {
+        return firstValueFrom(this.http.post<{ id: string; title: string }>(`/api/drafts/${id}/duplicate`, { title }));
     }
 
     // Returns the server's own updatedAt: the caller compares it against translation timestamps,

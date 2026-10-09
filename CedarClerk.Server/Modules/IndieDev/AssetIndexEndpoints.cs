@@ -279,7 +279,7 @@ public static class AssetIndexEndpoints
         // What the preview pass still owes. Driving the pass from the server's own answer is what
         // makes it resumable and idempotent: interrupt it, run it again next week, and it picks up the
         // remainder instead of redoing the lot.
-        group.MapGet("/thumbs/pending", async (Guid projectId, ClaimsPrincipal user, CedarDbContext db, int take = 200) =>
+        group.MapGet("/thumbs/pending", async (Guid projectId, ClaimsPrincipal user, CedarDbContext db, int take = 200, int skip = 0) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (!await db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == uid)) return Results.NotFound();
@@ -289,7 +289,10 @@ public static class AssetIndexEndpoints
                             && a.MissingSince == null
                             && PreviewableExtensions.Contains(a.Extension)
                             && a.ThumbnailForModifiedAt != a.ModifiedAt)
-                .OrderByDescending(a => a.ModifiedAt)
+                .OrderByDescending(a => a.ModifiedAt).ThenBy(a => a.Id)
+                // A file no pass can render stays pending for good, so the caller steps past the ones
+                // it has already tried: 200 unreadable .blend backups at the head must not end the pass.
+                .Skip(Math.Max(skip, 0))
                 .Take(Math.Clamp(take, 1, 500))
                 .Select(a => new { a.Id, a.RelativePath })
                 .ToListAsync();

@@ -56,6 +56,52 @@ public class BlendThumbnailTests
         return ms.ToArray();
     }
 
+    /// <summary>The Blender 5 layout: a 17-byte header and block headers with 64-bit lengths.</summary>
+    private static byte[] Blend5(int width, int height, string header = "BLENDER17-01v0501")
+    {
+        using var ms = new MemoryStream();
+        using var w = new BinaryWriter(ms, Encoding.ASCII);
+        w.Write(Encoding.ASCII.GetBytes(header));
+
+        void Block(string code, byte[] data)
+        {
+            w.Write(Encoding.ASCII.GetBytes(code));
+            w.Write(0);                 // SDNA index
+            w.Write(0L);                // old pointer
+            w.Write((long)data.Length);
+            w.Write(1L);                // count
+            w.Write(data);
+        }
+
+        Block("REND", new byte[264]);
+        using var payload = new MemoryStream();
+        using var pw = new BinaryWriter(payload);
+        pw.Write(width);
+        pw.Write(height);
+        pw.Write(new byte[width * height * 4]);
+        pw.Flush();
+        Block("TEST", payload.ToArray());
+
+        w.Flush();
+        return ms.ToArray();
+    }
+
+    [Fact]
+    public void Reads_the_preview_from_a_Blender_5_file()
+    {
+        var preview = BlendThumbnail.TryRead(Blend5(128, 50));
+
+        Assert.NotNull(preview);
+        Assert.Equal((128, 50, 128 * 50 * 4), (preview!.Width, preview.Height, preview.Rgba.Length));
+    }
+
+    [Fact]
+    public void Refuses_a_file_format_version_it_has_never_seen()
+    {
+        Assert.Null(BlendThumbnail.TryRead(Blend5(128, 50, "BLENDER17-02v0600")));
+        Assert.Null(BlendThumbnail.TryRead("BLENDER17-01v05"u8));
+    }
+
     [Fact]
     public void Reads_the_preview_Blender_saved_inside_the_file()
     {

@@ -84,7 +84,6 @@ export const en = {
         forms: 'Forms',
         projectsCount: (n: number) => `${n} ${n === 1 ? 'project' : 'projects'}`,
         debugConsole: 'Debug console',
-        alerts: 'New comments and reactions',
         version: (v: string) => `Version ${v}`,
         // ADR-301 — the menu bar's five groups. The palette reuses them as its group captions.
         menus: {
@@ -1137,7 +1136,7 @@ export const en = {
             },
             // The honesty rules from the handoff, as strings.
             noPreview: (kind: string) => `no preview · ${kind}`,
-            previewPending: 'preview not uploaded yet',
+            previewPending: 'no preview yet · re-index in the desktop app',
             notFoundAtPath: 'not found at path',
             onDisk: 'on this computer',
             fingerprint: 'fingerprint',
@@ -1186,6 +1185,7 @@ export const en = {
             previewing: 'Previews',
             previewProgress: (done: number, left: number) => `${done} uploaded, ${left} to go`,
             previewsStored: (n: number) => `${n} ${n === 1 ? 'preview' : 'previews'} uploaded`,
+            previewsUnavailable: (n: number) => `${n} ${n === 1 ? 'file has' : 'files have'} no readable preview`,
             scanKeepWorking: 'you can keep working',
             scanCancel: 'Cancel',
             scanCancelled: 'Indexing cancelled — what made it across is kept. Previews can be caught up later: running it again continues from what is missing.',
@@ -1560,7 +1560,8 @@ export const en = {
             deleteDraft: 'Delete',
             markTemplate: 'Mark as template',
             unmarkTemplate: 'Unmark as template',
-            evergreen: 'Evergreen recycling…',
+            evergreen: 'Repost automatically (evergreen)…',
+            duplicate: 'Duplicate',
             describe: 'Show in Properties',
             stopDescribing: 'Stop describing',
         },
@@ -1589,9 +1590,9 @@ export const en = {
         },
         // Wave 2 item 10 — the evergreen pool the queue slots draw from.
         evergreen: {
-            title: 'Evergreen recycling',
-            flag: 'Evergreen — reposted automatically into queue slots',
-            flagHint: 'The queue picks the evergreen document that has been sent the fewest times. Least-sent goes first.',
+            title: 'Automatic reposting',
+            flag: 'Evergreen — it does not go out of date, so repost it automatically',
+            flagHint: 'A queue slot is a weekly time on one destination, set up in Calendar → Queue. The server fills each upcoming slot with the evergreen document that has been sent the fewest times. With no queue slots, nothing is reposted.',
             category: 'Category',
             categoryPlaceholder: 'Matches slots with the same category; empty fits any slot',
             maxSends: 'Send at most',
@@ -1609,6 +1610,7 @@ export const en = {
             noneOfYours: 'No templates of your own yet — mark any document as a template on its row.',
             loadFailed: 'Could not load the starter templates.',
         },
+        copyTitle: (title: string) => `${title} (copy)`,
         deleteDraftTitle: 'Delete this document?',
         deleteDraftBody: 'This cannot be undone.',
         errors: {
@@ -1621,6 +1623,7 @@ export const en = {
             renameSeries: 'Failed to rename series',
             deleteSeries: 'Failed to delete series',
             update: 'Failed to update document',
+            duplicate: 'Failed to duplicate document',
             delete: 'Failed to delete document',
             create: 'Failed to create document',
             import: 'Import failed — check the file and try again',
@@ -1829,6 +1832,7 @@ export const en = {
             typeChangeFailed: 'Could not change the type.',
             slug: 'Slug',
             location: 'Location',
+            path: 'Path',
             backlinks: 'Backlinks',
             visibility: 'Visibility',
             watermark: 'Watermark',

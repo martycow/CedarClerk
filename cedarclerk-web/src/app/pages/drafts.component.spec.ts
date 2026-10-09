@@ -40,6 +40,15 @@ class FakeDrafts {
     async list() { return structuredClone(DRAFTS); }
     async listFolders() { return structuredClone(FOLDERS); }
     async listSeries() { return structuredClone(SERIES); }
+    created: unknown[] = [];
+    translated: string[] = [];
+    duplicated: { id: string; title: string }[] = [];
+    async create(title: string, _doc: string, projectId: string, options: unknown) {
+        this.created.push({ title, projectId, options });
+        return { id: 'new' };
+    }
+    async saveTranslation(_id: string, language: string) { this.translated.push(language); return {}; }
+    async duplicate(id: string, title: string) { this.duplicated.push({ id, title }); return { id: 'copy', title }; }
     async setDraftParent(id: string, parentId: string | null, beforeId?: string) {
         this.moves.push({ id, parentId, beforeId });
         return { parentDraftId: parentId, siblingOrder: 0 };
@@ -215,6 +224,34 @@ describe('drafts page', () => {
 
     const rows = () =>
         [...el().querySelectorAll('.drafts-table .drafts-row:not(.drafts-row-head)')] as HTMLElement[];
+    it('creates the document in the first picked language and the chosen type', async () => {
+        const drafts = TestBed.inject(DraftsService) as unknown as FakeDrafts;
+        const component = fixture.componentInstance;
+        vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+        component.newDraftOpen.set(true);
+        fixture.detectChanges();
+        expect(el().querySelectorAll('#new-document-type option').length).toBe(7);
+
+        component.newDraftTitle = 'Combat rules';
+        component.creationProjectId.set('p1');
+        component.newDraftLanguages.set(['en', 'de']);
+        component.newDraftType.set('design');
+        await component.confirmNewDraft();
+
+        expect(drafts.created).toEqual([{ title: 'Combat rules', projectId: 'p1', options: { language: 'en', documentType: 'design' } }]);
+        expect(drafts.translated).toEqual(['de']);
+    });
+
+    it('duplicates a row under a "(copy)" title', async () => {
+        const drafts = TestBed.inject(DraftsService) as unknown as FakeDrafts;
+        const button = [...rows()[0].querySelectorAll<HTMLButtonElement>('.row-actions .mini')]
+            .find(b => b.getAttribute('aria-label') === t.actions.duplicate)!;
+        button.click();
+        await settle(fixture);
+        expect(drafts.duplicated).toEqual([{ id: 'alpha', title: 'alpha (copy)' }]);
+    });
+
+
     const describeButton = (index: number) =>
         rows()[index].querySelector('.row-actions .mini') as HTMLButtonElement;
     it('the describe control sends document properties to the shared inspector', () => {

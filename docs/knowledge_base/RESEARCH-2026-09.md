@@ -1,7 +1,7 @@
 ---
 owner: marty
-last_verified: 2026-09-05
-source_of_truth_for: the API/terms research behind backlog rows T-127, T-169, T-170, T-171
+last_verified: 2026-10-09
+source_of_truth_for: the API/terms research behind backlog rows T-127, T-169, T-170, T-171, T-443
 guard: none
 ---
 
@@ -204,3 +204,50 @@ the PAXes, Global Game Jam, Ludum Dare, GMTK Jam.
 **Verdict:** scoping row: "Industry events seed — ~30 hand-curated anchor events as JSON, loaded
 into `IndustryEvent`, plus user-added events; shown in the calendar; refreshed by hand monthly;
 itch jams out of scope until issue #872 gets an API. #growth #calendar P3, S."
+
+---
+
+## T-443 — Miro: importing and exporting reference boards
+
+Asked on 09.10.2026: can a reference board (ADR-218) go to Miro and come back.
+
+### What Miro offers
+
+- **REST API v2 reads and writes board items.** Item types: card, sticky note, text, shape,
+  connector, app card, document, embed, frame, image (developers.miro.com/docs/rest-api-reference-guide,
+  read 09.10.2026). `GET /v2/boards/{board_id}/items` lists them with an optional `type` filter.
+- **Scopes:** `boards:read` reads boards, members and items; `boards:write` creates, updates and
+  deletes them. Both are available on every Miro plan (developers.miro.com/reference/scopes, read
+  09.10.2026). `boards:export` (PDF with comments) is Enterprise only and not needed here.
+- **Rate limit:** 100,000 credits per minute per application; a call costs 50, 100, 500 or 2,000
+  credits by level, which is 2,000 down to 50 calls a minute (developers.miro.com/reference/rate-limiting,
+  read 09.10.2026). A 2,000-item board is well inside that either way.
+- **Images are created from a URL** Miro fetches (`imageUrl`, same reference guide). Our board images
+  live behind the media gate (ADR-219), so an export has to hand Miro a URL it can read.
+- **Connectors join two items**; both ends must be items, never a free point
+  (developers.miro.com/docs/work-with-connectors, read 09.10.2026).
+- **Unverified:** the help-centre page on manual export (PDF, image, CSV; a "board backup" `.rtb`
+  file on paid plans) answered HTTP 403 to an automated client on 09.10.2026; the per-item field
+  schema (position, geometry, parent) and the experimental bulk-create endpoint's limits were not
+  read from the reference. A `.rtb` backup is not a documented format and is not a route.
+
+### What it means for our board
+
+- Our model has four kinds — note, image, frame, link — with a position, a size, a rotation and a
+  palette-token colour (`CanvasItem`, `CedarClerk.Core/CanvasPayload.cs`).
+- **Export is the easy half:** note → sticky note, frame → frame, image → image, link → a card or
+  text with the URL. Lossless enough to be honest about. It needs the user's OAuth grant
+  (`boards:write`), and images need a short-lived readable URL.
+- **Import is lossy by construction:** shapes, connectors, cards, text styling, embeds and documents
+  have nothing to land in. A connector-heavy Miro board arrives as a pile of notes. Images must be
+  downloaded and uploaded into the owner's library first (the `/media/` rule), and writes go through
+  the hub's validation, 100 items a call, 2,000 a board.
+- No scraping and no file-format reverse engineering (ADR-223); the API with the user's own grant is
+  the only route.
+
+**Verdict:** feasible, official, and a real connector's worth of work (OAuth app, token storage, two
+mappers, an image bridge) for a one-time migration. Scoping row: "Miro export for a reference board —
+OAuth (`boards:write`), map note/frame/image/link, images through a short-lived signed URL; import
+only if the board model first grows connectors and shapes. #canvas #integrations P3, L." Cheaper
+first step if the need is just "show this board to someone on Miro": a PNG export of the board,
+which Miro accepts as an ordinary image.

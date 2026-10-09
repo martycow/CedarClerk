@@ -1,6 +1,6 @@
 ---
 owner: marty
-last_verified: 2026-10-08
+last_verified: 2026-10-09
 source_of_truth_for: the only list of open tasks and questions (T-xxx, Q-xx)
 guard: none
 ---
@@ -65,6 +65,7 @@ Source: `Docs_CedarClerk/Reviews/0.25.1_Review.md` (owner's section/number in pa
 - [ ] T-437 Queue slots and project scope — ADR-322 scopes the calendar's scheduled posts by project, but `QueueSlot` belongs to a destination, not a project, so slots still show account-wide. Settle with T-428 #publishing #decision P3
 - [ ] T-428 Queue: keep, clarify or remove — weekly per-destination send slots that `FillQueueSlotsJob` fills nightly from evergreen drafts by category (Calendar 3) #publishing #decision P3
 - [ ] T-429 Builds rethink — today a `Build` entity with tasks and "Make changelog"; decide what replaces it (Builds 1) #indiedev #decision P3
+- [ ] T-443 Miro import and export for reference boards — research verdict (`docs/knowledge_base/RESEARCH-2026-09.md` §T-443): possible through Miro's REST API v2 with the user's own OAuth grant, lossy in both directions (our four item kinds against Miro's ten; no connectors, shapes or cards here). Scope and whether it is worth a connector are the owner's call #canvas #integrations #decision P3
 - [ ] T-430 Skill Points research — paid per-upgrade skill tree vs. the current tiers + credit wallet; fit with `docs/product/BUSINESS.md` (Ideas 1) #billing #decision P3
 
 ## New features
@@ -213,11 +214,15 @@ and the realtime path has only ever run on one machine with two browser contexts
 
 ## Bugs
 
+- [ ] T-442 Desktop sign-in with Google (and Discord) cannot finish — the challenge starts in the app window, Google's next in-page navigation is off-origin, so `will-navigate` in `CedarClerk.Desktop/main.js` hands a mid-flow URL to the system browser; the callback then lands in a cookie jar with no correlation cookie (production log, 08.10: `'.AspNetCore.Correlation.…' cookie not found`). The "500" is the provider's own error page, not ours. Two ways out, and `docs/tech/DESKTOP.md` ("Electron does not handle authentication at all") rules on neither: keep the provider's pages in the window for the length of the round trip (Google may refuse an embedded browser), or run the whole round trip in the system browser and hand the session to the app with a one-time code over a `cedarclerk://` link (a new auth path: ADR first). Password sign-in works meanwhile #desktop #auth #decision P1
+- [ ] T-445 `BlogViewGeoDailies` unique-constraint race — production log 09.10 00:23 UTC: `UNIQUE constraint failed: BlogViewGeoDailies.OwnerId, Day, Country, Language` out of `SaveChangesAsync`; two views of the same day/country/language insert the aggregate row at once. Needs an upsert or a retry-as-update #blog #stats P2
+- [ ] T-446 `CanvasHub.Cursor` logs at `fail` for a deleted board — a client still on a board somebody deleted sends cursor moves, each one a `HubException` with a stack trace in the journal (production log 09.10 12:59 UTC, several per second). The refusal is right; the log level and the client that keeps sending are not #canvas P3
 - [ ] T-388 `17-density.spec.ts` "the shipped shell resolves the same two floors" fails in the full smoke run and passes alone — reproduced on `master` and on a feature branch with byte-identical results (1 failed, 18 skipped, 70 passed), so it is the spec, not a regression. Its paper half reads `main[data-surface="paper"] app-button button`, and on the hub with zero projects the only control in `main` is the empty state's plain `<button>`; the test waits for `app-index-tabs` and then measures something it never waited for. Point it at a control that is always there, or wait for the one it measures #tests P2
 - [ ] T-375 `core/display-time.spec.ts` leaks locale under parallel vitest — seen once in the 05.09 sweep: an expectation of `11 Aug` got `11 авг`, so another worker's Russian locale bled into the formatter under test. Pin the locale inside the spec (or the formatter takes it as an argument) rather than re-run #tests P3
 
 ## Tech debt
 
+- [ ] T-444 Remember that a file has no readable preview — a compressed `.blend`, a `.blend1` backup saved without a thumbnail or a damaged image stays "no preview yet" forever, because only the run that tried it knows it failed. Store the attempt (`AssetEntry`, per `ModifiedAt`) so the tile can say "no preview" and the pass stops asking; needs a column and a migration #assets #desktop P3
 - [ ] T-441 Drop the vestigial `LandingSettings` columns — ADR-323 left the fixed En/Ru columns, the six section flags and `ShotsJson` / `RoadmapJson` / `StoryJson` / `EditorialJson` in place; `LandingDocument.FromLegacy` still reads them for a row nobody has saved from the block editor. Before dropping: store the converted document for any row whose `DocumentJson` is null, then remove the columns, `LandingContent`, `LegacyLandingRenderer` and `LandingEquivalenceTests` together, once the release is past the point of rolling back #growth #backend #cleanup P3
 - [ ] T-439 Drop the `GlossaryTerms` table — the `GlossaryEntries` migration copied it into `GlossaryEntry` / `GlossaryEntryLanguage` and left it in place as the rollback source (`LegacyGlossaryTerm`; nothing reads it, account deletion clears it). Once production has run on the new tables and a nightly backup holds them, remove the entity and drop the table in a migration of its own #glossary #backend P3
 - [ ] T-395 Project modules, steps 14a/14b (ADR-293) — the sidebar still hardcodes its sections and ignores the `modules` map (14a); Settings gets a toggle per module (14b). Data and write path (`PUT /api/projects/{id}/modules`) exist #indiedev #ui P2
@@ -260,4 +265,5 @@ and the realtime path has only ever run on one machine with two browser contexts
 | Q-9 | Old FI6 (account settings): sub-items 1/3/4/5 were lost when the old inbox was overwritten — needs re-specification |
 | Q-10 | T-036 (response country/IP): raw IPs are deliberately not stored (hash only). Start storing IP/geo for form responses? The privacy policy must reflect it. Precedent (ADR-097): view country comes from `CF-IPCountry` into a daily aggregate — geography without storing IPs. Not a full answer for T-036 (it needs a country per response, not a sum), but it removes the "showing a country requires storing IPs" premise |
 | Q-15 | Public media endpoint vs private posts (T-172). Meta networks require a publicly reachable HTTPS media URL; direct upload is unsupported. Conflicts with private posts, watermark and copy protection (ADR-063). Overlaps Q-8 |
+| Q-25 | "Unify location selector" (stream notes 09.10): which selector? The geographic `app-location-input` is already one component in the editor, Settings and onboarding. The two inspector rows that were both called "Location" are now Path and Location. If it means where a document is filed — project `<select>`, folder picker, series picker and the tree's move menu are four different controls — that is a design task and needs its shape described |
 | Q-16 | ~~Public version scheme~~ — answered 31.08: the sprint ships as **0.20.0** (reads as the wished-for "0.2.0", still sorts after 0.17.x everywhere versions compare); `Consts.CurrentVersion` bumped. Original wording: the sprint is named v0.2.0 while the code read 0.17.0 |

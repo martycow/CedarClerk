@@ -21,7 +21,7 @@ const GROUPS: NavGroup[] = [
         <app-sidebar [mode]="mode()" [groups]="groups" activeId="documents"
                      [project]="project()" [projects]="projects()" projectHint="Switch project"
                      navLabel="Screens" brand="Cedar Clerk" brandLabel="Cedar Clerk"
-                     allProjectsLabel="All projects" alertsTitle="New comments and reactions" [alerts]="alerts()" />
+                     allProjectsLabel="All projects" feedbackLabel="Send feedback" />
     `,
 })
 class Host {
@@ -29,7 +29,6 @@ class Host {
     groups = GROUPS;
     project = signal<SidebarProject | null>({ id: 'p1', name: 'Cedar Quest', kind: 'Game · 2 projects', link: ['/projects', 'p1'] });
     projects = signal<SidebarProject[]>([]);
-    alerts = signal(0);
 }
 
 describe('SidebarComponent', () => {
@@ -85,13 +84,12 @@ describe('SidebarComponent', () => {
         expect(h.items().find(a => a.textContent?.includes('Metrics'))!.getAttribute('href')).toBe('/metrics');
     });
 
-    it('shows the bell dot only while something is unread', () => {
+    it('keeps feedback as the only control beside the account', () => {
         const h = mount();
-        expect(h.el.querySelector('.side-dot')).toBeNull();
-        expect((h.el.querySelector('.side-bell') as HTMLAnchorElement).getAttribute('aria-label')).toBe('New comments and reactions');
-        h.host.alerts.set(3);
-        h.fixture.detectChanges();
-        expect(h.el.querySelector('.side-dot')).toBeTruthy();
+        const controls = h.el.querySelectorAll('.side-user .side-bell');
+        expect(controls.length).toBe(1);
+        expect(controls[0].getAttribute('aria-label')).toBe('Send feedback');
+        expect(h.el.querySelector('.side-user a[href="/posts"]')).toBeNull();
     });
 
     it('draws the rail with compact project and account controls but no duplicate width control', () => {

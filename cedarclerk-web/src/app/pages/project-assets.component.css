@@ -370,6 +370,11 @@
 
 .preview { aspect-ratio: 4 / 3; }
 
+/* With no picture the icon is the tile's whole content, so it is drawn at tile scale, not at the
+   size of an icon beside a label. */
+.preview,
+.preview-pane { --icon-lg: 40px; }
+
 /* The pane is a scrolling flex column, and a flex item gives up its aspect ratio before the
    column agrees to scroll. */
 .preview-pane {

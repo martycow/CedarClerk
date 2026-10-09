@@ -82,6 +82,9 @@ because linking it to a document means choosing from a list the modal was coveri
                 <p class="notice">
                     {{ t().projects.assets.scanDone(s.indexed, s.markedMissing) }}
                     <span class="dot">·</span>{{ t().projects.assets.previewsStored(s.thumbsDone) }}
+                    @if (s.thumbsUnavailable > 0) {
+                        <span class="dot">·</span>{{ t().projects.assets.previewsUnavailable(s.thumbsUnavailable) }}
+                    }
                     @if (s.unreadable > 0) {
                         <span class="dot">·</span>{{ t().projects.assets.scanUnreadable(s.unreadable) }}
                     }
@@ -201,12 +204,12 @@ because linking it to a document means choosing from a list the modal was coveri
                                                 <!-- A preview is possible and has not arrived. Distinct from the
                                                      case below, or a freshly indexed folder seen from a browser
                                                      would look identical to one full of undecodable formats. -->
-                                                <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                                <app-icon [name]="iconOf(a)" size="lg"></app-icon>
                                                 <span class="preview-label">{{ t().projects.assets.previewPending }}</span>
                                             } @else {
                                                 <!-- Kinds with no thumbnail say so, rather than showing an empty
                                                      frame that reads as a broken image. -->
-                                                <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                                <app-icon [name]="iconOf(a)" size="lg"></app-icon>
                                                 <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
                                             }
                                             @if (!isLocal() && !a.missingSince) {
@@ -270,7 +273,7 @@ because linking it to a document means choosing from a list the modal was coveri
                                         <div class="file-cell" role="cell">
                                             <button type="button" class="asset-open" [title]="a.relativePath"
                                                     [attr.aria-pressed]="selected()?.id === a.id" (click)="open(a)">
-                                                <app-icon [name]="kindIcons[a.kind]" size="sm"></app-icon>
+                                                <app-icon [name]="iconOf(a)" size="sm"></app-icon>
                                                 <span class="path">{{ a.relativePath }}</span>
                                             </button>
                                         </div>
@@ -318,10 +321,10 @@ because linking it to a document means choosing from a list the modal was coveri
                             } @else if (showsThumbnail(a)) {
                                 <img class="thumb" [src]="thumbUrl(a)" [alt]="a.fileName" (error)="onThumbError(a)">
                             } @else if (awaitingThumbnail(a)) {
-                                <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                <app-icon [name]="iconOf(a)" size="lg"></app-icon>
                                 <span class="preview-label">{{ t().projects.assets.previewPending }}</span>
                             } @else {
-                                <app-icon [name]="kindIcons[a.kind]" size="lg"></app-icon>
+                                <app-icon [name]="iconOf(a)" size="lg"></app-icon>
                                 <span class="preview-label">{{ t().projects.assets.noPreview(t().projects.assets.kindOne[a.kind]) }}</span>
                             }
                         </div>

@@ -25,7 +25,11 @@ public static class DraftEndpoints
     // ExpectedUpdatedAt/ConfirmShrink are the two save guards (T-018.1/T-018.3) and both are
     // optional: a client that sends neither behaves exactly as before, which keeps the Posts
     // manager's rename-PUT and the import paths working unchanged.
-    public record SaveDraftRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false, Guid? ProjectId = null);
+    // Language and DocumentType are read on create only: after that each has its own endpoint
+    // (/primary-language, /api/documents/{id}/type) with the guards a change needs.
+    public record SaveDraftRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false, Guid? ProjectId = null,
+        string? Language = null, string? DocumentType = null);
+    public record DuplicateDraftRequest(string? Title = null);
     public record SaveTranslationRequest(string Title, string CedarJson, DateTime? ExpectedUpdatedAt = null, bool ConfirmShrink = false);
     public record ChangePrimaryLanguageRequest(string Language);
     public record UpdateTagsRequest(string Tags);
@@ -61,7 +65,7 @@ public static class DraftEndpoints
     // ADR-128 — diff-sync the derived wiki-links against the primary document's current text.
     // Only ids the owner actually has become rows (a pasted foreign id links nothing), self-links
     // are ignored, and translations never run this: they inherit the primary's links.
-    private static async Task SyncDocumentLinksAsync(CedarDbContext db, string uid, Guid fromId, string cedarJson)
+    internal static async Task SyncDocumentLinksAsync(CedarDbContext db, string uid, Guid fromId, string cedarJson)
     {
         var linked = WikiLinkRefs.Collect(cedarJson).Where(to => to != fromId).ToList();
         var owned = linked.Count == 0
@@ -1348,7 +1352,11 @@ public static class DraftEndpoints
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
             if (req.ProjectId is not { } projectId || !await db.Projects.AnyAsync(p => p.Id == projectId && p.OwnerId == uid && p.ArchivedAt == null))
                 return Results.BadRequest(new { error = ErrorMessages.ProjectRequired });
-            var draft = new Draft { Title = req.Title, CedarJson = req.CedarJson, OwnerId = uid, ProjectId = projectId };
+            if (req.Language is not null && !Languages.IsContentLanguage(req.Language))
+                return Results.BadRequest(new { error = ErrorMessages.UnsupportedLanguage(req.Language) });
+            if (req.DocumentType is not null && !DocumentTypes.IsKnown(req.DocumentType))
+                return Results.BadRequest(new { error = ErrorMessages.UnknownDocumentType(req.DocumentType) });
+            var draft = DraftDuplication.NewDraft(uid, projectId, req);
             db.Drafts.Add(draft);
             await DraftRevisionService.RecordAsync(db, draft.Id, draft.PrimaryLanguage, req.Title, req.CedarJson);
             await db.SaveChangesAsync();
@@ -1574,6 +1582,13 @@ public static class DraftEndpoints
             return deleted > 0 ? Results.NoContent() : Results.NotFound();
         });
         
+        groupBuilder.MapPost("/{id:guid}/duplicate", async (Guid id, DuplicateDraftRequest req, ClaimsPrincipal user, CedarDbContext db) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var copy = await DraftDuplication.DuplicateAsync(db, uid, id, req.Title);
+            return copy is null ? Results.NotFound() : Results.Created($"/api/drafts/{copy.Id}", new { copy.Id, copy.Title });
+        });
+
         groupBuilder.MapGet("/{id:guid}/cedar", async (Guid id, ClaimsPrincipal user, CedarDbContext db, MediaPaths media) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -2051,6 +2066,7 @@ public static class DraftEndpoints
             .post-sheet h1 { font-size: 27px; font-weight: 700; letter-spacing: -.015em; line-height: 1.22; margin: 0 0 6px; text-align: center; }
             .post-meta { font-size: 12px; color: var(--t2); text-align: center; margin: 0 0 22px; }
             .post-sheet h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 8px; }
+            .post-sheet h3 { font-size: 18px; font-weight: 600; margin: 20px 0 6px; }
             .post-sheet p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
             .toc { background: var(--asoft); border: 1px solid var(--abord); border-radius: 10px; padding: 14px 18px; margin: 0 0 18px; }
             .toc-title { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }

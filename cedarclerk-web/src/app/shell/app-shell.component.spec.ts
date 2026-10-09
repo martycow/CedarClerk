@@ -6,6 +6,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { AppearanceService } from '../core/appearance.service';
+import { CommandsService } from '../core/commands.service';
 import { CommentsService } from '../core/comments.service';
 import { LocaleService } from '../core/i18n/locale.service';
 import { OverlayCoordinatorService } from '../core/overlay-coordinator.service';
@@ -172,6 +173,21 @@ describe('app shell', () => {
         expect([...el().querySelectorAll('app-menu-bar .side-project-item')].map(menuText))
             .toEqual(['Projects Hub', 'Manage teams']);
         expect(el().querySelector('.side-project-item.is-on')?.textContent).toContain('Projects Hub');
+    });
+
+    it('greys out the project-scoped commands on the hub and frees them inside a project', async () => {
+        const commands = TestBed.inject(CommandsService);
+        const scoped = ['file.new', 'file.documents', 'file.library', 'view.calendar', 'view.posts'];
+        const enabled = () => scoped.map(id => commands.isEnabled(commands.find(id)!));
+        expect(enabled()).toEqual([true, true, true, true, true]);
+
+        TestBed.inject(AuthService).indieDev.set(true);
+        await go('/projects');
+        expect(enabled()).toEqual([false, false, false, false, false]);
+        expect(commands.isEnabled(commands.find('file.download')!)).toBe(true);
+
+        await go('/projects/p1');
+        expect(enabled()).toEqual([true, true, true, true, true]);
     });
 
     it('keeps both workspace doors after the first project arrives', async () => {

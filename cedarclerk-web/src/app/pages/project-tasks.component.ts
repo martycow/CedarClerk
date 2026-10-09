@@ -121,6 +121,7 @@ export class ProjectTasksComponent {
     newFiles = signal<File[]>([]);
     newStatus = signal<TaskStatus>('backlog');
     newPriority = signal<TaskPriority>(2);
+    newSprintId = signal('');
 
     /** Edits live in the modal until saved, so a half-typed title never reaches the board. */
     draftTitle = signal('');
@@ -425,6 +426,7 @@ export class ProjectTasksComponent {
         this.newFiles.set([]);
         this.newStatus.set(status);
         this.newPriority.set(2);
+        this.newSprintId.set(this.sprintFilter() ?? '');
         this.actionError.set(null);
         this.creating.set(true);
     }
@@ -442,6 +444,7 @@ export class ProjectTasksComponent {
                 description: this.newDescription(),
                 status: this.newStatus(),
                 priority: this.newPriority(),
+                ...(this.newSprintId() ? { sprintId: this.newSprintId() } : {}),
             });
             for (const file of this.newFiles()) {
                 const asset = await this.assets.upload(file);

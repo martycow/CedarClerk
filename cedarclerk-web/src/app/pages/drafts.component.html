@@ -231,6 +231,9 @@ never on a component — several of the components below also appear on comforta
                         <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                             <app-icon name="layout" size="sm"></app-icon>
                         </button>
+                        <button class="mini" (click)="duplicate(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.duplicate" [attr.aria-label]="t().drafts.actions.duplicate">
+                            <app-icon name="copy" size="sm"></app-icon>
+                        </button>
                         <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
                             @if (busyId() === d.id) { <app-icon name="arrow-clockwise" size="sm" class="spin"></app-icon> }
                             @else if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> }
@@ -366,6 +369,9 @@ never on a component — several of the components below also appear on comforta
                             <button class="mini" (click)="toggleTemplate(d, $event)" [disabled]="busyId() === d.id" [class.on]="d.isTemplate" [title]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate" [attr.aria-label]="d.isTemplate ? t().drafts.actions.unmarkTemplate : t().drafts.actions.markTemplate">
                                 <app-icon name="layout" size="sm"></app-icon>
                             </button>
+                            <button class="mini" (click)="duplicate(d, $event)" [disabled]="busyId() === d.id" [title]="t().drafts.actions.duplicate" [attr.aria-label]="t().drafts.actions.duplicate">
+                                    <app-icon name="copy" size="sm"></app-icon>
+                            </button>
                             <button class="mini" (click)="toggleArchive(d, $event)" [disabled]="busyId() === d.id" [title]="d.isArchived ? t().drafts.actions.unarchive : t().drafts.actions.archive">
                                 @if (d.isArchived) { <app-icon name="arrow-counter-clockwise" size="sm"></app-icon> } @else { <app-icon name="archive" size="sm"></app-icon> }
                             </button>
@@ -432,6 +438,10 @@ never on a component — several of the components below also appear on comforta
             @for (project of creationProjects(); track project.id) { <option [value]="project.id">{{ project.name }}</option> }
         </select>
         @if (!creationProjects().length) { <a routerLink="/projects">{{ t().projects.newProject }}</a> }
+        <label class="tb-caption" for="new-document-type">{{ t().editor.inspector.type }}</label>
+        <select id="new-document-type" class="chat-input" [ngModel]="newDraftType()" (ngModelChange)="newDraftType.set($event)">
+            @for (type of docTypes; track type) { <option [value]="type">{{ t().projects.docTypes[type].name }}</option> }
+        </select>
         <input class="chat-input" [(ngModel)]="newDraftTitle" [placeholder]="t().editor.newDraft.titlePlaceholder"
                    [maxlength]="draftTitleMax" (keyup.enter)="confirmNewDraft()">
             @if (newDraftTitle.trim().length === 0) {

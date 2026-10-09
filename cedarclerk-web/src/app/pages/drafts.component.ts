@@ -1,4 +1,4 @@
-import { ProjectsService, ProjectSummary } from '../core/projects.service';
+import { DOCUMENT_TYPES, DocumentType, ProjectsService, ProjectSummary } from '../core/projects.service';
 import { CurrentProjectService } from '../core/current-project.service';
 import { Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import {
@@ -774,6 +774,8 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
     readonly contentLanguages = CONTENT_LANGUAGES;
     /** Picked languages, in pick order — the first is the draft's primary. */
     newDraftLanguages = signal<string[]>([DEFAULT_PRIMARY_LANGUAGE]);
+    readonly docTypes = DOCUMENT_TYPES;
+    newDraftType = signal<DocumentType>('post');
     newDraftTagList = signal<string[]>([]);
     newDraftSeriesId = signal<string | null>(null);
     // Not persisted into newDraftDefaultsJson (unlike languages/tags/template) — "private" and
@@ -790,6 +792,7 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         } catch { /* ignore a corrupt/foreign blob, fall back to built-in defaults */ }
 
         this.newDraftTitle = '';
+        this.newDraftType.set('post');
         this.newDraftLanguages.set(readLanguages(defaults.languages));
         // At least one tag on show: with nothing remembered, the tag the account uses most is the
         // one it would have picked anyway, and an empty tag row taught nobody the field exists.
@@ -860,7 +863,8 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
         this.creatingDraft.set(true);
         this.newDraftError.set(null);
         try {
-            const created = await this.draftsApi.create(title, EMPTY_DOC, this.creationProjectId());
+            const created = await this.draftsApi.create(title, EMPTY_DOC, this.creationProjectId(),
+                { language: languages[0], documentType: this.newDraftType() });
             // Same follow-up-call shape as tags on the main list row: create first, then apply
             // the extras the create endpoint doesn't take.
             if (tags) await this.draftsApi.updateTags(created.id, tags);
@@ -1087,6 +1091,22 @@ export class DraftsPageComponent implements OnInit, OnDestroy {
             this.drafts.update(list => list.map(x => x.id === d.id ? { ...x, isTemplate: res.isTemplate } : x));
         } catch (e) {
             this.error.set(httpErrorMessage(e, this.t().drafts.errors.update));
+        } finally {
+            this.busyId.set(null);
+        }
+    }
+
+    async duplicate(d: DraftMeta, ev: Event) {
+        ev.stopPropagation();
+        if (this.busyId()) return;
+        this.busyId.set(d.id);
+        this.error.set('');
+        try {
+            const title = this.t().drafts.copyTitle(d.title || this.t().drafts.untitled).slice(0, DRAFT_TITLE_MAX);
+            await this.draftsApi.duplicate(d.id, title);
+            this.drafts.set(await this.draftsApi.list());
+        } catch (e) {
+            this.error.set(httpErrorMessage(e, this.t().drafts.errors.duplicate));
         } finally {
             this.busyId.set(null);
         }

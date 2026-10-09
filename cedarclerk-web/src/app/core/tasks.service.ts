@@ -63,6 +63,7 @@ export interface CreateTaskInput {
     priority?: TaskPriority;
     assignee?: string;
     dueAt?: string | null;
+    sprintId?: string;
 }
 
 /**

@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-10-09 — Stream notes, day 9
+
+Fifteen notes from the 09.10 stream, checked against the code.
+
+- **Headings on the sheet.** `.tiptap` sized `h1` and `h2` in fixed pixels and left `h3` to the browser's `1.17em`, so `h3` followed the sheet's text size: larger than `h2` at the default 17px and level with `h1` at 22px. The three are now `--fs-27` / `--fs-22` / `--fs-19`, each with an em floor so a larger body never catches up. The share-preview page gained the `h3` rule it lacked.
+- **File menu on the hub.** New document, Open documents, Open the media library, Calendar and Publishing Manager lead to project-scoped screens; with no project open the guard returned them to the hub, which from the hub is a click that does nothing. They are greyed there instead, in the menu and the palette.
+- **Sidebar.** The Publishing Manager link beside the account is removed; the *Publishing* entry in the Ship group stays, with its unread count. The rail no longer shows an unread dot.
+- **New document.** The dialog has a Type select, and the first picked language is the document's primary: both travel in `POST /api/drafts` (`Language`, `DocumentType`). Before, every document was born a Russian `post`, a single non-Russian pick created no version at all, and picking Russian second failed with "primary language".
+- **Duplicate.** `POST /api/drafts/{id}/duplicate` and a per-row button. The copy keeps the text, every language version, type, project, folder, tags, tree parent, per-network texts, glossary exclusions and reader settings; it has no blog address, no sends, no schedule, no history and is never a template, archived or evergreen.
+- **Location.** The inspector's geographic Location row is drawn for publishable types only. The tree breadcrumb row, which carried the same label, is Path.
+- **Tasks.** The new-task modal has the Sprint select and opens on the sprint the board is filtered to. The server already accepted `SprintId` on create.
+- **Evergreen.** The row action reads "Repost automatically (evergreen)…", the dialog "Automatic reposting", and the hint says what a queue slot is, where it is set up, and that nothing is reposted without one.
+- **`.blend` previews.** Blender 5 writes a 17-byte header (`BLENDER17-01v0501`) and block headers with 64-bit lengths; `BlendThumbnail` read neither, so every file from a current Blender had no preview. It reads both layouts now; checked against a real 5.1 file.
+- **The preview pass.** `thumbs/pending` takes `skip`, and the page steps past files it has already tried: 200 unreadable files at the head of the list used to end the pass before any older image was reached. The run's notice counts the files with no readable preview. **Re-index file** also renders and uploads that file's preview. The "coming" label names the way out.
+- **Placeholder icons.** A tile with no picture draws its icon at 40px, by format where that says more than the kind (`file-zip`, `file-code`).
+
+Not changed, and why: desktop Google sign-in is `T-442` (diagnosed from the production log, needs a decision on the handoff); Miro is research (`docs/knowledge_base/RESEARCH-2026-09.md` §T-443, row `T-443`); "Unify location selector" is `Q-25`. Production-log findings unrelated to the notes: `T-445`, `T-446`.
+
+The `.blend` fix lives in the desktop agent, so it reaches a machine with the next desktop build; everything else ships with a server deploy.
+
+Validation: see BR-003.
+
 ## 2026-10-08 — Imported media answers its owner
 
 - `/media` found a file's owner by the GUID in its name alone. The two package imports (`.cedar` / markdown with images) named each file `asset_{new GUID}` and let the `Asset` row take a different `Id`, so every imported picture had no owner and answered **404 to everyone, its owner included**, while being on disk and in the library. `MediaOwnerIndex` now matches the row by `Id`, `LocalPath` or `TelegramLocalPath`; existing rows need no data fix. Both imports now name the file after the row.

@@ -1492,7 +1492,7 @@
                 <p class="insp-group">{{ t().editor.inspector.document }}</p>
                 @if (breadcrumbs().length) {
                 <!--ADR-128 — where this document sits in the tree; a crumb opens that document.-->
-                <app-spec-row scope="document" [label]="t().editor.inspector.location">
+                <app-spec-row scope="document" [label]="t().editor.inspector.path">
                     <span class="doc-crumbs">
                         @for (crumb of breadcrumbs(); track crumb.id) {
                         <button class="doc-crumb" (click)="openDraft(crumb.id)" [title]="crumb.title">{{ crumb.title }}</button>
@@ -1531,9 +1531,11 @@
                 profile's at render, which is what the MapLocation slot showed before. No `field`:
                 the control is a stacked input plus a profile chip and paints its own face, so the
                 row's box would be the second, weaker one ADR-238 clause 1 removes elsewhere.-->
+                @if (!isWorkingMaterial()) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.location">
                     <app-location-input [value]="locationText()" (valueChange)="setLocation($event)" />
                 </app-spec-row>
+                }
                 @if (isWorkingMaterial()) {
                 <app-spec-row scope="document" [label]="t().editor.inspector.publishes">
                     <app-stamp-badge tone="ink" [rotate]="-1">{{ t().editor.inspector.workingMaterial }}</app-stamp-badge>

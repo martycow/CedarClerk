@@ -22,7 +22,7 @@ public static class BlendThumbnail
     /// </summary>
     public static Preview? TryRead(ReadOnlySpan<byte> bytes)
     {
-        // Header: "BLENDER" + pointer-size char + endianness char + 3 version chars.
+        // Legacy header: "BLENDER" + pointer-size char + endianness char + 3 version chars.
         if (bytes.Length < 12 || !bytes[..7].SequenceEqual(Magic))
         {
             // Blender 3.0+ can save zstd-compressed (and older versions gzip-compressed) files. The
@@ -31,22 +31,41 @@ public static class BlendThumbnail
             return null;
         }
 
-        var pointerSize = bytes[7] switch { (byte)'_' => 4, (byte)'-' => 8, _ => 0 };
-        if (pointerSize == 0) return null;
+        // Blender 5 writes "BLENDER17-01v0501": a two-digit header length, the format version, then
+        // a four-digit release — and block headers with 64-bit lengths in a different field order.
+        var large = bytes[7] is >= (byte)'0' and <= (byte)'9';
+        int headerSize, offset, lengthAt;
+        if (large)
+        {
+            if (bytes.Length < 17 || bytes[8] is < (byte)'0' or > (byte)'9' || bytes[9] != (byte)'-') return null;
+            if (bytes[10] != (byte)'0' || bytes[11] != (byte)'1' || bytes[12] != (byte)'v') return null;
+            offset = (bytes[7] - '0') * 10 + (bytes[8] - '0');
+            if (offset < 17) return null;
+            // 4-byte code, 4-byte SDNA index, 8-byte pointer, 8-byte length, 8-byte count.
+            headerSize = 4 + 4 + 8 + 8 + 8;
+            lengthAt = 16;
+        }
+        else
+        {
+            var pointerSize = bytes[7] switch { (byte)'_' => 4, (byte)'-' => 8, _ => 0 };
+            if (pointerSize == 0) return null;
 
-        var littleEndian = bytes[8] == (byte)'v';
-        // Every .blend written this century is little-endian; big-endian support would be untested
-        // code guarding against a file nobody has.
-        if (!littleEndian) return null;
+            // Every .blend written this century is little-endian; big-endian support would be untested
+            // code guarding against a file nobody has.
+            if (bytes[8] != (byte)'v') return null;
 
-        // Block header: 4-byte code, 4-byte length, pointer, 4-byte SDNA index, 4-byte count.
-        var headerSize = 4 + 4 + pointerSize + 4 + 4;
-        var offset = 12;
+            // Block header: 4-byte code, 4-byte length, pointer, 4-byte SDNA index, 4-byte count.
+            headerSize = 4 + 4 + pointerSize + 4 + 4;
+            offset = 12;
+            lengthAt = 4;
+        }
 
         while (offset + headerSize <= bytes.Length)
         {
             var code = bytes.Slice(offset, 4);
-            var length = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(offset + 4, 4));
+            var length = large
+                ? BinaryPrimitives.ReadInt64LittleEndian(bytes.Slice(offset + lengthAt, 8))
+                : BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(offset + lengthAt, 4));
             if (length < 0) return null;
 
             var data = offset + headerSize;
@@ -67,7 +86,7 @@ public static class BlendThumbnail
             // "ENDB" closes the file; anything after it is not a block.
             if (code.SequenceEqual("ENDB"u8)) return null;
 
-            var next = (long)data + length;
+            var next = data + length;
             if (next <= offset) return null;   // a zero or negative stride would spin here forever
             offset = (int)Math.Min(next, bytes.Length);
         }

@@ -41,7 +41,7 @@ flowchart TB
         DESIGN["docs/design/DESIGN.md<br/>tokens, UI patterns"]
         UIINV["docs/design/UI-INVENTORY.md<br/>inventory of UI elements"]
         STACK["docs/knowledge_base/STACK.md<br/>stack and costs"]
-        RESEARCH["docs/knowledge_base/RESEARCH-2026-09.md<br/>API research: IndieDB, LinkedIn,<br/>IGDB, Telegram comments, events"]
+        RESEARCH["docs/knowledge_base/RESEARCH-2026-09.md<br/>API research: IndieDB, LinkedIn,<br/>IGDB, Telegram comments, events, Miro"]
         BIZ["docs/product/BUSINESS.md<br/>money: gates, metrics, rituals"]
         COMPET["docs/product/COMPETITORS.md<br/>competitor landscape:<br/>per segment, take / refuse"]
         METRICS["docs/product/METRICS.md<br/>event dictionary, metrics derivation §4"]

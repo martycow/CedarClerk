@@ -46,6 +46,8 @@ export interface SyncProgress {
     thumbsRemaining: number;
     /** Bytes of preview uploaded this run — the number that makes "no limit" concrete. */
     thumbBytes: number;
+    /** Files a preview was asked for and could not be made: a compressed .blend, a damaged image. */
+    thumbsUnavailable: number;
     /** Folders the walk could not open. Reported, never swallowed. */
     unreadable: number;
     markedMissing: number;
@@ -54,7 +56,7 @@ export interface SyncProgress {
 
 const IDLE: SyncProgress = {
     phase: 'idle', total: 0, indexed: 0, thumbsDone: 0, thumbsRemaining: 0,
-    thumbBytes: 0, unreadable: 0, markedMissing: 0, error: null,
+    thumbBytes: 0, thumbsUnavailable: 0, unreadable: 0, markedMissing: 0, error: null,
 };
 
 /**
@@ -215,17 +217,24 @@ export class AssetSyncService {
      */
     private async previewPhase(projectId: string, root: string, bridge: CedarDesktopBridge) {
         this.patch({ phase: 'previews' });
-        const hopeless = new Set<string>();
+        // Every row tried in this run, stored or not. A stored one leaves the pending list; the rest
+        // stay in it, so `skip` only ever steps over rows already in here.
+        const tried = new Set<string>();
+        let skip = 0;
 
         for (;;) {
             if (this.cancelled) return;
 
             const pending = await firstValueFrom(this.http.get<{ items: { id: string; relativePath: string }[]; remaining: number }>(
-                `/api/projects/${projectId}/assets/thumbs/pending?take=${THUMB_PENDING_PAGE}`));
+                `/api/projects/${projectId}/assets/thumbs/pending?take=${THUMB_PENDING_PAGE}&skip=${skip}`));
             this.patch({ thumbsRemaining: pending.remaining });
 
-            const todo = pending.items.filter(item => !hopeless.has(item.id));
-            if (todo.length === 0) return;
+            const todo = pending.items.filter(item => !tried.has(item.id));
+            if (todo.length === 0) {
+                if (pending.items.length < THUMB_PENDING_PAGE) return;
+                skip += pending.items.length;
+                continue;
+            }
 
             for (let i = 0; i < todo.length; i += THUMB_BATCH) {
                 if (this.cancelled) return;
@@ -236,8 +245,9 @@ export class AssetSyncService {
                 let attached = 0;
 
                 for (const item of slice) {
+                    tried.add(item.id);
                     const base64 = await bridge.thumb(this.absolute(root, item.relativePath));
-                    if (!base64) { hopeless.add(item.id); continue; }
+                    if (!base64) { this.patch({ thumbsUnavailable: this.state().thumbsUnavailable + 1 }); continue; }
                     const blob = base64ToBlob(base64);
                     bytes += blob.size;
                     // The part's name is the asset id — that is how the server knows which row each
@@ -256,6 +266,18 @@ export class AssetSyncService {
                 });
             }
         }
+    }
+
+    /** One file's preview, outside a run — what "Re-index file" does after the re-stat. */
+    async uploadPreview(projectId: string, root: string, bridge: CedarDesktopBridge,
+                        asset: { id: string; relativePath: string }): Promise<boolean> {
+        const base64 = await bridge.thumb(this.absolute(root, asset.relativePath));
+        if (!base64) return false;
+        const form = new FormData();
+        form.append(asset.id, base64ToBlob(base64), `${asset.id}.jpg`);
+        const result = await firstValueFrom(this.http.put<{ stored: number }>(
+            `/api/projects/${projectId}/assets/thumbs`, form));
+        return result.stored > 0;
     }
 
     /** The path on the machine holding the files. Windows separators, because that is where it goes. */

@@ -27,6 +27,20 @@ export const ASSET_KIND_ICONS: Record<AssetKind, IconName> = {
     other: 'file',
 };
 
+const ARCHIVE_EXTENSIONS = new Set(['zip', 'rar', '7z', 'tar', 'gz', 'unitypackage']);
+const CODE_EXTENSIONS = new Set([
+    'cs', 'js', 'ts', 'py', 'gd', 'lua', 'cpp', 'c', 'h', 'hpp', 'rs', 'java', 'kt', 'swift',
+    'json', 'xml', 'yaml', 'yml', 'toml', 'shader', 'hlsl', 'glsl', 'usf', 'ush',
+]);
+
+/** The picture a file gets when it has no preview: by format where one says more than the kind. */
+export function assetIcon(asset: { kind: AssetKind; extension: string }): IconName {
+    const extension = asset.extension.replace(/^\./, '').toLowerCase();
+    if (ARCHIVE_EXTENSIONS.has(extension)) return 'file-zip';
+    if (CODE_EXTENSIONS.has(extension)) return 'file-code';
+    return ASSET_KIND_ICONS[asset.kind];
+}
+
 export interface AssetEntry {
     id: string;
     relativePath: string;

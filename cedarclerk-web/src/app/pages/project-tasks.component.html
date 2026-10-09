@@ -383,6 +383,13 @@
                 </div>
             </div>
 
+            @if (sprints().length) {
+            <div class="field">
+                <app-select inputId="new-task-sprint" [label]="t().projects.planner.assignSprint" [options]="sprintOptions()"
+                            [value]="newSprintId()" (valueChange)="newSprintId.set($any($event) ?? '')" />
+            </div>
+            }
+
             <div class="field">
                 <label>{{ t().projects.tasks.fieldFiles }}</label>
                 <input #taskFiles type="file" multiple hidden

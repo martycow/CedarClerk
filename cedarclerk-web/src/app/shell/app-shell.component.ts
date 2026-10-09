@@ -105,10 +105,10 @@ function matches(path: string, pattern: string): boolean {
             <div class="workspace-row">
                 <app-sidebar [mode]="mode()" [groups]="groups()" [activeId]="activeId()"
                              [project]="project()" [projects]="switcher()" [projectHint]="t().shell.switchProject"
-                             [user]="user()" [alerts]="alerts()" [navLabel]="t().shell.screens"
+                             [user]="user()" [navLabel]="t().shell.screens"
                              [feedbackLabel]="t().feedbackForm.title" (feedback)="feedbackForm.openForm()"
                              [brand]="t().shell.brand" [brandLabel]="t().shell.logoLabel"
-                             [allProjectsLabel]="t().shell.allProjects" [alertsTitle]="t().shell.alerts" />
+                             [allProjectsLabel]="t().shell.allProjects" />
                 <main class="body" data-surface="paper">
                     <router-outlet />
                 </main>
@@ -378,10 +378,13 @@ export class AppShellComponent implements OnDestroy {
         const labels = this.t().shell.commands;
         const go = (path: string, queryParams?: Record<string, string>) =>
             () => void this.router.navigate([path], queryParams ? { queryParams } : {});
+        // projectScopeGuard sends a project-scoped screen with no open project back to the hub,
+        // which from the hub itself is a click that does nothing — so the row greys out instead.
+        const inProject = () => !this.auth.indieDev() || !!this.openProjectId();
         const commands: AppCommand[] = [
-            { id: 'file.new', group: 'file', label: labels.newDocument, icon: 'plus', run: go('/drafts', { new: '1' }) },
-            { id: 'file.documents', group: 'file', label: labels.openDocuments, icon: 'file-text', run: go('/drafts') },
-            { id: 'file.library', group: 'file', label: labels.library, icon: 'images', run: go('/library') },
+            { id: 'file.new', group: 'file', label: labels.newDocument, icon: 'plus', enabled: inProject, run: go('/drafts', { new: '1' }) },
+            { id: 'file.documents', group: 'file', label: labels.openDocuments, icon: 'file-text', enabled: inProject, run: go('/drafts') },
+            { id: 'file.library', group: 'file', label: labels.library, icon: 'images', enabled: inProject, run: go('/library') },
             {
                 id: 'file.download', group: 'file', label: labels.download, icon: 'download-simple',
                 separatorBefore: true, run: go('/download'),
@@ -407,8 +410,8 @@ export class AppShellComponent implements OnDestroy {
                 checked: () => this.appearance.paintedTheme() === 'dark',
                 run: () => this.setPref({ theme: this.appearance.paintedTheme() === 'dark' ? 'light' : 'dark' }),
             },
-            { id: 'view.calendar', group: 'view', label: labels.calendar, icon: 'calendar-blank', separatorBefore: true, run: go('/calendar') },
-            { id: 'view.posts', group: 'view', label: labels.posts, icon: 'paper-plane-tilt', run: go('/posts') },
+            { id: 'view.calendar', group: 'view', label: labels.calendar, icon: 'calendar-blank', separatorBefore: true, enabled: inProject, run: go('/calendar') },
+            { id: 'view.posts', group: 'view', label: labels.posts, icon: 'paper-plane-tilt', enabled: inProject, run: go('/posts') },
             {
                 id: 'tools.palette', group: 'tools', label: labels.palette, icon: 'terminal-window',
                 shortcut: 'Ctrl+Shift+P', run: () => this.palette().openOverlay(),

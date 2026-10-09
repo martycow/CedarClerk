@@ -67,11 +67,6 @@ export interface SidebarUser {
                 <app-icon name="chat-teardrop-dots" size="sm" />
             </button>
             }
-            <a class="side-bell" routerLink="/posts" [attr.title]="alertsTitle() || null"
-               [attr.aria-label]="alertsTitle() || null">
-                <app-icon name="chat-teardrop" size="sm" />
-                @if (alerts() > 0) { <span class="side-dot" aria-hidden="true"></span> }
-            </a>
         </div>
 
         <ng-template #entry let-item>
@@ -195,16 +190,6 @@ export interface SidebarUser {
         .side-bell:hover { background: var(--hover); color: var(--text); }
         button.side-bell { border: 0; background: transparent; cursor: pointer; }
 
-        .side-dot {
-            position: absolute;
-            top: 7px;
-            right: 7px;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--danger);
-        }
-
         :host(.is-rail) { width: var(--sidebar-rail-w); }
         :host(.is-rail) .side-nav { align-items: center; padding: var(--space-3) 0; }
         :host(.is-rail) .side-group { align-items: center; gap: var(--space-1); }
@@ -238,12 +223,10 @@ export class SidebarComponent {
     readonly projects = input<readonly SidebarProject[]>([]);
     readonly projectHint = input('');
     readonly user = input<SidebarUser>();
-    readonly alerts = input(0);
     readonly navLabel = input('');
     readonly brand = input('');
     readonly brandLabel = input('');
     readonly allProjectsLabel = input('');
-    readonly alertsTitle = input('');
     readonly picked = output<string>();
     readonly feedbackLabel = input('');
     readonly feedback = output<void>();
