@@ -9,7 +9,7 @@
 // (see `guard` in main.js). Two checks rather than one because this one runs *inside* the renderer and
 // therefore cannot be the last word about it.
 //
-// Nothing here writes, deletes or launches anything. `shell.openPath` is deliberately not exposed:
+// Nothing here writes, deletes or runs a file. `shell.openPath` is deliberately not exposed:
 // reading a folder is what the feature needs, and executing a file is what an attacker needs.
 const { contextBridge, ipcRenderer } = require('electron');
 
@@ -68,5 +68,11 @@ if (isUpstream()) {
 
         /** Shows a file in Explorer/Finder. Highlights it; does not open it. */
         reveal: (targetPath) => ipcRenderer.invoke('cedar:reveal', targetPath),
+
+        /**
+         * Starts a Google or Discord sign-in in the system browser (ADR-327). The provider's pages
+         * cannot run in this window, and the address opened is built in main, not taken from here.
+         */
+        signIn: (provider, returnUrl) => ipcRenderer.invoke('cedar:sign-in', provider, returnUrl),
     });
 }

@@ -30,6 +30,15 @@ describe('External sign-in buttons', () => {
         expect(external.startGoogle).toHaveBeenCalledWith('/projects');
     });
 
+    it('says the sign-in continues in the browser when the desktop shell took it', async () => {
+        const { fixture, buttons, external } = await setup();
+        expect(fixture.nativeElement.querySelector('.providers-note')).toBeNull();
+        external.startGoogle.mockReturnValue('browser');
+        buttons[0].click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.providers-note')).not.toBeNull();
+    });
+
     it('posts a signed Telegram result once and reports successful sign in', async () => {
         const { fixture, buttons, external, callback } = await setup();
         const signedIn = vi.fn();

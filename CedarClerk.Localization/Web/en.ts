@@ -312,6 +312,12 @@ export const en = {
         completeSubmit: 'Create account',
         linkPrompt: 'An account already uses this address. Sign in below and the provider will be attached to it.',
         failed: 'That sign-in did not finish. Try again, or use your password.',
+        continueInBrowser: 'Finish signing in in your browser. This window will follow.',
+        desktopTitle: 'Open the desktop app',
+        desktopTagline: (email: string) => `You are signed in as ${email}. Continue to sign in to Cedar Clerk on this computer with the same account.`,
+        desktopOpen: 'Open Cedar Clerk',
+        desktopOpened: 'You can close this tab once the app opens.',
+        desktopFailed: 'This sign-in link is no longer valid. Start again from the desktop app.',
     },
     authLayout: {
         legalTerms: 'Terms', legalPrivacy: 'Privacy',

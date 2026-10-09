@@ -41,6 +41,13 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/external-complete.component').then(m => m.ExternalCompleteComponent),
         canActivate: [guestGuard],
     },
+    // ADR-327 — where a sign-in started in the desktop app ends in the browser. authGuard, because
+    // the page hands over the session it finds.
+    {
+        path: 'auth/desktop',
+        loadComponent: () => import('./pages/desktop-handoff.component').then(m => m.DesktopHandoffComponent),
+        canActivate: [authGuard],
+    },
     // T-328 — the mandatory first stop after registration, outside the shell like the other doors.
     {
         path: 'onboarding',

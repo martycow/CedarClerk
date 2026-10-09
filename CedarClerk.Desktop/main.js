@@ -51,10 +51,21 @@ const UPSTREAM = 'https://cedarclerk.app';
 // Any other path falls through to the SPA, whose own guard sends a signed-out visitor to /login.
 const START_PATH = '/projects';
 
+// ADR-327 — how a session made in the system browser comes back to this window.
+const SIGN_IN_SCHEME = 'cedarclerk';
+const SIGN_IN_PROVIDERS = new Set(['google', 'discord']);
+const SIGN_IN_WINDOW_MS = 10 * 60 * 1000;
+
 let agentProcess = null;
 let agentOrigin = null;
 let agentToken = null;
 let mainWindow = null;
+let pendingSignIn = null;
+
+// Windows and Linux deliver a cedarclerk:// link by starting a second copy with it in argv; the lock
+// is what routes that to this one. Packaged builds only: a development run shares the installed
+// app's lock name, and `npm start` exiting silently beside it reads as a broken checkout.
+const isPrimaryInstance = !app.isPackaged || app.requestSingleInstanceLock();
 
 /** Ask the OS for a port nobody is using. Never 8080: a local dev server or the tunnel-fixed
  *  production port would collide, and a collision here reads as "the app won't start". */
@@ -420,6 +431,47 @@ function createWindow() {
     void mainWindow.loadURL(`${UPSTREAM}${START_PATH}`);
 }
 
+/** Same-origin paths only: the page supplies this, and it ends up in a navigation. */
+function safePath(value) {
+    return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : START_PATH;
+}
+
+function showWindow() {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+}
+
+/**
+ * The second half of a provider sign-in (ADR-327): the browser hands back a one-time code, and this
+ * window trades it, with the verifier only this process holds, for a session cookie in its own jar.
+ *
+ * A navigation rather than a fetch, because the cookie has to land in the window's session. The
+ * X-Cedar-Desktop header is what the server takes as proof a web page did not post this.
+ */
+function finishSignIn(link) {
+    let code = null;
+    try {
+        const url = new URL(link);
+        if (url.protocol === `${SIGN_IN_SCHEME}:` && url.hostname === 'auth') code = url.searchParams.get('code');
+    } catch {
+        // Not a link at all; nothing to do.
+    }
+
+    const pending = pendingSignIn;
+    if (!code || !pending || Date.now() > pending.expires) return;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    pendingSignIn = null;
+
+    const body = new URLSearchParams({ code, verifier: pending.verifier, returnUrl: pending.returnUrl });
+    void mainWindow.loadURL(`${UPSTREAM}/api/auth/desktop/redeem`, {
+        postData: [{ type: 'rawData', bytes: Buffer.from(body.toString()) }],
+        extraHeaders: 'Content-Type: application/x-www-form-urlencoded\nX-Cedar-Desktop: 1',
+    });
+    showWindow();
+}
+
 function isUpstream(url) {
     try {
         return new URL(url).origin === new URL(UPSTREAM).origin;
@@ -447,8 +499,8 @@ function guard(channel, handler) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The bridge. Eight functions, none of which writes, deletes or launches anything (ADR-117): the
-// worst a compromised page can do with all of them is learn what is in a folder its human chose.
+// The filesystem bridge. None of it writes, deletes or launches anything (ADR-117): the worst a
+// compromised page can do with all of it is learn what is in a folder its human chose.
 // `shell.openPath` is deliberately absent — that one turns reading into execution, and Marty chose to
 // do without it rather than gain a double-click that opens Blender.
 // ---------------------------------------------------------------------------------------------
@@ -530,6 +582,19 @@ guard('cedar:reveal', async (target) => {
     if (typeof target === 'string' && target.length > 0) shell.showItemInFolder(target);
 });
 
+// Starts a provider sign-in in the system browser (ADR-327). The page names a provider and a return
+// path and nothing else: the address opened is built here and is always the upstream's own.
+guard('cedar:sign-in', (provider, returnUrl) => {
+    if (!SIGN_IN_PROVIDERS.has(provider)) throw new Error('Cedar Clerk: unknown sign-in provider.');
+
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+    pendingSignIn = { verifier, returnUrl: safePath(returnUrl), expires: Date.now() + SIGN_IN_WINDOW_MS };
+
+    const handoff = `/auth/desktop?challenge=${challenge}`;
+    void shell.openExternal(`${UPSTREAM}/api/auth/external/${provider}?returnUrl=${encodeURIComponent(handoff)}`);
+});
+
 async function agentError(response, fallback) {
     try {
         return (await response.json()).error ?? fallback;
@@ -538,8 +603,27 @@ async function agentError(response, fallback) {
     }
 }
 
+if (!isPrimaryInstance) app.quit();
+
+app.on('second-instance', (_event, argv) => {
+    const link = argv.find(arg => arg.startsWith(`${SIGN_IN_SCHEME}://`));
+    if (link) finishSignIn(link);
+    else showWindow();
+});
+
+// macOS delivers the link to the running app as an event instead of a second launch.
+app.on('open-url', (event, url) => {
+    event.preventDefault();
+    finishSignIn(url);
+});
+
 app.whenReady().then(async () => {
+    if (!isPrimaryInstance) return;
     try {
+        // Windows has no install-time registration for the scheme. Packaged only: an unpackaged run
+        // would register the bare Electron binary as the handler.
+        if (app.isPackaged) app.setAsDefaultProtocolClient(SIGN_IN_SCHEME);
+
         const identity = machineIdentity();
         machine.id = identity.id;
         machine.name = identity.name;

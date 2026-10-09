@@ -139,6 +139,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedProto);
 builder.Services.ConfigureApplicationCookie(AuthCookie.Configure);
 builder.Services.AddPasswordRecovery();
+builder.Services.AddSingleton(new DesktopHandoffCodes(TimeProvider.System));
 
 builder.Services.AddScoped<TenantContext>();
 builder.Services.AddSingleton<TelegramBotService>();
@@ -334,6 +335,7 @@ app.MapAuthEndpoints();
 app.MapPasswordRecoveryEndpoints();
 app.MapAccountSecurityEndpoints();
 app.MapExternalAuthEndpoints();
+app.MapDesktopAuthEndpoints();
 app.MapWaitlistEndpoint();
 app.MapDiscoveryEndpoint();
 app.MapFeedbackEndpoints();

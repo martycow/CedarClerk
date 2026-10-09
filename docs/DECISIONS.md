@@ -331,3 +331,4 @@ The ownership-audit table kept with the log is [`docs/adr/ownership-audit.md`](a
 - [ADR-324 — Shell chrome after the 0.25.1 review (08.10.2026)](adr/ADR-324.md)
 - [ADR-325 — Registration field rules (08.10.2026)](adr/ADR-325.md)
 - [ADR-326 — The Writer follows the 08.10 mockup: one toolbar row, a Document | Selection inspector (08.10.2026)](adr/ADR-326.md)
+- [ADR-327 — Desktop provider sign-in runs in the system browser and returns by a one-time code (09.10.2026)](adr/ADR-327.md)

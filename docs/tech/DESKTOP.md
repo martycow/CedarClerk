@@ -40,7 +40,7 @@ Reason for existing — the Asset Manager: describing the contents of a game pro
 
 Neither the server code nor the frontend is forked (ADR-101). The Angular build is the same one that ships to production; the desktop app doesn't even host it, but opens it from production.
 
-**Who does what: the agent reads the disk, the page sends.** The page already has a cookie to the cloud — so the agent needs no credentials at all, and Electron does not handle authentication at all. The side benefit matters more than the savings: the work happens in an ordinary screen with progress and a cancel button, not in a background process nobody can ask what it's doing.
+**Who does what: the agent reads the disk, the page sends.** The page already has a cookie to the cloud — so the agent needs no credentials at all. The shell holds no credentials either; its one part in authentication is carrying a provider sign-in back from the system browser (§Provider sign-in). The side benefit matters more than the savings: the work happens in an ordinary screen with progress and a cancel button, not in a background process nobody can ask what it's doing.
 
 ## Repository layout
 
@@ -149,6 +149,21 @@ What narrows it:
 
 The address constant is deliberately duplicated in `main.js` and `preload.js`: the sandboxed preload can only require the documented set of modules, and `process.argv` is not a surface to hang a security gate on. If the two constants ever diverge, the bridge simply doesn't appear — closed by default.
 
+## Provider sign-in
+
+Google and Discord cannot finish in the window: the provider's pages are off-origin, navigation off the upstream is blocked, and Google refuses embedded browsers. The round trip runs in the system browser and the session comes back by a one-time code (ADR-327).
+
+1. The page calls `cedarDesktop.signIn(provider, returnUrl)`. Main keeps a random verifier in memory and opens the browser on `/api/auth/external/<provider>` with `returnUrl=/auth/desktop?challenge=<SHA-256 of the verifier>`.
+2. The browser finishes the sign-in, including the invite and link-by-password screens, and lands on `/auth/desktop`. One click there mints a code and opens `cedarclerk://auth?code=…`.
+3. Main receives the link (`open-url` on macOS, `second-instance` elsewhere) and loads `POST /api/auth/desktop/redeem` in the window with the code, the verifier and the `X-Cedar-Desktop` header. The cookie lands in the window's own jar.
+
+- The address opened in step 1 is built in main; the page supplies a provider name and a same-origin path.
+- A link is acted on only while a sign-in started here is pending (ten minutes). A link with nothing pending is ignored.
+- The scheme is registered for packaged builds only: `protocols` in `electron-builder.yml` (macOS, Linux) and `setAsDefaultProtocolClient` at launch (Windows). `npm start` cannot receive the link.
+- A packaged build takes a single-instance lock. A second launch focuses the first window.
+- Linux AppImage registers the scheme only where the desktop integrates AppImages. Password sign-in works everywhere.
+- Telegram sign-in is not part of this.
+
 ## The window opens `/projects`, not `/`
 
 The landing page intercepts exactly `GET /` without a cookie (`LandingEndpoints.UseLanding`), so any other path serves the SPA. An unlogged-in `authGuard` redirects to `/login`.
@@ -222,6 +237,7 @@ TypeError: Cannot read properties of undefined (reading 'handle')
 | Distribution size (~119 MB installer, see diagram above) | The cost of the ADR-104 decision; accepted, not fought |
 | An update installs over a running agent | `stopAgent()` is synchronous, called before `quitAndInstall()` |
 | An update from a spoofed origin | Not closed: `T-145`, code signing |
+| Another application registers `cedarclerk://` | It receives a code it cannot redeem: the verifier never leaves the shell's memory (ADR-327) |
 
 ## What's not resolved
 
@@ -229,4 +245,5 @@ TypeError: Cannot read properties of undefined (reading 'handle')
 - **iPad** — `T-011` in `docs/tasks/BACKLOG.md`. Electron doesn't go there.
 - **Linux and Windows builds from the new entry point** — the instructions and targets exist, but need execution on those hosts.
 - **Code signing and notarization** — `T-145`: the local Mac package is unsigned; distribution needs a Developer ID identity and notarization credentials.
+- **Provider sign-in on a packaged build** — written and covered on the server side, never run through a real installer on any of the three systems (ADR-327).
 - **Offline mode** — deliberately absent (ADR-117). If it's ever needed, it's a synchronization problem again, the one ADR-105 rightly walked away from.

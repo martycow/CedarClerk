@@ -28,6 +28,7 @@ import { BrandIconComponent } from './brand-icon.component';
                         {{ loading() || busy() ? t().externalAuth.loading : t().externalAuth.telegram }}
                     </app-button>
                 }
+                @if (inBrowser()) { <div class="providers-note" role="status">{{ t().externalAuth.continueInBrowser }}</div> }
                 @if (error()) { <div class="providers-error" role="alert">{{ error() }}</div> }
                 <div class="providers-rule"><span>{{ t().externalAuth.emailAlternative }}</span></div>
             </div>
@@ -39,6 +40,7 @@ import { BrandIconComponent } from './brand-icon.component';
         .providers-rule { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); font-size: var(--fs-meta); color: var(--t2); }
         .providers-rule::before, .providers-rule::after { content: ''; flex: 1; height: 1px; background: var(--border); opacity: .6; }
         .providers-error { font-size: var(--fs-ui); color: var(--danger); }
+        .providers-note { font-size: var(--fs-ui); color: var(--t2); line-height: 1.5; }
     `],
 })
 export class ExternalAuthButtonsComponent {
@@ -53,6 +55,7 @@ export class ExternalAuthButtonsComponent {
     protected readonly error = signal('');
     protected readonly loading = signal(false);
     protected readonly busy = signal(false);
+    protected readonly inBrowser = signal(false);
     protected readonly google = this.version.googleAuth;
     protected readonly discord = this.version.discordAuth;
     protected readonly telegramBotId = this.version.telegramBotId;
@@ -62,9 +65,13 @@ export class ExternalAuthButtonsComponent {
         effect(() => { if (this.telegramBotId()) void this.prepareTelegram(); });
     }
 
-    protected signInWithDiscord(): void { this.external.startDiscord(this.returnUrl()); }
+    protected signInWithDiscord(): void {
+        this.inBrowser.set(this.external.startDiscord(this.returnUrl()) === 'browser');
+    }
 
-    protected signInWithGoogle(): void { this.external.startGoogle(this.returnUrl()); }
+    protected signInWithGoogle(): void {
+        this.inBrowser.set(this.external.startGoogle(this.returnUrl()) === 'browser');
+    }
 
     private async prepareTelegram(): Promise<void> {
         this.loading.set(true);

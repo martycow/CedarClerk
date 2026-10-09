@@ -31,6 +31,13 @@ publish:
   # gets a full body back — slower than not trying. Sequential single ranges work.
   useMultipleRangeRequest: false
 
+# ADR-327 — the link a browser uses to hand a finished sign-in back to the app. This covers macOS
+# (Info.plist) and Linux (the desktop entry); Windows is registered at runtime in main.js.
+protocols:
+  - name: Cedar Clerk
+    schemes:
+      - cedarclerk
+
 win:
   target:
     - target: nsis

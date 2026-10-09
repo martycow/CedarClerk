@@ -1,0 +1,22 @@
+<app-auth-layout>
+    <section class="card auth-card" data-surface="paper">
+        <div class="auth-header">
+            <h1 class="auth-title">{{ t().externalAuth.desktopTitle }}</h1>
+            <div class="auth-tagline">{{ t().externalAuth.desktopTagline(email() ?? '') }}</div>
+        </div>
+
+        @if (failed()) {
+        <div class="error-box" role="alert">{{ t().externalAuth.desktopFailed }}</div>
+        }
+
+        @if (valid) {
+        <app-button class="primary-btn" variant="pine" [disabled]="busy()" (clicked)="open()">
+            {{ busy() ? '…' : t().externalAuth.desktopOpen }}
+        </app-button>
+        }
+
+        @if (opened()) {
+        <p class="auth-footer" role="status">{{ t().externalAuth.desktopOpened }}</p>
+        }
+    </section>
+</app-auth-layout>

@@ -243,6 +243,11 @@ export interface CedarDesktopBridge {
     thumb(fullPath: string): Promise<string | null>;
     /** Highlights the file in Explorer/Finder. Does not open it. */
     reveal(path: string): Promise<void>;
+    /**
+     * Starts a provider sign-in in the system browser (ADR-327). Optional because an installed
+     * shell updates on its own schedule and may predate it.
+     */
+    signIn?(provider: 'google' | 'discord', returnUrl: string): Promise<void>;
 }
 
 export function desktopBridge(): CedarDesktopBridge | undefined {

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-09 — Desktop sign-in with Google and Discord (T-442, ADR-327)
+
+A provider sign-in started in the desktop app never finished: the challenge began in the app window, the provider's next page went to the system browser, and the callback arrived there without its correlation cookie.
+
+- The desktop app now opens the whole round trip in the system browser. The login screen says so under the buttons.
+- The browser ends on the new `/auth/desktop` page, which names the account and offers **Open Cedar Clerk**. The press mints a one-time code and opens `cedarclerk://auth?code=…`.
+- The app trades the code for a session in its own window (`POST /api/auth/desktop/redeem`) and continues to the screen it was heading for.
+- A code is single-use, lives two minutes, is bound to a verifier only the app holds, and is kept in memory. Redeem refuses any request without the `X-Cedar-Desktop` header.
+- A packaged desktop build registers the `cedarclerk://` scheme and takes a single-instance lock: a second launch focuses the first window.
+
+Needs a server deploy and a new desktop build. An installed app older than this keeps failing as before; password sign-in works in it. Telegram sign-in in the desktop app is unchanged.
+
+Validation: see BR-004.
+
 ## 2026-10-09 — Stream notes, day 9
 
 Fifteen notes from the 09.10 stream, checked against the code.

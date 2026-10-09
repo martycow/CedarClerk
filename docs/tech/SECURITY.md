@@ -44,6 +44,7 @@ bot), `.claude/rules/renderers.md` (output escaping).
 | Shared bot → account | Which account an update belongs to | Four attribution checks from the T-359 audit, kept in `.claude/rules/telegram-bot.md` §"The bot is shared" |
 | Reader → private post and its files | `?invite=` link, access cookie, media grant | Signed `PrivateAccess` cookie per draft (ADR-084); a file inherits the audience of the posts that publish it (`MediaOwnershipMiddleware`, ADR-211/219); a `MediaGrant` is a 15-minute signed key bound to one filename, issued only at Telegram send time |
 | Author text → rendered HTML | Post bodies, notes, comments | Every renderer escapes `< > &` before markup — invariant 1 of `renderers.md`, unit-tested per mark and block |
+| Browser session → desktop shell | A provider sign-in finished in the system browser | One-time code, two minutes, bound to the account and to the SHA-256 of a verifier only the shell holds; minted on a click, never on arrival; redeem refuses a request without `X-Cedar-Desktop`, which a web page cannot add to a navigation (ADR-327, `DesktopHandoffTests`) |
 | Desktop shell → local agent | Filesystem reads on the maintainer's machine | Per-launch 32-byte token, never on disk; granted roots only, compared as resolved paths (`docs/tech/DESKTOP.md`) |
 | Repo → secrets | Config keys | Every `Cedar:*` secret is an environment variable in the systemd drop-in; `appsettings.Development.json` is gitignored; rotate before cleaning history |
 

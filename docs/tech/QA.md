@@ -287,6 +287,10 @@ The full risk list is `docs/tech/DESKTOP.md` §Risks. The checks that need a rea
   folder, the orientation of a real `.blend` preview, cancelling mid-preview-pass and resuming, zero
   processes of either kind after closing the window (an orphan holds the SQLite WAL lock and the next
   launch finds a database it cannot open), and `curl` to the agent without a token → 401.
+- **Provider sign-in from an installed build (ADR-327).** Continue with Google in the app opens the
+  browser; after the provider, `/auth/desktop` names the account; Open Cedar Clerk brings the app
+  forward signed in. Then the same with a new address (invite screen in the browser) and with the
+  app closed before the last click (nothing happens, no error window). Each of the three systems.
 - **The startup log says `Cedar:BotToken not set — bot is disabled`.** A desktop build that polls would
   knock production's bot off its token.
 
